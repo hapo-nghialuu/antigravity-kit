@@ -2,5 +2,9 @@
 node_modules/
 .temp_ag_kit/
 antigravity-doc
+<<<<<<< HEAD
 tests
 others
+=======
+logs/
+>>>>>>> c89ba25 (feat: add SDD skill, workflows, architecture docs and initial specs)
