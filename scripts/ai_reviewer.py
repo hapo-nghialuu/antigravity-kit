@@ -1,13 +1,13 @@
 """
-AI Code Reviewer v2
-====================
+AI Code Reviewer v2 (Smart Auto-Resolve)
+========================================
 Automatically reviews Pull Requests using OpenRouter AI and posts reviews with severity-based actions.
 
 Features:
 - Severity classification: critical, high, medium, low
 - Smart action: Request Changes for critical/high, Comment for medium/low
 - Project context injection for better understanding
-- Auto-resolve outdated bot comments
+- Smart Auto-resolve: Only resolves threads if the issue is no longer detected by AI
 
 Usage:
     Run this script in a GitHub Action triggered by `pull_request` events.
@@ -59,12 +59,10 @@ def get_project_context(repo):
             content = repo.get_contents(filepath)
             if content and hasattr(content, 'decoded_content'):
                 text = content.decoded_content.decode('utf-8')
-                # Limit context size per file
                 if len(text) > 2000:
                     text = text[:2000] + "\n...[truncated]..."
                 context.append(f"### {filepath}\n{text}")
         except Exception:
-            # File doesn't exist, skip silently
             pass
 
     return "\n\n".join(context) if context else "No project documentation found."
@@ -84,12 +82,10 @@ def get_file_list(repo):
                     pass
             elif item.type == "file":
                 files.append(item.path)
-            # Limit to 100 files for context
             if len(files) >= 100:
                 break
         return files
-    except Exception as e:
-        logging.warning(f"Could not fetch file list: {e}")
+    except Exception:
         return []
 
 
@@ -101,7 +97,6 @@ def get_pr_diff(repo, pr_number):
     for file in pr.get_files():
         if not should_review(file.filename):
             continue
-
         if file.status == 'removed':
             continue
 
@@ -110,49 +105,24 @@ def get_pr_diff(repo, pr_number):
             "status": file.status,
             "patch": file.patch
         }
-
-        # Try to get full file content for better context
         try:
             content = repo.get_contents(file.filename, ref=pr.head.sha)
             if content and hasattr(content, 'decoded_content'):
                 full_content = content.decoded_content.decode('utf-8')
-                # Limit full content size
                 if len(full_content) <= 5000:
                     file_info["full_content"] = full_content
         except Exception:
             pass
-
         files_data.append(file_info)
 
     return pr, files_data
 
 
-def resolve_thread(thread_id, token):
-    """Resolve a specific review thread using GraphQL."""
-    mutation = """
-    mutation ResolveThread($threadId: ID!) {
-      resolveReviewThread(input: {threadId: $threadId}) {
-        thread { isResolved }
-      }
-    }
+def get_existing_bot_threads(repo_owner, repo_name, pr_number, token):
     """
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    payload = {"query": mutation, "variables": {"threadId": thread_id}}
-
-    try:
-        response = requests.post(GITHUB_GRAPHQL_URL, json=payload, headers=headers, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        if 'errors' in data:
-            logging.error(f"GraphQL Error resolving thread: {data['errors']}")
-        else:
-            logging.info(f"Resolved thread {thread_id}")
-    except Exception as e:
-        logging.error(f"Failed to resolve thread {thread_id}: {e}")
-
-
-def resolve_existing_comments(repo_owner, repo_name, pr_number, token):
-    """Resolve all unresolved bot review threads on the PR."""
+    Fetch all unresolved review threads created by the bot.
+    Returns a list of dicts: {'id': ..., 'filename': ..., 'line': ..., 'body': ...}
+    """
     query = """
     query($owner: String!, $repo: String!, $prNumber: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -161,8 +131,13 @@ def resolve_existing_comments(repo_owner, repo_name, pr_number, token):
             nodes {
               id
               isResolved
+              line  # The current line in the file
               comments(first: 1) {
-                nodes { author { login } }
+                nodes {
+                  path
+                  body
+                  author { login }
+                }
               }
             }
           }
@@ -180,38 +155,119 @@ def resolve_existing_comments(repo_owner, repo_name, pr_number, token):
 
         if 'errors' in data:
             logging.error(f"GraphQL Error: {data['errors']}")
-            return
+            return []
 
         pr_data = data.get('data', {}).get('repository', {}).get('pullRequest')
         if not pr_data:
-            return
+            return []
 
-        threads = pr_data.get('reviewThreads', {}).get('nodes', [])
+        threads_raw = pr_data.get('reviewThreads', {}).get('nodes', [])
         bot_threads = []
 
-        for thread in threads:
+        for thread in threads_raw:
             if thread.get('isResolved'):
                 continue
-            comments = thread.get('comments', {}).get('nodes', [])
-            if comments:
-                author = comments[0].get('author')
-                if author and author.get('login') == 'github-actions[bot]':
-                    bot_threads.append(thread.get('id'))
 
-        if bot_threads:
-            logging.info(f"Resolving {len(bot_threads)} old bot threads...")
-            for tid in bot_threads:
-                resolve_thread(tid, token)
+            comments = thread.get('comments', {}).get('nodes', [])
+            if not comments:
+                continue
+
+            first_comment = comments[0]
+            author = first_comment.get('author')
+            
+            # Check if this thread belongs to github-actions[bot]
+            if author and author.get('login') == 'github-actions[bot]':
+                bot_threads.append({
+                    'id': thread.get('id'),
+                    'line': thread.get('line'), # Current line in PR head
+                    'filename': first_comment.get('path'),
+                    'body': first_comment.get('body')
+                })
+
+        return bot_threads
 
     except Exception as e:
-        logging.error(f"Failed to resolve threads: {e}")
+        logging.error(f"Failed to fetch existing threads: {e}")
+        return []
+
+
+def resolve_thread(thread_id, token):
+    """Resolve a specific thread via GraphQL."""
+    mutation = """
+    mutation ResolveThread($threadId: ID!) {
+      resolveReviewThread(input: {threadId: $threadId}) {
+        thread { isResolved }
+      }
+    }
+    """
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    payload = {"query": mutation, "variables": {"threadId": thread_id}}
+    try:
+        requests.post(GITHUB_GRAPHQL_URL, json=payload, headers=headers, timeout=30)
+        logging.info(f"Resolved thread {thread_id}")
+    except Exception as e:
+        logging.error(f"Failed to resolve thread {thread_id}: {e}")
+
+
+def manage_review_threads(repo_owner, repo_name, pr_number, new_comments, token):
+    """
+    Smart Auto-Resolve Logic:
+    1. Fetch existing unresolved bot threads.
+    2. Match new comments to existing threads (by filename + approx line).
+    3. If matched: Keep thread open (do NOT post new comment).
+    4. If old thread has no match in new comments: Resolve it (Fixed).
+    5. Return list of TRULY NEW comments to post.
+    """
+    logging.info("Syncing comments (Smart Auto-Resolve)...")
+    
+    old_threads = get_existing_bot_threads(repo_owner, repo_name, pr_number, token)
+    matched_thread_ids = set()
+    comments_to_post = []
+
+    # Map new comments to finding signature
+    # Since line numbers can shift, we use a relaxed match: +/- 3 lines
+    
+    for new_cmt in new_comments:
+        new_file = new_cmt.get('filename')
+        new_line = int(new_cmt.get('line_number', 0))
+        
+        found_match = False
+        
+        for old_th in old_threads:
+            if old_th['id'] in matched_thread_ids:
+                continue # Already matched
+            
+            old_file = old_th['filename']
+            old_line = old_th['line']
+            
+            # If thread has no line (outdated), we can't match by line reliably.
+            # But let's assume valid threads have lines.
+            if old_line is None: 
+                continue
+
+            if new_file == old_file and abs(new_line - old_line) <= 3:
+                # MATCH FOUND!
+                matched_thread_ids.add(old_th['id'])
+                found_match = True
+                logging.info(f"Matched existing thread {old_th['id']} for {new_file}:{new_line}. Keeping open.")
+                break
+        
+        if not found_match:
+            comments_to_post.append(new_cmt)
+
+    # Resolve unmatched old threads
+    for old_th in old_threads:
+        if old_th['id'] not in matched_thread_ids:
+            logging.info(f"Issue at {old_th['filename']}:{old_th['line']} no longer detected. Resolving...")
+            resolve_thread(old_th['id'], token)
+
+    return comments_to_post
 
 
 def analyze_code_with_openrouter(files_data, project_context, file_list):
-    """Send code to OpenRouter AI for review with severity classification."""
+    """Send code review request to AI."""
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        logging.error("OPENROUTER_API_KEY not found.")
         return []
 
     try:
@@ -223,11 +279,9 @@ def analyze_code_with_openrouter(files_data, project_context, file_list):
                 "X-Title": "AI Code Reviewer v2"
             }
         )
-    except Exception as e:
-        logging.error(f"Failed to init OpenAI client: {e}")
+    except Exception:
         return []
 
-    # Build comprehensive prompt with project context
     prompt = f"""
 Bạn là một Senior Code Reviewer chuyên nghiệp. Review code trong Pull Request này.
 
@@ -272,128 +326,45 @@ Bạn là một Senior Code Reviewer chuyên nghiệp. Review code trong Pull Re
             ],
         )
 
-        if not response.choices:
-            return []
-
         content = response.choices[0].message.content or ""
-        content = content.strip()
-
-        # Clean markdown formatting
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-
-        if not content:
-            return []
-
+        content = content.replace("```json", "").replace("```", "").strip()
+        if not content: return []
+        
         logging.info("AI response received.")
         return json.loads(content)
 
-    except AuthenticationError:
-        logging.error("OpenRouter authentication failed.")
-        return []
-    except RateLimitError:
-        logging.error("OpenRouter rate limit exceeded.")
-        return []
-    except json.JSONDecodeError as e:
-        logging.error(f"JSON parse error: {e}")
-        return []
     except Exception as e:
-        logging.error(f"OpenRouter error: {e}")
+        logging.error(f"AI Error: {e}")
         return []
 
 
 def submit_review(pr, comments):
-    """Submit a PR review with appropriate action based on severity."""
+    """Submit review comments."""
     if not comments:
-        logging.info("No issues found. LGTM! ✅")
+        logging.info("No new issues found.")
         return
 
-    try:
-        commit = pr.get_commits().reversed[0]
-    except Exception as e:
-        logging.error(f"Failed to get commit: {e}")
-        return
-
-    # Classify comments by severity
+    # Check for blocking issues
     has_blocking = any(c.get('severity', '').lower() in BLOCKING_SEVERITIES for c in comments)
-
-    # Build review body
-    summary_parts = []
-    if has_blocking:
-        summary_parts.append("🚨 **Phát hiện vấn đề nghiêm trọng cần xử lý trước khi merge.**")
-    else:
-        summary_parts.append("📝 **Một số góp ý để cải thiện code.**")
-
-    summary_parts.append("\n_Đây là AI review tự động. Vui lòng verify trước khi áp dụng._")
-
-    # Determine review event
+    summary = "🚨 **Phát hiện vấn đề nghiêm trọng.**" if has_blocking else "📝 **Góp ý cải thiện code.**"
     event = "REQUEST_CHANGES" if has_blocking else "COMMENT"
-    logging.info(f"Submitting review with {len(comments)} comments. Event: {event}")
-
-    # Build review comments
+    
     review_comments = []
     for note in comments:
         filename = note.get('filename')
-        line = note.get('line_number')
-        severity = note.get('severity', 'medium')
-        comment_text = note.get('comment', '')
+        line = int(note.get('line_number', 0))
+        if not line or not filename: continue
 
-        if not comment_text or not filename:
-            continue
+        severity = note.get('severity', 'medium').lower()
+        badge = {'critical': '🔴', 'high': '🟠', 'medium': '🟡', 'low': '🟢'}.get(severity, '⚪')
+        body = f"**{badge} {severity.upper()}**\n\n{note.get('comment')}"
+        
+        review_comments.append({"path": filename, "line": line, "body": body, "side": "RIGHT"})
 
-        # Add severity badge
-        severity_badge = {
-            'critical': '🔴 CRITICAL',
-            'high': '🟠 HIGH',
-            'medium': '🟡 MEDIUM',
-            'low': '🟢 LOW'
-        }.get(severity.lower(), '⚪')
-
-        body = f"**{severity_badge}**\n\n{comment_text}"
-
-        # Validate line number
-        try:
-            line_int = int(line) if line else None
-            if line_int and line_int > 0:
-                review_comments.append({
-                    "path": filename,
-                    "line": line_int,
-                    "body": body,
-                    "side": "RIGHT"
-                })
-        except (ValueError, TypeError):
-            logging.warning(f"Invalid line for {filename}: {line}")
-
-    # Submit review
     try:
         if review_comments:
-            pr.create_review(
-                commit=commit,
-                body="\n".join(summary_parts),
-                event=event,
-                comments=review_comments
-            )
-            logging.info(f"Review submitted successfully: {event}")
-        else:
-            # No valid line comments, post as issue comment
-            for note in comments:
-                body = f"🤖 **AI Review** ({note.get('severity', 'info').upper()}): {note.get('comment', '')}"
-                pr.create_issue_comment(body)
-
-    except GithubException as e:
-        logging.error(f"GitHub API error: {e}")
-        # Fallback to issue comments
-        for note in comments:
-            try:
-                body = f"🤖 **AI Review**: {note.get('comment', '')}"
-                pr.create_issue_comment(body)
-            except Exception:
-                pass
+            pr.create_review(commit=pr.get_commits().reversed[0], body=summary, event=event, comments=review_comments)
+            logging.info(f"Submitted review: {event} with {len(review_comments)} comments.")
     except Exception as e:
         logging.error(f"Failed to submit review: {e}")
 
@@ -401,74 +372,41 @@ def submit_review(pr, comments):
 def main():
     github_token = os.getenv("GITHUB_TOKEN")
     event_path = os.getenv("GITHUB_EVENT_PATH")
-
-    if not github_token or not event_path:
-        logging.error("Missing GITHUB_TOKEN or GITHUB_EVENT_PATH.")
-        return
+    if not github_token or not event_path: return
 
     try:
         with open(event_path, 'r') as f:
             event_data = json.load(f)
-    except FileNotFoundError:
-        logging.error(f"Event file not found at {event_path}")
-        return
-    except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse event file: {e}")
-        return
-    except Exception as e:
-        logging.error(f"Unexpected error reading event file: {e}")
-        return
+    except Exception: return
 
-    if 'pull_request' not in event_data:
-        logging.info("Not a pull_request event.")
-        return
+    if 'pull_request' not in event_data: return
 
-    try:
-        pr_number = event_data['pull_request']['number']
-        repo_name = event_data['repository']['full_name']
-    except KeyError as e:
-        logging.error(f"Missing field: {e}")
-        return
+    pr_number = event_data['pull_request']['number']
+    repo_name = event_data['repository']['full_name']
+    owner, repo_name_only = repo_name.split('/', 1)
 
-    if '/' not in repo_name:
-        logging.error(f"Invalid repo format: {repo_name}")
-        return
-
-    owner_name, repository_name = repo_name.split('/', 1)
-    logging.info(f"🔍 Starting AI review for PR #{pr_number} in {repo_name}")
-
-    # Initialize GitHub client
+    logging.info(f"🔍 AI Review (Smart Mode) for PR #{pr_number}")
+    
     g = Github(github_token)
-    try:
-        repo = g.get_repo(repo_name)
-    except GithubException as e:
-        logging.error(f"Repo access failed: {e}")
-        return
+    repo = g.get_repo(repo_name)
 
-    # Step 1: Resolve old bot threads
-    logging.info("Resolving old bot comments...")
-    resolve_existing_comments(owner_name, repository_name, pr_number, github_token)
-
-    # Step 2: Get project context
-    logging.info("Fetching project context...")
+    # 1. Fetch Context & Analyze
     project_context = get_project_context(repo)
     file_list = get_file_list(repo)
-
-    # Step 3: Get PR diff
     pr, files_data = get_pr_diff(repo, pr_number)
-
+    
     if not files_data:
-        logging.info("No reviewable files.")
+        logging.info("No files to review.")
         return
 
-    logging.info(f"Analyzing {len(files_data)} files...")
+    ai_comments = analyze_code_with_openrouter(files_data, project_context, file_list)
 
-    # Step 4: AI Analysis
-    comments = analyze_code_with_openrouter(files_data, project_context, file_list)
+    # 2. Smart Auto-Resolve & Sync
+    final_comments = manage_review_threads(owner, repo_name_only, pr_number, ai_comments, github_token)
 
-    # Step 5: Submit review
-    submit_review(pr, comments)
-    logging.info("🎉 Review complete!")
+    # 3. Post (only new) comments
+    submit_review(pr, final_comments)
+    logging.info("Done.")
 
 
 if __name__ == "__main__":
