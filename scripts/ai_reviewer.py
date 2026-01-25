@@ -12,32 +12,8 @@ import os
 import json
 import requests
 import logging
+from github import Github, GithubException
 from openai import OpenAI, AuthenticationError, RateLimitError
-
-# ... (rest of imports)
-
-# ... (inside analyze_code_with_openrouter)
-    except AuthenticationError:
-        logging.error("OpenRouter API Key authentication failed. Check your API key.")
-        return []
-    except RateLimitError:
-        logging.error("OpenRouter API Rate limit exceeded.")
-        return []
-    except json.JSONDecodeError as e:
-# ...
-
-# ... (inside main)
-    # Extract owner and repo name properly
-    if '/' not in repo_name:
-        logging.error(f"Invalid repo name format: {repo_name} (Slash missing)")
-        return
-
-    try:
-        # Split only on the first slash to handle potential edge cases safely
-        owner_name, repository_name = repo_name.split('/', 1)
-    except ValueError:
-        logging.error(f"Invalid repo name format: {repo_name}")
-        return
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -289,6 +265,12 @@ def analyze_code_with_openrouter(files_data):
 
         logging.info("OpenRouter response received.")
         return json.loads(content)
+    except AuthenticationError:
+        logging.error("OpenRouter API Key authentication failed. Check your API key.")
+        return []
+    except RateLimitError:
+        logging.error("OpenRouter API Rate limit exceeded.")
+        return []
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse JSON response: {e}")
         return []
@@ -382,7 +364,8 @@ def main():
         return
 
     try:
-        owner_name, repository_name = repo_name.split('/')
+        # Split only on the first slash to handle potential edge cases safely
+        owner_name, repository_name = repo_name.split('/', 1)
     except ValueError:
         logging.error(f"Invalid repo name format: {repo_name}")
         return
