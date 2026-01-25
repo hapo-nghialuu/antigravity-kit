@@ -344,8 +344,13 @@ def main():
         logging.info("Not a pull_request event. Exiting.")
         return
 
-    pr_number = event_data['pull_request']['number']
-    repo_name = event_data['repository']['full_name']
+    # Safely extract required fields from event_data
+    try:
+        pr_number = event_data['pull_request']['number']
+        repo_name = event_data['repository']['full_name']
+    except KeyError as e:
+        logging.error(f"Missing required field in event data: {e}")
+        return
 
     # Extract owner and repo name properly
     if '/' not in repo_name:
