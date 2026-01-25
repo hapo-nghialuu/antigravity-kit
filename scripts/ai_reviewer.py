@@ -199,31 +199,34 @@ def analyze_code_with_openrouter(files_data):
         logging.error(f"Failed to initialize OpenAI client: {e}")
         return []
 
-    # Construct Prompt
+    # Construct Prompt - Strict version to reduce false positives
     prompt = """
-    Bạn là một Senior Code Reviewer. Nhiệm vụ của bạn là review các đoạn code thay đổi trong Pull Request này.
+    Bạn là một Senior Code Reviewer RẤT NGHIÊM KHẮC. Chỉ báo lỗi khi BẠN CHẮC CHẮN 100% đó là bug thực sự.
 
-    Hãy chỉ ra các vấn đề nghiêm trọng:
-    1. Lỗi Logic (Logic Errors) - Rất quan trọng.
-    2. Vấn đề Bảo mật (Security Vulnerabilities) - Rất quan trọng.
-    3. Hiệu năng (Performance Issues).
-    4. Code xấu, khó bảo trì (Bad Practices).
+    CHỈ BÁO LỖI KHI:
+    1. Lỗi Logic NGHIÊM TRỌNG sẽ gây crash hoặc sai kết quả (VÀ chưa có try-catch xử lý).
+    2. Lỗ hổng Bảo mật THỰC SỰ (SQL Injection, XSS, hardcoded secrets, v.v.).
 
-    Bỏ qua:
-    - Các lỗi format/style (đã có linter).
-    - Các thay đổi không quan trọng.
+    KHÔNG BÁO (BỎ QUA HOÀN TOÀN):
+    - Code đã có try-except bọc -> Đừng báo "thiếu xử lý lỗi".
+    - Các edge case hiếm khi xảy ra (ví dụ: API key expired) nếu đã có log/return.
+    - Style/format (đã có linter).
+    - Gợi ý cải thiện (improvements) - chỉ báo BUG thực sự.
+    - Các comment về "nên thêm validation" nếu code đã validate.
+
+    QUY TẮC VÀNG: Nếu bạn không chắc 100%, KHÔNG báo. Trả về [] (rỗng).
 
     Dữ liệu input là JSON list các file kèm patch.
-    Hãy trả về kết quả là một JSON list thuần túy (không markdown block, không giải thích thêm), mỗi item có format sau:
+    Hãy trả về kết quả là một JSON list thuần túy (không markdown block, không giải thích thêm):
     [
         {
             "filename": "tên_file",
             "line_number": số_dòng_trong_patch_để_comment,
-            "comment": "Nội dung review bằng tiếng Việt, ngắn gọn, súc tích."
+            "comment": "Mô tả BUG thực sự, ngắn gọn."
         }
     ]
 
-    Nếu code tốt hoàn toàn, hãy trả về danh sách rỗng [].
+    Nếu code tốt hoặc bạn không chắc chắn, trả về [].
 
     CODE DIFF TO REVIEW:
     """ + json.dumps(files_data)
