@@ -9,7 +9,15 @@ Features:
 - Project context injection for better understanding
 - Auto-resolve outdated bot comments
 
-Model: mistralai/devstral-2512:free (configurable via MODEL_NAME)
+Usage:
+    Run this script in a GitHub Action triggered by `pull_request` events.
+    Ensure GITHUB_TOKEN and OPENROUTER_API_KEY, GITHUB_EVENT_PATH are set.
+
+Environment Variables:
+    GITHUB_TOKEN: GitHub Action token
+    OPENROUTER_API_KEY: API key for OpenRouter
+    GITHUB_EVENT_PATH: Path to the GitHub event JSON file
+    AI_MODEL: Model to use (default: mistralai/devstral-2512:free)
 """
 
 import os
@@ -401,8 +409,14 @@ def main():
     try:
         with open(event_path, 'r') as f:
             event_data = json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Event file not found at {event_path}")
+        return
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse event file: {e}")
+        return
     except Exception as e:
-        logging.error(f"Failed to read event: {e}")
+        logging.error(f"Unexpected error reading event file: {e}")
         return
 
     if 'pull_request' not in event_data:
