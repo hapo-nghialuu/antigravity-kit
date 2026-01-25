@@ -348,6 +348,10 @@ def main():
     repo_name = event_data['repository']['full_name']
 
     # Extract owner and repo name properly
+    if '/' not in repo_name:
+        logging.error(f"Invalid repo name format: {repo_name} (Slash missing)")
+        return
+
     try:
         owner_name, repository_name = repo_name.split('/')
     except ValueError:
