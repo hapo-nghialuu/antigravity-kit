@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 import logging
 from github import Github
 from openai import OpenAI
@@ -11,6 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 IGNORED_EXTENSIONS = ['.json', '.md', '.txt', '.yml', '.yaml', '.lock', '.png', '.jpg', '.jpeg', '.gif', '.svg']
 IGNORED_DIRS = ['dist', 'build', 'node_modules', '.github']
 MODEL_NAME = "mistralai/devstral-2512:free"
+GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 
 def should_review(filename):
     """Check if file should be reviewed based on extension and path."""
@@ -38,6 +40,117 @@ def get_pr_diff(repo, pr_number):
             "patch": file.patch
         })
     return pr, files_data
+
+def resolve_thread(thread_id, token):
+    """Resolve a specific review thread using GraphQL."""
+    mutation = """
+    mutation ResolveThread($threadId: ID!) {
+      resolveReviewThread(input: {threadId: $threadId}) {
+        thread {
+          isResolved
+        }
+      }
+    }
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "query": mutation,
+        "variables": {"threadId": thread_id}
+    }
+
+    try:
+        response = requests.post(GITHUB_GRAPHQL_URL, json=payload, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        if 'errors' in data:
+            logging.error(f"GraphQL Error resolving thread {thread_id}: {data['errors']}")
+        else:
+            logging.info(f"Resolved thread {thread_id}")
+    except Exception as e:
+        logging.error(f"Failed to resolve thread {thread_id}: {e}")
+
+def resolve_existing_comments(repo_owner, repo_name, pr_number, token):
+    """
+    Fetch all unresolved review threads on the PR and resolve them if they were created by the bot.
+    Since we can't easily check 'author' of a thread in a simple query without pagination complexity,
+    we will assume for this V1 that we want to auto-resolve ALL unresolved threads (or try to filter).
+
+    Refined Strategy: Fetch threads, check if author is 'github-actions[bot]', then resolve.
+    """
+    query = """
+    query($owner: String!, $repo: String!, $prNumber: Int!) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $prNumber) {
+          id
+          reviewThreads(last: 50) {
+            nodes {
+              id
+              isResolved
+              comments(first: 1) {
+                nodes {
+                  author {
+                    login
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "query": query,
+        "variables": {
+            "owner": repo_owner,
+            "repo": repo_name,
+            "prNumber": pr_number
+        }
+    }
+
+    try:
+        response = requests.post(GITHUB_GRAPHQL_URL, json=payload, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        if 'errors' in data:
+            logging.error(f"GraphQL Error fetching threads: {data['errors']}")
+            return
+
+        threads = data['data']['repository']['pullRequest']['reviewThreads']['nodes']
+        bot_threads = []
+
+        for thread in threads:
+            if thread['isResolved']:
+                continue
+
+            # Check author of the first comment in thread
+            comments = thread['comments']['nodes']
+            if not comments:
+                continue
+
+            author = comments[0]['author']
+            # Author can be None if user is deleted
+            if author and author.get('login') == 'github-actions[bot]':
+                bot_threads.append(thread['id'])
+
+        if not bot_threads:
+            logging.info("No unresolved bot threads found.")
+            return
+
+        logging.info(f"Found {len(bot_threads)} unresolved bot threads. Resolving...")
+        for thread_id in bot_threads:
+            resolve_thread(thread_id, token)
+
+    except Exception as e:
+        logging.error(f"Failed to fetch/resolve threads: {e}")
 
 def analyze_code_with_openrouter(files_data):
     """Send code diff to OpenRouter for review."""
@@ -163,6 +276,7 @@ def main():
     with open(event_path, 'r') as f:
         event_data = json.load(f)
 
+    # Handle pull_request event
     if 'pull_request' not in event_data:
         logging.info("Not a pull_request event. Exiting.")
         return
@@ -170,10 +284,25 @@ def main():
     pr_number = event_data['pull_request']['number']
     repo_name = event_data['repository']['full_name']
 
+    # Extract owner and repo name properly
+    # repo_name is usually "owner/repo"
+    try:
+        owner_name, repository_name = repo_name.split('/')
+    except ValueError:
+        logging.error(f"Invalid repo name format: {repo_name}")
+        return
+
     logging.info(f"Starting review for PR #{pr_number} in {repo_name}")
 
+    # 1. Initialize PyGithub
     g = Github(github_token)
     repo = g.get_repo(repo_name)
+
+    # 2. AUTO-RESOLVE OLD THREADS
+    logging.info("Checking for unresolved bot threads...")
+    resolve_existing_comments(owner_name, repository_name, pr_number, github_token)
+
+    # 3. Analyze new code
     pr, files_data = get_pr_diff(repo, pr_number)
 
     if not files_data:
