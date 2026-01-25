@@ -108,6 +108,10 @@ def analyze_code_with_openrouter(files_data):
 
         content = content.strip()
 
+        if not content:
+            logging.warning("Received empty response from OpenRouter.")
+            return []
+
         logging.info("OpenRouter response received.")
         return json.loads(content)
     except json.JSONDecodeError:
@@ -130,10 +134,16 @@ def post_comments(pr, comments):
     for note in comments:
         filename = note.get('filename')
         line = note.get('line_number') # AI guess of the line
-        body = f"🤖 **AI Review**: {note.get('comment')}"
+        comment_text = note.get('comment')
+
+        if not comment_text:
+            continue
+
+        body = f"🤖 **AI Review**: {comment_text}"
 
         try:
-            if not line:
+            # Validate line number
+            if not line or not str(line).isdigit():
                 pr.create_issue_comment(f"File `{filename}`: {body}")
                 continue
 
