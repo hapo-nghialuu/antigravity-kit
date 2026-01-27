@@ -1,0 +1,28 @@
+{
+  "name": "antigravity-kit",
+  "version": "1.0.0",
+  "description": "20 specialist agents + 36 domain skills for comprehensive AI-assisted development",
+  "author": "nghialuutrung",
+  "license": "MIT",
+
+  "agents": {
+    "directory": "agents",
+    "pattern": "*.md"
+  },
+
+  "skills": {
+    "directory": "skills",
+    "pattern": "*/SKILL.md"
+  },
+
+  "hooks": {
+    "file": "hooks/hooks.json"
+  },
+
+  "metadata": {
+    "total_agents": 20,
+    "total_skills": 38,
+    "total_workflows": 17,
+    "validation_scripts": 16
+  }
+}
