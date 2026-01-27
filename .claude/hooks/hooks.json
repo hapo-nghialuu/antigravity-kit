@@ -1,0 +1,14 @@
+{
+  "PostToolUse": {
+    "Edit": {
+      "script": "scripts/validate_dispatcher.py",
+      "args": ["--file", "{file_path}", "--tool", "edit"],
+      "description": "Run validators after code edits"
+    },
+    "Write": {
+      "script": "scripts/validate_dispatcher.py",
+      "args": ["--file", "{file_path}", "--tool", "write"],
+      "description": "Run validators after writing new files"
+    }
+  }
+}
