@@ -1,4 +1,5 @@
 ---
+name: spec-design
 description: Create comprehensive technical design for a specification
 allowed-tools: Glob, Grep, Read, Write, Edit, WebSearch, WebFetch
 argument-hint: <feature-name> [-y]

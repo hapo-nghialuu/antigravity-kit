@@ -1,5 +1,7 @@
 ---
+name: spec-status
 description: Display current status of a specification.
+argument-hint: <feature-name>
 ---
 
 # /spec-status - View Specification Status

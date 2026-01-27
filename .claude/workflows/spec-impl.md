@@ -1,5 +1,7 @@
 ---
+name: spec-impl
 description: Implement specific tasks from task list.
+argument-hint: <feature-name> <task-ids>
 ---
 
 # /spec-impl - Implement Tasks
