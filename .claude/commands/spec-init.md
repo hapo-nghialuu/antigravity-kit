@@ -1,5 +1,4 @@
 ---
-name: spec-init
 description: Initialize a new specification with detailed project description
 allowed-tools: Read, Write, Glob
 argument-hint: <project-description>

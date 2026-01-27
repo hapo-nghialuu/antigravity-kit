@@ -204,12 +204,12 @@ Use workflows for structured tasks:
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest
 ├── agents/                      # 20 agents (auto-discovered)
-├── skills/                      # 36 skills (auto-discovered)
+├── skills/                      # 38 skills (auto-discovered)
 │   └── <skill-name>/
 │       ├── SKILL.md             # Entry point
 │       ├── references/          # Progressive loading
 │       └── scripts/             # Validation scripts
-├── workflows/                   # 11 workflows
+├── commands/                    # 17 slash commands
 ├── hooks/
 │   └── hooks.json              # PostToolUse hooks
 └── scripts/

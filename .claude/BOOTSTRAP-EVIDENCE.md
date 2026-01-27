@@ -516,7 +516,7 @@ Reports findings to user
 │   ├── testing-patterns/
 │   └── ... (31 more)
 │
-├── workflows/                   # 11 workflows
+├── commands/                    # 17 slash commands
 │   ├── brainstorm.md
 │   ├── create.md
 │   ├── debug.md
@@ -525,6 +525,12 @@ Reports findings to user
 │   ├── orchestrate.md
 │   ├── plan.md
 │   ├── preview.md
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-impl.md
+│   ├── spec-status.md
 │   ├── status.md
 │   ├── test.md
 │   └── ui-ux-pro-max.md

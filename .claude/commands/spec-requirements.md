@@ -1,5 +1,4 @@
 ---
-name: spec-requirements
 description: Generate comprehensive requirements for a specification
 allowed-tools: Glob, Grep, Read, Write, Edit, WebSearch, WebFetch
 argument-hint: <feature-name>
