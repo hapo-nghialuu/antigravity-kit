@@ -1,5 +1,4 @@
 ---
-name: spec-tasks
 description: Generate implementation tasks for a specification
 allowed-tools: Glob, Grep, Read, Write, Edit, WebSearch, WebFetch
 argument-hint: <feature-name> [-y] [--sequential]

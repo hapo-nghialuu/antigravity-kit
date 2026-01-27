@@ -23,6 +23,17 @@ ag-kit init
 
 This installs the `.agent` folder containing all templates into your project.
 
+## 🆕 Claude Code Plugin
+
+**For Claude Code users**, this repository also includes a `.claude/` plugin with native integration:
+
+- ✅ **Auto-discovery** - Agents and skills load automatically
+- ✅ **Progressive loading** - Load only what you need via @mentions
+- ✅ **Validation hooks** - 16 validators run after code edits
+- ✅ **Plugin format** - Standard Claude Code plugin structure
+
+**See [`CLAUDE.md`](CLAUDE.md) for Claude Code specific documentation.**
+
 ## What's Included
 
 | Component     | Count | Description                                                        |
