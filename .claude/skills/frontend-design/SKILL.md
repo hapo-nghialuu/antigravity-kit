@@ -43,16 +43,91 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 
 > **STOP! If the user's request is open-ended, DO NOT default to your favorites.**
 
-### When User Prompt is Vague, ASK:
+### When User Prompt is Vague, ASK (Use AskUserQuestion Tool):
 
-**Color not specified?** Ask:
-> "What color palette do you prefer? (blue/green/orange/neutral/other?)"
+**When design direction is unclear, use AskUserQuestion to clarify:**
 
-**Style not specified?** Ask: 
-> "What style are you going for? (minimal/bold/retro/futuristic/organic?)"
+```json
+{
+  "questions": [
+    {
+      "question": "What color palette do you prefer for this design?",
+      "header": "Color",
+      "options": [
+        {
+          "label": "Blue spectrum",
+          "description": "Trust, calm, professional - good for SaaS, fintech, healthcare"
+        },
+        {
+          "label": "Green spectrum",
+          "description": "Growth, nature, wealth - good for eco, finance, health"
+        },
+        {
+          "label": "Warm (orange/red)",
+          "description": "Energy, urgency, appetite - good for food, retail, action"
+        },
+        {
+          "label": "Neutral/monochrome",
+          "description": "Minimal, elegant, timeless - good for luxury, portfolio"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "What style are you going for?",
+      "header": "Style",
+      "options": [
+        {
+          "label": "Minimal/Clean",
+          "description": "Lots of whitespace, simple typography, restrained"
+        },
+        {
+          "label": "Bold/Dramatic",
+          "description": "Large typography, high contrast, statement-making"
+        },
+        {
+          "label": "Playful/Organic",
+          "description": "Rounded corners, friendly, approachable"
+        },
+        {
+          "label": "Technical/Sharp",
+          "description": "Geometric, brutalist edges, data-focused"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Do you have a layout preference?",
+      "header": "Layout",
+      "options": [
+        {
+          "label": "Single column",
+          "description": "Linear storytelling, mobile-first, editorial"
+        },
+        {
+          "label": "Grid layout",
+          "description": "Structured, product showcase, dashboard"
+        },
+        {
+          "label": "Asymmetric",
+          "description": "Creative, unique, portfolio"
+        },
+        {
+          "label": "Full-width sections",
+          "description": "Modern SaaS, landing page, hero-driven"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
 
-**Layout not specified?** Ask:
-> "Do you have a layout preference? (single column/grid/asymmetric/full-width?)"
+**Answer Processing:**
+- Color = Blue + Style = Minimal → Clean SaaS aesthetic
+- Color = Warm + Style = Bold → High-energy marketing site
+- Layout = Grid + Style = Technical → Dashboard/data visualization
+- Layout = Asymmetric + Color = Neutral → Portfolio/agency site
 
 ### ⛔ DEFAULT TENDENCIES TO AVOID (ANTI-SAFE HARBOR):
 

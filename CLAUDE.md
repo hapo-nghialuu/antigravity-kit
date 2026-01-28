@@ -200,57 +200,41 @@ File to edit: UserService.ts
 
 ## SOCRATIC GATE (For Complex Tasks)
 
-**MANDATORY: Complex requests must pass through clarification first.**
+**MANDATORY: Complex requests must pass through clarification using AskUserQuestion tool.**
 
 ### When to Trigger
 
 | Pattern | Action |
 |---------|--------|
-| "Build/Create/Make [thing]" without details | 🛑 ASK 3 questions |
+| "Build/Create/Make [thing]" without details | 🛑 Use AskUserQuestion |
 | Complex feature or architecture | 🛑 Clarify before implementing |
 | Update/change request | 🛑 Confirm scope |
 | Vague requirements | 🛑 Ask purpose, users, constraints |
 
-### 3 Questions Before Implementation
+### Required: Use AskUserQuestion Tool
 
+**Claude Code provides the `AskUserQuestion` tool for structured clarification.**
+
+**Protocol:**
 1. **STOP** - Do NOT start coding
-2. **ASK** - Minimum 3 questions:
-   - 🎯 Purpose: What problem are you solving?
-   - 👥 Users: Who will use this?
-   - 📦 Scope: Must-have vs nice-to-have?
-3. **WAIT** - Get response before proceeding
+2. **INVOKE** - Use AskUserQuestion tool with 1-4 questions (refer to brainstorming skill for examples)
+3. **WAIT** - Tool execution pauses until user answers (60s timeout)
+4. **PROCEED** - Use answers to inform implementation
 
-### Question Format (MANDATORY)
-
-```markdown
-### [PRIORITY] **[DECISION POINT]**
-
-**Question:** [Clear question]
-
-**Why This Matters:**
-- [Architectural consequence]
-- [Affects: cost/complexity/timeline/scale]
-
-**Options:**
-| Option | Pros | Cons | Best For |
-|--------|------|------|----------|
-| A | [+] | [-] | [Use case] |
-
-**If Not Specified:** [Default + rationale]
-```
+**See:** `.claude/skills/brainstorming/SKILL.md` for full question templates and examples.
 
 ### Request Types
 
 | Request Type            | Strategy       | Required Action                                |
 | ----------------------- | -------------- | ---------------------------------------------- |
-| **New Feature / Build** | Deep Discovery | ASK minimum 3 strategic questions              |
+| **New Feature / Build** | Deep Discovery | Use AskUserQuestion with minimum 3 questions   |
 | **Code Edit / Bug Fix** | Context Check  | Confirm understanding + ask impact questions   |
-| **Vague / Simple**      | Clarification  | Ask Purpose, Users, and Scope                  |
+| **Vague / Simple**      | Clarification  | Ask Purpose, Users, and Scope via tool         |
 | **Full Orchestration**  | Gatekeeper     | STOP subagents until user confirms plan        |
 
 **Protocol:**
-1. **Never Assume:** If even 1% is unclear, ASK.
-2. **Wait:** Do NOT invoke subagents or write code until user clears the Gate.
+1. **Never Assume:** If even 1% is unclear, use AskUserQuestion tool.
+2. **Wait:** Do NOT invoke subagents or write code until user answers.
 
 ---
 

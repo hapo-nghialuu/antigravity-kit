@@ -60,16 +60,117 @@ allowed-tools: Read, Glob, Grep, Bash
 
 > **STOP! If the user's request is open-ended, DO NOT default to your favorites.**
 
-### You MUST Ask If Not Specified:
+### You MUST Ask If Not Specified (Use AskUserQuestion Tool)
 
-| Aspect | Ask | Why |
-|--------|-----|-----|
-| **Platform** | "iOS, Android, or both?" | Affects EVERY design decision |
-| **Framework** | "React Native, Flutter, or native?" | Determines patterns and tools |
-| **Navigation** | "Tab bar, drawer, or stack-based?" | Core UX decision |
-| **State** | "What state management? (Zustand/Redux/Riverpod/BLoC?)" | Architecture foundation |
-| **Offline** | "Does this need to work offline?" | Affects data strategy |
-| **Target devices** | "Phone only, or tablet support?" | Layout complexity |
+**When mobile project details are unclear, use AskUserQuestion:**
+
+```json
+{
+  "questions": [
+    {
+      "question": "Which platform(s) are you targeting?",
+      "header": "Platform",
+      "options": [
+        {
+          "label": "iOS only",
+          "description": "iPhone/iPad - SwiftUI or React Native iOS"
+        },
+        {
+          "label": "Android only",
+          "description": "Android phones/tablets - Kotlin/Compose or React Native Android"
+        },
+        {
+          "label": "Both (cross-platform)",
+          "description": "iOS + Android - React Native or Flutter recommended"
+        },
+        {
+          "label": "Not decided",
+          "description": "Still evaluating platform options"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "What framework do you prefer?",
+      "header": "Framework",
+      "options": [
+        {
+          "label": "React Native",
+          "description": "JavaScript/TypeScript - best for web developers, OTA updates"
+        },
+        {
+          "label": "Flutter",
+          "description": "Dart - pixel-perfect UI, excellent performance"
+        },
+        {
+          "label": "Native (Swift/Kotlin)",
+          "description": "Platform-specific - maximum control and performance"
+        },
+        {
+          "label": "Let you decide",
+          "description": "Choose the best option for this project"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "What type of navigation pattern?",
+      "header": "Navigation",
+      "options": [
+        {
+          "label": "Tab bar",
+          "description": "Bottom tabs for main sections (most common)"
+        },
+        {
+          "label": "Drawer",
+          "description": "Side menu for many options"
+        },
+        {
+          "label": "Stack-based",
+          "description": "Linear flow, screens push/pop"
+        },
+        {
+          "label": "Custom/Hybrid",
+          "description": "Mix of patterns or custom navigation"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Does this app need offline functionality?",
+      "header": "Offline",
+      "options": [
+        {
+          "label": "Yes, full offline",
+          "description": "Core features work without internet"
+        },
+        {
+          "label": "Partial offline",
+          "description": "Some features cached, most need network"
+        },
+        {
+          "label": "No, online only",
+          "description": "Requires active internet connection"
+        },
+        {
+          "label": "Not sure",
+          "description": "Need guidance on offline requirements"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+**Answer Processing:**
+- Platform = iOS only + Framework = Native → SwiftUI patterns
+- Platform = Android only + Framework = Native → Kotlin Compose patterns
+- Platform = Both + Framework = React Native → RN cross-platform with platform-specific code
+- Platform = Both + Framework = Flutter → Flutter cross-platform
+- Navigation = Tab bar → Bottom tab navigation component
+- Offline = Yes → AsyncStorage + offline-first architecture
+- Offline = No → Standard API calls with loading states
 
 ### ⛔ AI MOBILE ANTI-PATTERNS (YASAK LİSTESİ)
 

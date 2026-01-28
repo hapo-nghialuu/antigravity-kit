@@ -1,5 +1,8 @@
 ---
+name: spec-impl
 description: Implement specific tasks from task list.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash
+argument-hint: <feature-name> [task-ids]
 ---
 
 # /spec-impl - Implement Tasks
