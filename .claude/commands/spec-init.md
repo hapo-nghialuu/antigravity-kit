@@ -1,4 +1,5 @@
 ---
+name: spec-init
 description: Initialize a new specification with detailed project description
 allowed-tools: Read, Write, Glob
 argument-hint: <project-description>
@@ -22,10 +23,42 @@ Before any execution, validate $ARGUMENTS:
    - Has fewer than 5 words
    - Contains only generic terms like "better", "improve", "fix", "update" without specific context
    - Lacks clear nouns describing what to build
-3. **Ambiguity Fallback**: When triggered:
+3. **Ambiguity Fallback**: When triggered, use AskUserQuestion tool:
    - Do NOT proceed with initialization
-   - Propose 2-3 specific feature name options based on common patterns
-   - Ask user: "Could you clarify what you'd like to build, or select one of these options?"
+   - Invoke AskUserQuestion with 2-3 specific feature options based on common patterns
+
+   **Example:**
+   ```json
+   {
+     "questions": [
+       {
+         "question": "Your description is too vague. What type of feature are you building?",
+         "header": "Feature Type",
+         "options": [
+           {
+             "label": "User Management",
+             "description": "Authentication, profiles, user CRUD operations"
+           },
+           {
+             "label": "Data Dashboard",
+             "description": "Analytics, charts, reporting interface"
+           },
+           {
+             "label": "Mobile App",
+             "description": "Cross-platform mobile application"
+           },
+           {
+             "label": "API Service",
+             "description": "Backend API endpoints and business logic"
+           }
+         ],
+         "multiSelect": false
+       }
+     ]
+   }
+   ```
+
+   **After user selects:** Re-run spec-init with the selected feature description
 4. **Only proceed** to Core Task if input clearly describes a feature/project
 
 ## Core Task

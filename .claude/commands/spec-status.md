@@ -1,5 +1,8 @@
 ---
+name: spec-status
 description: Display current status of a specification.
+allowed-tools: Read, Glob
+argument-hint: [feature-name]
 ---
 
 # /spec-status - View Specification Status

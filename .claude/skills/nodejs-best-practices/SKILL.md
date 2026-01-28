@@ -54,11 +54,68 @@ What are you building?
 | **TypeScript** | Native | Excellent | Good |
 | **Learning curve** | Low | Medium | Low |
 
-### Selection Questions to Ask:
-1. What's the deployment target?
-2. Is cold start time critical?
-3. Does team have existing experience?
-4. Is there legacy code to maintain?
+### Framework Selection Clarification (Use AskUserQuestion Tool)
+
+**When framework choice is unclear, use AskUserQuestion to clarify:**
+
+```json
+{
+  "questions": [
+    {
+      "question": "What's the deployment target for this Node.js application?",
+      "header": "Deployment",
+      "options": [
+        {
+          "label": "Edge/Serverless",
+          "description": "Cloudflare Workers, Vercel Edge, AWS Lambda - needs fast cold starts"
+        },
+        {
+          "label": "Traditional server",
+          "description": "Long-running process on VPS, EC2, or dedicated server"
+        },
+        {
+          "label": "Container",
+          "description": "Docker/Kubernetes with managed orchestration"
+        },
+        {
+          "label": "Not decided yet",
+          "description": "Still evaluating deployment options"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Does your team have existing Node.js framework experience?",
+      "header": "Experience",
+      "options": [
+        {
+          "label": "Express",
+          "description": "Team familiar with Express.js patterns"
+        },
+        {
+          "label": "NestJS",
+          "description": "Team uses NestJS or similar DI frameworks"
+        },
+        {
+          "label": "Fastify/Hono",
+          "description": "Team experienced with modern lightweight frameworks"
+        },
+        {
+          "label": "None/Learning",
+          "description": "New to Node.js or choosing first framework"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+**Answer Processing:**
+- Deployment = Edge/Serverless → Recommend Hono
+- Deployment = Traditional + Experience = Express → Recommend Express or Fastify
+- Deployment = Container + Experience = NestJS → Recommend NestJS
+- Experience = None → Recommend Express (largest ecosystem, easiest learning)
 
 ---
 

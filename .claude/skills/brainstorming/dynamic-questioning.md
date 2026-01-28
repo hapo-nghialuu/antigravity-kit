@@ -133,42 +133,71 @@ INPUT: User request + Context (greenfield/feature/refactor/debug)
 
 ---
 
-## 📐 Dynamic Question Template
+## 📐 Dynamic Question Template (Using AskUserQuestion Tool)
 
+**IMPORTANT:** All questions must use Claude Code's `AskUserQuestion` tool instead of markdown tables.
+
+### Template Structure
+
+```json
+{
+  "questions": [
+    {
+      "question": "[Clear, specific question with architectural consequence]",
+      "header": "[12 chars max]",
+      "options": [
+        {
+          "label": "[Option A name]",
+          "description": "[Pros + Cons + Best for - concise]"
+        },
+        {
+          "label": "[Option B name]",
+          "description": "[Pros + Cons + Best for - concise]"
+        },
+        {
+          "label": "[Option C name]",
+          "description": "[Pros + Cons + Best for - concise]"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+### Priority-Based Question Batching
+
+**🔴 CRITICAL (P0) - 1st AskUserQuestion call:**
+- Blocking decisions (cannot proceed without answer)
+- Max 4 questions
+- Must answer before any coding
+
+**🟡 HIGH-LEVERAGE (P1) - 2nd AskUserQuestion call (after P0):**
+- Affects >30% of implementation
+- Max 4 questions
+- Can defer if user wants to proceed
+
+**🟢 NICE-TO-HAVE (P2) - 3rd call or document as defaults:**
+- Edge cases, optimizations
+- Document defaults in plan
+- Ask only if user requests
+
+### Constraints
+
+- **1-4 questions** per AskUserQuestion invocation
+- **2-4 options** per question
+- **Header max 12 chars** (e.g., "Storage", "Auth", "Cache")
+- **Description < 100 chars** (concise trade-offs)
+- **Always support "Other"** for free-text input
+
+### Default Handling
+
+**For each question, document:**
 ```markdown
-Based on your request for [DOMAIN] [FEATURE]:
-
-## 🔴 CRITICAL (Blocking Decisions)
-
-### 1. **[DECISION POINT]**
-
-**Question:** [Clear, specific question]
-
-**Why This Matters:**
-- [Explain architectural consequence]
-- [Affects: cost / complexity / timeline / scale]
-
-**Options:**
-| Option | Pros | Cons | Best For |
-|--------|------|------|----------|
-| A | [Advantage] | [Disadvantage] | [Use case] |
-| B | [Advantage] | [Disadvantage] | [Use case] |
-
-**If Not Specified:** [Default choice + rationale]
-
----
-
-## 🟡 HIGH-LEVERAGE (Affects Implementation)
-
-### 2. **[DECISION POINT]**
-[Same format]
-
----
-
-## 🟢 NICE-TO-HAVE (Edge Cases)
-
-### 3. **[DECISION POINT]**
-[Same format]
+**If user doesn't answer within 60s or selects "Other" without specifics:**
+- Default: [Chosen option]
+- Rationale: [Why this default makes sense]
+- Impact: [Can be changed later? What's the cost?]
 ```
 
 ---
@@ -226,116 +255,164 @@ STEP 4: Format Output
 
 ---
 
-## 📊 Generated Output (Example)
+## 📊 Generated Output (Example Using AskUserQuestion Tool)
 
+**User Request:** "Build an Instagram clone"
+
+### Step 1: P0 Questions (CRITICAL - Must Answer First)
+
+```json
+{
+  "questions": [
+    {
+      "question": "Where should user photos be stored and served from? (Affects hosting costs, page load speed, CDN complexity)",
+      "header": "Storage",
+      "options": [
+        {
+          "label": "Cloudinary",
+          "description": "$89/mo (25GB), Fast CDN, Low complexity - MVP rapid launch"
+        },
+        {
+          "label": "AWS S3 + CloudFront",
+          "description": "$0.023/GB, Fast CDN, Medium complexity - Production cost-optimized"
+        },
+        {
+          "label": "Supabase Storage",
+          "description": "Free tier 1GB, Medium speed, Low complexity - Small scale"
+        },
+        {
+          "label": "Local Storage",
+          "description": "Server cost, Slow, Low complexity - Development only"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "How should the main feed algorithm work? (Affects DB query complexity, caching strategy, dev time)",
+      "header": "Feed Type",
+      "options": [
+        {
+          "label": "Chronological",
+          "description": "Low complexity, Simple query - Early stage transparency"
+        },
+        {
+          "label": "Follow-Only",
+          "description": "Medium complexity, JOIN pagination - Most social apps"
+        },
+        {
+          "label": "Algorithmic",
+          "description": "High complexity, Pre-computed tables - Instagram competitor"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "How should users sign up and login? (Affects dev time 2-5 hrs, security, UX friction)",
+      "header": "Auth Method",
+      "options": [
+        {
+          "label": "Email/Password",
+          "description": "4-5 hrs, High security (with 2FA), Medium UX - Full control"
+        },
+        {
+          "label": "Social Only (Google/FB)",
+          "description": "1-2 hrs, Provider-dependent security, Smooth UX - B2C rapid launch"
+        },
+        {
+          "label": "Magic Link",
+          "description": "2-3 hrs, Medium security, Very smooth UX - Security-focused"
+        },
+        {
+          "label": "Clerk/Auth0 (Recommended)",
+          "description": "1 hr, High security, Smooth UX - Fastest to market"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
 ```
-Based on your Instagram clone request:
 
-## 🔴 CRITICAL DECISIONS (Cannot Proceed Without Answers)
-
-### 1. **Photo Storage Strategy**
-
-**Question:** Where will user photos be stored and served?
-
-**Why This Matters:**
-- Affects: Monthly hosting costs, page load speed, CDN complexity
-- High-volume social apps: 1000 users × 10 photos × 2MB = 20GB storage
-
-**Options:**
-| Option | Cost | Speed | Complexity | Best For |
-|--------|------|-------|------------|----------|
-| **Cloudinary** | $89/mo (25GB) | Fast (CDN) | Low | MVP, rapid launch |
-| **AWS S3 + CloudFront** | $0.023/GB | Fast (CDN) | Medium | Production, cost-optimized |
-| **Supabase Storage** | Free tier 1GB | Medium | Low | Small scale, simple |
-| **Local Storage** | Server cost | Slow | Low | Development only |
-
-**If Not Specified:** Cloudinary (balanced for MVP)
+**Default Handling (if 60s timeout or no answer):**
+- Storage: Cloudinary (balanced for MVP, can migrate later)
+- Feed: Follow-Only (standard for social apps)
+- Auth: Clerk (fastest implementation, production-ready)
 
 ---
 
-### 2. **Feed Algorithm Choice**
+### Step 2: P1 Questions (HIGH-LEVERAGE - After P0 Answered)
 
-**Question:** How should the main feed work?
+```json
+{
+  "questions": [
+    {
+      "question": "Do users need instant notifications for likes/comments? (WebSocket adds complexity, polling simpler)",
+      "header": "Real-time",
+      "options": [
+        {
+          "label": "WebSocket + Redis",
+          "description": "High complexity, $10+/mo scale cost - >1000 concurrent users"
+        },
+        {
+          "label": "Polling (30s) (Recommended)",
+          "description": "Low complexity, DB query cost - <1000 users, MVP validation"
+        },
+        {
+          "label": "No Real-time",
+          "description": "None, Free - Defer until validated"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
 
-**Why This Matters:**
-- Affects: Database query complexity, caching strategy, development time
-- Algorithmic feeds require ML infrastructure, ranking signals
-
-**Options:**
-| Option | Complexity | Database Impact | Best For |
-|--------|------------|-----------------|----------|
-| **Chronological** | Low | Simple query | Early stage, transparency |
-| **Follow-Only** | Medium | JOIN with pagination | Most social apps |
-| **Algorithmic** | High | Pre-computed feed tables | Instagram competitor |
-
-**If Not Specified:** Follow-Only (balanced for social app)
-
----
-
-### 3. **Authentication Approach**
-
-**Question:** How do users sign up and login?
-
-**Why This Matters:**
-- Affects: Development time (2-5 hours), security posture, UX friction
-
-**Options:**
-| Option | Dev Time | Security | UX | Best For |
-|--------|----------|----------|-----|----------|
-| **Email/Password** | 4-5 hrs | High (if 2FA) | Medium | Full control needed |
-| **Social Only** | 1-2 hrs | Provider-dependent | Smooth | B2C, rapid launch |
-| **Magic Link** | 2-3 hrs | Medium | Very smooth | Security-focused |
-| **Clerk/Auth0** | 1 hr | High | Smooth | Fastest to market |
-
-**If Not Specified:** Clerk (fastest for MVP)
+**Default:** Polling for MVP (defer WebSocket until user base validated)
 
 ---
 
-## 🟡 HIGH-LEVERAGE (Affects Architecture)
+### Step 3: P2 Features (NICE-TO-HAVE - Document as Deferred)
 
-### 4. **Real-time Notifications**
+**Documented in Plan (not asked via tool):**
 
-**Question:** Do users need instant notifications for likes/comments?
-
-**Why This Matters:**
-- WebSocket adds infrastructure complexity (Redis pub/sub for scaling)
-- Polling is simpler but higher latency
-
-**Options:**
-| Option | Complexity | Scale Cost | Best For |
-|--------|------------|------------|----------|
-| **WebSocket + Redis** | High | $10+/mo | >1000 concurrent users |
-| **Polling (30s)** | Low | DB queries | <1000 users |
-| **No Real-time** | None | None | MVP, validate first |
-
-**If Not Specified:** Polling for MVP (defer WebSocket until validated)
+| Feature | Recommendation | Rationale |
+|---------|----------------|-----------|
+| **Video/Reels** | Defer to v2 | Major complexity (video processing, streaming infrastructure) |
+| **Direct Messaging** | Defer to v2 | Separate subsystem (chat != feed architecture) |
+| **Stories (24h)** | Defer to v2 | Requires scheduled cleanup, TTL logic |
 
 ---
 
-## 🟢 NICE-TO-HAVE (Defer to v2)
+### Final Implementation Summary
 
-### 5. **Video/Reels Support**
-- Major complexity (video processing, streaming infrastructure)
-- Recommendation: Launch with photos only, add video after validation
+**After P0 + P1 answers collected:**
 
-### 6. **Direct Messaging**
-- Separate subsystem (chat infrastructure different from feed)
-- Recommendation: Use Pusher/Stream for real-time or defer entirely
+```markdown
+## Implementation Plan
 
----
+### Tech Stack (Based on Answers)
+- Storage: [User's P0 answer]
+- Feed: [User's P0 answer]
+- Auth: [User's P0 answer]
+- Real-time: [User's P1 answer]
 
-## 📋 Summary
+### Deferred Features
+- Video/Reels → v2
+- Direct Messaging → v2
+- Stories → v2
 
-| Decision | Recommendation | If Changed |
-|----------|----------------|------------|
-| Storage | Cloudinary | +3 hrs setup |
-| Feed | Follow-only | +2 hrs query optimization |
-| Auth | Clerk | -3 hrs dev time |
-| Real-time | Polling | +5 hrs WebSocket setup |
-| Video | Defer to v2 | N/A |
-| DM | Defer to v2 | N/A |
+### Estimated MVP Time
+- With Cloudinary + Follow-Only + Clerk + Polling: **15-20 hours**
+- If changed to AWS S3 + Algorithmic + Custom Auth: **+10 hours**
 
-**Total Estimated MVP Time:** 15-20 hours with recommendations above
+### Next Steps
+1. Create project structure
+2. Set up authentication ([chosen method])
+3. Implement photo upload ([chosen storage])
+4. Build feed ([chosen algorithm])
+5. Add engagement (likes/comments)
+6. Testing + deployment
 ```
 
 ---

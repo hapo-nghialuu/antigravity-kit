@@ -28,13 +28,16 @@ When `/brainstorm` is triggered:
    - Each with pros and cons
    - Consider unconventional solutions
 
-3. **Compare and recommend**
-   - Summarize tradeoffs
-   - Give a recommendation with reasoning
+3. **Present options using AskUserQuestion tool**
+   - Use tool to let user select preferred approach
+   - Options shown with pros/cons in descriptions
+   - User can select or provide custom approach
 
 ---
 
 ## Output Format
+
+### Step 1: Analysis (Text Output)
 
 ```markdown
 ## 🧠 Brainstorm: [Topic]
@@ -42,66 +45,89 @@ When `/brainstorm` is triggered:
 ### Context
 [Brief problem statement]
 
----
+### Generated Options
 
-### Option A: [Name]
-[Description]
+I've identified 3 viable approaches for [topic]:
+```
 
-✅ **Pros:**
-- [benefit 1]
-- [benefit 2]
+### Step 2: Selection (Use AskUserQuestion Tool)
 
-❌ **Cons:**
-- [drawback 1]
+```json
+{
+  "questions": [
+    {
+      "question": "Which approach would you like to explore for [topic]?",
+      "header": "Approach",
+      "options": [
+        {
+          "label": "[Option A Name]",
+          "description": "Pros: [benefit 1, benefit 2] | Cons: [drawback] | Effort: [Low/Med/High]"
+        },
+        {
+          "label": "[Option B Name]",
+          "description": "Pros: [benefit] | Cons: [drawback 1, drawback 2] | Effort: [Low/Med/High]"
+        },
+        {
+          "label": "[Option C Name]",
+          "description": "Pros: [benefit] | Cons: [drawback] | Effort: [Low/Med/High]"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
 
-📊 **Effort:** Low | Medium | High
+### Step 3: Follow-up (After Selection)
 
----
+```markdown
+## 💡 Selected: [User's Choice]
 
-### Option B: [Name]
-[Description]
+**Why this is a good choice:**
+[Reasoning based on context]
 
-✅ **Pros:**
-- [benefit 1]
+**Next steps:**
+1. [Concrete action 1]
+2. [Concrete action 2]
+3. [Concrete action 3]
 
-❌ **Cons:**
-- [drawback 1]
-- [drawback 2]
-
-📊 **Effort:** Low | Medium | High
-
----
-
-### Option C: [Name]
-[Description]
-
-✅ **Pros:**
-- [benefit 1]
-
-❌ **Cons:**
-- [drawback 1]
-
-📊 **Effort:** Low | Medium | High
-
----
-
-## 💡 Recommendation
-
-**Option [X]** because [reasoning].
-
-What direction would you like to explore?
+Would you like me to proceed with implementation?
 ```
 
 ---
 
 ## Examples
 
+**Example 1: Authentication System**
+
 ```
-/brainstorm authentication system
-/brainstorm state management for complex form
-/brainstorm database schema for social app
-/brainstorm caching strategy
+User: /brainstorm authentication system
+
+Claude:
+## 🧠 Brainstorm: Authentication System
+
+### Context
+Need to implement user authentication for the application. Considerations: security, UX, development time.
+
+### Generated Options
+I've identified 3 viable approaches:
 ```
+
+Then use AskUserQuestion with options:
+- "Email/Password with JWT" (Pros: Full control, standard | Cons: 4-5 hrs dev time | Effort: Medium)
+- "Social Login (OAuth)" (Pros: 1-2 hrs, smooth UX | Cons: Less control | Effort: Low)
+- "Auth Service (Clerk/Auth0)" (Pros: 1 hr, production-ready | Cons: Monthly cost | Effort: Low)
+
+**Example 2: State Management**
+
+```
+User: /brainstorm state management for complex form
+```
+
+Use AskUserQuestion with options:
+- "React Context + useReducer" (Pros: Built-in, no deps | Cons: Verbose | Effort: Low)
+- "Zustand" (Pros: Simple API, 1KB | Cons: Learning curve | Effort: Low)
+- "Redux Toolkit" (Pros: DevTools, ecosystem | Cons: Boilerplate | Effort: Medium)
 
 ---
 

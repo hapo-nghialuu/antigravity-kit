@@ -16,19 +16,104 @@ allowed-tools: Read, Glob, Grep
 
 | Pattern | Action |
 |---------|--------|
-| "Build/Create/Make [thing]" without details | 🛑 ASK 3 questions |
+| "Build/Create/Make [thing]" without details | 🛑 Use AskUserQuestion tool |
 | Complex feature or architecture | 🛑 Clarify before implementing |
 | Update/change request | 🛑 Confirm scope |
 | Vague requirements | 🛑 Ask purpose, users, constraints |
 
-### 🚫 MANDATORY: 3 Questions Before Implementation
+### 🚫 MANDATORY: Use AskUserQuestion Tool Before Implementation
 
+**CRITICAL:** Claude Code provides the `AskUserQuestion` tool for structured clarification. **ALWAYS use this tool** instead of text-based questions.
+
+**Protocol:**
 1. **STOP** - Do NOT start coding
-2. **ASK** - Minimum 3 questions:
-   - 🎯 Purpose: What problem are you solving?
-   - 👥 Users: Who will use this?
-   - 📦 Scope: Must-have vs nice-to-have?
-3. **WAIT** - Get response before proceeding
+2. **INVOKE** - Use AskUserQuestion tool with minimum 3 questions
+3. **WAIT** - Tool execution pauses until user answers
+4. **PROCEED** - Use answers to inform implementation
+
+**Required Questions (Use AskUserQuestion tool):**
+
+```json
+{
+  "questions": [
+    {
+      "question": "What problem are you trying to solve with this feature?",
+      "header": "Purpose",
+      "options": [
+        {
+          "label": "User pain point",
+          "description": "Solving a specific user problem or friction"
+        },
+        {
+          "label": "Business goal",
+          "description": "Meeting a business objective or metric"
+        },
+        {
+          "label": "Technical debt",
+          "description": "Improving existing system quality or maintainability"
+        },
+        {
+          "label": "Competitive parity",
+          "description": "Matching features from competitors"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "Who is the primary user of this feature?",
+      "header": "Users",
+      "options": [
+        {
+          "label": "End users",
+          "description": "Direct product users (customers/visitors)"
+        },
+        {
+          "label": "Developers",
+          "description": "Internal team members building the product"
+        },
+        {
+          "label": "Admins",
+          "description": "Platform administrators or moderators"
+        },
+        {
+          "label": "Multiple roles",
+          "description": "Feature serves multiple user types"
+        }
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "What is the scope of this work?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "MVP only",
+          "description": "Minimum viable version to validate the idea"
+        },
+        {
+          "label": "Production-ready",
+          "description": "Full implementation with error handling, tests, docs"
+        },
+        {
+          "label": "Specific module",
+          "description": "Limited to one area of the system"
+        },
+        {
+          "label": "Full system",
+          "description": "Affects multiple components or layers"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+**Answer Processing:**
+- Answers are captured programmatically via the tool
+- User selects from options (or provides custom "Other" text)
+- 60-second timeout with sensible defaults
+- Proceed only after receiving answers
 
 ---
 
