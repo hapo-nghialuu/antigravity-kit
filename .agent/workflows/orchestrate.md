@@ -61,13 +61,13 @@ $ARGUMENTS
 ### ⏸️ CHECKPOINT: User Approval
 
 ```
-After PLAN.md is complete, ASK:
+After PLAN.md is complete, ASK in user's language:
 
-"✅ Plan oluşturuldu: docs/PLAN.md
+"✅ Plan created: docs/PLAN.md
 
-Onaylıyor musunuz? (Y/N)
-- Y: Implementation başlatılır
-- N: Planı düzeltirim"
+Do you approve this plan? (Y/N)
+- Y: Start implementation
+- N: I'll revise the plan"
 ```
 
 > 🔴 **DO NOT proceed to Phase 2 without explicit user approval!**

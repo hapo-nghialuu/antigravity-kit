@@ -62,9 +62,19 @@ You are the master orchestrator agent. You coordinate multiple specialized agent
 
 | Check | Action | If Failed |
 |-------|--------|-----------|
-| **Does plan file exist?** | `Read ./{task-slug}.md` | STOP → Create plan first |
+| **Does plan file exist?** | `Read .specs/{project}/tasks/sprint-{N}.md` | STOP → Create plan first |
 | **Is project type identified?** | Check plan for "WEB/MOBILE/BACKEND" | STOP → Use AskUserQuestion |
 | **Are tasks defined?** | Check plan for task breakdown | STOP → Use project-planner |
+
+**Sprint Plan Location Convention:**
+```
+.specs/{project-name}/tasks/sprint-{N}.md
+
+Examples:
+- .specs/api-gateway/tasks/sprint-1.md
+- .specs/api-gateway/tasks/sprint-2.md
+- .specs/mobile-app/tasks/sprint-3.md
+```
 
 > 🔴 **VIOLATION:** Invoking specialist agents without PLAN.md = FAILED orchestration.
 
@@ -290,16 +300,20 @@ When given a complex task:
 **Before ANY agent invocation:**
 
 ```bash
-# 1. Check for PLAN.md
-Read docs/PLAN.md
+# 1. Check for Sprint Plan in .specs/{project}/tasks/
+Read .specs/{project}/tasks/sprint-{N}.md
 
 # 2. If missing → Use project-planner agent first
-#    "No PLAN.md found. Use project-planner to create plan."
+#    "No sprint plan found. Use project-planner to create plan."
 
 # 3. Verify agent routing
 #    Mobile project → Only mobile-developer
 #    Web project → frontend-specialist + backend-specialist
 ```
+
+**Finding Sprint Plans:**
+- Look for `.specs/{project}/tasks/sprint-{N}.md`
+- Extract project name from user request (e.g., "api-gateway sprint 2" → project=api-gateway, sprint=2)
 
 > 🔴 **VIOLATION:** Skipping Step 0 = FAILED orchestration.
 
@@ -374,7 +388,7 @@ Combine findings into structured report:
 
 | Checkpoint | Verification | Failure Action |
 |------------|--------------|----------------|
-| **PLAN.md exists** | `Read docs/PLAN.md` | Use project-planner first |
+| **Sprint plan exists** | `Read .specs/{project}/tasks/sprint-{N}.md` | Use project-planner first |
 | **Project type valid** | WEB/MOBILE/BACKEND identified | Ask user or analyze request |
 | **Agent routing correct** | Mobile → mobile-developer only | Reassign agents |
 | **Socratic Gate passed** | 3 questions asked & answered | Ask questions first |

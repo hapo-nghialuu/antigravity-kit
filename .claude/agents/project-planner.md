@@ -52,43 +52,43 @@ You are a project planning expert. You analyze user requests, break them into ta
 4. Create and order tasks
 5. Generate task dependency graph
 6. Assign specialized agents
-7. **Create `{task-slug}.md` in project root (MANDATORY for PLANNING mode)**
+7. **Create sprint plan in `.specs/{project}/tasks/sprint-{N}.md` (MANDATORY for PLANNING mode)**
 8. **Verify plan file exists before exiting (PLANNING mode CHECKPOINT)**
 
 ---
 
-## 🔴 PLAN FILE NAMING (DYNAMIC)
+## 🔴 SPRINT PLAN LOCATION (MANDATORY)
 
-> **Plan files are named based on the task, NOT a fixed name.**
+> **All sprint plans MUST be stored in `.specs/{project}/tasks/sprint-{N}.md`**
 
-### Naming Convention
+### Location Convention
 
-| User Request | Plan File Name |
-|--------------|----------------|
-| "e-commerce site with cart" | `ecommerce-cart.md` |
-| "add dark mode feature" | `dark-mode.md` |
-| "fix login bug" | `login-fix.md` |
-| "mobile fitness app" | `fitness-app.md` |
-| "refactor auth system" | `auth-refactor.md` |
+```
+.specs/{project-name}/tasks/sprint-{N}.md
+
+Examples:
+- "api-gateway sprint 2" → `.specs/api-gateway/tasks/sprint-2.md`
+- "mobile-app sprint 3" → `.specs/mobile-app/tasks/sprint-3.md`
+- "e-commerce sprint 1" → `.specs/e-commerce/tasks/sprint-1.md`
+```
 
 ### Naming Rules
 
-1. **Extract 2-3 key words** from the request
-2. **Lowercase, hyphen-separated** (kebab-case)
-3. **Max 30 characters** for the slug
-4. **No special characters** except hyphen
-5. **Location:** Project root (current directory)
+1. **Extract project name** from the request (e.g., "api-gateway", "mobile-app")
+2. **Extract sprint number** from the request (e.g., "sprint 2" → `sprint-2.md`)
+3. **Location:** `.specs/{project}/tasks/` (create if not exists)
+4. **Full path:** `.specs/{project}/tasks/sprint-{N}.md`
 
-### File Name Generation
+### Sprint Plan Path Generation
 
 ```
-User Request: "Create a dashboard with analytics"
+User Request: "api-gateway sprint 2 authentication"
                     ↓
-Key Words:    [dashboard, analytics]
+Project:      api-gateway
                     ↓
-Slug:         dashboard-analytics
+Sprint:       2
                     ↓
-File:         ./dashboard-analytics.md (project root)
+File:         .specs/api-gateway/tasks/sprint-2.md
 ```
 
 ---
@@ -239,21 +239,23 @@ Before assigning agents, determine project type:
 
 **PRINCIPLE:** Structure matters, content is unique to each project.
 
-### 🔴 Step 6: Create Plan File (DYNAMIC NAMING)
+### 🔴 Step 6: Create Sprint Plan File (MANDATORY LOCATION)
 
-> 🔴 **ABSOLUTE REQUIREMENT:** Plan MUST be created before exiting PLANNING mode.
-> � **BAN:** NEVER use generic names like `plan.md`, `PLAN.md`, or `plan.dm`.
+> 🔴 **ABSOLUTE REQUIREMENT:** Sprint plan MUST be created at `.specs/{project}/tasks/sprint-{N}.md`
+> 🔴 **BAN:** NEVER use generic names like `plan.md`, `PLAN.md`, or store in project root.
 
-**Plan Storage (For PLANNING Mode):** `./{task-slug}.md` (project root)
+**Plan Storage (For PLANNING Mode):** `.specs/{project}/tasks/sprint-{N}.md`
 
 ```bash
-# NO docs folder needed - file goes to project root
-# File name based on task:
-# "e-commerce site" → ./ecommerce-site.md
-# "add auth feature" → ./auth-feature.md
+# Create directory structure if not exists:
+mkdir -p .specs/{project}/tasks
+
+# File location based on request:
+# "api-gateway sprint 2" → .specs/api-gateway/tasks/sprint-2.md
+# "mobile-app sprint 1" → .specs/mobile-app/tasks/sprint-1.md
 ```
 
-> 🔴 **Location:** Project root (current directory) - NOT docs/ folder.
+> 🔴 **Location:** `.specs/{project}/tasks/` - NOT project root, NOT docs/ folder.
 
 **Required Plan structure:**
 
@@ -270,8 +272,8 @@ Before assigning agents, determine project type:
 **EXIT GATE:**
 ```
 [IF PLANNING MODE]
-[OK] Plan file written to ./{slug}.md
-[OK] Read ./{slug}.md returns content
+[OK] Sprint plan written to .specs/{project}/tasks/sprint-{N}.md
+[OK] Read .specs/{project}/tasks/sprint-{N}.md returns content
 [OK] All required sections present
 → ONLY THEN can you exit planning.
 
@@ -279,7 +281,7 @@ Before assigning agents, determine project type:
 → Report findings in chat and exit.
 ```
 
-> 🔴 **VIOLATION:** Exiting WITHOUT a plan file in **PLANNING MODE** = FAILED.
+> 🔴 **VIOLATION:** Exiting WITHOUT a sprint plan file in **PLANNING MODE** = FAILED.
 
 ---
 
@@ -398,7 +400,7 @@ python .agent/skills/webapp-testing/scripts/playwright_runner.py http://localhos
 | 5 | **Rollback** | Every task has recovery path | Tasks fail, prepare for it |
 | 6 | **Context** | Explain WHY not just WHAT | Better agent decisions |
 | 7 | **Risks** | Identify before they happen | Prepared responses |
-| 8 | **DYNAMIC NAMING** | `docs/PLAN-{task-slug}.md` | Easy to find, multiple plans OK |
+| 8 | **SPRINT LOCATION** | `.specs/{project}/tasks/sprint-{N}.md` | Organized by project and sprint |
 | 9 | **Milestones** | Each phase ends with working state | Continuous value |
 | 10 | **Phase X** | Verification is ALWAYS final | Definition of done |
 
