@@ -1,0 +1,181 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "tw-animate-css";
+@import "highlight.js/styles/github-dark.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #F8FAFC;
+  /* Slate-50 */
+  --foreground: #1E293B;
+  /* Slate-800 */
+
+  --primary: #F97316;
+  /* Orange-500 */
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #E2E8F0;
+  /* Slate-200 */
+  --secondary-foreground: #0F172A;
+  /* Slate-900 */
+
+  --muted: #F1F5F9;
+  /* Slate-100 */
+  --muted-foreground: #64748B;
+  /* Slate-500 */
+
+  --accent: #F97316;
+  /* Orange-500 */
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E2E8F0;
+  /* Slate-200 */
+  --input: #E2E8F0;
+  --ring: #F97316;
+
+  --card: #FFFFFF;
+  --card-foreground: #1E293B;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #1E293B;
+
+  --radius: 0.5rem;
+
+  --info: #3B82F6;
+  --info-foreground: #EFF6FF;
+
+  --success: #10B981;
+  --success-foreground: #ECFDF5;
+
+  --warning: #F59E0B;
+  --warning-foreground: #FFFBEB;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --animate-skeleton: skeleton 2s -1s infinite linear;
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  @keyframes skeleton {
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+.dark {
+  --background: #18181B;
+  /* Zinc-900 */
+  --foreground: #FAFAFA;
+  /* Zinc-50 */
+
+  --primary: #F97316;
+  /* Orange-500 */
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #27272A;
+  /* Zinc-800 */
+  --secondary-foreground: #FAFAFA;
+
+  --muted: #27272A;
+  /* Zinc-800 */
+  --muted-foreground: #A1A1AA;
+  /* Zinc-400 */
+
+  --accent: #F97316;
+  /* Orange-500 */
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #27272A;
+  /* Zinc-800 */
+  --input: #27272A;
+  --ring: #F97316;
+
+  --card: #18181B;
+  /* Zinc-900 - Match background for cleaner look or 18181B for contrast */
+  --card-foreground: #FAFAFA;
+
+  --popover: #18181B;
+  --popover-foreground: #FAFAFA;
+
+  --info: #3B82F6;
+  --info-foreground: #1E3A8A;
+
+  --success: #10B981;
+  --success-foreground: #064E3B;
+
+  --warning: #F59E0B;
+  --warning-foreground: #78350F;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  .anchor {
+    @apply ml-2 no-underline text-muted-foreground opacity-0 transition-opacity;
+  }
+
+  .anchor::after {
+    content: "#";
+  }
+
+  h1:hover .anchor,
+  h2:hover .anchor,
+  h3:hover .anchor,
+  h4:hover .anchor,
+  h5:hover .anchor,
+  h6:hover .anchor {
+    @apply opacity-100;
+  }
+}

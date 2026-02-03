@@ -1,10 +1,10 @@
-# Antigravity Kit - Claude Code Plugin
+# CafeKit - Claude Code Plugin
 
 > 20 specialist agents + 36 domain skills for comprehensive AI-assisted development
 
 ## 📋 Overview
 
-Antigravity Kit is a Claude Code plugin that provides:
+CafeKit is a Claude Code plugin that provides:
 - **20 Specialist Agents** - Domain experts (frontend, backend, security, DevOps, etc.)
 - **36 Skills** - Deep knowledge modules (React performance, API patterns, database design, etc.)
 - **11 Workflows** - Slash command procedures (brainstorm, create, debug, deploy, etc.)
@@ -317,8 +317,8 @@ VALIDATOR_MAP = {
 ## 🆘 Support
 
 For issues or questions:
-- GitHub: https://github.com/vudovn/antigravity-kit
-- Docs: https://antigravity-kit.vercel.app/
+- GitHub: https://github.com/hapo-nghialuu/hapo-cafekit
+- Docs: https://cafekit.vercel.app/
 
 ## 📄 License
 

@@ -1,0 +1,521 @@
+---
+title: Todo App API Example
+description: A beginner-friendly example of building a REST API for a todo application with CafeKit Spec.
+---
+
+# Todo App API Example
+
+This beginner-friendly example shows how to build a REST API for a todo application. It's perfect for learning the CafeKit Spec workflow.
+
+## Overview
+
+**Feature:** Todo list REST API
+**Complexity:** Beginner
+**Estimated Time:** 3-4 hours
+**Stack:** Node.js, Express, PostgreSQL
+
+---
+
+## Phase 1: Initialize
+
+```bash
+/spec-init todo-app-api
+```
+
+**Initial description:**
+> REST API for a todo application with CRUD operations. Users can create, read, update, and delete todos. Each todo has a title, description, completion status, and priority level. Include filtering by status and priority.
+
+---
+
+## Phase 2: Requirements
+
+```markdown
+# Todo App API - Requirements
+
+## Purpose
+Provide a REST API for managing personal todo items with filtering and sorting capabilities.
+
+## Target Users
+- Individual users managing personal tasks
+- Frontend developers consuming the API
+
+## Functional Requirements
+
+### FR-1: Create Todo
+When a user submits a new todo with title,
+the system shall create and return the todo item
+with unique ID and timestamp.
+
+**Acceptance Criteria:**
+- Title is required (1-200 characters)
+- Description is optional (max 1000 characters)
+- Priority defaults to "medium"
+- Status defaults to "pending"
+- Created timestamp auto-generated
+
+### FR-2: List Todos
+When requesting todos,
+the system shall return a paginated list
+with optional filtering and sorting.
+
+**Acceptance Criteria:**
+- Pagination: 20 items per page default
+- Filter by status: pending, in-progress, completed
+- Filter by priority: low, medium, high
+- Sort by: created_at, priority, title
+- Default sort: created_at DESC
+
+### FR-3: Update Todo
+When updating a todo,
+the system shall modify specified fields
+and update the timestamp.
+
+**Acceptance Criteria:**
+- Partial updates supported
+- Updated timestamp auto-generated
+- Returns updated todo
+- 404 if todo not found
+
+### FR-4: Delete Todo
+When deleting a todo,
+the system shall remove it permanently.
+
+**Acceptance Criteria:**
+- Returns 204 on success
+- 404 if todo not found
+- Cannot be undone
+
+### FR-5: Toggle Completion
+When toggling todo status,
+the system shall switch between pending and completed.
+
+**Acceptance Criteria:**
+- Sets completed_at timestamp when completed
+- Clears completed_at when reopened
+- Dedicated endpoint for convenience
+
+## Non-Functional Requirements
+
+### Performance
+- API response time < 100ms for list operations
+- Support 100 concurrent users
+- Pagination prevents large payloads
+
+### Data Integrity
+- Title cannot be empty
+- Priority must be valid enum value
+- Status transitions are valid
+```
+
+---
+
+## Phase 3: Design
+
+```markdown
+# Todo App API - Design
+
+## API Endpoints
+
+### GET /api/todos
+List all todos with filtering and pagination.
+
+**Query Parameters:**
+```
+?page=1&limit=20
+&status=pending
+&priority=high
+&sort_by=created_at&order=desc
+```
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Buy groceries",
+      "description": "Milk, eggs, bread",
+      "status": "pending",
+      "priority": "high",
+      "created_at": "2026-01-15T10:00:00Z",
+      "updated_at": "2026-01-15T10:00:00Z",
+      "completed_at": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45,
+    "total_pages": 3
+  }
+}
+```
+
+### POST /api/todos
+Create a new todo.
+
+**Request:**
+```json
+{
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "priority": "high"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "high",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T10:00:00Z",
+  "completed_at": null
+}
+```
+
+**Response (400):**
+```json
+{
+  "error": "Title is required",
+  "field": "title"
+}
+```
+
+### GET /api/todos/:id
+Get a single todo by ID.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "high",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T10:00:00Z",
+  "completed_at": null
+}
+```
+
+**Response (404):**
+```json
+{
+  "error": "Todo not found"
+}
+```
+
+### PATCH /api/todos/:id
+Update a todo (partial updates supported).
+
+**Request:**
+```json
+{
+  "title": "Buy groceries and supplies",
+  "priority": "medium"
+}
+```
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries and supplies",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "medium",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T11:30:00Z",
+  "completed_at": null
+}
+```
+
+### DELETE /api/todos/:id
+Delete a todo.
+
+**Response (204):** No content
+
+### PATCH /api/todos/:id/toggle
+Toggle completion status.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "status": "completed",
+  "completed_at": "2026-01-15T14:00:00Z"
+}
+```
+
+## Database Schema
+
+```sql
+CREATE TYPE todo_status AS ENUM ('pending', 'in_progress', 'completed');
+CREATE TYPE todo_priority AS ENUM ('low', 'medium', 'high');
+
+CREATE TABLE todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  status todo_status DEFAULT 'pending',
+  priority todo_priority DEFAULT 'medium',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_todos_status ON todos(status);
+CREATE INDEX idx_todos_priority ON todos(priority);
+CREATE INDEX idx_todos_created_at ON todos(created_at DESC);
+CREATE INDEX idx_todos_status_priority ON todos(status, priority);
+```
+
+## Project Structure
+
+```
+src/
+├── routes/
+│   └── todos.ts          # Route handlers
+├── controllers/
+│   └── todoController.ts # Business logic
+├── models/
+│   └── Todo.ts           # Data access
+├── validators/
+│   └── todoValidator.ts  # Input validation
+└── app.ts                # Express app setup
+```
+```
+
+---
+
+## Phase 4: Tasks
+
+```markdown
+# Todo App API - Sprint Plan
+
+**Estimated Time:** 3.5 hours
+
+## TASK 1: Project Setup (30 min)
+**Priority:** P0
+**Dependencies:** None
+
+**OUTPUT:**
+- Initialize Node.js project
+- Install dependencies (express, pg, zod)
+- Setup project structure
+- Configure database connection
+
+## TASK 2: Database Setup (30 min)
+**Priority:** P0
+**Dependencies:** None
+
+**OUTPUT:**
+- Create todos table migration
+- Create enum types
+- Add indexes
+- Seed test data
+
+## TASK 3: Create Todo Endpoint (30 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- POST /api/todos
+- Input validation
+- Database insert
+- Response formatting
+
+## TASK 4: List Todos Endpoint (45 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- GET /api/todos
+- Query parameter parsing
+- Filtering logic
+- Pagination
+- Sorting
+
+## TASK 5: Get Single Todo Endpoint (20 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- GET /api/todos/:id
+- 404 handling
+- Response formatting
+
+## TASK 6: Update Todo Endpoint (30 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- PATCH /api/todos/:id
+- Partial update handling
+- Validation
+- Timestamp updates
+
+## TASK 7: Delete Todo Endpoint (20 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- DELETE /api/todos/:id
+- 204 response
+- Error handling
+
+## TASK 8: Toggle Completion Endpoint (30 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- PATCH /api/todos/:id/toggle
+- Status switching logic
+- completed_at timestamp handling
+
+## TASK 9: API Tests (45 min)
+**Priority:** P1
+**Dependencies:** All above
+
+**OUTPUT:**
+- Integration tests for all endpoints
+- Test coverage for filters
+- Error case testing
+```
+
+---
+
+## Phase 5: Implementation Highlights
+
+### Validation Schema (Zod)
+
+```typescript
+import { z } from 'zod';
+
+export const createTodoSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+});
+
+export const updateTodoSchema = createTodoSchema.partial();
+
+export const listTodosQuerySchema = z.object({
+  page: z.coerce.number().positive().default(1),
+  limit: z.coerce.number().positive().max(100).default(20),
+  status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  sort_by: z.enum(['created_at', 'priority', 'title']).default('created_at'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+});
+```
+
+### Controller Pattern
+
+```typescript
+export class TodoController {
+  async list(req: Request, res: Response) {
+    const query = listTodosQuerySchema.parse(req.query);
+    const todos = await TodoModel.findMany(query);
+    res.json({
+      data: todos.data,
+      pagination: todos.pagination,
+    });
+  }
+
+  async create(req: Request, res: Response) {
+    const data = createTodoSchema.parse(req.body);
+    const todo = await TodoModel.create(data);
+    res.status(201).json(todo);
+  }
+
+  // ... other methods
+}
+```
+
+### Toggle Completion Logic
+
+```typescript
+async toggleCompletion(id: string) {
+  const todo = await this.findById(id);
+  if (!todo) throw new NotFoundError('Todo not found');
+
+  const newStatus = todo.status === 'completed' ? 'pending' : 'completed';
+  const completedAt = newStatus === 'completed' ? new Date() : null;
+
+  return this.update(id, {
+    status: newStatus,
+    completed_at: completedAt,
+  });
+}
+```
+
+---
+
+## Phase 6: Testing the API
+
+### Example Requests
+
+```bash
+# Create a todo
+curl -X POST http://localhost:3000/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy groceries","priority":"high"}'
+
+# List todos with filters
+curl "http://localhost:3000/api/todos?status=pending&priority=high&sort_by=created_at"
+
+# Update a todo
+curl -X PATCH http://localhost:3000/api/todos/uuid \
+  -H "Content-Type: application/json" \
+  -d '{"status":"in_progress"}'
+
+# Toggle completion
+curl -X PATCH http://localhost:3000/api/todos/uuid/toggle
+
+# Delete a todo
+curl -X DELETE http://localhost:3000/api/todos/uuid
+```
+
+---
+
+## Key Learnings
+
+### What Worked Well
+- Clear API design made implementation straightforward
+- Zod validation caught edge cases early
+- Pagination prevented performance issues
+- Enum types ensured data integrity
+
+### Common Pitfalls Avoided
+- Always return consistent response structure
+- Handle partial updates correctly with PATCH
+- Index foreign keys and commonly filtered columns
+- Use transactions for complex operations
+
+### Testing Strategy
+- Unit tests for validation logic
+- Integration tests for API endpoints
+- Test filter combinations
+- Verify pagination edge cases
+
+---
+
+## Next Steps
+
+To extend this API:
+
+1. **Add Authentication** - See [User Authentication](/docs/examples/user-authentication) example
+2. **Add Categories** - Group todos into categories/projects
+3. **Add Due Dates** - Schedule todos with reminders
+4. **Add Subtasks** - Break todos into smaller steps
+
+---
+
+**Try it yourself!** Use this as a template for your own API projects.

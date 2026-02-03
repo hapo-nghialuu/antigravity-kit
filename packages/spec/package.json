@@ -1,0 +1,31 @@
+{
+  "name": "@haposoft/cafekit-spec",
+  "version": "0.1.1",
+  "description": "Spec-Driven Development workflow for Claude Code",
+  "author": "Haposoft <nghialt@haposoft.com>",
+  "license": "MIT",
+  "private": false,
+  "bin": {
+    "cafekit-spec": "./bin/install.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hapo-nghialuu/hapo-cafekit.git"
+  },
+  "keywords": [
+    "haposoft",
+    "cafekit",
+    "antigravity",
+    "claude-code",
+    "spec-driven",
+    "workflow"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
