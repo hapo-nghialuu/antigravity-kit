@@ -253,7 +253,7 @@ Reports findings to user
 
 ```json
 {
-  "name": "cafekit",
+  "name": "antigravity-kit",
   "version": "1.0.0",
   "description": "20 specialist agents + 36 domain skills",
   "author": "nghialuutrung",

@@ -1,71 +1,148 @@
-# CafeKit Spec
+# Antigravity Kit
 
-> Spec-Driven Development workflow for Claude Code and Antigravity
+> AI Agent templates with Skills, Agents, and Workflows
+
+<div  align="center">
+    <a href="https://unikorn.vn/p/antigravity-kit?ref=unikorn" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/antigravity-kit?theme=dark" alt="Antigravity Kit - Nổi bật trên Unikorn.vn" style="width: 210px; height: 54px;" width="210" height="54" /></a>
+    <a href="https://unikorn.vn/p/antigravity-kit?ref=unikorn" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/antigravity-kit/rank?theme=dark&type=daily" alt="Antigravity Kit - Hàng ngày" style="width: 250px; height: 64px;" width="250" height="64" /></a>
+    <a href="https://launch.j2team.dev/products/antigravity-kit" target="_blank"><img src="https://launch.j2team.dev/badge/antigravity-kit/dark" alt="Antigravity Kit on J2TEAM Launch" width="250" height="54" /></a>
+</div>
 
 ## Quick Install
 
 ```bash
-npx @haposoft/cafekit-spec
+npx @vudovn/ag-kit init
 ```
 
-## What is CafeKit Spec?
-
-CafeKit Spec is a structured spec-driven development workflow for Claude Code. It adds 6 slash commands that guide you through building complex features:
-
-| Command | Purpose |
-|---------|---------|
-| `/spec-init` | Initialize feature specification |
-| `/spec-requirements` | Generate EARS-format requirements |
-| `/spec-design` | Create technical design |
-| `/spec-tasks` | Break down into implementable tasks |
-| `/spec-impl` | Implement specific tasks |
-| `/spec-status` | Check progress |
-
-## Why Spec-Driven Development?
-
-Traditional AI coding often leads to:
-- Incomplete requirements causing rework
-- Missing edge cases discovered late
-- Lost context between sessions
-
-**CafeKit Spec solves this** with a structured 6-phase workflow:
-
-```
-Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /spec-impl → /spec-status
-```
-
-## Quick Start
+Or install globally:
 
 ```bash
-# 1. Install
-npx @haposoft/cafekit-spec
+npm install -g @vudovn/ag-kit
+ag-kit init
+```
 
-# 2. Initialize a spec
-/spec-init user-authentication
+This installs the `.agent` folder containing all templates into your project.
 
-# 3. Gather requirements
-/spec-requirements user-authentication
+## 🆕 Claude Code Plugin
 
-# 4. Create design
-/spec-design user-authentication
+**For Claude Code users**, this repository also includes a `.claude/` plugin with native integration:
 
-# 5. Generate tasks
-/spec-tasks user-authentication
+- ✅ **Auto-discovery** - Agents and skills load automatically
+- ✅ **Progressive loading** - Load only what you need via @mentions
+- ✅ **Validation hooks** - 16 validators run after code edits
+- ✅ **Plugin format** - Standard Claude Code plugin structure
 
-# 6. Implement
-/spec-impl user-authentication
+**See [`CLAUDE.md`](CLAUDE.md) for Claude Code specific documentation.**
+
+## What's Included
+
+| Component     | Count | Description                                                        |
+| ------------- | ----- | ------------------------------------------------------------------ |
+| **Agents**    | 20    | Specialist AI personas (frontend, backend, security, PM, QA, etc.) |
+| **Skills**    | 36    | Domain-specific knowledge modules                                  |
+| **Workflows** | 11    | Slash command procedures                                           |
+
+
+## Usage
+
+### Using Agents
+
+**No need to mention agents explicitly!** The system automatically detects and applies the right specialist(s):
+
+```
+You: "Add JWT authentication"
+AI: 🤖 Applying @security-auditor + @backend-specialist...
+
+You: "Fix the dark mode button"
+AI: 🤖 Using @frontend-specialist...
+
+You: "Login returns 500 error"
+AI: 🤖 Using @debugger for systematic analysis...
+```
+
+**How it works:**
+
+- Analyzes your request silently
+
+- Detects domain(s) automatically (frontend, backend, security, etc.)
+- Selects the best specialist(s)
+- Informs you which expertise is being applied
+- You get specialist-level responses without needing to know the system architecture
+
+**Benefits:**
+
+- ✅ Zero learning curve - just describe what you need
+- ✅ Always get expert responses
+- ✅ Transparent - shows which agent is being used
+- ✅ Can still override by mentioning agent explicitly
+
+### Using Workflows
+
+Invoke workflows with slash commands:
+
+| Command          | Description                           |
+| ---------------- | ------------------------------------- |
+| `/brainstorm`    | Explore options before implementation |
+| `/create`        | Create new features or apps           |
+| `/debug`         | Systematic debugging                  |
+| `/deploy`        | Deploy application                    |
+| `/enhance`       | Improve existing code                 |
+| `/orchestrate`   | Multi-agent coordination              |
+| `/plan`          | Create task breakdown                 |
+| `/preview`       | Preview changes locally               |
+| `/status`        | Check project status                  |
+| `/test`          | Generate and run tests                |
+| `/ui-ux-pro-max` | Design with 50 styles                 |
+
+Example:
+
+```
+/brainstorm authentication system
+/create landing page with hero section
+/debug why login fails
+```
+
+### Using Skills
+
+Skills are loaded automatically based on task context. The AI reads skill descriptions and applies relevant knowledge.
+
+## CLI Tool
+
+| Command         | Description                               |
+| --------------- | ----------------------------------------- |
+| `ag-kit init`   | Install `.agent` folder into your project |
+| `ag-kit update` | Update to the latest version              |
+| `ag-kit status` | Check installation status                 |
+
+### Options
+
+```bash
+ag-kit init --force        # Overwrite existing .agent folder
+ag-kit init --path ./myapp # Install in specific directory
+ag-kit init --branch dev   # Use specific branch
+ag-kit init --quiet        # Suppress output (for CI/CD)
+ag-kit init --dry-run      # Preview actions without executing
 ```
 
 ## Documentation
 
-- **[Installation](https://cafekit.vercel.app/docs/getting-started/installation)** - Get set up
-- **[Quickstart](https://cafekit.vercel.app/docs/getting-started/quickstart)** - Build your first spec
-- **[Spec Workflow](https://cafekit.vercel.app/docs/guides/spec-workflow)** - Complete guide
+- **[Web App Example](https://antigravity-kit.vercel.app//docs/guide/examples/brainstorm)** - Step-by-step guide to creating a web application
+- **[Online Docs](https://antigravity-kit.vercel.app//docs)** - Browse all documentation online
 
-## Acknowledgments
+## Buy me coffee
 
-CafeKit Spec is inspired by and built upon ideas from [Antigravity Kit](https://github.com/vudovn/antigravity-kit) by [@vudovn](https://github.com/vudovn).
+<p align="center">
+  <a href="https://buymeacoffee.com/vudovn">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" />
+  </a>
+</p>
+
+<p align="center"> - or - </p>
+
+<p align="center">
+  <img src="https://img.vietqr.io/image/mbbank-0779440918-compact.jpg" alt="Buy me coffee" width="200" />
+</p>
 
 ## License
 
-MIT © Haposof
+MIT © Vudovn
