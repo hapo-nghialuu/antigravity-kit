@@ -1,24 +1,17 @@
 {
-  "name": "cafekit",
+  "name": "antigravity-kit",
   "version": "2.0.0",
-  "private": true,
   "description": "AI Agent templates - Skills, Agents, and Workflows for enhanced coding assistance",
-  "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
-    "test": "pnpm -r test",
-    "clean": "pnpm -r clean && rm -rf node_modules"
-  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hapo-nghialuu/hapo-cafekit.git"
+    "url": "git+https://github.com/vudovn/antigravity-kit.git"
   },
-  "homepage": "https://github.com/hapo-nghialuu/hapo-cafekit#readme",
+  "homepage": "https://github.com/vudovn/antigravity-kit#readme",
   "bugs": {
-    "url": "https://github.com/hapo-nghialuu/hapo-cafekit/issues"
+    "url": "https://github.com/vudovn/antigravity-kit/issues"
   },
   "keywords": [
-    "cafekit",
+    "antigravity",
     "ai",
     "agent",
     "gemini",
@@ -26,10 +19,5 @@
     "templates"
   ],
   "author": "vudovn",
-  "license": "MIT",
-  "devDependencies": {
-    "@tailwindcss/typography": "^0.5.19",
-    "@types/node": "^22.13.1",
-    "typescript": "^5.7.2"
-  }
+  "license": "MIT"
 }
