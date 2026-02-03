@@ -672,7 +672,7 @@ These skills contain **conceptual template questions** for agent thinking, NOT d
 1. **Git Commit**
    ```bash
    git add .
-   git commit -m "feat: integrate AskUserQuestion tool across antigravity-kit (3 phases)
+   git commit -m "feat: integrate AskUserQuestion tool across cafekit (3 phases)
 
    Phase 1: Core brainstorming + orchestrator (6 files, ~12 questions)
    Phase 2: Agent audit + explorer-agent (1 file, 4 questions)
