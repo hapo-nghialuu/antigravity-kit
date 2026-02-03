@@ -14,30 +14,8 @@ interface PageProps {
   }>;
 }
 
-// Generate static params for all MDX files
-// With cookie-based i18n, we only statically generate standardized paths based on English structure
-export async function generateStaticParams() {
-  const files = getMDXFiles('docs/en');
-
-  const params: { slug?: string[] }[] = [];
-
-  files.forEach((file) => {
-    const slugParts = file.replace('docs/en/', '').split('/');
-    // Handle index files mapping to root or folder root
-    if (slugParts.length === 1 && slugParts[0] === 'index') {
-      params.push({ slug: undefined });
-    } else {
-      if (slugParts[slugParts.length - 1] === 'index') {
-        slugParts.pop();
-      }
-      if (slugParts.length > 0) {
-        params.push({ slug: slugParts });
-      }
-    }
-  });
-
-  return params;
-}
+// With cookie-based i18n, we must use dynamic rendering
+export const dynamic = 'force-dynamic';
 
 // Helper to determine locale and content path from slug
 async function getRouteInfo(slug?: string[]) {
