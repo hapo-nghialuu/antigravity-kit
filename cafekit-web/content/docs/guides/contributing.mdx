@@ -1,0 +1,231 @@
+---
+title: Contributing
+description: Learn how to contribute to CafeKit Spec and help improve the spec-driven development workflow.
+---
+
+# Contributing to CafeKit Spec
+
+Thank you for your interest in contributing to CafeKit Spec! This guide will help you get started.
+
+## Ways to Contribute
+
+### 1. Report Issues
+
+Found a bug or have a suggestion? Open an issue on GitHub:
+
+- **Bug reports**: Describe what happened, what you expected, and steps to reproduce
+- **Feature requests**: Explain the use case and why it would be valuable
+- **Documentation issues**: Point out unclear or incorrect documentation
+
+[Open an Issue →](https://github.com/vudovn/cafekit/issues)
+
+### 2. Improve Documentation
+
+Documentation improvements are always welcome:
+
+- Fix typos or unclear explanations
+- Add examples to existing guides
+- Translate documentation to other languages
+- Create video tutorials
+
+### 3. Submit Code Changes
+
+Want to fix a bug or add a feature? Follow these steps:
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+
+- Git
+- Claude Code (for testing)
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/vudovn/cafekit.git
+cd cafekit
+```
+
+### Install Dependencies
+
+```bash
+# Install root dependencies
+npm install
+
+# Install spec package dependencies
+cd packages/spec
+npm install
+```
+
+### Project Structure
+
+```
+cafekit/
+├── packages/
+│   └── spec/              # @haposoft/cafekit-spec package
+│       ├── bin/           # CLI installer
+│       └── src/           # Source files
+├── cafekit-web/           # Documentation website
+│   └── content/docs/      # MDX documentation
+└── .claude/
+    └── commands/          # Spec workflow commands
+```
+
+## Making Changes
+
+### 1. Spec Commands
+
+The 6 spec workflow commands are in `.claude/commands/`:
+
+- `spec-init.md`
+- `spec-requirements.md`
+- `spec-design.md`
+- `spec-tasks.md`
+- `spec-impl.md`
+- `spec-status.md`
+
+To modify a command:
+
+1. Edit the `.md` file
+2. Test the command in Claude Code
+3. Update documentation if needed
+
+### 2. Installer Package
+
+The installer is in `packages/spec/`:
+
+```bash
+cd packages/spec
+
+# Test locally
+node bin/install.js
+
+# Or link for testing
+npm link
+npx @haposoft/cafekit-spec
+```
+
+### 3. Documentation
+
+Documentation is in `cafekit-web/content/docs/`:
+
+```bash
+cd cafekit-web
+
+# Run dev server
+npm run dev
+
+# Edit MDX files
+# Changes hot-reload automatically
+```
+
+## Pull Request Process
+
+### 1. Create a Branch
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+### 2. Make Your Changes
+
+- Write clear, concise code
+- Follow existing code style
+- Add/update tests if applicable
+- Update documentation
+
+### 3. Test Your Changes
+
+```bash
+# Test the installer
+cd packages/spec
+node bin/install.js
+
+# Test commands in Claude Code
+# (Copy .md files to .claude/commands/ and test)
+```
+
+### 4. Commit Your Changes
+
+```bash
+git add .
+git commit -m "feat: add feature description"
+```
+
+Use conventional commits:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `refactor:` - Code refactoring
+- `test:` - Test changes
+
+### 5. Submit Pull Request
+
+1. Push to your fork
+2. Open a PR against `main` branch
+3. Fill out the PR template
+4. Link any related issues
+
+## Code Style
+
+### Markdown Files
+
+- Use clear, concise language
+- Include code examples where helpful
+- Use proper frontmatter
+
+```yaml
+---
+title: Page Title
+description: Brief description
+---
+```
+
+### JavaScript/TypeScript
+
+- Use 2 spaces for indentation
+- Use single quotes for strings
+- Add JSDoc comments for functions
+
+## Testing
+
+Before submitting a PR, test your changes:
+
+1. **Test the installer**
+   ```bash
+   cd packages/spec
+   node bin/install.js
+   ```
+
+2. **Test spec commands**
+   - Copy modified commands to `.claude/commands/`
+   - Run each command in Claude Code
+   - Verify expected behavior
+
+3. **Test documentation**
+   ```bash
+   cd cafekit-web
+   npm run build
+   ```
+
+## Review Process
+
+- All PRs require at least one review
+- Address review feedback promptly
+- Keep PRs focused and small
+
+## Code of Conduct
+
+- Be respectful and inclusive
+- Focus on constructive feedback
+- Help others learn and grow
+
+## Questions?
+
+- Open a [GitHub Discussion](https://github.com/vudovn/cafekit/discussions)
+- Comment on an existing issue
+
+---
+
+Thank you for contributing to CafeKit Spec! ☕

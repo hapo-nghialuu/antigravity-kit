@@ -1,0 +1,278 @@
+---
+title: Quickstart Guide
+description: Create your first feature spec in 5 minutes with CafeKit's step-by-step workflow.
+---
+
+# Quickstart Guide
+
+This guide walks you through creating your first feature using CafeKit's spec-driven workflow.
+
+## What You'll Build
+
+In this quickstart, you'll create a spec for a **user login feature** using all 6 phases of the CafeKit workflow.
+
+**Time to complete:** 5-10 minutes
+
+## Step 1: Initialize Spec
+
+Start by creating a new spec workspace:
+
+```bash
+/spec-init login-feature
+```
+
+**What happens:**
+- Creates `.specs/login-feature/` directory
+- Generates initial folder structure
+- Sets up tracking files
+
+**Expected output:**
+```
+✅ Spec initialized: login-feature
+📁 Created .specs/login-feature/
+📄 Next step: Run /spec-requirements
+```
+
+## Step 2: Gather Requirements
+
+Define what your feature needs to do:
+
+```bash
+/spec-requirements login-feature
+```
+
+The AI assistant will ask you questions like:
+
+- **What is the main goal of this feature?**
+  - "Allow users to log in with email and password"
+
+- **Who will use this feature?**
+  - "End users of the application"
+
+- **What are the must-have functionalities?**
+  - Email/password validation
+  - Session management
+  - Error handling for invalid credentials
+
+- **Any constraints or technical requirements?**
+  - Must work on mobile and desktop
+  - Use JWT for authentication
+  - Password requirements: min 8 chars, 1 uppercase, 1 number
+
+**What happens:**
+- AI guides you through Socratic questioning
+- Captures all functional and non-functional requirements
+- Creates `requirements.md` in `.specs/login-feature/`
+
+**Expected output:**
+```
+✅ Requirements captured
+📄 Saved to .specs/login-feature/requirements.md
+📋 Next step: Run /spec-design
+```
+
+## Step 3: Create Design Document
+
+Generate a technical design from your requirements:
+
+```bash
+/spec-design login-feature
+```
+
+**What happens:**
+- AI reads your requirements
+- Creates architecture diagram
+- Defines API endpoints, database schema, UI components
+- Identifies edge cases and error scenarios
+- Generates `design.md`
+
+**Sample design output:**
+
+```markdown
+# Login Feature - Design Document
+
+## Architecture
+- Frontend: React login form component
+- Backend: POST /api/auth/login endpoint
+- Database: users table with hashed passwords
+
+## API Design
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123"
+}
+
+## Database Schema
+users table:
+- id (UUID, primary key)
+- email (string, unique)
+- password_hash (string)
+- created_at (timestamp)
+
+## UI Components
+- LoginForm.tsx
+- PasswordInput.tsx (with visibility toggle)
+- ErrorMessage.tsx
+
+## Security Measures
+- bcrypt password hashing
+- Rate limiting (5 attempts per minute)
+- JWT token expiry (24 hours)
+```
+
+**Expected output:**
+```
+✅ Design document created
+📄 Saved to .specs/login-feature/design.md
+🎯 Next step: Run /spec-tasks
+```
+
+## Step 4: Generate Task Breakdown
+
+Break the design into actionable implementation tasks:
+
+```bash
+/spec-tasks login-feature
+```
+
+**What happens:**
+- AI analyzes design document
+- Creates prioritized task list
+- Estimates time for each task
+- Defines dependencies between tasks
+- Generates `tasks.md` (sprint plan)
+
+**Sample tasks output:**
+
+```markdown
+# Login Feature - Sprint Plan
+
+## TASK 1: Setup Database Schema (30 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** None
+
+- Create users table migration
+- Add email uniqueness constraint
+- Test migration rollback
+
+## TASK 2: Implement Password Hashing (45 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1
+
+- Install bcrypt
+- Create hashPassword() utility
+- Create verifyPassword() utility
+- Write unit tests
+
+## TASK 3: Create Login API Endpoint (1 hour)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1, TASK 2
+
+- POST /api/auth/login route
+- Validate email/password
+- Generate JWT token
+- Handle errors (invalid credentials, rate limiting)
+
+## TASK 4: Build Login Form UI (1 hour)
+**Priority:** P1 (High)
+**Dependencies:** TASK 3
+
+- Create LoginForm component
+- Form validation (email format, password requirements)
+- Loading states
+- Error message display
+```
+
+**Expected output:**
+```
+✅ Task breakdown created
+📄 Saved to .specs/login-feature/tasks/sprint-1.md
+🚀 Next step: Run /spec-impl
+```
+
+## Step 5: Implement Tasks
+
+Start implementing based on your sprint plan:
+
+```bash
+/spec-impl login-feature
+```
+
+**What happens:**
+- AI reads task breakdown
+- Prompts you to select which task to implement
+- Guides you through implementation
+- Writes code, runs tests, verifies completion
+
+**Sample interaction:**
+
+```
+AI: Which task would you like to implement?
+1. TASK 1: Setup Database Schema
+2. TASK 2: Implement Password Hashing
+3. TASK 3: Create Login API Endpoint
+4. TASK 4: Build Login Form UI
+
+You: 1
+
+AI: Starting TASK 1: Setup Database Schema
+✅ Created migration file: migrations/001_create_users_table.sql
+✅ Added email uniqueness constraint
+✅ Tested migration: Up + Down successful
+📋 TASK 1 complete. Next: TASK 2?
+```
+
+## Step 6: Track Progress
+
+Monitor your implementation status:
+
+```bash
+/spec-status login-feature
+```
+
+**What happens:**
+- AI reads completed tasks
+- Shows progress dashboard
+- Identifies blockers or pending items
+
+**Sample status output:**
+
+```
+# Login Feature - Status Report
+
+## Progress: 75% (3/4 tasks complete)
+
+✅ TASK 1: Setup Database Schema (DONE)
+✅ TASK 2: Implement Password Hashing (DONE)
+✅ TASK 3: Create Login API Endpoint (DONE)
+⏳ TASK 4: Build Login Form UI (IN PROGRESS)
+
+## Blockers: None
+
+## Next Steps:
+- Complete TASK 4 (LoginForm UI)
+- Run end-to-end tests
+- Deploy to staging
+```
+
+## Congratulations!
+
+You've completed your first CafeKit spec workflow. You learned how to:
+
+- ✅ Initialize a spec with `/spec-init`
+- ✅ Gather requirements with `/spec-requirements`
+- ✅ Design architecture with `/spec-design`
+- ✅ Break down tasks with `/spec-tasks`
+- ✅ Implement with AI guidance using `/spec-impl`
+- ✅ Track progress with `/spec-status`
+
+## Next Steps
+
+- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Deep dive into each phase
+- **[Best Practices](/docs/guides/best-practices)** - Learn advanced tips
+- **[Examples](/docs/examples)** - See real-world specs
+
+---
+
+**Questions?** Check our [FAQ](/docs/faq) or open an issue on [GitHub](https://github.com/vudovn/cafekit/issues).

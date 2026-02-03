@@ -19,68 +19,34 @@
 ## 📂 Project Structure
 
 ```
-cafekit/                           # Main project (renamed)
-├── packages/                      # NPM packages (Week 1-2)
-│   ├── spec/                      # @haposoft/cafekit-spec
-│   └── cli/                       # @haposoft/cafekit (future)
+cafekit/                           # Main project
+├── packages/                      # NPM packages
+│   └── spec/                      # @haposoft/cafekit-spec
 │
-├── website/                       # 🆕 NEW - Official website
-│   ├── app/                       # Next.js 15 App Router
-│   │   ├── page.tsx               # Landing page (/)
-│   │   ├── docs/
-│   │   │   ├── page.tsx           # Docs home (/docs)
-│   │   │   ├── getting-started/
-│   │   │   │   ├── installation/page.tsx
-│   │   │   │   └── quickstart/page.tsx
-│   │   │   ├── guides/
-│   │   │   │   ├── spec-workflow/page.tsx
-│   │   │   │   ├── agents/page.tsx
-│   │   │   │   └── skills/page.tsx
-│   │   │   ├── reference/
-│   │   │   │   ├── cli/page.tsx
-│   │   │   │   ├── agents/page.tsx
-│   │   │   │   └── skills/page.tsx
-│   │   │   └── layout.tsx         # Docs sidebar
-│   │   └── layout.tsx             # Root layout
-│   │
-│   ├── components/
-│   │   ├── landing/
-│   │   │   ├── hero.tsx
-│   │   │   ├── features.tsx
-│   │   │   └── quick-start.tsx
-│   │   ├── docs/
-│   │   │   ├── sidebar.tsx
-│   │   │   ├── toc.tsx            # Table of contents
-│   │   │   └── code-block.tsx
-│   │   └── shared/
-│   │       ├── navbar.tsx
-│   │       └── footer.tsx
-│   │
+├── cafekit-web/                   # ✅ ACTIVE - Official website
+│   ├── src/                       # Next.js 15 App Router
+│   │   ├── app/                   # App routes
+│   │   └── components/            # React components
 │   ├── content/                   # 🔑 Markdown docs (easier to edit)
-│   │   ├── docs/
-│   │   │   ├── getting-started/
-│   │   │   │   ├── installation.mdx
-│   │   │   │   └── quickstart.mdx
-│   │   │   ├── guides/
-│   │   │   │   ├── spec-workflow.mdx
-│   │   │   │   ├── agents.mdx
-│   │   │   │   └── skills.mdx
-│   │   │   └── reference/
-│   │   │       ├── cli-commands.mdx
-│   │   │       ├── agents-list.mdx
-│   │   │       └── skills-list.mdx
-│   │   └── config.ts              # Sidebar config
-│   │
+│   │   └── docs/
+│   │       ├── index.mdx          # Docs home
+│   │       ├── getting-started/
+│   │       │   ├── installation.mdx
+│   │       │   └── quickstart.mdx
+│   │       └── guides/
+│   │           └── spec-workflow.mdx
 │   ├── public/
-│   │   ├── favicon.ico
-│   │   └── logo.svg
-│   │
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tailwind.config.ts
-│   └── next.config.ts
+│   └── package.json
 │
-├── web/                           # OLD demo (keep for reference)
+├── .claude/                       # ✅ ACTIVE - Spec workflow commands
+│   └── commands/                  # 6 spec workflow commands
+│       ├── spec-init.md
+│       ├── spec-requirements.md
+│       ├── spec-design.md
+│       ├── spec-tasks.md
+│       ├── spec-impl.md
+│       └── spec-status.md
+│
 └── .docs/                         # Internal docs (not published)
 ```
 
@@ -159,18 +125,18 @@ font-family:
   <section className="py-12">
     <Card>
       <Icon>🎯</Icon>
-      <h3>Spec-Driven Workflow</h3>
-      <p>Structured development process</p>
+      <h3>6-Phase Workflow</h3>
+      <p>From requirements to implementation</p>
     </Card>
     <Card>
-      <Icon>🤖</Icon>
-      <h3>20 Specialist Agents</h3>
-      <p>Frontend, backend, mobile, security</p>
+      <Icon>📋</Icon>
+      <h3>Structured Specs</h3>
+      <p>Clear documentation for every feature</p>
     </Card>
     <Card>
-      <Icon>🧩</Icon>
-      <h3>39 Domain Skills</h3>
-      <p>Next.js, React Native, API patterns</p>
+      <Icon>🚀</Icon>
+      <h3>AI-Guided</h3>
+      <p>Step-by-step implementation help</p>
     </Card>
   </section>
 
@@ -232,15 +198,7 @@ font-family:
 
 **Guides:**
 - `/docs/guides/spec-workflow` - Complete spec-driven guide
-- `/docs/guides/agents` - How to use agents
-- `/docs/guides/skills` - How to use skills
 - `/docs/guides/contributing` - How to contribute
-
-**Reference:**
-- `/docs/reference/cli-commands` - All CLI commands
-- `/docs/reference/agents` - 20 agents catalog
-- `/docs/reference/skills` - 39 skills catalog
-- `/docs/reference/workflows` - 17 workflows
 
 **Examples:**
 
@@ -248,46 +206,54 @@ font-family:
 // content/docs/getting-started/installation.mdx
 ---
 title: Installation
-description: Install CafeKit in your project
+description: Install CafeKit Spec in your project
 ---
 
 # Installation
 
-CafeKit can be installed via npx (no global install needed).
+CafeKit Spec can be installed via npx (no global install needed).
 
 ## Prerequisites
 
 - Node.js 18+
-- Antigravity Editor or Claude Code CLI
+- Claude Code CLI
 
-## Install Spec Skills
+## Install CafeKit Spec
 
 ```bash
 npx @haposoft/cafekit-spec
 ```
 
 This will:
-1. Detect your platform (Antigravity or Claude Code)
-2. Create `.agent/workflows/` or `.claude/commands/` folder
-3. Copy 6 spec skills
+1. Detect your project structure
+2. Create `.claude/commands/` folder
+3. Copy 6 spec workflow commands
+
+## What Gets Installed
+
+CafeKit Spec installs to `.claude/commands/`:
+
+```
+.claude/commands/
+├── spec-init.md           # Initialize new spec
+├── spec-requirements.md   # Gather requirements
+├── spec-design.md         # Create design doc
+├── spec-tasks.md          # Generate task breakdown
+├── spec-impl.md           # Implementation guide
+└── spec-status.md         # Track progress
+```
+
+**Total: 6 spec workflow commands**
 
 ## Verify Installation
 
-```bash
-# For Antigravity
-ls .agent/workflows/spec-*.md
+Open Claude Code and type:
 
-# For Claude Code
-ls .claude/commands/spec-*.md
+```
+/spec-init
 ```
 
-You should see:
-- `spec-init.md`
-- `spec-requirements.md`
-- `spec-design.md`
-- `spec-tasks.md`
-- `spec-impl.md`
-- `spec-status.md`
+You should see the spec initialization workflow start.
 
 ## Next Steps
 
@@ -324,18 +290,7 @@ export const docsConfig = {
       title: "Guides",
       items: [
         { title: "Spec Workflow", href: "/docs/guides/spec-workflow" },
-        { title: "Using Agents", href: "/docs/guides/agents" },
-        { title: "Using Skills", href: "/docs/guides/skills" },
         { title: "Contributing", href: "/docs/guides/contributing" }
-      ]
-    },
-    {
-      title: "Reference",
-      items: [
-        { title: "CLI Commands", href: "/docs/reference/cli-commands" },
-        { title: "Agents", href: "/docs/reference/agents" },
-        { title: "Skills", href: "/docs/reference/skills" },
-        { title: "Workflows", href: "/docs/reference/workflows" }
       ]
     }
   ]
@@ -469,22 +424,21 @@ vercel
 ### **Landing Page Sections:**
 1. Hero
    - Title: "CafeKit"
-   - Subtitle: "Smart agent kit for Antigravity & Claude Code"
+   - Subtitle: "Spec-driven development workflow for Claude Code"
    - Install command: `npx @haposoft/cafekit-spec`
    - CTA: "Read Documentation →"
 
 2. Features
-   - 🎯 Spec-Driven Workflow
-   - 🤖 20 Specialist Agents
-   - 🧩 39 Domain Skills
+   - 🎯 6-Phase Spec Workflow
+   - 📋 Structured Documentation
+   - 🚀 AI-Guided Implementation
 
 3. Quick Start
    - Code example
    - Link to quickstart guide
 
 4. Footer
-   - GitHub link
-   - Haposoft link
+   - GitHub link (vudovn/cafekit)
    - Documentation link
 
 ---
@@ -497,15 +451,7 @@ vercel
 
 **2. Guides**
 - Spec Workflow (complete tutorial)
-- Using Agents (how to invoke, when to use)
-- Using Skills (how skills work, loading)
-- Contributing (how to add agents/skills)
-
-**3. Reference**
-- CLI Commands (all commands with examples)
-- Agents (20 agents catalog with descriptions)
-- Skills (39 skills catalog with use cases)
-- Workflows (17 workflows list)
+- Contributing (how to contribute)
 
 ---
 
@@ -520,7 +466,7 @@ vercel
 - ✅ Dark mode toggle
 
 ### **Nice-to-Have:**
-- ⭐ Auto-generate agent/skill docs from metadata
+- ⭐ Auto-generate spec documentation
 - ⭐ Live code examples (CodeSandbox embeds)
 - ⭐ Changelog page (from CHANGELOG.md)
 - ⭐ Team page (Haposoft contributors)
@@ -541,7 +487,7 @@ vercel
 
 ### **Next Week:**
 1. Write comprehensive guides
-2. Auto-generate reference docs
+2. Create spec templates and examples
 3. Add search functionality
 
 ---

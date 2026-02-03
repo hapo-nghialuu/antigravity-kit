@@ -1,0 +1,653 @@
+---
+title: Spec Workflow Guide
+description: Master CafeKit's 6-phase spec-driven development workflow for building complex features with AI assistance.
+---
+
+# Spec Workflow Guide
+
+CafeKit introduces **spec-driven development** - a structured approach to building features with AI assistance. This guide explains the complete 6-phase workflow.
+
+## What is Spec-Driven Development?
+
+Spec-driven development is a methodology where you:
+
+1. **Plan before coding** - Define requirements and design upfront
+2. **Break down complexity** - Divide features into manageable tasks
+3. **Document decisions** - Create a knowledge base for your project
+4. **Track progress** - Monitor implementation status in real-time
+
+### Why Use Specs?
+
+Traditional AI coding can lead to:
+- Incomplete requirements causing rework
+- Missing edge cases discovered late
+- Inconsistent implementation across features
+- Lost context between coding sessions
+
+Spec-driven development solves this by creating a **single source of truth** before writing code.
+
+## The 6-Phase Workflow
+
+1. **INIT** - Create spec workspace
+2. **REQUIREMENTS** - Gather functional needs
+3. **DESIGN** - Define architecture
+4. **TASKS** - Break down implementation
+5. **IMPL** - Build with AI guidance
+6. **STATUS** - Track and verify
+
+Let's explore each phase in detail.
+
+---
+
+## Phase 1: Initialize (/spec-init)
+
+**Goal:** Create a dedicated workspace for your feature spec.
+
+### When to Use
+
+Use `/spec-init` when starting any new feature that:
+- Affects multiple files or components
+- Requires architectural decisions
+- Has complex business logic
+- Will be worked on over multiple sessions
+
+### What Happens
+
+```bash
+/spec-init my-feature
+```
+
+CafeKit creates:
+
+```
+.specs/my-feature/
+├── requirements.md    # (Created in Phase 2)
+├── design.md          # (Created in Phase 3)
+├── tasks/
+│   └── sprint-1.md    # (Created in Phase 4)
+└── status.md          # (Updated in Phase 6)
+```
+
+### Best Practices
+
+- **Naming:** Use kebab-case: `user-authentication`, `payment-gateway`
+- **Scope:** One feature per spec (don't combine unrelated features)
+- **Location:** Specs live in `.specs/` - commit to Git for team visibility
+
+---
+
+## Phase 2: Gather Requirements (/spec-requirements)
+
+**Goal:** Capture all functional and non-functional requirements through guided questions.
+
+### The Socratic Process
+
+CafeKit uses Socratic questioning to uncover hidden requirements:
+
+```bash
+/spec-requirements my-feature
+```
+
+The AI asks:
+
+1. **Purpose:** What problem does this solve?
+2. **Users:** Who will use this feature?
+3. **Functionality:** What are the must-have capabilities?
+4. **Constraints:** Any technical limitations or requirements?
+5. **Success Criteria:** How do you know it is done?
+
+### Example: E-commerce Checkout
+
+**AI:** What is the main goal of this feature?
+**You:** Allow users to complete purchases with credit card payments.
+
+**AI:** Who are the primary users?
+**You:** Customers making purchases, admins viewing orders.
+
+**AI:** What are the must-have functionalities?
+**You:**
+- Add items to cart
+- Enter shipping address
+- Choose payment method (credit card, PayPal)
+- Apply discount codes
+- View order summary
+
+### Output: requirements.md
+
+```markdown
+# My Feature - Requirements
+
+## Purpose
+Allow customers to complete purchases...
+
+## Target Users
+- End customers (95% mobile users)
+- Admin dashboard operators
+
+## Functional Requirements
+### Must Have (P0)
+- Shopping cart management
+- Credit card payment processing
+- Order confirmation email
+
+### Nice to Have (P1)
+- PayPal integration
+- Save payment methods
+- Guest checkout
+
+## Non-Functional Requirements
+- Performance: Page load under 2s
+- Security: PCI DSS Level 1 compliance
+- Accessibility: WCAG 2.1 AA
+
+## Success Criteria
+- Checkout completion rate above 95%
+- Payment success rate above 99.9%
+```
+
+### Best Practices
+
+- **Be specific:** "Login with Google OAuth" is better than "User authentication"
+- **Include edge cases:** What happens if payment fails mid-transaction?
+- **Define constraints early:** "Must work offline" vs "Requires internet"
+- **Prioritize:** Mark must-haves (P0) vs nice-to-haves (P1)
+
+---
+
+## Phase 3: Design Architecture (/spec-design)
+
+**Goal:** Create a technical blueprint before implementation.
+
+### What the AI Designs
+
+```bash
+/spec-design my-feature
+```
+
+The AI generates:
+
+1. **System Architecture** - How components interact
+2. **API Contracts** - Endpoint definitions, request/response formats
+3. **Database Schema** - Tables, relationships, indexes
+4. **UI Components** - Component hierarchy, props, state
+5. **Error Scenarios** - Edge cases and failure handling
+6. **Security Measures** - Authentication, authorization, data protection
+
+### Example: design.md
+
+```markdown
+# E-commerce Checkout - Design
+
+## Architecture Diagram
+
+[React Cart] --\> [Next.js API] --\> [Stripe API]
+                      |
+                      v
+                [PostgreSQL]
+
+## API Design
+
+### POST /api/checkout
+
+**Request:**
+```json
+{
+  "cart_id": "cart_123",
+  "payment_method": {
+    "type": "credit_card",
+    "token": "tok_visa_4242"
+  },
+  "shipping_address": {
+    "line1": "123 Main St",
+    "city": "San Francisco",
+    "postal_code": "94105",
+    "country": "US"
+  },
+  "discount_code": "SUMMER20"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "order_id": "ord_456",
+  "status": "confirmed",
+  "total": 89.99,
+  "currency": "USD",
+  "confirmation_url": "/orders/ord_456"
+}
+```
+
+## Database Schema
+
+```sql
+-- Orders table
+CREATE TABLE orders (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  total_amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(3) DEFAULT 'USD',
+  status VARCHAR(20) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Order items
+CREATE TABLE order_items (
+  id UUID PRIMARY KEY,
+  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id),
+  quantity INT NOT NULL,
+  unit_price DECIMAL(10, 2) NOT NULL
+);
+```
+
+## UI Components
+
+### Component Tree
+
+- CheckoutPage
+  - CartSummary (cart)
+  - ShippingForm (onSubmit)
+  - PaymentForm (methods, onSubmit)
+  - DiscountCodeInput (onApply)
+  - CheckoutButton (loading, onClick)
+
+## Error Handling
+
+| Scenario | Response | User Action |
+|----------|----------|-------------|
+| Card declined | Show error message | Update payment method |
+| Network timeout | Retry 3 times, then show error | Retry manually |
+| Out of stock | Show item unavailable | Remove from cart |
+| Invalid discount code | Inline error on input field | Correct code or remove |
+
+## Security Measures
+
+1. **PCI Compliance:**
+   - Never store raw credit card numbers
+   - Use Stripe tokenization
+   - HTTPS only for checkout pages
+
+2. **Rate Limiting:**
+   - Max 5 checkout attempts per 10 minutes per user
+   - Prevents card testing attacks
+
+3. **CSRF Protection:**
+   - Verify CSRF token on all POST requests
+   - Use SameSite=Strict cookies
+```
+
+### Best Practices
+
+- **Start simple:** Design MVP first, add complexity later
+- **Use diagrams:** Visual architecture helps team alignment
+- **Define contracts early:** Lock API shapes before implementation
+- **Consider scale:** Will this work with 10,000 users? 1 million?
+- **Document tradeoffs:** Why did you choose REST over GraphQL?
+
+---
+
+## Phase 4: Task Breakdown (/spec-tasks)
+
+**Goal:** Transform design into actionable, prioritized tasks.
+
+### What the AI Creates
+
+```bash
+/spec-tasks my-feature
+```
+
+The AI generates a **sprint plan** with:
+
+1. **Prioritized tasks** - P0 (blocker) to P1 (high) to P2 (nice-to-have)
+2. **Time estimates** - Realistic development time per task
+3. **Dependencies** - Task ordering and blockers
+4. **Verification steps** - How to confirm task completion
+
+### Example: tasks/sprint-1.md
+
+```markdown
+# E-commerce Checkout - Sprint 1
+
+**Estimated Time:** 12 hours (3 days)
+
+## TASK 1: Setup Database Schema (1 hour)
+**Priority:** P0 (Blocker)
+**Dependencies:** None
+
+**INPUT:**
+- Design document database schema
+
+**OUTPUT:**
+- Migration file: 001_create_orders_tables.sql
+- Applied to development database
+- Indexes created
+
+**VERIFY:**
+```bash
+psql -d myapp -c "\\d orders"
+# Should show orders table structure
+```
+
+**Rollback:** Run down migration
+
+---
+
+## TASK 2: Create Stripe Integration (2 hours)
+**Priority:** P0 (Blocker)
+**Dependencies:** None
+
+**INPUT:**
+- Stripe API key (test mode)
+- Payment requirements from design
+
+**OUTPUT:**
+- lib/stripe.ts - Stripe client wrapper
+- processPayment(token, amount) function
+- Error handling for declined cards
+
+**VERIFY:**
+```bash
+npm test lib/stripe.test.ts
+# All tests pass
+```
+
+**Rollback:** Remove stripe.ts
+
+---
+
+## TASK 3: Build Checkout API Endpoint (2 hours)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1, TASK 2
+
+**INPUT:**
+- API design from design.md
+- Stripe integration
+- Database schema
+
+**OUTPUT:**
+- pages/api/checkout.ts endpoint
+- Request validation (Zod schema)
+- Transaction handling (order + payment)
+- Error responses
+
+**VERIFY:**
+```bash
+curl -X POST http://localhost:3000/api/checkout \
+  -H "Content-Type: application/json" \
+  -d '{"cart_id": "test", ...}'
+# Returns 200 with order_id
+```
+
+**Rollback:** Delete checkout.ts
+```
+
+### Best Practices
+
+- **Small tasks:** Max 4 hours per task (easier to estimate and complete)
+- **Clear dependencies:** Use task numbers for sequencing
+- **Verify steps:** Define "done" criteria (tests pass, feature works)
+- **Rollback plans:** Always include how to undo a task if needed
+
+---
+
+## Phase 5: Implementation (/spec-impl)
+
+**Goal:** Build tasks with AI-guided coding.
+
+### How It Works
+
+```bash
+/spec-impl my-feature
+```
+
+The AI:
+
+1. **Reads the task breakdown**
+2. **Asks which task to implement**
+3. **Writes code** for that task
+4. **Runs verification** steps
+5. **Marks task complete** when verified
+
+### Example Session
+
+```
+AI: Which task would you like to implement?
+1. TASK 1: Setup Database Schema (P0)
+2. TASK 2: Create Stripe Integration (P0)
+3. TASK 3: Build Checkout API Endpoint (P0)
+4. TASK 4: Create UI Components (P1)
+
+You: 1
+
+AI: Starting TASK 1: Setup Database Schema
+
+[AI writes migration file]
+
+Created: migrations/001_create_orders_tables.sql
+Migration applied successfully
+Verified: Orders table exists
+
+TASK 1 COMPLETE
+
+Next recommended task: TASK 2 (Stripe Integration)
+Continue? (y/n)
+
+You: y
+
+[AI proceeds to TASK 2...]
+```
+
+### Best Practices
+
+- **Follow order:** Implement P0 tasks before P1 tasks
+- **Respect dependencies:** Do not skip blocked tasks
+- **Verify each task:** Run tests before moving to next task
+- **Update status:** Use `/spec-status` to track progress
+
+---
+
+## Phase 6: Track Status (/spec-status)
+
+**Goal:** Monitor implementation progress and identify blockers.
+
+### What You See
+
+```bash
+/spec-status my-feature
+```
+
+**Output:**
+
+```markdown
+# E-commerce Checkout - Status Report
+
+Generated: 2026-01-30 14:30
+
+## Progress: 67% (4/6 tasks complete)
+
+### Completed Tasks
+- TASK 1: Setup Database Schema (1h)
+- TASK 2: Create Stripe Integration (2h)
+- TASK 3: Build Checkout API Endpoint (2h)
+- TASK 4: Create UI Components (3h)
+
+### In Progress
+- TASK 5: Integrate Frontend + Backend (50% complete)
+
+### Pending
+- TASK 6: End-to-End Testing
+
+## Blockers: None
+
+## Next Steps
+1. Complete TASK 5 (remaining: PaymentForm integration)
+2. Run TASK 6 E2E tests
+3. Deploy to staging for QA review
+
+## Estimated Completion
+- Remaining time: 3 hours
+- Expected completion: 2026-01-30 17:30
+```
+
+### Best Practices
+
+- **Check regularly:** Run `/spec-status` at start of each session
+- **Update blockers:** Document issues preventing progress
+- **Adjust estimates:** If tasks take longer, update time remaining
+
+---
+
+## When to Use Spec Workflow
+
+### Use Specs For:
+
+- **Complex features** (affects 3+ files)
+- **New architecture** (introducing new patterns)
+- **Team projects** (multiple developers)
+- **Critical features** (payments, authentication, data migrations)
+- **Long-running work** (spans multiple days/weeks)
+
+### Skip Specs For:
+
+- **Simple bug fixes** (change 1-2 lines)
+- **Copy changes** (updating text, fixing typos)
+- **Styling tweaks** (CSS adjustments)
+- **Trivial tasks** (under 30 min to complete)
+
+---
+
+## Common Mistakes
+
+### 1. Skipping Requirements Phase
+
+**Wrong:**
+```bash
+/spec-init feature
+/spec-design feature   # No requirements gathered!
+```
+
+**Right:**
+```bash
+/spec-init feature
+/spec-requirements feature  # Capture needs first
+/spec-design feature
+```
+
+**Why:** Design without requirements leads to missing edge cases.
+
+---
+
+### 2. Over-Engineering
+
+**Wrong:**
+- Designing for 1 million users when you have 100
+- Adding features not in requirements
+- Creating abstractions before you need them
+
+**Right:**
+- Build for current scale + 10x growth
+- Stick to requirements (defer nice-to-haves)
+- Follow YAGNI (You Aren't Gonna Need It)
+
+---
+
+### 3. Ignoring Task Dependencies
+
+**Wrong:**
+```
+# Implementing UI before API exists
+TASK 4: Create UI Components (done)
+TASK 3: Build Checkout API (not started)
+```
+
+**Right:**
+```
+# Follow dependency order
+TASK 3: Build Checkout API (done)
+TASK 4: Create UI Components (in progress)
+```
+
+**Why:** Dependent tasks fail without prerequisites.
+
+---
+
+### 4. Not Verifying Tasks
+
+**Wrong:**
+- Mark task complete without testing
+- Skip verification steps
+- Move to next task with broken code
+
+**Right:**
+- Run all verification commands
+- Ensure tests pass
+- Manually test critical paths
+- Only then mark task complete
+
+---
+
+## Advanced Tips
+
+### Iterative Refinement
+
+You can refine specs mid-implementation:
+
+```bash
+# Update requirements after user feedback
+/spec-requirements my-feature
+
+# Re-run design to incorporate changes
+/spec-design my-feature
+
+# Regenerate tasks with new design
+/spec-tasks my-feature
+```
+
+### Parallel Implementation
+
+For independent tasks, work in parallel:
+
+```
+TASK 2: Stripe Integration (Backend)  -- Developer A
+TASK 4: UI Components (Frontend)      -- Developer B
+```
+
+Both can proceed since they do not depend on each other.
+
+### Archiving Completed Specs
+
+Keep specs for future reference:
+
+```bash
+# Move to archive after feature ships
+mv .specs/my-feature .specs/archive/my-feature
+```
+
+Archived specs serve as documentation for maintenance.
+
+---
+
+## Workflow Cheat Sheet
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `/spec-init name` | Create spec workspace | Starting new feature |
+| `/spec-requirements name` | Gather needs | After init, before design |
+| `/spec-design name` | Create architecture | After requirements |
+| `/spec-tasks name` | Break down work | After design |
+| `/spec-impl name` | Build feature | After tasks generated |
+| `/spec-status name` | Check progress | Anytime during implementation |
+
+---
+
+## Next Steps
+
+- [Installation](/docs/getting-started/installation) - Get CafeKit Spec installed
+- [Quickstart Guide](/docs/getting-started/quickstart) - Build your first spec
+- [FAQ](/docs/faq) - Common questions answered
+- [GitHub Issues](https://github.com/vudovn/cafekit/issues) - Report bugs or request features
+
+---
+
+**Questions?** Check the [FAQ](/docs/faq) or open an issue on [GitHub](https://github.com/vudovn/cafekit/issues).

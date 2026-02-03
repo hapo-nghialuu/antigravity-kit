@@ -1,0 +1,86 @@
+---
+title: Installation
+description: Get started with CafeKit Spec in under a minute. Install the 6 spec workflow commands for structured feature development.
+---
+
+# Installation
+
+Get CafeKit Spec installed and start using spec-driven development in your projects.
+
+## Prerequisites
+
+Before installing, ensure you have:
+
+- **Node.js 18+** - Required for running the CLI
+- **Claude Code** - CafeKit Spec extends Claude Code with workflow commands
+- **Git** - For version control and updates
+
+## Install CafeKit Spec
+
+Run the install command in your project root:
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+This command will:
+- Detect your project structure
+- Install 6 spec workflow commands to `.claude/commands/`
+- Configure your workspace for spec-driven development
+
+## What Gets Installed
+
+After running the install command, you'll have 6 spec workflow commands in `.claude/commands/`:
+
+```
+.claude/commands/
+├── spec-init.md           # Initialize new spec
+├── spec-requirements.md   # Gather requirements
+├── spec-design.md         # Create design doc
+├── spec-tasks.md          # Generate task breakdown
+├── spec-impl.md           # Implementation guide
+└── spec-status.md         # Track progress
+```
+
+## Verify Installation
+
+Open Claude Code and type:
+
+```
+/spec-init
+```
+
+You should see the spec initialization workflow start.
+
+## Troubleshooting
+
+### Command not found
+
+If `/spec-init` doesn't work:
+
+1. **Check file locations** - Ensure files are in `.claude/commands/` folder
+2. **Restart Claude Code** - Some tools require a restart to detect new commands
+3. **Verify file format** - Commands must be `.md` files with proper frontmatter
+
+### Wrong directory
+
+If CafeKit installs to the wrong directory, you can manually move files:
+
+```bash
+# Ensure .claude/commands/ exists
+mkdir -p .claude/commands/
+
+# Re-run installer
+npx @haposoft/cafekit-spec
+```
+
+## Next Steps
+
+Now that CafeKit Spec is installed:
+
+- **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
+- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full 6-phase process
+
+---
+
+**Need help?** Open an issue on [GitHub](https://github.com/vudovn/cafekit) or contact support.

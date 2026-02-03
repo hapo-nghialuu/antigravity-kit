@@ -1,6 +1,6 @@
 # So sánh 2 Hệ thống: Google Antigravity vs Claude Code CLI
 
-> **Dự án:** antigravity-kit
+> **Dự án:** cafekit
 > **Mục đích ban đầu:** Tool định nghĩa agents cho **Google Antigravity** (AI coding editor)
 > **Hiện trạng:** Hỗ trợ song song cả Google Antigravity VÀ Claude Code CLI
 
@@ -211,14 +211,14 @@ Claude Code CLI:    .claude/commands/brainstorm.md (user-invocable)
 #### **Claude Code CLI**
 - **Plugin system** - Must have `.claude-plugin/plugin.json` to be distributed
 - **Manifest required** for marketplace
-- **Installation:** `/plugin install antigravity-kit`
+- **Installation:** `/plugin install cafekit`
 - **Hooks:** Support for PreToolUse, PostToolUse, etc.
 
 **Missing file (TODO):**
 ```json
 // .claude/.claude-plugin/plugin.json
 {
-  "name": "antigravity-kit",
+  "name": "cafekit",
   "description": "Comprehensive Claude Code plugin",
   "version": "1.0.0",
   "author": {

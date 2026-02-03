@@ -1,4 +1,4 @@
-# Antigravity Kit - Claude Code Convention
+# CafeKit - Claude Code Convention
 
 > Instructions for Claude Code to understand and use the `.claude/` plugin structure
 
@@ -240,10 +240,10 @@ File to edit: UserService.ts
 
 ## 📁 Project Structure
 
-This project uses **Antigravity Kit** - a Claude Code plugin with specialist agents and domain skills.
+This project uses **CafeKit** - a Claude Code plugin with specialist agents and domain skills.
 
 ```
-antigravity-kit/
+cafekit/
 ├── .agent/                    # ⚠️ LEGACY - Google Antigravity format
 │   └── (Keep for reference, but DO NOT USE)
 │
@@ -261,7 +261,7 @@ antigravity-kit/
 
 ---
 
-## 🎯 How to Use Antigravity Kit
+## 🎯 How to Use CafeKit
 
 ### Agents Auto-Discovery
 

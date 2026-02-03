@@ -1,0 +1,34 @@
+{
+  "name": "@haposoft/cafekit-spec",
+  "version": "0.1.0",
+  "description": "Spec-Driven Development workflow for Haposoft projects",
+  "author": "Haposoft <nghialt@haposoft.com>",
+  "license": "UNLICENSED",
+  "private": true,
+  "bin": {
+    "cafekit-spec": "./bin/install.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haposoft/cafekit.git"
+  },
+  "keywords": [
+    "haposoft",
+    "cafekit",
+    "antigravity",
+    "claude-code",
+    "spec-driven",
+    "workflow"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
