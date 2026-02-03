@@ -37,58 +37,111 @@ async function promptPlatformSelection() {
   });
 }
 
+// Copy recursive
+function copyRecursive(src, dest) {
+  const exists = fs.existsSync(src);
+  const stats = exists && fs.statSync(src);
+  const isDirectory = exists && stats.isDirectory();
+
+  if (isDirectory) {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    fs.readdirSync(src).forEach(childItemName => {
+      copyRecursive(path.join(src, childItemName), path.join(dest, childItemName));
+    });
+  } else {
+    fs.copyFileSync(src, dest);
+  }
+}
+
 // Copy files
 function copyFiles(platforms) {
-  const sourceDir = path.join(__dirname, '../src/claude/commands');
+  const commandsSourceDir = path.join(__dirname, '../src/claude/commands');
+  const skillsSourceDir = path.join(__dirname, '../src/common/skills');
 
-  // Define targets based on platforms
+  // Define targets
   const targets = [];
-  if (platforms.includes('claude')) targets.push('.claude/commands');
-  if (platforms.includes('antigravity')) targets.push('.agent/commands');
+  if (platforms.includes('claude')) {
+    targets.push({
+      commandsDir: '.claude/commands',
+      skillsDir: '.claude/skills',
+      skillsRef: '.claude/skills'
+    });
+  }
+  if (platforms.includes('antigravity')) {
+    targets.push({
+      commandsDir: '.agent/commands',
+      skillsDir: '.agent/skills',
+      skillsRef: '.agent/skills'
+    });
+  }
 
-  // Create directories
-  targets.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
+  let copiedFiles = 0;
+  let skippedFiles = 0;
+  let copiedSkills = 0;
 
-  // Copy each spec file
-  const specFiles = [
-    'spec-init.md',
-    'spec-requirements.md',
-    'spec-design.md',
-    'spec-tasks.md',
-    'spec-impl.md',
-    'spec-status.md'
-  ];
+  // Process each target platform
+  targets.forEach(target => {
+    // 1. Copy Skills
+    if (fs.existsSync(skillsSourceDir)) {
+      if (!fs.existsSync(target.skillsDir)) {
+        fs.mkdirSync(target.skillsDir, { recursive: true });
+      }
 
-  let copied = 0;
-  let skipped = 0;
+      // Copy spec-driven-development skill folder
+      const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
+      const specSkillDest = path.join(target.skillsDir, 'spec-driven-development');
 
-  specFiles.forEach(file => {
-    const source = path.join(sourceDir, file);
-
-    if (!fs.existsSync(source)) {
-      console.error(`Error: Source file not found: ${file}`);
-      process.exit(1);
-    }
-
-    targets.forEach(targetDir => {
-      const target = path.join(targetDir, file);
-
-      if (fs.existsSync(target)) {
-        console.log(`[${targetDir}] Skipped: ${file} (already exists)`);
-        skipped++;
+      if (fs.existsSync(specSkillSource)) {
+        // We overwrite skills to ensure they match the package version
+        copyRecursive(specSkillSource, specSkillDest);
+        copiedSkills++;
+        console.log(`[${target.skillsDir}] Installed skill: spec-driven-development`);
       } else {
-        fs.copyFileSync(source, target);
-        console.log(`[${targetDir}] Copied: ${file}`);
-        copied++;
+        console.warn(`Warning: Skills source not found at ${specSkillSource}`);
+      }
+    }
+
+    // 2. Copy Commands
+    if (!fs.existsSync(target.commandsDir)) {
+      fs.mkdirSync(target.commandsDir, { recursive: true });
+    }
+
+    const specFiles = [
+      'spec-init.md',
+      'spec-requirements.md',
+      'spec-design.md',
+      'spec-tasks.md',
+      'spec-impl.md',
+      'spec-status.md'
+    ];
+
+    specFiles.forEach(file => {
+      const source = path.join(commandsSourceDir, file);
+      const dest = path.join(target.commandsDir, file);
+
+      if (!fs.existsSync(source)) {
+        console.error(`Error: Source file not found: ${file}`);
+        process.exit(1);
+      }
+
+      if (fs.existsSync(dest)) {
+        console.log(`[${target.commandsDir}] Skipped: ${file} (already exists)`);
+        skippedFiles++;
+      } else {
+        // Read content and replace placeholders
+        let content = fs.readFileSync(source, 'utf8');
+        content = content.replace(/{{SKILLS_DIR}}/g, target.skillsRef);
+
+        fs.writeFileSync(dest, content);
+        console.log(`[${target.commandsDir}] Copied: ${file}`);
+        copiedFiles++;
       }
     });
   });
 
-  return { copied, skipped, targets };
+  return { copied: copiedFiles, skipped: skippedFiles, copiedSkills, targets: targets.map(t => t.commandsDir) };
 }
 
 // Main
@@ -109,12 +162,13 @@ async function main() {
   }
 
   try {
-    const { copied, skipped, targets } = copyFiles(platforms);
+    const result = copyFiles(platforms);
 
     console.log(`\nInstallation complete!`);
-    console.log(`   Copied: ${copied} files`);
-    console.log(`   Skipped: ${skipped} files`);
-    console.log(`   Targets: ${targets.join(', ')}`);
+    console.log(`   Copied Commands: ${result.copied}`);
+    console.log(`   Skipped Commands: ${result.skipped}`);
+    console.log(`   Installed Skills: ${result.copiedSkills > 0 ? 'Yes' : 'No'}`);
+    console.log(`   Targets: ${result.targets.join(', ')}`);
     console.log(`\nNext steps:`);
     console.log(`   1. Run /spec-init <feature-name>`);
     console.log(`   2. Follow the spec workflow: requirements -> design -> tasks -> impl`);

@@ -37,9 +37,9 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 ### Step 2: Generate Implementation Tasks
 
 **Load generation rules and template**:
-- Read `.agent/skills/spec-driven-development/rules/tasks-generation.md` for principles
-- If `sequential` is **false**: Read `.agent/skills/spec-driven-development/rules/tasks-parallel-analysis.md` for parallel judgement criteria
-- Read `.agent/skills/spec-driven-development/templates/tasks.md` for format (supports `(P)` markers)
+- Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-generation.md` for principles
+- If `sequential` is **false**: Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-parallel-analysis.md` for parallel judgement criteria
+- Read `{{SKILLS_DIR}}/spec-driven-development/templates/tasks.md` for format (supports `(P)` markers)
 
 **Generate task list following all rules**:
 - Use language specified in spec.json
@@ -112,7 +112,7 @@ Provide brief summary in the language specified in spec.json:
 - **User Action Required**: Confirm intentional gaps or regenerate tasks
 
 **Template/Rules Missing**:
-- **User Message**: "Template or rules files missing in `.agent/skills/spec-driven-development/`"
+- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/spec-driven-development/`"
 - **Fallback**: Use inline basic structure with warning
 - **Suggested Action**: "Check repository setup or restore template files"
 

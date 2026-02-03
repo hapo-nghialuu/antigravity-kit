@@ -21,7 +21,7 @@ Hướng dẫn và thực hiện implement các task cụ thể từ task list.
 
 ### Prerequisites
 - Tasks phải được generate trước (`/spec-tasks`)
-- Đọc skill: `.agent/skills/spec-driven-development/SKILL.md`
+- Đọc skill: `{{SKILLS_DIR}}/spec-driven-development/SKILL.md`
 
 ### Arguments
 
