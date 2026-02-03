@@ -21,6 +21,7 @@ export function LanguageSwitcher() {
         // Determine initial locale from cookie
         const match = document.cookie.match(new RegExp('(^| )NEXT_LOCALE=([^;]+)'));
         if (match) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLocale(match[2]);
         }
     }, []);

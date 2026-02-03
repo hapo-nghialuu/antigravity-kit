@@ -15,25 +15,25 @@ export function Breadcrumbs({ slug }: BreadcrumbsProps) {
   ];
 
   if (slug) {
-      // Logic to find titles could be complex, for now let's use slug parts or look up
-      // Flatten config to find titles
-      const flatNav = docsConfig.sidebarNav.flatMap(section => section.items);
+    // Logic to find titles could be complex, for now let's use slug parts or look up
+    // Flatten config to find titles
+    const flatNav = docsConfig.sidebarNav.flatMap(section => section.items);
 
-      let currentPath = '/docs';
-      slug.forEach((part, index) => {
-          currentPath += `/${part}`;
-          // Try to find title in config
-          const navItem = flatNav.find(item => item.href === currentPath);
-          const title = navItem ? navItem.title : part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
+    let currentPath = '/docs';
+    slug.forEach((part) => {
+      currentPath += `/${part}`;
+      // Try to find title in config
+      const navItem = flatNav.find(item => item.href === currentPath);
+      const title = navItem ? navItem.title : part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
 
-          crumbs.push({
-              title,
-              href: currentPath
-          });
+      crumbs.push({
+        title,
+        href: currentPath
       });
+    });
   } else {
-      // Root docs page
-      crumbs.push({ title: 'Introduction', href: '/docs' });
+    // Root docs page
+    crumbs.push({ title: 'Introduction', href: '/docs' });
   }
 
   // Remove duplicates if any (e.g. Docs > Introduction might overlap if slug is empty)

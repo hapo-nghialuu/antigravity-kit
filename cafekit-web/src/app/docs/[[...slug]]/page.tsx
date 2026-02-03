@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getMDXContent, getMDXFiles, extractHeadings } from '@/lib/mdx';
+import { getMDXContent, getMDXFiles, extractHeadings, type MDXContent } from '@/lib/mdx';
 import { TableOfContents, TOCHeading } from '@/components/docs/toc';
 import { Breadcrumbs } from '@/components/docs/breadcrumbs';
 import { DocsPager } from '@/components/docs/pager';
@@ -138,7 +138,7 @@ export default async function DocPage({ params }: PageProps) {
   return renderDoc(mdxContent, slug, locale, resolvedPath);
 }
 
-function renderDoc(mdxContent: any, slug: string[] | undefined, locale: string, resolvedPath: string) {
+function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: string, resolvedPath: string) {
   // Extract headings for TOC
   const filePath = path.join(process.cwd(), 'content', `${resolvedPath}.mdx`);
   const source = fs.readFileSync(filePath, 'utf-8');
