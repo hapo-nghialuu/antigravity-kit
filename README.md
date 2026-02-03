@@ -62,6 +62,10 @@ npx @haposoft/cafekit-spec
 - **[Quickstart](https://cafekit.vercel.app/docs/getting-started/quickstart)** - Build your first spec
 - **[Spec Workflow](https://cafekit.vercel.app/docs/guides/spec-workflow)** - Complete guide
 
+## Acknowledgments
+
+CafeKit Spec is inspired by and built upon ideas from [Antigravity Kit](https://github.com/vudovn/antigravity-kit) by [@vudovn](https://github.com/vudovn).
+
 ## License
 
 MIT © Haposof
