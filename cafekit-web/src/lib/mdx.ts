@@ -74,7 +74,12 @@ export async function getMDXContent(slug: string): Promise<MDXContent | null> {
             rehypeRaw, // Allow raw HTML
             rehypeHighlight,
             rehypeSlug,
-            [rehypeAutolinkHeadings, { behavior: 'wrap' }],
+            [rehypeAutolinkHeadings, {
+              behavior: 'append',
+              properties: {
+                className: ['anchor'],
+              },
+            }],
           ],
         },
       },
@@ -114,11 +119,14 @@ export function getAllMDXMetadata(dir: string = 'docs'): Array<{ slug: string; f
  * Extract headings from MDX content for table of contents
  */
 export function extractHeadings(content: string): Array<{ id: string; text: string; level: number }> {
+  // Remove code blocks to avoid matching headings inside them
+  const contentWithoutCodeBlocks = content.replace(/```[\s\S]*?```/g, '');
+
   const headingRegex = /^(#{1,6})\s+(.+)$/gm;
   const headings: Array<{ id: string; text: string; level: number }> = [];
 
   let match;
-  while ((match = headingRegex.exec(content)) !== null) {
+  while ((match = headingRegex.exec(contentWithoutCodeBlocks)) !== null) {
     const level = match[1].length;
     const text = match[2];
     const id = text

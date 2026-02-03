@@ -4,38 +4,54 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-// Detect platform
-function detectPlatform() {
-  if (fs.existsSync('.claude/commands')) return 'claude';
-  if (fs.existsSync('.claude')) return 'claude';
-  return null;
+// Detect platforms
+function detectPlatforms() {
+  const platforms = [];
+  if (fs.existsSync('.claude')) platforms.push('claude');
+  if (fs.existsSync('.agent')) platforms.push('antigravity');
+  return platforms;
 }
 
 // Prompt user for confirmation
-async function promptConfirmation() {
+async function promptPlatformSelection() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
+  console.log('No existing configuration detected.');
+  console.log('Which platform do you want to install for?');
+  console.log('1) Claude Code (.claude/commands)');
+  console.log('2) Antigravity (.agent/commands)');
+  console.log('3) Both');
+
   return new Promise((resolve) => {
-    rl.question('Create .claude/commands/ directory? (yes/no): ', (answer) => {
+    rl.question('Select (1-3): ', (answer) => {
       rl.close();
-      resolve(answer.trim().toLowerCase() === 'yes' || answer.trim().toLowerCase() === 'y');
+      const choice = answer.trim();
+      if (choice === '1') resolve(['claude']);
+      else if (choice === '2') resolve(['antigravity']);
+      else if (choice === '3') resolve(['claude', 'antigravity']);
+      else resolve([]); // Cancel
     });
   });
 }
 
 // Copy files
-function copyFiles() {
-  const platform = 'claude';
+function copyFiles(platforms) {
   const sourceDir = path.join(__dirname, '../src/claude/commands');
-  const targetDir = '.claude/commands';
 
-  // Create target directory if not exists
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
+  // Define targets based on platforms
+  const targets = [];
+  if (platforms.includes('claude')) targets.push('.claude/commands');
+  if (platforms.includes('antigravity')) targets.push('.agent/commands');
+
+  // Create directories
+  targets.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
 
   // Copy each spec file
   const specFiles = [
@@ -52,54 +68,57 @@ function copyFiles() {
 
   specFiles.forEach(file => {
     const source = path.join(sourceDir, file);
-    const target = path.join(targetDir, file);
 
     if (!fs.existsSync(source)) {
       console.error(`Error: Source file not found: ${file}`);
       process.exit(1);
     }
 
-    if (fs.existsSync(target)) {
-      console.log(`Skipped: ${file} (already exists)`);
-      skipped++;
-    } else {
-      fs.copyFileSync(source, target);
-      console.log(`Copied: ${file}`);
-      copied++;
-    }
+    targets.forEach(targetDir => {
+      const target = path.join(targetDir, file);
+
+      if (fs.existsSync(target)) {
+        console.log(`[${targetDir}] Skipped: ${file} (already exists)`);
+        skipped++;
+      } else {
+        fs.copyFileSync(source, target);
+        console.log(`[${targetDir}] Copied: ${file}`);
+        copied++;
+      }
+    });
   });
 
-  return { copied, skipped };
+  return { copied, skipped, targets };
 }
 
 // Main
 async function main() {
   console.log('CafeKit Spec Installer\n');
 
-  let platform = detectPlatform();
+  let platforms = detectPlatforms();
 
-  if (!platform) {
-    console.log('No .claude/ folder detected in current directory.');
-    const shouldCreate = await promptConfirmation();
+  if (platforms.length === 0) {
+    platforms = await promptPlatformSelection();
 
-    if (!shouldCreate) {
+    if (platforms.length === 0) {
       console.log('Installation cancelled.');
       process.exit(0);
     }
   } else {
-    console.log('Detected .claude/ folder');
+    console.log(`Detected platforms: ${platforms.join(', ')}`);
   }
 
   try {
-    const { copied, skipped } = copyFiles();
+    const { copied, skipped, targets } = copyFiles(platforms);
 
     console.log(`\nInstallation complete!`);
     console.log(`   Copied: ${copied} files`);
     console.log(`   Skipped: ${skipped} files`);
+    console.log(`   Targets: ${targets.join(', ')}`);
     console.log(`\nNext steps:`);
     console.log(`   1. Run /spec-init <feature-name>`);
     console.log(`   2. Follow the spec workflow: requirements -> design -> tasks -> impl`);
-    console.log(`\nDocumentation: https://github.com/vudovn/cafekit`);
+    console.log(`\nDocumentation: https://github.com/hapo-nghialuu/hapo-cafekit`);
 
     process.exit(0);
   } catch (error) {

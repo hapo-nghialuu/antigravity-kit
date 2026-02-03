@@ -438,7 +438,7 @@ vercel
    - Link to quickstart guide
 
 4. Footer
-   - GitHub link (vudovn/cafekit)
+   - GitHub link (hapo-nghialuu/hapo-cafekit)
    - Documentation link
 
 ---

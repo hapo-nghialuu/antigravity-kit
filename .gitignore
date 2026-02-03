@@ -6,3 +6,5 @@ tests
 others
 logs/
 .next
+__pycache__/*
+*.pyc

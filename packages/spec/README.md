@@ -2,9 +2,9 @@
 
 > Spec-Driven Development workflow for Claude Code
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/vudovn/cafekit)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
 [![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Claude%20Code-green.svg)](https://github.com/vudovn/cafekit)
+[![Platform](https://img.shields.io/badge/platform-Claude%20Code-green.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
 
 ## Overview
 
@@ -62,7 +62,7 @@ Next steps:
    1. Run /spec-init <feature-name>
    2. Follow the spec workflow: requirements -> design -> tasks -> impl
 
-Documentation: https://github.com/vudovn/cafekit
+Documentation: https://github.com/hapo-nghialuu/hapo-cafekit
 ```
 
 ## Quick Start
@@ -514,16 +514,16 @@ Task #4: Add protected route middleware
 
 ## Contributing
 
-- **Report issues:** https://github.com/vudovn/cafekit/issues
+- **Report issues:** https://github.com/hapo-nghialuu/hapo-cafekit/issues
 - **Suggest improvements:** Open a GitHub Discussion
 
 ---
 
 ## Support
 
-- **GitHub:** https://github.com/vudovn/cafekit
-- **Issues:** https://github.com/vudovn/cafekit/issues
-- **Discussions:** https://github.com/vudovn/cafekit/discussions
+- **GitHub:** https://github.com/hapo-nghialuu/hapo-cafekit
+- **Issues:** https://github.com/hapo-nghialuu/hapo-cafekit/issues
+- **Discussions:** https://github.com/hapo-nghialuu/hapo-cafekit/discussions
 
 ---
 

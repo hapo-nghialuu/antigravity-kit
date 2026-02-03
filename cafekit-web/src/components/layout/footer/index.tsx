@@ -3,30 +3,30 @@ import Link from "next/link";
 
 export default function Footer() {
     return (
-        <footer className="border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+        <footer className="border-t border-border mt-auto bg-muted/30">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
                     {/* Product */}
                     <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Product</h3>
+                        <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Product</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <Link href="/docs" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Documentation
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/docs/getting-started/installation" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/getting-started/installation" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Installation
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/docs/guides/spec-workflow" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/guides/spec-workflow" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Spec Workflow
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/docs/examples" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/examples" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Examples
                                 </Link>
                             </li>
@@ -35,25 +35,25 @@ export default function Footer() {
 
                     {/* Resources */}
                     <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Resources</h3>
+                        <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Resources</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <Link href="/docs/getting-started/quickstart" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/getting-started/quickstart" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Quick Start
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/docs/faq" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/faq" className="text-muted-foreground hover:text-foreground transition-colors">
                                     FAQ
                                 </Link>
                             </li>
                             <li>
-                                <a href="https://github.com/vudovn/cafekit" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     GitHub
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/vudovn/cafekit/releases" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/releases" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Changelog
                                 </a>
                             </li>
@@ -62,25 +62,25 @@ export default function Footer() {
 
                     {/* Community */}
                     <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Community</h3>
+                        <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Community</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <a href="https://github.com/vudovn/cafekit" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     GitHub
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/vudovn/cafekit/issues" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/issues" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Issues
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/vudovn/cafekit/discussions" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/discussions" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Discussions
                                 </a>
                             </li>
                             <li>
-                                <Link href="/docs/guides/contributing" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="/docs/guides/contributing" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Contributing
                                 </Link>
                             </li>
@@ -89,20 +89,20 @@ export default function Footer() {
 
                     {/* Legal */}
                     <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Legal</h3>
+                        <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Legal</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <a href="https://github.com/vudovn/cafekit/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     License
                                 </a>
                             </li>
                             <li>
-                                <Link href="#1" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="#1" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Privacy Policy
                                 </Link>
                             </li>
                             <li>
-                                <Link href="#1" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors">
+                                <Link href="#1" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Terms of Service
                                 </Link>
                             </li>
@@ -111,26 +111,26 @@ export default function Footer() {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                     {/* Copyright */}
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    <p className="text-sm text-muted-foreground">
                         © {new Date().getFullYear()} CafeKit Spec by{" "}
                         <a
-                            href="https://github.com/vudovn"
+                            href="https://github.com/haposoft"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline">
-                            @vudovn
+                            className="font-medium text-foreground hover:underline">
+                            @haposoft
                         </a>. All rights reserved.
                     </p>
 
                     {/* Social Links */}
                     <div className="flex items-center gap-4">
                         <a
-                            href="https://github.com/vudovn/cafekit"
+                            href="https://github.com/hapo-nghialuu/hapo-cafekit"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                             aria-label="GitHub"
                         >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

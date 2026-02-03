@@ -317,7 +317,7 @@ VALIDATOR_MAP = {
 ## 🆘 Support
 
 For issues or questions:
-- GitHub: https://github.com/vudovn/cafekit
+- GitHub: https://github.com/hapo-nghialuu/hapo-cafekit
 - Docs: https://cafekit.vercel.app/
 
 ## 📄 License

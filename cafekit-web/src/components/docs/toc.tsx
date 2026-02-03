@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export interface TOCHeading {
   id: string;
@@ -28,7 +29,6 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
       { rootMargin: '-80px 0px -80% 0px' }
     );
 
-    // Observe all headings
     headings.forEach(({ id }) => {
       const element = document.getElementById(id);
       if (element) observer.observe(element);
@@ -43,40 +43,47 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
 
   return (
     <nav className="space-y-2">
-      <div className="font-semibold text-zinc-900 dark:text-zinc-50 mb-3 text-sm">
+      <div className="font-semibold text-foreground mb-4 text-sm tracking-tight">
         On This Page
       </div>
-      <ul className="space-y-2">
-        {headings.map((heading) => {
-          const isActive = activeId === heading.id;
-          const paddingLeft = `${(heading.level - 2) * 0.75}rem`;
+      <div className="relative pl-0.5">
+        {/* Decorative vertical line */}
+        <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
 
-          return (
-            <li key={heading.id} style={{ paddingLeft }}>
-              <Link
-                href={`#${heading.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById(heading.id)?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  });
-                }}
-                className={`
-                  block text-xs py-1 transition-colors hover:text-zinc-900 dark:hover:text-zinc-50
-                  ${
+        <ul className="space-y-2">
+          {headings.map((heading, index) => {
+            const isActive = activeId === heading.id;
+            // Indent text based on level, but keep border aligned if we want shared line
+            // OR indent everything. Let's do indent everything but subtle
+
+            return (
+              <li key={`${heading.id}-${index}`}>
+                <Link
+                  href={`#${heading.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(heading.id)?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    });
+                  }}
+                  className={cn(
+                    "block text-xs py-1.5 transition-colors border-l-2 -ml-px pl-4",
                     isActive
-                      ? 'text-zinc-900 dark:text-zinc-50 font-medium'
-                      : 'text-zinc-600 dark:text-zinc-400'
-                  }
-                `}
-              >
-                {heading.text}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                      ? "border-primary text-primary font-medium"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
+                  )}
+                  style={{
+                    paddingLeft: `${(heading.level - 2) * 0.75 + 1}rem`
+                  }}
+                >
+                  {heading.text}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
   );
 }

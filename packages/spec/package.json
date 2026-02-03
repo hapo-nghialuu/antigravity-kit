@@ -1,10 +1,10 @@
 {
   "name": "@haposoft/cafekit-spec",
-  "version": "0.1.0",
-  "description": "Spec-Driven Development workflow for Haposoft projects",
+  "version": "0.1.1",
+  "description": "Spec-Driven Development workflow for Claude Code",
   "author": "Haposoft <nghialt@haposoft.com>",
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT",
+  "private": false,
   "bin": {
     "cafekit-spec": "./bin/install.js"
   },
@@ -13,12 +13,9 @@
     "src",
     "README.md"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/haposoft/cafekit.git"
+    "url": "https://github.com/hapo-nghialuu/hapo-cafekit.git"
   },
   "keywords": [
     "haposoft",
