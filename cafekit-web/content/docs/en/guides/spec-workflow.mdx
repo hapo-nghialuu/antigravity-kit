@@ -30,12 +30,12 @@ Spec-driven development solves this by creating a **single source of truth** bef
 
 | Phase | [Claude Code](https://claude.ai/code) | [Antigravity](https://antigravity.google/) | Purpose |
 |-------|-------------|-------------|---------|
-| **INIT** | `/spec-init` | `@spec-init` | Create spec workspace |
-| **REQUIREMENTS** | `/spec-requirements` | `@spec-requirements` | Gather functional needs |
-| **DESIGN** | `/spec-design` | `@spec-design` | Define architecture |
-| **TASKS** | `/spec-tasks` | `@spec-tasks` | Break down implementation |
-| **IMPL** | `/spec-impl` | `@spec-impl` | Build with AI guidance |
-| **STATUS** | `/spec-status` | `@spec-status` | Track and verify |
+| **INIT** | `/spec-init` | `/spec-init` or `@spec-init` | Create spec workspace |
+| **REQUIREMENTS** | `/spec-requirements` | `/spec-requirements` or `@spec-requirements` | Gather functional needs |
+| **DESIGN** | `/spec-design` | `/spec-design` or `@spec-design` | Define architecture |
+| **TASKS** | `/spec-tasks` | `/spec-tasks` or `@spec-tasks` | Break down implementation |
+| **IMPL** | `/spec-impl` | `/spec-impl` or `@spec-impl` | Build with AI guidance |
+| **STATUS** | `/spec-status` | `/spec-status` or `@spec-status` | Track and verify |
 
 Let's explore each phase in detail.
 
@@ -62,7 +62,8 @@ Use the init command when starting any new feature that:
 
 **Antigravity:**
 ```bash
-@spec-init my-feature
+/spec-init my-feature
+# or @spec-init my-feature
 ```
 
 CafeKit creates:
@@ -99,7 +100,8 @@ CafeKit uses Socratic questioning to uncover hidden requirements:
 
 **Antigravity:**
 ```bash
-@spec-requirements my-feature
+/spec-requirements my-feature
+# or @spec-requirements my-feature
 ```
 
 The AI asks:
@@ -181,7 +183,8 @@ Allow customers to complete purchases...
 
 **Antigravity:**
 ```bash
-@spec-design my-feature
+/spec-design my-feature
+# or @spec-design my-feature
 ```
 
 The AI generates:
@@ -320,7 +323,8 @@ CREATE TABLE order_items (
 
 **Antigravity:**
 ```bash
-@spec-tasks my-feature
+/spec-tasks my-feature
+# or @spec-tasks my-feature
 ```
 
 The AI generates a **sprint plan** with:
@@ -430,7 +434,8 @@ curl -X POST http://localhost:3000/api/checkout \
 
 **Antigravity:**
 ```bash
-@spec-impl my-feature
+/spec-impl my-feature
+# or @spec-impl my-feature
 ```
 
 The AI:
@@ -492,7 +497,8 @@ You: y
 
 **Antigravity:**
 ```bash
-@spec-status my-feature
+/spec-status my-feature
+# or @spec-status my-feature
 ```
 
 **Output:**
@@ -646,13 +652,13 @@ You can refine specs mid-implementation:
 **Antigravity:**
 ```bash
 # Update requirements after user feedback
-@spec-requirements my-feature
+/spec-requirements my-feature
 
 # Re-run design to incorporate changes
-@spec-design my-feature
+/spec-design my-feature
 
 # Regenerate tasks with new design
-@spec-tasks my-feature
+/spec-tasks my-feature
 ```
 
 ### Parallel Implementation
@@ -696,12 +702,12 @@ Archived specs serve as documentation for maintenance.
 
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
-| `@spec-init name` | Create spec workspace | Starting new feature |
-| `@spec-requirements name` | Gather needs | After init, before design |
-| `@spec-design name` | Create architecture | After requirements |
-| `@spec-tasks name` | Break down work | After design |
-| `@spec-impl name` | Build feature | After tasks generated |
-| `@spec-status name` | Check progress | Anytime during implementation |
+| `/spec-init name` or `@` | Create spec workspace | Starting new feature |
+| `/spec-requirements name` or `@` | Gather needs | After init, before design |
+| `/spec-design name` or `@` | Create architecture | After requirements |
+| `/spec-tasks name` or `@` | Break down work | After design |
+| `/spec-impl name` or `@` | Build feature | After tasks generated |
+| `/spec-status name` or `@` | Check progress | Anytime during implementation |
 
 ---
 

@@ -9,7 +9,7 @@ CafeKit Spec is a spec-driven development workflow for AI coding assistants. It 
 
 **Command formats by platform:**
 - **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
-- **[Antigravity](https://antigravity.google/)**: `@spec-init`, `@spec-requirements`, `@spec-design`, `@spec-tasks`, `@spec-impl`, `@spec-status`
+- **[Antigravity](https://antigravity.google/)**: `/spec-init` (or `@spec-init`), `/spec-requirements`, ...
 
 ### What is spec-driven development?
 
@@ -71,7 +71,7 @@ CafeKit Spec supports multiple AI coding assistant platforms:
 | Platform | Status | Notes |
 |----------|--------|-------|
 | **[Claude Code](https://claude.ai/code)** | Available | Full support with `/` commands |
-| **[Antigravity](https://antigravity.google/)** | Available | Full support with `@` commands |
+| **[Antigravity](https://antigravity.google/)** | Available | Full support with `/` or `@` commands |
 
 The installer automatically detects and configures for your platform.
 
@@ -102,7 +102,8 @@ Specs are stored in `.specs/` directory in your project root:
 
 **Antigravity:**
 ```bash
-@spec-init my-feature-name
+/spec-init my-feature-name
+# or @spec-init my-feature-name
 ```
 
 This creates a `.specs/my-feature-name/` directory with initial structure.
@@ -111,12 +112,12 @@ This creates a `.specs/my-feature-name/` directory with initial structure.
 
 | Phase | Claude Code | Antigravity | Description |
 |-------|-------------|-------------|-------------|
-| **Initialize** | `/spec-init` | `@spec-init` | Creates spec workspace |
-| **Requirements** | `/spec-requirements` | `@spec-requirements` | AI asks questions to gather requirements |
-| **Design** | `/spec-design` | `@spec-design` | Generates technical architecture document |
-| **Tasks** | `/spec-tasks` | `@spec-tasks` | Breaks design into actionable tasks |
-| **Implement** | `/spec-impl` | `@spec-impl` | Implements tasks with AI guidance |
-| **Status** | `/spec-status` | `@spec-status` | Shows progress and next steps |
+| **Initialize** | `/spec-init` | `/spec-init` or `@` | Creates spec workspace |
+| **Requirements** | `/spec-requirements` | `/spec-requirements` or `@` | AI asks questions to gather requirements |
+| **Design** | `/spec-design` | `/spec-design` or `@` | Generates technical architecture document |
+| **Tasks** | `/spec-tasks` | `/spec-tasks` or `@` | Breaks design into actionable tasks |
+| **Implement** | `/spec-impl` | `/spec-impl` or `@` | Implements tasks with AI guidance |
+| **Status** | `/spec-status` | `/spec-status` or `@` | Shows progress and next steps |
 
 ### Can I skip phases?
 

@@ -9,7 +9,7 @@ CafeKit Spec là một quy trình phát triển hướng spec (spec-driven devel
 
 **Định dạng lệnh theo nền tảng:**
 - **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
-- **[Antigravity](https://antigravity.google/)**: `@spec-init`, `@spec-requirements`, `@spec-design`, `@spec-tasks`, `@spec-impl`, `@spec-status`
+- **[Antigravity](https://antigravity.google/)**: `/spec-init` (hoặc `@spec-init`), `/spec-requirements`, ...
 
 ### Phát triển hướng spec là gì?
 
@@ -71,7 +71,7 @@ CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
 | Nền tảng | Trạng thái | Ghi chú |
 |----------|--------|-------|
 | **[Claude Code](https://claude.ai/code)** | Khả dụng | Hỗ trợ đầy đủ với lệnh `/` |
-| **[Antigravity](https://antigravity.google/)** | Khả dụng | Hỗ trợ đầy đủ với lệnh `@` |
+| **[Antigravity](https://antigravity.google/)** | Khả dụng | Hỗ trợ đầy đủ với lệnh `/` hoặc `@` |
 
 Trình cài đặt tự động phát hiện và cấu hình cho nền tảng của bạn.
 
@@ -102,7 +102,8 @@ Các spec được lưu trong thư mục `.specs/` ở thư mục gốc dự án
 
 **Antigravity:**
 ```bash
-@spec-init my-feature-name
+/spec-init my-feature-name
+# hoặc @spec-init my-feature-name
 ```
 
 Lệnh này tạo thư mục `.specs/my-feature-name/` với cấu trúc ban đầu.
@@ -111,12 +112,12 @@ Lệnh này tạo thư mục `.specs/my-feature-name/` với cấu trúc ban đ�
 
 | Giai đoạn | Claude Code | Antigravity | Mô tả |
 |-------|-------------|-------------|-------------|
-| **Khởi tạo** | `/spec-init` | `@spec-init` | Tạo workspace spec |
-| **Yêu cầu** | `/spec-requirements` | `@spec-requirements` | AI đặt câu hỏi để thu thập yêu cầu |
-| **Thiết kế** | `/spec-design` | `@spec-design` | Tạo tài liệu kiến trúc kỹ thuật |
-| **Tasks** | `/spec-tasks` | `@spec-tasks` | Chia nhỏ thiết kế thành các task hành động |
-| **Thực hiện** | `/spec-impl` | `@spec-impl` | Thực hiện task với hướng dẫn AI |
-| **Trạng thái** | `/spec-status` | `@spec-status` | Hiển thị tiến độ và bước tiếp theo |
+| **Khởi tạo** | `/spec-init` | `/spec-init` hoặc `@` | Tạo workspace spec |
+| **Yêu cầu** | `/spec-requirements` | `/spec-requirements` hoặc `@` | AI đặt câu hỏi để thu thập yêu cầu |
+| **Thiết kế** | `/spec-design` | `/spec-design` hoặc `@` | Tạo tài liệu kiến trúc kỹ thuật |
+| **Tasks** | `/spec-tasks` | `/spec-tasks` hoặc `@` | Chia nhỏ thiết kế thành các task hành động |
+| **Thực hiện** | `/spec-impl` | `/spec-impl` hoặc `@` | Thực hiện task với hướng dẫn AI |
+| **Trạng thái** | `/spec-status` | `/spec-status` hoặc `@` | Hiển thị tiến độ và bước tiếp theo |
 
 ### Tôi có thể bỏ qua các giai đoạn không?
 

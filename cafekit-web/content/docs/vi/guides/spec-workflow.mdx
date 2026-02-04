@@ -30,12 +30,12 @@ Spec-driven development giải quyết vấn đề này bằng cách tạo ra m�
 
 | Giai đoạn | [Claude Code](https://claude.ai/code) | [Antigravity](https://antigravity.google/) | Mục đích |
 |-------|-------------|-------------|---------|
-| **INIT** | `/spec-init` | `@spec-init` | Tạo workspace spec |
-| **REQUIREMENTS** | `/spec-requirements` | `@spec-requirements` | Thu thập nhu cầu chức năng |
-| **DESIGN** | `/spec-design` | `@spec-design` | Định nghĩa kiến trúc |
-| **TASKS** | `/spec-tasks` | `@spec-tasks` | Chia nhỏ việc thực hiện |
-| **IMPL** | `/spec-impl` | `@spec-impl` | Xây dựng với hướng dẫn AI |
-| **STATUS** | `/spec-status` | `@spec-status` | Theo dõi và xác minh |
+| **INIT** | `/spec-init` | `/spec-init` hoặc `@spec-init` | Tạo workspace spec |
+| **REQUIREMENTS** | `/spec-requirements` | `/spec-requirements` hoặc `@spec-requirements` | Thu thập nhu cầu chức năng |
+| **DESIGN** | `/spec-design` | `/spec-design` hoặc `@spec-design` | Định nghĩa kiến trúc |
+| **TASKS** | `/spec-tasks` | `/spec-tasks` hoặc `@spec-tasks` | Chia nhỏ việc thực hiện |
+| **IMPL** | `/spec-impl` | `/spec-impl` hoặc `@spec-impl` | Xây dựng với hướng dẫn AI |
+| **STATUS** | `/spec-status` | `/spec-status` hoặc `@spec-status` | Theo dõi và xác minh |
 
 Hãy cùng khám phá chi tiết từng giai đoạn.
 
@@ -62,7 +62,8 @@ Sử dụng lệnh init khi bắt đầu bất kỳ tính năng mới nào mà:
 
 **Antigravity:**
 ```bash
-@spec-init my-feature
+/spec-init my-feature
+# hoặc @spec-init my-feature
 ```
 
 CafeKit tạo:
@@ -99,7 +100,8 @@ CafeKit sử dụng phương pháp đặt câu hỏi Socratic để khám phá c
 
 **Antigravity:**
 ```bash
-@spec-requirements my-feature
+/spec-requirements my-feature
+# hoặc @spec-requirements my-feature
 ```
 
 AI sẽ hỏi:
@@ -181,7 +183,8 @@ Allow customers to complete purchases...
 
 **Antigravity:**
 ```bash
-@spec-design my-feature
+/spec-design my-feature
+# hoặc @spec-design my-feature
 ```
 
 AI tạo ra:
@@ -302,7 +305,8 @@ CREATE TABLE orders (
 
 **Antigravity:**
 ```bash
-@spec-tasks my-feature
+/spec-tasks my-feature
+# hoặc @spec-tasks my-feature
 ```
 
 AI tạo ra một **kế hoạch sprint** với:
@@ -374,7 +378,8 @@ npm test lib/stripe.test.ts
 
 **Antigravity:**
 ```bash
-@spec-impl my-feature
+/spec-impl my-feature
+# hoặc @spec-impl my-feature
 ```
 
 AI sẽ:
@@ -436,7 +441,8 @@ You: y
 
 **Antigravity:**
 ```bash
-@spec-status my-feature
+/spec-status my-feature
+# hoặc @spec-status my-feature
 ```
 
 **Kết quả:**
@@ -590,13 +596,13 @@ Bạn có thể tinh chỉnh spec giữa chừng khi đang thực hiện:
 **Antigravity:**
 ```bash
 # Cập nhật yêu cầu sau khi có phản hồi người dùng
-@spec-requirements my-feature
+/spec-requirements my-feature
 
 # Chạy lại design để hợp nhất thay đổi
-@spec-design my-feature
+/spec-design my-feature
 
 # Tạo lại task với design mới
-@spec-tasks my-feature
+/spec-tasks my-feature
 ```
 
 ### Lưu trữ các Spec đã hoàn thành
@@ -629,12 +635,12 @@ Các spec được lưu trữ đóng vai trò như tài liệu hướng dẫn b�
 
 | Lệnh | Mục đích | Khi nào dùng |
 |---------|---------|-------------|
-| `@spec-init name` | Tạo workspace spec | Bắt đầu tính năng mới |
-| `@spec-requirements name` | Thu thập nhu cầu | Sau init, trước design |
-| `@spec-design name` | Tạo kiến trúc | Sau requirements |
-| `@spec-tasks name` | Chia nhỏ công việc | Sau design |
-| `@spec-impl name` | Xây dựng tính năng | Sau khi tạo tasks |
-| `@spec-status name` | Kiểm tra tiến độ | Bất cứ lúc nào trong khi thực hiện |
+| `/spec-init name` hoặc `@` | Tạo workspace spec | Bắt đầu tính năng mới |
+| `/spec-requirements name` hoặc `@` | Thu thập nhu cầu | Sau init, trước design |
+| `/spec-design name` hoặc `@` | Tạo kiến trúc | Sau requirements |
+| `/spec-tasks name` hoặc `@` | Chia nhỏ công việc | Sau design |
+| `/spec-impl name` hoặc `@` | Xây dựng tính năng | Sau khi tạo tasks |
+| `/spec-status name` hoặc `@` | Kiểm tra tiến độ | Bất cứ lúc nào trong khi thực hiện |
 
 ---
 
