@@ -5,7 +5,11 @@ description: Frequently asked questions about CafeKit Spec and spec-driven devel
 
 ### What is CafeKit Spec?
 
-CafeKit Spec is a spec-driven development workflow for Claude Code. It provides 6 slash commands (`/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`) that guide you through building features with clear documentation and structure.
+CafeKit Spec is a spec-driven development workflow for AI coding assistants. It provides 6 commands that guide you through building features with clear documentation and structure.
+
+**Command formats by platform:**
+- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
+- **[Antigravity](https://antigravity.google/)**: `@spec-init`, `@spec-requirements`, `@spec-design`, `@spec-tasks`, `@spec-impl`, `@spec-status`
 
 ### What is spec-driven development?
 
@@ -57,12 +61,19 @@ This installs 6 spec workflow commands to `.claude/commands/`.
 ### What are the prerequisites?
 
 - Node.js 18+
-- Claude Code
+- AI coding assistant ([Claude Code](https://claude.ai/code) or [Antigravity](https://antigravity.google/))
 - Git (for version control)
 
 ### Can I use CafeKit Spec with other AI assistants?
 
-Currently, CafeKit Spec is designed for **Claude Code** only. It relies on Claude Code's slash command system.
+CafeKit Spec supports multiple AI coding assistant platforms:
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **[Claude Code](https://claude.ai/code)** | Available | Full support with `/` commands |
+| **[Antigravity](https://antigravity.google/)** | Available | Full support with `@` commands |
+
+The installer automatically detects and configures for your platform.
 
 ### Where are the spec files stored?
 
@@ -84,20 +95,28 @@ Specs are stored in `.specs/` directory in your project root:
 
 ### How do I start a new spec?
 
+**Claude Code:**
 ```bash
 /spec-init my-feature-name
+```
+
+**Antigravity:**
+```bash
+@spec-init my-feature-name
 ```
 
 This creates a `.specs/my-feature-name/` directory with initial structure.
 
 ### What happens in each phase?
 
-1. **`/spec-init`** - Creates spec workspace
-2. **`/spec-requirements`** - AI asks questions to gather requirements
-3. **`/spec-design`** - Generates technical architecture document
-4. **`/spec-tasks`** - Breaks design into actionable tasks
-5. **`/spec-impl`** - Implements tasks with AI guidance
-6. **`/spec-status`** - Shows progress and next steps
+| Phase | Claude Code | Antigravity | Description |
+|-------|-------------|-------------|-------------|
+| **Initialize** | `/spec-init` | `@spec-init` | Creates spec workspace |
+| **Requirements** | `/spec-requirements` | `@spec-requirements` | AI asks questions to gather requirements |
+| **Design** | `/spec-design` | `@spec-design` | Generates technical architecture document |
+| **Tasks** | `/spec-tasks` | `@spec-tasks` | Breaks design into actionable tasks |
+| **Implement** | `/spec-impl` | `@spec-impl` | Implements tasks with AI guidance |
+| **Status** | `/spec-status` | `@spec-status` | Shows progress and next steps |
 
 ### Can I skip phases?
 
@@ -129,12 +148,15 @@ Yes. Each spec is independent in its own `.specs/feature-name/` directory. Switc
 
 ### Command not found
 
-**Problem:** `/spec-init` doesn't work
+**Problem:** Spec commands don't work
 
 **Solutions:**
-1. Check files exist in `.claude/commands/`
-2. Restart Claude Code
+1. Check files exist in the correct folder:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. Restart your AI coding assistant
 3. Re-run installer: `npx @haposoft/cafekit-spec`
+4. Verify you selected the correct platform during installation
 
 ### Spec directory not created
 
@@ -206,10 +228,19 @@ Use kebab-case, descriptive names:
 
 ## Advanced Questions
 
+### Can I use the same spec across different platforms?
+
+Yes. Specs created with CafeKit are platform-agnostic. The `.specs/` directory and its contents work identically whether you're using Claude Code or Antigravity. You can:
+
+- Start a spec in Claude Code and continue in Antigravity
+- Share specs between team members using different platforms
+- Migrate between platforms without losing spec data
+
 ### Can I customize the workflow?
 
-Yes. After installation, edit the `.md` files in `.claude/commands/`:
+Yes. After installation, edit the `.md` files in your platform's commands folder:
 
+**Claude Code:**
 ```bash
 .claude/commands/
 ├── spec-init.md          # Customize init process
@@ -217,7 +248,15 @@ Yes. After installation, edit the `.md` files in `.claude/commands/`:
 └── ...
 ```
 
-Changes take effect immediately in Claude Code.
+**Antigravity:**
+```bash
+.agent/commands/
+├── spec-init.md          # Customize init process
+├── spec-requirements.md  # Change question style
+└── ...
+```
+
+Changes take effect immediately.
 
 ### How do I archive completed specs?
 

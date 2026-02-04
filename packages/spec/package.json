@@ -1,7 +1,7 @@
 {
   "name": "@haposoft/cafekit-spec",
-  "version": "0.1.1",
-  "description": "Spec-Driven Development workflow for Claude Code",
+  "version": "0.1.2",
+  "description": "Spec-Driven Development workflow for AI coding assistants (Claude Code, Antigravity, and more)",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
   "private": false,
@@ -20,10 +20,14 @@
   "keywords": [
     "haposoft",
     "cafekit",
-    "antigravity",
-    "claude-code",
     "spec-driven",
-    "workflow"
+    "workflow",
+    "claude-code",
+    "antigravity",
+    "ai-coding",
+    "specification",
+    "requirements",
+    "sdd"
   ],
   "engines": {
     "node": ">=18.0.0"

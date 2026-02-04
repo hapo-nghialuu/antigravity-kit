@@ -1,43 +1,157 @@
 #!/usr/bin/env node
 
+/**
+ * CafeKit Spec Installer
+ * Multi-platform installer for AI coding assistants
+ *
+ * Supported platforms:
+ * - claude: Claude Code (.claude/)
+ * - antigravity: Antigravity (.agent/)
+ *
+ * To add a new platform:
+ * 1. Add to PLATFORMS registry below
+ * 2. Add platform-specific commands in src/[platform]/commands/
+ * 3. Update detectPlatforms() if using different folder names
+ */
+
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-// Detect platforms
+// ═══════════════════════════════════════════════════════════
+// PLATFORM REGISTRY - Add new platforms here
+// ═══════════════════════════════════════════════════════════
+const PLATFORMS = {
+  claude: {
+    id: 'claude',
+    name: 'Claude Code',
+    description: 'Anthropic\'s Claude Code CLI',
+    folder: '.claude',
+    commandsDir: '.claude/commands',
+    skillsDir: '.claude/skills',
+    skillsRef: '.claude/skills',
+    commandPrefix: '/',
+    sourceDir: 'claude',       // Maps to src/claude/
+    sourceSubdir: 'commands'   // Source subfolder within src/claude/
+  },
+  antigravity: {
+    id: 'antigravity',
+    name: 'Antigravity',
+    description: 'Google\'s Antigravity Kit',
+    folder: '.agent',
+    commandsDir: '.agent/commands',
+    skillsDir: '.agent/skills',
+    skillsRef: '.agent/skills',
+    commandPrefix: '/',
+    sourceDir: 'antigravity',  // Maps to src/antigravity/
+    sourceSubdir: 'workflows'  // Source subfolder within src/antigravity/
+  }
+  // Add new platforms here:
+  // cursor: {
+  //   id: 'cursor',
+  //   name: 'Cursor',
+  //   description: 'Cursor IDE',
+  //   folder: '.cursor',
+  //   commandsDir: '.cursor/commands',
+  //   sourceDir: 'cursor',
+  //   sourceSubdir: 'commands'
+  // }
+};
+
+// ═══════════════════════════════════════════════════════════
+// DETECTION
+// ═══════════════════════════════════════════════════════════
+
 function detectPlatforms() {
-  const platforms = [];
-  if (fs.existsSync('.claude')) platforms.push('claude');
-  if (fs.existsSync('.agent')) platforms.push('antigravity');
-  return platforms;
+  const detected = [];
+
+  for (const [key, config] of Object.entries(PLATFORMS)) {
+    if (fs.existsSync(config.folder)) {
+      detected.push(key);
+    }
+  }
+
+  return detected;
 }
 
-// Prompt user for confirmation
+function formatPlatformList() {
+  return Object.entries(PLATFORMS)
+    .map(([key, config], index) => {
+      return `${index + 1}) ${config.name} (${config.folder}/)\n   ${config.description}`;
+    })
+    .join('\n');
+}
+
+function getPlatformKeys() {
+  return Object.keys(PLATFORMS);
+}
+
+// ═══════════════════════════════════════════════════════════
+// USER INTERACTION
+// ═══════════════════════════════════════════════════════════
+
 async function promptPlatformSelection() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  console.log('No existing configuration detected.');
-  console.log('Which platform do you want to install for?');
-  console.log('1) Claude Code (.claude/commands)');
-  console.log('2) Antigravity (.agent/commands)');
-  console.log('3) Both');
+  const maxChoice = Object.keys(PLATFORMS).length + 1;
+
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║      CafeKit Spec - Platform Selection                 ║');
+  console.log('╚════════════════════════════════════════════════════════╝');
+  console.log();
+  console.log('No existing AI editor configuration detected.\n');
+  console.log('Select which platform(s) to install for:\n');
+  console.log(formatPlatformList());
+  console.log(`${maxChoice}) All platforms`);
+  console.log('0) Cancel');
+  console.log();
 
   return new Promise((resolve) => {
-    rl.question('Select (1-3): ', (answer) => {
+    rl.question(`Select (0-${maxChoice}): `, (answer) => {
       rl.close();
-      const choice = answer.trim();
-      if (choice === '1') resolve(['claude']);
-      else if (choice === '2') resolve(['antigravity']);
-      else if (choice === '3') resolve(['claude', 'antigravity']);
-      else resolve([]); // Cancel
+      const choice = parseInt(answer.trim(), 10);
+
+      if (choice === 0 || isNaN(choice)) {
+        resolve([]);
+      } else if (choice === maxChoice) {
+        resolve(getPlatformKeys());
+      } else if (choice >= 1 && choice <= Object.keys(PLATFORMS).length) {
+        resolve([getPlatformKeys()[choice - 1]]);
+      } else {
+        console.log('Invalid selection. Please run the installer again.');
+        resolve([]);
+      }
     });
   });
 }
 
-// Copy recursive
+async function promptMultiPlatformConfirm(detected) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const platformNames = detected.map(key => PLATFORMS[key].name).join(', ');
+
+  console.log(`\nDetected existing configurations: ${platformNames}`);
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Install for all detected platforms? (Y/n): ', (answer) => {
+      rl.close();
+      const response = answer.trim().toLowerCase();
+      resolve(response === '' || response === 'y' || response === 'yes');
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILE OPERATIONS
+// ═══════════════════════════════════════════════════════════
+
 function copyRecursive(src, dest) {
   const exists = fs.existsSync(src);
   const stats = exists && fs.statSync(src);
@@ -55,128 +169,155 @@ function copyRecursive(src, dest) {
   }
 }
 
-// Copy files
-function copyFiles(platforms) {
-  const commandsSourceDir = path.join(__dirname, '../src/claude/commands');
+function copyPlatformFiles(platformKey, results) {
+  const platform = PLATFORMS[platformKey];
+
+  // Source directories - support different subfolder names per platform
+  const sourceSubdir = platform.sourceSubdir || 'commands';
+  const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
   const skillsSourceDir = path.join(__dirname, '../src/common/skills');
 
-  // Define targets
-  const targets = [];
-  if (platforms.includes('claude')) {
-    targets.push({
-      commandsDir: '.claude/commands',
-      skillsDir: '.claude/skills',
-      skillsRef: '.claude/skills'
-    });
+  // Create directories
+  if (!fs.existsSync(platform.commandsDir)) {
+    fs.mkdirSync(platform.commandsDir, { recursive: true });
   }
-  if (platforms.includes('antigravity')) {
-    targets.push({
-      commandsDir: '.agent/commands',
-      skillsDir: '.agent/skills',
-      skillsRef: '.agent/skills'
-    });
+  if (!fs.existsSync(platform.skillsDir)) {
+    fs.mkdirSync(platform.skillsDir, { recursive: true });
   }
 
-  let copiedFiles = 0;
-  let skippedFiles = 0;
-  let copiedSkills = 0;
+  // Copy skills (shared across all platforms)
+  if (fs.existsSync(skillsSourceDir)) {
+    const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
+    const specSkillDest = path.join(platform.skillsDir, 'spec-driven-development');
 
-  // Process each target platform
-  targets.forEach(target => {
-    // 1. Copy Skills
-    if (fs.existsSync(skillsSourceDir)) {
-      if (!fs.existsSync(target.skillsDir)) {
-        fs.mkdirSync(target.skillsDir, { recursive: true });
-      }
+    if (fs.existsSync(specSkillSource)) {
+      copyRecursive(specSkillSource, specSkillDest);
+      results.installedSkills++;
+      console.log(`  ✓ Skill installed: spec-driven-development`);
+    }
+  }
 
-      // Copy spec-driven-development skill folder
-      const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
-      const specSkillDest = path.join(target.skillsDir, 'spec-driven-development');
+  // Copy commands
+  const specFiles = [
+    'spec-init.md',
+    'spec-requirements.md',
+    'spec-design.md',
+    'spec-tasks.md',
+    'spec-impl.md',
+    'spec-status.md'
+  ];
 
-      if (fs.existsSync(specSkillSource)) {
-        // We overwrite skills to ensure they match the package version
-        copyRecursive(specSkillSource, specSkillDest);
-        copiedSkills++;
-        console.log(`[${target.skillsDir}] Installed skill: spec-driven-development`);
-      } else {
-        console.warn(`Warning: Skills source not found at ${specSkillSource}`);
-      }
+  specFiles.forEach(file => {
+    const source = path.join(commandsSourceDir, file);
+    const dest = path.join(platform.commandsDir, file);
+
+    if (!fs.existsSync(source)) {
+      console.error(`  ✗ Error: Source file not found: ${file}`);
+      results.errors++;
+      return;
     }
 
-    // 2. Copy Commands
-    if (!fs.existsSync(target.commandsDir)) {
-      fs.mkdirSync(target.commandsDir, { recursive: true });
+    if (fs.existsSync(dest)) {
+      console.log(`  → Skipped: ${file} (already exists)`);
+      results.skipped++;
+    } else {
+      let content = fs.readFileSync(source, 'utf8');
+      content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+      fs.writeFileSync(dest, content);
+      console.log(`  ✓ Copied: ${file}`);
+      results.copied++;
     }
-
-    const specFiles = [
-      'spec-init.md',
-      'spec-requirements.md',
-      'spec-design.md',
-      'spec-tasks.md',
-      'spec-impl.md',
-      'spec-status.md'
-    ];
-
-    specFiles.forEach(file => {
-      const source = path.join(commandsSourceDir, file);
-      const dest = path.join(target.commandsDir, file);
-
-      if (!fs.existsSync(source)) {
-        console.error(`Error: Source file not found: ${file}`);
-        process.exit(1);
-      }
-
-      if (fs.existsSync(dest)) {
-        console.log(`[${target.commandsDir}] Skipped: ${file} (already exists)`);
-        skippedFiles++;
-      } else {
-        // Read content and replace placeholders
-        let content = fs.readFileSync(source, 'utf8');
-        content = content.replace(/{{SKILLS_DIR}}/g, target.skillsRef);
-
-        fs.writeFileSync(dest, content);
-        console.log(`[${target.commandsDir}] Copied: ${file}`);
-        copiedFiles++;
-      }
-    });
   });
-
-  return { copied: copiedFiles, skipped: skippedFiles, copiedSkills, targets: targets.map(t => t.commandsDir) };
 }
 
-// Main
+// ═══════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════
+
 async function main() {
-  console.log('CafeKit Spec Installer\n');
+  console.log();
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║         CafeKit Spec Installer v0.1.2                  ║');
+  console.log('║         Multi-platform SDD Workflow                    ║');
+  console.log('╚════════════════════════════════════════════════════════╝');
+  console.log();
 
   let platforms = detectPlatforms();
 
   if (platforms.length === 0) {
+    // No platforms detected - prompt user
     platforms = await promptPlatformSelection();
 
     if (platforms.length === 0) {
-      console.log('Installation cancelled.');
+      console.log('\nInstallation cancelled.');
       process.exit(0);
     }
-  } else {
-    console.log(`Detected platforms: ${platforms.join(', ')}`);
+  } else if (platforms.length > 1) {
+    // Multiple platforms detected - confirm with user
+    const proceed = await promptMultiPlatformConfirm(platforms);
+    if (!proceed) {
+      platforms = await promptPlatformSelection();
+      if (platforms.length === 0) {
+        console.log('\nInstallation cancelled.');
+        process.exit(0);
+      }
+    }
   }
 
+  // Show detected/selected platforms
+  const platformNames = platforms.map(key => PLATFORMS[key].name).join(', ');
+  console.log(`\nInstalling for: ${platformNames}\n`);
+
+  const results = {
+    copied: 0,
+    skipped: 0,
+    installedSkills: 0,
+    errors: 0,
+    targets: []
+  };
+
   try {
-    const result = copyFiles(platforms);
+    for (const platformKey of platforms) {
+      const platform = PLATFORMS[platformKey];
+      console.log(`${platform.name} (${platform.folder}/)`);
+      console.log('-'.repeat(40));
 
-    console.log(`\nInstallation complete!`);
-    console.log(`   Copied Commands: ${result.copied}`);
-    console.log(`   Skipped Commands: ${result.skipped}`);
-    console.log(`   Installed Skills: ${result.copiedSkills > 0 ? 'Yes' : 'No'}`);
-    console.log(`   Targets: ${result.targets.join(', ')}`);
-    console.log(`\nNext steps:`);
-    console.log(`   1. Run /spec-init <feature-name>`);
-    console.log(`   2. Follow the spec workflow: requirements -> design -> tasks -> impl`);
-    console.log(`\nDocumentation: https://github.com/hapo-nghialuu/hapo-cafekit`);
+      copyPlatformFiles(platformKey, results);
+      results.targets.push(platform.commandsDir);
+      console.log();
+    }
 
-    process.exit(0);
+    // Summary
+    console.log('╔════════════════════════════════════════════════════════╗');
+    console.log('║         Installation Complete!                         ║');
+    console.log('╚════════════════════════════════════════════════════════╝');
+    console.log();
+    console.log(`  Copied Commands:    ${results.copied}`);
+    console.log(`  Skipped Commands:   ${results.skipped}`);
+    console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
+    console.log(`  Target Directories: ${results.targets.join(', ')}`);
+    if (results.errors > 0) {
+      console.log(`  Errors:             ${results.errors} ⚠`);
+    }
+    console.log();
+    console.log('Next steps:');
+    console.log('  1. Start your AI editor');
+
+    // Show platform-specific commands
+    for (const platformKey of platforms) {
+      const platform = PLATFORMS[platformKey];
+      console.log(`\n  For ${platform.name}:`);
+      console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
+    }
+
+    console.log('\n  2. Follow the workflow: requirements → design → tasks → impl');
+    console.log();
+    console.log('Documentation: https://github.com/hapo-nghialuu/hapo-cafekit');
+    console.log();
+
+    process.exit(results.errors > 0 ? 1 : 0);
   } catch (error) {
-    console.error(`Error: Installation failed: ${error.message}`);
+    console.error(`\n✗ Installation failed: ${error.message}`);
     process.exit(1);
   }
 }

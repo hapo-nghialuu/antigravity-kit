@@ -33,7 +33,7 @@ npx @haposoft/cafekit-spec
           Get Started in Seconds
         </h2>
         <p className="mx-auto mb-12 max-w-2xl text-center text-lg text-zinc-600 dark:text-zinc-400">
-          Install CafeKit Spec and run your first spec-driven workflow
+          Install CafeKit Spec and run your first spec-driven workflow with Claude Code or Antigravity
         </p>
 
         <div className="relative">

@@ -14,7 +14,7 @@ const features = [
   {
     icon: Rocket,
     title: "AI-Guided Implementation",
-    description: "Claude Code guides you through each phase with intelligent suggestions and verification at every step.",
+    description: "Works with Claude Code and Antigravity to guide you through each phase with intelligent suggestions and verification at every step.",
   },
 ];
 
@@ -26,7 +26,7 @@ export function Features() {
           Build features with confidence
         </h2>
         <p className="mx-auto mb-16 max-w-2xl text-center text-lg text-zinc-600 dark:text-zinc-400">
-          CafeKit Spec provides a complete workflow for spec-driven development with Claude Code
+          CafeKit Spec provides a complete workflow for spec-driven development with Claude Code & Antigravity
         </p>
 
         <div className="grid gap-8 md:grid-cols-3">

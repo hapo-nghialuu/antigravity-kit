@@ -1,6 +1,6 @@
 # CafeKit Spec
 
-> Spec-Driven Development workflow for Claude Code and Antigravity
+> Spec-Driven Development workflow for AI coding assistants
 
 ## Quick Install
 
@@ -10,7 +10,7 @@ npx @haposoft/cafekit-spec
 
 ## What is CafeKit Spec?
 
-CafeKit Spec is a structured spec-driven development workflow for Claude Code. It adds 6 slash commands that guide you through building complex features:
+CafeKit Spec is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 6 slash commands that guide you through building complex features:
 
 | Command | Purpose |
 |---------|---------|
@@ -34,10 +34,17 @@ Traditional AI coding often leads to:
 Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /spec-impl → /spec-status
 ```
 
+## Platform Compatibility
+
+| Platform | Status | Directory | Installation |
+|----------|--------|-----------|--------------|
+| **Claude Code** (Anthropic) | ✅ Fully supported | `.claude/` | `npx @haposoft/cafekit-spec` |
+| **Antigravity** (Google) | ✅ Fully supported | `.agent/` | `npx @haposoft/cafekit-spec` |
+
 ## Quick Start
 
 ```bash
-# 1. Install
+# 1. Install (auto-detects your platform)
 npx @haposoft/cafekit-spec
 
 # 2. Initialize a spec

@@ -1,28 +1,45 @@
-# So sánh 2 Hệ thống: Google Antigravity vs Claude Code CLI
+# Multi-Platform Support: Claude Code CLI vs Google Antigravity
 
-> **Dự án:** cafekit
-> **Mục đích ban đầu:** Tool định nghĩa agents cho **Google Antigravity** (AI coding editor)
-> **Hiện trạng:** Hỗ trợ song song cả Google Antigravity VÀ Claude Code CLI
+> **Project:** CafeKit
+> **Original Purpose:** Agent definition tool for **[Google Antigravity](https://antigravity.google/)** (AI coding editor)
+> **Current Status:** Multi-platform support for both **[Claude Code](https://claude.ai/code)** (Anthropic) AND **[Antigravity](https://antigravity.google/)** (Google)
+> **Target Users:** AI coding assistant users across platforms
 
 ---
 
-## 📋 Tổng quan
+## 📋 Platform Overview
 
-| Aspect | Google Antigravity | Claude Code CLI |
-|--------|-------------------|-----------------|
-| **Thư mục** | `.agent/` | `.claude/` |
-| **Platform** | Google Antigravity Editor | Anthropic Claude Code |
-| **Trạng thái** | ⚠️ Legacy/Original | ✅ Active/Migrated |
+| Aspect | Claude Code CLI | Google Antigravity |
+|--------|-----------------|-------------------|
+| **Directory** | `.claude/` | `.agent/` |
+| **Platform** | [Anthropic Claude Code](https://claude.ai/code) | [Google Antigravity Editor](https://antigravity.google/) |
+| **Status** | ✅ Active/Primary | ⚠️ Legacy/Original |
 | **Agents** | 20 agents | 20 agents |
-| **Skills** | 38 skills | 39 skills |
-| **Commands** | 17 workflows | 17 commands |
-| **Format** | Antigravity format | Claude Code plugin format |
+| **Skills** | 39 skills | 38 skills |
+| **Commands** | 17 commands | 17 workflows |
+| **Format** | Claude Code plugin format | Antigravity format |
+
+## 🌐 Platform Compatibility Matrix
+
+| Feature | Claude Code | Antigravity | Notes |
+|---------|-------------|-------------|-------|
+| **Agents** | ✅ 20 | ✅ 20 | Same agent definitions |
+| **Skills** | ✅ 39 | ✅ 38 | +1 skill in Claude format |
+| **Slash Commands** | ✅ 17 | ✅ 17 | Same workflows |
+| **YAML Frontmatter** | ✅ Required | ❌ No | Claude requires metadata |
+| **Auto-discovery** | ✅ Automatic | ⚠️ Manual | Claude scans frontmatter |
+| **Plugin System** | ✅ Yes | ❌ No | Claude has marketplace |
+| **Hooks** | ✅ PostToolUse | ❌ No | Auto-validation |
+| **Auto-validation** | ✅ Hooks-triggered | ❌ Manual | Run scripts explicitly |
+| **Progressive Loading** | ✅ On-demand | ❌ Load all | Efficient context use |
+| **AskUserQuestion Tool** | ✅ Structured | ❌ Text-based | Better UX |
+| **Multi-platform Support** | ✅ Yes | ✅ Yes | Use either platform |
 
 ---
 
 ## 🏗️ Cấu trúc Thư mục
 
-### `.agent/` - Google Antigravity (Original)
+### `.agent/` - Google Antigravity (Legacy)
 
 ```
 .agent/
@@ -48,7 +65,7 @@
 └── .shared/                 # Shared data (ui-ux-pro-max)
 ```
 
-### `.claude/` - Claude Code CLI (Migrated)
+### `.claude/` - Claude Code CLI (Primary)
 
 ```
 .claude/
@@ -331,19 +348,20 @@ When user says "build mobile app" → Claude auto-selects `mobile-developer`.
 
 ## 📊 Feature Comparison
 
-| Feature | Google Antigravity | Claude Code CLI |
-|---------|-------------------|-----------------|
+| Feature | Claude Code CLI | Google Antigravity |
+|---------|-----------------|-------------------|
 | **Agents** | ✅ 20 agents | ✅ 20 agents |
-| **Skills** | ✅ 38 skills | ✅ 39 skills (+ 11 command skills) |
-| **Slash Commands** | ✅ 17 workflows | ✅ 17 commands |
-| **YAML Frontmatter** | ❌ No | ✅ Required |
-| **Auto-discovery** | ❌ Manual | ✅ Automatic |
-| **Plugin System** | ❌ No | ✅ Yes (TODO: manifest) |
-| **Hooks** | ❌ No | ✅ PostToolUse, PreToolUse |
-| **Auto-validation** | ❌ Manual | ✅ Hooks-triggered |
-| **Progressive Loading** | ❌ Load all | ✅ On-demand |
-| **Marketplace** | ❌ No | ✅ Yes (after plugin.json) |
-| **AskUserQuestion Tool** | ❌ Text-based | ✅ Structured tool |
+| **Skills** | ✅ 39 skills (+ 11 command skills) | ✅ 38 skills |
+| **Slash Commands** | ✅ 17 commands | ✅ 17 workflows |
+| **YAML Frontmatter** | ✅ Required | ❌ No |
+| **Auto-discovery** | ✅ Automatic | ❌ Manual |
+| **Plugin System** | ✅ Yes (TODO: manifest) | ❌ No |
+| **Hooks** | ✅ PostToolUse, PreToolUse | ❌ No |
+| **Auto-validation** | ✅ Hooks-triggered | ❌ Manual |
+| **Progressive Loading** | ✅ On-demand | ❌ Load all |
+| **Marketplace** | ✅ Yes (after plugin.json) | ❌ No |
+| **AskUserQuestion Tool** | ✅ Structured tool | ❌ Text-based |
+| **Multi-platform Support** | ✅ Yes | ✅ Yes |
 
 ---
 
@@ -369,19 +387,20 @@ When user says "build mobile app" → Claude auto-selects `mobile-developer`.
 
 ## 🎯 Recommended Usage
 
-### **For Google Antigravity Users:**
-```bash
-# Use .agent/ directory
-# Reference: .agent/ARCHITECTURE.md
-# Scripts: .agent/scripts/checklist.py
+### **Platform Detection (Automatic)**
 
-# Invoke workflows:
-/brainstorm authentication system
-/create blog site
-/debug login not working
+CafeKit automatically detects your AI coding assistant platform:
+
+```bash
+# Install CafeKit (works on both platforms)
+npx @haposoft/cafekit-spec
+
+# Auto-detects and installs to correct directory:
+# → Claude Code users: .claude/
+# → Antigravity users: .agent/
 ```
 
-### **For Claude Code CLI Users:**
+### **For Claude Code Users:**
 ```bash
 # Use .claude/ directory
 # Reference: CLAUDE.md (project instructions)
@@ -397,30 +416,48 @@ When user says "build mobile app" → Claude auto-selects `mobile-developer`.
 @mobile-design best navigation pattern?
 ```
 
+### **For Antigravity Users:**
+```bash
+# Use .agent/ directory
+# Reference: .agent/ARCHITECTURE.md
+# Scripts: .agent/scripts/checklist.py
+
+# Invoke workflows:
+/brainstorm authentication system
+/create blog site
+/debug login not working
+```
+
 ---
 
 ## 📝 Key Takeaways
 
+### **Multi-Platform Philosophy**
+CafeKit is designed to work seamlessly across AI coding assistant platforms. Choose the platform that fits your workflow:
+
+| Use Case | Recommended Platform |
+|----------|---------------------|
+| Terminal-based workflow | Claude Code CLI |
+| Editor-based workflow | Google Antigravity |
+| Team already using one | Stick with current |
+| New project | Either (both fully supported) |
+
 ### **Google Antigravity (`.agent/`)**
-- ✅ **Original system** - Ban đầu được thiết kế cho Google's AI coding tool
+- ✅ **Original system** - Initially designed for Google's AI coding tool
 - ✅ **Simple format** - Markdown files, no frontmatter
 - ✅ **Manual validation** - Run scripts explicitly
-- ⚠️ **Legacy status** - Recommended to use `.claude/` for new work
+- ✅ **Fully supported** - CafeKit maintains compatibility
 
 ### **Claude Code CLI (`.claude/`)**
-- ✅ **Modern system** - Migrated/adapted for Anthropic's Claude Code
+- ✅ **Modern system** - Native support for Anthropic's Claude Code
 - ✅ **Plugin format** - YAML frontmatter, structured metadata
 - ✅ **Auto-validation** - Hooks trigger validators automatically
 - ✅ **Active development** - New features, AskUserQuestion integration
-- ✅ **Marketplace ready** - After adding plugin.json
+- ✅ **Marketplace ready** - Plugin system for distribution
 
 ---
 
 ## 🔗 Related Documentation
-
-### **Google Antigravity:**
-- `.agent/ARCHITECTURE.md` - System architecture
-- `.agent/scripts/README.md` - Validation scripts guide
 
 ### **Claude Code CLI:**
 - `CLAUDE.md` - Project-level instructions
@@ -428,8 +465,13 @@ When user says "build mobile app" → Claude auto-selects `mobile-developer`.
 - `.docs/claude-code-cli/ASKUSERQUESTION-SUMMARY.md` - Tool integration guide
 - `.docs/claude-code-cli/BOOTSTRAP-EVIDENCE.md` - Official Claude Code docs
 
+### **Google Antigravity:**
+- `.agent/ARCHITECTURE.md` - System architecture
+- `.agent/scripts/README.md` - Validation scripts guide
+
 ---
 
-**Last Updated:** 2026-01-28
-**Comparison Version:** 1.0
+**Last Updated:** 2026-02-04
+**Comparison Version:** 1.1
 **Total Components:** 40 agents + 77 skills + 34 commands/workflows across both systems
+**Supported Platforms:** Claude Code CLI (Anthropic) + Google Antigravity

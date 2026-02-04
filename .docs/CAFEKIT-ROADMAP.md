@@ -3,7 +3,7 @@
 > **Organization:** Haposoft
 > **GitHub:** https://github.com/haposoft
 > **NPM Registry:** Private npm registry
-> **Target Platform:** Google Antigravity + Claude Code CLI
+> **Target Platforms:** [Claude Code CLI](https://claude.ai/code) + [Google Antigravity](https://antigravity.google/)
 > **Update Frequency:** Weekly
 > **Installation:** npx (no global install)
 
@@ -35,10 +35,20 @@ Week 9+:  Full Kit Rollout
 `@haposoft/cafekit-spec` package với 6 spec skills
 
 ### **Features:**
-- ✅ Platform detection (Antigravity vs Claude Code)
+- ✅ Platform detection (Claude Code vs Antigravity)
 - ✅ Auto-copy 6 spec skills to correct location
-- ✅ Support both `.agent/workflows/` and `.claude/commands/`
+- ✅ Support both `.claude/commands/` and `.agent/workflows/`
 - ✅ No global installation needed (npx only)
+
+### **Platform Compatibility Matrix**
+
+| Feature | Claude Code | Antigravity |
+|---------|-------------|-------------|
+| Directory | `.claude/` | `.agent/` |
+| Format | YAML frontmatter | Markdown |
+| Auto-discovery | ✅ Yes | ⚠️ Manual |
+| Hooks | ✅ PostToolUse | ❌ No |
+| Plugin System | ✅ Yes | ❌ No |
 
 ### **Tasks Breakdown:**
 
@@ -165,8 +175,8 @@ README.md:
 npx @haposoft/cafekit-spec
 
 # Result:
-# → Detects platform (Antigravity or Claude Code)
-# → Copies 6 spec skills to .agent/workflows/ or .claude/commands/
+# → Detects platform (Claude Code or Antigravity)
+# → Copies 6 spec skills to .claude/commands/ or .agent/workflows/
 # → Ready to use /spec-init
 ```
 

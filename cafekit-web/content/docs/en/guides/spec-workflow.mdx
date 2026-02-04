@@ -5,7 +5,7 @@ description: Master CafeKit's 6-phase spec-driven development workflow for build
 
 # Spec Workflow Guide
 
-CafeKit introduces **spec-driven development** - a structured approach to building features with AI assistance. This guide explains the complete 6-phase workflow.
+CafeKit introduces **spec-driven development** - a structured approach to building features with AI assistance. This guide explains the complete 6-phase workflow for both [Claude Code](https://claude.ai/code) and [Antigravity](https://antigravity.google/) platforms.
 
 ## What is Spec-Driven Development?
 
@@ -28,12 +28,14 @@ Spec-driven development solves this by creating a **single source of truth** bef
 
 ## The 6-Phase Workflow
 
-1. **INIT** - Create spec workspace
-2. **REQUIREMENTS** - Gather functional needs
-3. **DESIGN** - Define architecture
-4. **TASKS** - Break down implementation
-5. **IMPL** - Build with AI guidance
-6. **STATUS** - Track and verify
+| Phase | [Claude Code](https://claude.ai/code) | [Antigravity](https://antigravity.google/) | Purpose |
+|-------|-------------|-------------|---------|
+| **INIT** | `/spec-init` | `@spec-init` | Create spec workspace |
+| **REQUIREMENTS** | `/spec-requirements` | `@spec-requirements` | Gather functional needs |
+| **DESIGN** | `/spec-design` | `@spec-design` | Define architecture |
+| **TASKS** | `/spec-tasks` | `@spec-tasks` | Break down implementation |
+| **IMPL** | `/spec-impl` | `@spec-impl` | Build with AI guidance |
+| **STATUS** | `/spec-status` | `@spec-status` | Track and verify |
 
 Let's explore each phase in detail.
 
@@ -45,7 +47,7 @@ Let's explore each phase in detail.
 
 ### When to Use
 
-Use `/spec-init` when starting any new feature that:
+Use the init command when starting any new feature that:
 - Affects multiple files or components
 - Requires architectural decisions
 - Has complex business logic
@@ -53,8 +55,14 @@ Use `/spec-init` when starting any new feature that:
 
 ### What Happens
 
+**Claude Code:**
 ```bash
 /spec-init my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-init my-feature
 ```
 
 CafeKit creates:
@@ -84,8 +92,14 @@ CafeKit creates:
 
 CafeKit uses Socratic questioning to uncover hidden requirements:
 
+**Claude Code:**
 ```bash
 /spec-requirements my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-requirements my-feature
 ```
 
 The AI asks:
@@ -160,8 +174,14 @@ Allow customers to complete purchases...
 
 ### What the AI Designs
 
+**Claude Code:**
 ```bash
 /spec-design my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-design my-feature
 ```
 
 The AI generates:
@@ -293,8 +313,14 @@ CREATE TABLE order_items (
 
 ### What the AI Creates
 
+**Claude Code:**
 ```bash
 /spec-tasks my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-tasks my-feature
 ```
 
 The AI generates a **sprint plan** with:
@@ -397,8 +423,14 @@ curl -X POST http://localhost:3000/api/checkout \
 
 ### How It Works
 
+**Claude Code:**
 ```bash
 /spec-impl my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-impl my-feature
 ```
 
 The AI:
@@ -453,8 +485,14 @@ You: y
 
 ### What You See
 
+**Claude Code:**
 ```bash
 /spec-status my-feature
+```
+
+**Antigravity:**
+```bash
+@spec-status my-feature
 ```
 
 **Output:**
@@ -593,6 +631,7 @@ TASK 4: Create UI Components (in progress)
 
 You can refine specs mid-implementation:
 
+**Claude Code:**
 ```bash
 # Update requirements after user feedback
 /spec-requirements my-feature
@@ -602,6 +641,18 @@ You can refine specs mid-implementation:
 
 # Regenerate tasks with new design
 /spec-tasks my-feature
+```
+
+**Antigravity:**
+```bash
+# Update requirements after user feedback
+@spec-requirements my-feature
+
+# Re-run design to incorporate changes
+@spec-design my-feature
+
+# Regenerate tasks with new design
+@spec-tasks my-feature
 ```
 
 ### Parallel Implementation
@@ -630,6 +681,8 @@ Archived specs serve as documentation for maintenance.
 
 ## Workflow Cheat Sheet
 
+### Claude Code Commands
+
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `/spec-init name` | Create spec workspace | Starting new feature |
@@ -638,6 +691,17 @@ Archived specs serve as documentation for maintenance.
 | `/spec-tasks name` | Break down work | After design |
 | `/spec-impl name` | Build feature | After tasks generated |
 | `/spec-status name` | Check progress | Anytime during implementation |
+
+### Antigravity Commands
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `@spec-init name` | Create spec workspace | Starting new feature |
+| `@spec-requirements name` | Gather needs | After init, before design |
+| `@spec-design name` | Create architecture | After requirements |
+| `@spec-tasks name` | Break down work | After design |
+| `@spec-impl name` | Build feature | After tasks generated |
+| `@spec-status name` | Check progress | Anytime during implementation |
 
 ---
 

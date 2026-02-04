@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee } from "lucide-react";
+import { Coffee, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 export function Hero() {
@@ -21,7 +21,7 @@ export function Hero() {
       <div className="relative z-10 mx-auto max-w-5xl px-6 py-20 text-center">
         <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-amber-900/10 px-4 py-2 text-sm font-medium text-amber-900 dark:bg-amber-100/10 dark:text-amber-100">
           <Coffee className="h-4 w-4" />
-          <span>Spec-Driven Development for Claude Code</span>
+          <span>Spec-Driven Development for AI Coding Assistants</span>
         </div>
 
         <h1 className="mb-6 text-6xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-7xl md:text-8xl">
@@ -32,8 +32,24 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-xl">
-          A structured 6-phase workflow for building features with Claude Code. From requirements to implementation, with clear documentation every step of the way.
+          A structured 6-phase workflow for building features with Claude Code & Antigravity. From requirements to implementation, with clear documentation every step of the way.
         </p>
+
+        <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+            <Sparkles className="h-3 w-3" />
+            Claude Code
+          </span>
+          <a
+            href="https://antigravity.google/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 transition-colors hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+          >
+            <Sparkles className="h-3 w-3" />
+            Antigravity
+          </a>
+        </div>
 
         <div className="mb-10 flex flex-col items-center gap-4">
           <div className="group relative inline-flex w-full max-w-lg items-center justify-between gap-3 rounded-lg border-2 border-amber-900/20 bg-white/80 px-4 py-3 font-mono text-sm shadow-lg backdrop-blur-sm transition-all hover:border-amber-900/40 dark:border-amber-100/20 dark:bg-zinc-800/80 dark:hover:border-amber-100/40">

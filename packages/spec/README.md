@@ -1,38 +1,52 @@
 # @haposoft/cafekit-spec
 
-> Spec-Driven Development workflow for Claude Code
+> Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
-[![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Claude%20Code-green.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
+[![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
 
 ## Overview
 
-CafeKit Spec is a lightweight CLI tool that installs a structured 6-step specification workflow for Claude Code. It helps teams move from idea to implementation systematically using slash commands.
+CafeKit Spec is a **multi-platform** CLI tool that installs a structured 6-step specification workflow for AI coding assistants. It helps teams move from idea to implementation systematically using natural language commands.
+
+**Supported Platforms:**
+| Platform | Status | Installation Path |
+|----------|--------|-------------------|
+| [Claude Code](https://claude.ai/code) | ✅ Supported | `.claude/commands/` |
+| [Antigravity](https://antigravity.google/) | ✅ Supported | `.agent/commands/` |
+| Cursor | 🔮 Planned | `.cursor/commands/` |
+| GitHub Copilot | 🔮 Planned | TBD |
+| Windsurf | 🔮 Planned | TBD |
 
 **What it does:**
-- Installs 6 workflow commands into your `.claude/commands/` folder
+- Installs 6 workflow commands into your AI editor's commands folder
 - Enables spec-driven development with clear phase separation
 - Creates living documentation for every feature
 - Works with zero configuration
+- **Idempotent** - Safe to re-run, won't overwrite existing files
 
 **What it doesn't do:**
-- Generate code (commands guide Claude Code to help you write code)
+- Generate code (commands guide AI to help you write code)
 - Require configuration (zero-config installation)
+- Lock you to a specific AI editor
 
 ## Features
 
-- **6-step spec workflow** - From init to implementation tracking
-- **Zero-config** - Works out of the box with sensible defaults
-- **Idempotent** - Safe to re-run, skips existing files
-- **No global install** - Use directly with `npx`
+- **🎯 Multi-platform** - Works with Claude Code, Antigravity, and future AI editors
+- **📋 6-step spec workflow** - From init to implementation tracking
+- **⚡ Zero-config** - Works out of the box with sensible defaults
+- **🔄 Idempotent** - Safe to re-run, skips existing files
+- **📦 No global install** - Use directly with `npx`
+- **🚀 Future-proof** - Easy to add support for new AI editors
 
 ## Installation
 
 ### Prerequisites
 
 - Node.js 18+
-- Claude Code
+- An AI coding assistant (Claude Code or Antigravity)
 
 ### Install Spec Workflow
 
@@ -42,25 +56,38 @@ Run in your project root:
 npx @haposoft/cafekit-spec
 ```
 
-**Expected output:**
+The installer will:
+1. **Auto-detect** your AI editor configuration (`.claude/` or `.agent/`)
+2. **Prompt** you to select platform if not detected
+3. **Copy** workflow commands to the appropriate directory
+4. **Install** shared skills for spec-driven development
+
+**Example output (Claude Code):**
 ```
 CafeKit Spec Installer
+===============================
 
-Detected .claude/ folder
-Copied: spec-init.md
-Copied: spec-requirements.md
-Copied: spec-design.md
-Copied: spec-tasks.md
-Copied: spec-impl.md
-Copied: spec-status.md
+✓ Detected platforms: claude
+
+Installing for: .claude/
+------------------------
+[.claude/skills] Installed skill: spec-driven-development
+[.claude/commands] Copied: spec-init.md
+[.claude/commands] Copied: spec-requirements.md
+[.claude/commands] Copied: spec-design.md
+[.claude/commands] Copied: spec-tasks.md
+[.claude/commands] Copied: spec-impl.md
+[.claude/commands] Copied: spec-status.md
 
 Installation complete!
-   Copied: 6 files
-   Skipped: 0 files
+   Copied Commands: 6
+   Skipped Commands: 0
+   Installed Skills: Yes
+   Targets: .claude/commands
 
 Next steps:
    1. Run /spec-init <feature-name>
-   2. Follow the spec workflow: requirements -> design -> tasks -> impl
+   2. Follow the spec workflow: requirements → design → tasks → impl
 
 Documentation: https://github.com/hapo-nghialuu/hapo-cafekit
 ```
@@ -356,39 +383,86 @@ done
 
 ## File Structure
 
-Commands are installed to `.claude/commands/`:
+### Platform-Specific Installation
+
+**Claude Code** (`.claude/`):
 ```
 .claude/
-└── commands/
-    ├── spec-init.md
-    ├── spec-requirements.md
-    ├── spec-design.md
-    ├── spec-tasks.md
-    ├── spec-impl.md
-    └── spec-status.md
+├── commands/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-impl.md
+│   └── spec-status.md
+└── skills/
+    └── spec-driven-development/
+        ├── SKILL.md
+        ├── rules/
+        └── templates/
 ```
 
-**Usage:** `/spec-init`, `/spec-requirements`, etc.
+**Antigravity** (`.agent/`):
+```
+.agent/
+├── commands/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-impl.md
+│   └── spec-status.md
+└── skills/
+    └── spec-driven-development/
+        ├── SKILL.md
+        ├── rules/
+        └── templates/
+```
 
-Specs are created in `.specs/`:
+**Usage:** `/spec-init`, `/spec-requirements`, etc. (same commands across platforms)
+
+### Generated Specs Directory
+
+Specs are created in `.specs/` (shared across all platforms):
 ```
 .specs/
-└── feature-name/
+├── steering/              # Project-wide conventions
+│   ├── tech.md
+│   ├── structure.md
+│   └── product.md
+└── feature-name/          # Individual feature specs
     ├── spec.json
     ├── requirements.md
     ├── design.md
-    ├── tasks/
-    │   └── sprint-1.md
-    └── status.md
+    ├── research.md
+    └── tasks/
+        └── sprint-1.md
 ```
 
 ---
 
 ## FAQ
 
-### Q: Does this work with other AI assistants?
+### Q: Which AI editors are supported?
 
-A: No. Currently supports Claude Code only.
+A: Currently supports:
+- ✅ **Claude Code** - `.claude/commands/`
+- ✅ **Antigravity** - `.agent/commands/`
+
+Planned for future:
+- 🔮 **Cursor** - `.cursor/commands/`
+- 🔮 **GitHub Copilot** - TBD
+- 🔮 **Windsurf** - TBD
+
+### Q: Can I use multiple AI editors on the same project?
+
+A: Yes! You can install CafeKit Spec for multiple platforms:
+```bash
+npx @haposoft/cafekit-spec
+# Select "Both" when prompted
+```
+
+This installs commands to both `.claude/` and `.agent/`. The `.specs/` directory is shared, so your specifications work across all editors.
 
 ### Q: Can I customize the workflow steps?
 
@@ -410,16 +484,19 @@ A: Yes. Each spec has its own directory in `.specs/`. Work on multiple in parall
 
 ## Troubleshooting
 
-### "No .claude/ folder detected"
+### "No platform configuration detected"
 
-**Cause:** You're not in a project with Claude Code set up.
+**Cause:** Neither `.claude/` nor `.agent/` folder exists in your project.
 
 **Solution:**
 ```bash
-# Create .claude/commands/ manually
+# Option 1: Create Claude Code folder
 mkdir -p .claude/commands
 
-# Re-run installer
+# Option 2: Create Antigravity folder
+mkdir -p .agent/commands
+
+# Option 3: Run installer and it will prompt you to select platform
 npx @haposoft/cafekit-spec
 ```
 
@@ -529,6 +606,21 @@ Task #4: Add protected route middleware
 
 ## Changelog
 
+### [0.1.2] - 2026-02-04
+
+#### Changed
+- **Multi-platform support** - Renamed from "Claude Code only" to "AI coding assistants"
+- Updated documentation to reflect dual-platform support (Claude Code + Antigravity)
+- Improved platform detection and installation UX
+- Added platform compatibility matrix
+
+### [0.1.1] - 2026-02-03
+
+#### Added
+- Dual-platform installer supporting both Claude Code and Antigravity
+- Auto-detection of existing `.claude/` and `.agent/` configurations
+- Interactive platform selection when no configuration detected
+
 ### [0.1.0] - 2026-02-02
 
 #### Added
@@ -542,8 +634,12 @@ Task #4: Add protected route middleware
 
 ## License
 
-UNLICENSED - Internal Use Only
+MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
 **Made with care by the CafeKit Team**
+
+<p align="center">
+  <sub>Multi-platform Spec-Driven Development for AI Coding Assistants</sub>
+</p>
