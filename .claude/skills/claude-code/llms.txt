@@ -1,0 +1,135 @@
+# Claude Code Documentation
+
+## Overview
+Claude Code expert skill providing comprehensive guidance on features, setup, configuration, and troubleshooting.
+
+## Core Topics
+
+### Getting Started
+- Installation methods (npm, pip)
+- Authentication and API keys
+- First run and basic usage
+- See: references/getting-started.md
+
+### Slash Commands
+- Development commands (/cook, /plan, /debug, /test)
+- Fix commands (/fix:fast, /fix:hard, /fix:types, /fix:test, /fix:ui, /fix:ci)
+- Documentation commands (/docs:init, /docs:update, /docs:summarize)
+- Git commands (/git:cm, /git:cp, /git:pr)
+- Design and content commands
+- See: references/slash-commands.md
+
+### Agent Skills
+- Creating and managing skills
+- skill.md and skill.json structure
+- Resource types (scripts, references, assets)
+- API usage
+- See: references/agent-skills.md
+
+### MCP Integration
+- MCP server configuration
+- Common servers (filesystem, GitHub, PostgreSQL, Brave Search, Puppeteer)
+- Remote MCP servers
+- Environment variables and security
+- See: references/mcp-integration.md
+
+### Hooks and Plugins
+- Hook types (pre-tool, post-tool, user-prompt-submit)
+- Hook configuration and examples
+- Plugin structure and management
+- Creating and publishing plugins
+- See: references/hooks-and-plugins.md
+
+### Configuration
+- Settings hierarchy (CLI flags, env vars, project, global)
+- Model configuration and aliases
+- Token and temperature settings
+- Sandboxing and memory management
+- Output styles
+- See: references/configuration.md
+
+### Enterprise Features
+- Identity & Access Management (SSO, RBAC)
+- Security & Compliance (sandboxing, audit logging, certifications)
+- Deployment options (Bedrock, Vertex AI, self-hosted)
+- Monitoring & Analytics
+- Network configuration
+- See: references/enterprise-features.md
+
+### IDE Integration
+- Visual Studio Code extension
+- JetBrains plugin
+- Features, configuration, keyboard shortcuts
+- See: references/ide-integration.md
+
+### CI/CD Integration
+- GitHub Actions workflows
+- GitLab CI/CD pipelines
+- Automated testing and code review
+- See: references/cicd-integration.md
+
+### Advanced Features
+- Extended thinking
+- Prompt caching
+- Checkpointing
+- Memory management
+- Context windows
+- See: references/advanced-features.md
+
+### Troubleshooting
+- Authentication issues
+- Installation problems
+- Connection & network issues
+- MCP server problems
+- Performance issues
+- Tool execution errors
+- Debug mode
+- See: references/troubleshooting.md
+
+### API Reference
+- Admin API (usage reports, cost reports, user management)
+- Messages API (create, stream, count tokens)
+- Files API (upload, list, download, delete)
+- Models API (list, get)
+- Skills API (create, list, update, delete)
+- Client SDKs (TypeScript, Python)
+- See: references/api-reference.md
+
+### Best Practices
+- Project organization
+- Security (API keys, sandboxing, hooks, plugins)
+- Performance optimization
+- Team collaboration
+- Cost management
+- Development workflows
+- See: references/best-practices.md
+
+## Documentation Links
+
+### Official Documentation
+- Main docs: https://docs.claude.com/claude-code
+- API reference: https://docs.claude.com/api
+- Agent Skills: https://docs.claude.com/agents-and-tools/agent-skills
+- Models: https://docs.claude.com/about-claude/models
+
+### Support
+- GitHub Issues: https://github.com/anthropics/claude-code/issues
+- Support Portal: support.claude.com
+- Community Discord: discord.gg/anthropic
+
+## Reference Files
+
+All detailed documentation is available in the references/ directory:
+- references/getting-started.md
+- references/slash-commands.md
+- references/agent-skills.md
+- references/mcp-integration.md
+- references/hooks-and-plugins.md
+- references/configuration.md
+- references/enterprise-features.md
+- references/ide-integration.md
+- references/cicd-integration.md
+- references/advanced-features.md
+- references/troubleshooting.md
+- references/api-reference.md
+- references/best-practices.md
