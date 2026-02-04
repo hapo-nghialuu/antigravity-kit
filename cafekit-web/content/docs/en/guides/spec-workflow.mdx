@@ -37,6 +37,14 @@ Spec-driven development solves this by creating a **single source of truth** bef
 | **IMPL** | `/spec-impl` | `/spec-impl` or `@spec-impl` | Build with AI guidance |
 | **STATUS** | `/spec-status` | `/spec-status` or `@spec-status` | Track and verify |
 
+### 💡 Model Strategy (Important)
+
+When using `spec-*` skills (especially Requirements, Design, Tasks), use **Claude 3.5 Sonnet, Claude 3 Opus (or the latest [Opus 4.5+] model)**.
+
+**Why?**
+- Planning phases require the **highest logic and reasoning capabilities** to create an accurate roadmap.
+- Once you have a detailed and standard plan (Design & Tasks), implementation phases (`impl`) can be handled well by other lighter models without needing maximum power.
+
 Let's explore each phase in detail.
 
 ---
