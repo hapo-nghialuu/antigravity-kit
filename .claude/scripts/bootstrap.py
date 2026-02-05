@@ -9,7 +9,7 @@ Scans agents, skills, workflows and generates:
 - metadata.json (per agent/skill)
 
 Usage:
-    python .claude/scripts/bootstrap.py --source .agent/ --target .claude/
+    python .claude/scripts/bootstrap.py --source .claude/ --target .claude/
     python .claude/scripts/bootstrap.py --rebuild  # Rebuild from .claude/
     python .claude/scripts/bootstrap.py --extract-agent path/to/agent.md
     python .claude/scripts/bootstrap.py --extract-skill path/to/SKILL.md
@@ -406,7 +406,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    parser.add_argument('--source', type=Path, help="Source directory (.agent/)")
+    parser.add_argument('--source', type=Path, help="Source directory (.claude/)")
     parser.add_argument('--target', type=Path, help="Target directory (.claude/)")
     parser.add_argument('--rebuild', action='store_true', help="Rebuild from .claude/")
     parser.add_argument('--extract-agent', type=Path, help="Extract metadata from single agent file")

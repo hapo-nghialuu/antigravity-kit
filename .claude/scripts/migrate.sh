@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Migrating .agent/ to .claude/ plugin format..."
+echo "🚀 Migrating .claude/ to .claude/ plugin format..."
 echo ""
 
 # 1. Create .claude/ structure
@@ -10,31 +10,31 @@ mkdir -p .claude/{agents,skills,commands,hooks,scripts,.shared,.claude-plugin}
 
 # 2. Copy agents (flatten structure - no subdirectories)
 echo "📦 Copying agents..."
-cp .agent/agents/*.md .claude/agents/ 2>/dev/null || echo "⚠️  No agents found"
+cp .claude/agents/*.md .claude/agents/ 2>/dev/null || echo "⚠️  No agents found"
 
 # 3. Copy skills (keep folder structure)
 echo "📦 Copying skills..."
-cp -r .agent/skills/* .claude/skills/ 2>/dev/null || echo "⚠️  No skills found"
+cp -r .claude/skills/* .claude/skills/ 2>/dev/null || echo "⚠️  No skills found"
 
 # 4. Copy workflows to commands (Claude Code uses commands/, not workflows/)
 echo "📦 Copying workflows to commands/..."
-cp .agent/workflows/*.md .claude/commands/ 2>/dev/null || echo "⚠️  No workflows found"
+cp .claude/workflows/*.md .claude/commands/ 2>/dev/null || echo "⚠️  No workflows found"
 
 # 5. Copy shared resources
 echo "📦 Copying shared resources..."
-if [ -d ".agent/.shared" ]; then
-    cp -r .agent/.shared/* .claude/.shared/
+if [ -d ".claude/.shared" ]; then
+    cp -r .claude/.shared/* .claude/.shared/
 else
     echo "⚠️  No shared resources found"
 fi
 
 # 6. Copy utility scripts
 echo "📦 Copying utility scripts..."
-if [ -f ".agent/scripts/session_manager.py" ]; then
-    cp .agent/scripts/session_manager.py .claude/scripts/
+if [ -f ".claude/scripts/session_manager.py" ]; then
+    cp .claude/scripts/session_manager.py .claude/scripts/
 fi
-if [ -f ".agent/scripts/auto_preview.py" ]; then
-    cp .agent/scripts/auto_preview.py .claude/scripts/
+if [ -f ".claude/scripts/auto_preview.py" ]; then
+    cp .claude/scripts/auto_preview.py .claude/scripts/
 fi
 
 # 7. Plugin manifest and hooks already created, skip

@@ -279,7 +279,7 @@ python3 .claude/scripts/validate_dispatcher.py --help
 
 ### Re-run Migration
 
-If you update `.agent/` content:
+If you update `.claude/` content:
 
 ```bash
 bash .claude/scripts/migrate.sh
@@ -310,7 +310,7 @@ VALIDATOR_MAP = {
 
 ## 📖 Documentation
 
-- **Full docs**: See `.agent/ARCHITECTURE.md` for detailed architecture
+- **Full docs**: See `.claude/ARCHITECTURE.md` for detailed architecture
 - **Skills reference**: Browse `.claude/skills/` for all available skills
 - **Agents reference**: Browse `.claude/agents/` for all available agents
 
