@@ -1,5 +1,5 @@
 ---
-description: <Cafekit>Initialize CLAUDE.md for a new project. Auto-detects tech stack, directory structure, and commands from actual project files.
+description: Initialize CLAUDE.md for a new project. Auto-detects tech stack, directory structure, and commands from actual project files. Works with any project type.
 ---
 
 # /init - Initialize Project Context
@@ -286,38 +286,397 @@ See `.claude/CONVENTIONS.md` for agent routing and framework rules.
 
 ---
 
-## Step 7: Generate .claude/docs/SETUP.md
+## Step 7: Generate .claude/docs/ with REAL Content
 
-Based on detected package manager and scripts:
+**CRITICAL: Docs must contain project-specific content, NOT templates.**
+
+### 7.1 Create .claude/docs/ directory
+
+```bash
+mkdir -p .claude/docs
+```
+
+### 7.2 Generate SETUP.md with REAL data
+
+**Detection commands:**
+```bash
+# Get repo URL
+cat package.json | grep -E '"url".*git' | head -1
+
+# Get project name
+cat package.json | grep '"name"' | head -1
+
+# Detect package manager
+test -f pnpm-lock.yaml && echo "pnpm"
+test -f yarn.lock && echo "yarn"
+test -f package-lock.json && echo "npm"
+
+# Check for .env.example
+test -f .env.example && echo "HAS_ENV_EXAMPLE"
+
+# Get engines
+cat package.json | grep -A 3 '"engines"'
+
+# Get scripts
+cat package.json | grep -A 20 '"scripts"'
+```
+
+**Generate SETUP.md with detected values:**
 
 ```markdown
 # Setup Guide
 
+> How to set up and run {PROJECT_NAME} locally.
+
+---
+
 ## Prerequisites
 
-{Detect from engines in package.json or runtime files}
-- Node.js >= {detected version or "18"}
-- {Package manager} >= {version}
+| Requirement | Version | Check Command |
+|-------------|---------|---------------|
+| Node.js | >= {FROM_ENGINES_OR_18} | `node -v` |
+| {DETECTED_PM: pnpm/npm/yarn} | >= {VERSION} | `{PM} -v` |
+
+---
 
 ## Quick Start
 
-```bash
-# Clone and install
-git clone {repo URL from package.json if exists}
-cd {project name}
-{detected install command: pnpm install / npm install / yarn}
+\`\`\`bash
+# 1. Clone repository
+git clone {ACTUAL_REPO_URL}
+cd {ACTUAL_PROJECT_NAME}
 
-# Setup environment
-cp .env.example .env  # {only if .env.example exists}
+# 2. Install dependencies
+{DETECTED_PM} install
 
-# Run development server
-{detected dev command}
-```
+# 3. Set up environment
+{IF .env.example EXISTS: "cp .env.example .env"}
+{IF NO .env.example: "# No .env required" OR skip this step}
+
+# 4. Run development server
+{DETECTED_PM} run dev
+\`\`\`
+
+---
 
 ## Available Scripts
 
-{Copy from Quick Commands table}
+| Command | Description |
+|---------|-------------|
+{FOR EACH SCRIPT IN package.json:}
+| `{PM} run {SCRIPT_NAME}` | {SCRIPT_DESCRIPTION} |
+
+---
+
+## Troubleshooting
+
+### Port already in use
+\`\`\`bash
+lsof -i :{DETECTED_PORT_OR_3000}
+kill -9 <PID>
+\`\`\`
+
+### Dependencies not installing
+\`\`\`bash
+rm -rf node_modules {LOCKFILE}
+{PM} install
+\`\`\`
 ```
+
+### 7.3 Generate DEPLOY.md based on detected platform
+
+**Detection commands:**
+```bash
+# Detect deployment platform
+test -f vercel.json && echo "VERCEL"
+test -f netlify.toml && echo "NETLIFY"
+test -f Dockerfile && echo "DOCKER"
+test -f docker-compose.yml && echo "DOCKER_COMPOSE"
+test -f fly.toml && echo "FLY"
+test -f railway.json && echo "RAILWAY"
+test -d .vercel && echo "VERCEL_DEPLOYED"
+ls .github/workflows/*.yml 2>/dev/null && echo "GITHUB_ACTIONS"
+```
+
+**Generate DEPLOY.md based on platform:**
+
+**If Vercel detected:**
+```markdown
+# Deployment Guide
+
+> Deploy {PROJECT_NAME} to Vercel.
+
+## Quick Deploy
+
+\`\`\`bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+\`\`\`
+
+## Environment Variables
+
+Set these in Vercel Dashboard → Settings → Environment Variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+{FROM .env.example IF EXISTS}
+```
+
+**If Docker detected:**
+```markdown
+# Deployment Guide
+
+> Deploy {PROJECT_NAME} with Docker.
+
+## Quick Deploy
+
+\`\`\`bash
+# Build image
+docker build -t {PROJECT_NAME} .
+
+# Run container
+docker run -p {PORT}:{PORT} {PROJECT_NAME}
+\`\`\`
+
+## Docker Compose
+
+\`\`\`bash
+docker-compose up -d
+\`\`\`
+```
+
+**If NO deployment platform detected:**
+```markdown
+# Deployment Guide
+
+> Deployment configuration not detected for {PROJECT_NAME}.
+
+## Options
+
+1. **Vercel** (Recommended for Next.js)
+   \`\`\`bash
+   npm i -g vercel && vercel
+   \`\`\`
+
+2. **Docker**
+   Create a Dockerfile for containerized deployment.
+
+3. **Manual Server**
+   \`\`\`bash
+   {PM} run build
+   {PM} run start
+   \`\`\`
+
+## Next Steps
+
+- Add `vercel.json` for Vercel configuration
+- Or add `Dockerfile` for container deployment
+- Or add `.github/workflows/deploy.yml` for CI/CD
+```
+
+### 7.4 Auto-detect and create additional docs
+
+**Only create docs when content is detected. Run detection commands first.**
+
+#### DATABASE.md - Create if database detected
+
+```bash
+# Detection
+test -f prisma/schema.prisma && echo "PRISMA"
+test -f drizzle.config.ts && echo "DRIZZLE"
+cat package.json | grep -E '"(mongoose|pg|mysql2|better-sqlite3)"' && echo "DB_DRIVER"
+test -f docker-compose.yml && grep -q "postgres\|mysql\|mongo" docker-compose.yml && echo "DB_CONTAINER"
+```
+
+**If detected, generate DATABASE.md:**
+```markdown
+# Database Guide
+
+> Database setup and management for {PROJECT_NAME}.
+
+## Database Type
+
+{PRISMA: PostgreSQL with Prisma ORM}
+{DRIZZLE: with Drizzle ORM}
+{MONGOOSE: MongoDB with Mongoose}
+
+## Setup
+
+\`\`\`bash
+{IF PRISMA:}
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev
+
+# Open Prisma Studio
+npx prisma studio
+{/IF}
+
+{IF DRIZZLE:}
+# Generate migrations
+npx drizzle-kit generate
+
+# Push to database
+npx drizzle-kit push
+{/IF}
+\`\`\`
+
+## Schema Location
+
+- {prisma/schema.prisma | drizzle/schema.ts | src/models/}
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Database connection string |
+```
+
+#### API.md - Create if API routes detected
+
+```bash
+# Detection
+test -d src/app/api && echo "NEXTJS_API"
+test -d pages/api && echo "NEXTJS_PAGES_API"
+test -d src/routes && echo "EXPRESS_ROUTES"
+test -d src/api && echo "API_DIR"
+cat package.json | grep -E '"(express|fastify|hono|@nestjs)"' && echo "API_FRAMEWORK"
+```
+
+**If detected, generate API.md:**
+```markdown
+# API Reference
+
+> API endpoints for {PROJECT_NAME}.
+
+## Base URL
+
+- Development: `http://localhost:{PORT}`
+- Production: `{PROD_URL_IF_DETECTED}`
+
+## Endpoints
+
+{Scan and list directories/files in api folder}
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+{FOR EACH route file detected:}
+| GET/POST | `/api/{route}` | {filename} |
+
+## Authentication
+
+{IF better-auth detected: "Uses Better Auth - see auth endpoints"}
+{IF next-auth detected: "Uses NextAuth.js"}
+{ELSE: "Not configured"}
+```
+
+#### TESTING.md - Create if test framework detected
+
+```bash
+# Detection
+cat package.json | grep -E '"(vitest|jest|playwright|cypress|pytest)"' && echo "TEST_FRAMEWORK"
+test -d __tests__ && echo "TESTS_DIR"
+test -d tests && echo "TESTS_DIR"
+test -d e2e && echo "E2E_DIR"
+cat package.json | grep -E '"test"' && echo "TEST_SCRIPT"
+```
+
+**If detected, generate TESTING.md:**
+```markdown
+# Testing Guide
+
+> How to run tests for {PROJECT_NAME}.
+
+## Test Framework
+
+{VITEST: Vitest}
+{JEST: Jest}
+{PLAYWRIGHT: Playwright (E2E)}
+{CYPRESS: Cypress (E2E)}
+
+## Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `{PM} test` | Run all tests |
+| `{PM} test:watch` | Run tests in watch mode |
+| `{PM} test:e2e` | Run E2E tests |
+| `{PM} test:coverage` | Run with coverage |
+
+## Test Locations
+
+- Unit tests: `{__tests__/ | tests/ | src/**/*.test.ts}`
+- E2E tests: `{e2e/ | tests/e2e/}`
+
+## Running Specific Tests
+
+\`\`\`bash
+# Run single test file
+{PM} test path/to/test.ts
+
+# Run tests matching pattern
+{PM} test -t "pattern"
+\`\`\`
+```
+
+#### ARCHITECTURE.md - Create if complex structure detected
+
+```bash
+# Detection - only for larger projects
+find . -type f -name "*.ts" -o -name "*.tsx" | wc -l  # If > 50 files
+test -d src/modules && echo "MODULAR"
+test -d src/features && echo "FEATURE_BASED"
+test -d src/services && echo "SERVICE_LAYER"
+test -f pnpm-workspace.yaml && echo "MONOREPO"
+```
+
+**If complex project detected, generate ARCHITECTURE.md:**
+```markdown
+# Architecture Overview
+
+> System architecture for {PROJECT_NAME}.
+
+## Project Type
+
+{MONOREPO: Monorepo with pnpm workspaces}
+{MODULAR: Modular architecture}
+{FEATURE_BASED: Feature-based structure}
+
+## Directory Structure
+
+\`\`\`
+{Generated tree from actual structure}
+\`\`\`
+
+## Key Patterns
+
+{Based on detected structure}
+
+## Data Flow
+
+{If API + DB detected: describe request flow}
+```
+
+### 7.5 Summary: Auto-create rules
+
+| Doc | Create when |
+|-----|-------------|
+| `SETUP.md` | Always (every project needs setup) |
+| `DEPLOY.md` | Always (even if "not configured") |
+| `DATABASE.md` | Prisma/Drizzle/DB driver detected |
+| `API.md` | API routes directory detected |
+| `TESTING.md` | Test framework in package.json |
+| `ARCHITECTURE.md` | Complex project (>50 files or monorepo) |
+
+**Rule: Create doc only if there's real content to put in it.**
 
 ---
 
@@ -342,10 +701,14 @@ Before completing, self-check:
    - Type: {Next.js App / FastAPI / Express API / etc.}
    - Stack: {list main technologies with versions}
 
-📁 Files:
+📁 Files created:
    - CLAUDE.md ({line count} lines)
-   - .claude/docs/SETUP.md
-   - .claude/docs/DEPLOY.md
+   - .claude/docs/SETUP.md ✓
+   - .claude/docs/DEPLOY.md ✓
+   {IF DATABASE detected:} - .claude/docs/DATABASE.md ✓
+   {IF API detected:} - .claude/docs/API.md ✓
+   {IF TESTING detected:} - .claude/docs/TESTING.md ✓
+   {IF COMPLEX detected:} - .claude/docs/ARCHITECTURE.md ✓
 
 🔗 Framework: .claude/CONVENTIONS.md {✓ / ⚠️ missing}
 ```

@@ -1,26 +1,6 @@
 # Setup Guide
 
-> How to set up and run this project locally.
-
----
-
-## Quick Start
-
-```bash
-# 1. Clone repository
-git clone <repo-url>
-cd <project-name>
-
-# 2. Install dependencies
-npm install  # or pnpm install / yarn
-
-# 3. Set up environment
-cp .env.example .env
-# Edit .env with your values
-
-# 4. Run development server
-npm run dev
-```
+> How to set up and run CafeKit (antigravity-kit) locally.
 
 ---
 
@@ -29,18 +9,25 @@ npm run dev
 | Requirement | Version | Check Command |
 |-------------|---------|---------------|
 | Node.js | >= 18.0 | `node -v` |
-| npm/pnpm | >= 8.0 | `npm -v` |
+| pnpm | >= 8.0 | `pnpm -v` |
+| Python | >= 3.11 | `python3 --version` |
 | Git | >= 2.0 | `git --version` |
 
 ---
 
-## Environment Variables
+## Quick Start
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `DATABASE_URL` | Yes | Database connection string | `postgresql://...` |
-| `API_KEY` | Yes | API authentication key | `sk-...` |
-| `NODE_ENV` | No | Environment mode | `development` |
+```bash
+# 1. Clone repository
+git clone git@github.com:hapo-nghialuu/hapo-cafekit.git
+cd hapo-cafekit
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Run development (all packages)
+pnpm dev
+```
 
 ---
 
@@ -48,26 +35,58 @@ npm run dev
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
-| `npm run test` | Run tests |
-| `npm run lint` | Run linter |
-| `npm run format` | Format code |
+| `pnpm dev` | Start development for all packages in parallel |
+| `pnpm build` | Build all packages |
+| `pnpm test` | Run tests for all packages |
+| `pnpm clean` | Clean node_modules and build artifacts |
 
 ---
 
-## Database Setup
+## Demo Website (cafekit-web)
 
 ```bash
-# Generate Prisma client
-npx prisma generate
+# Navigate to demo web
+cd cafekit-web
 
-# Run migrations
-npx prisma migrate dev
+# Install dependencies (if not done from root)
+pnpm install
 
-# Seed database (if available)
-npx prisma db seed
+# Start development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+Demo runs at `http://localhost:3000`
+
+### Demo Web Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Next.js | 16.1.3 | React framework with App Router |
+| React | 19.2.3 | UI library |
+| Tailwind CSS | v4 | Styling |
+| TypeScript | ^5 | Type safety |
+
+---
+
+## Project Structure
+
+```
+antigravity-kit/
+├── .claude/           # CafeKit plugin (agents, skills, commands)
+│   ├── agents/        # 20 specialist agents
+│   ├── skills/        # 66 domain skills
+│   ├── commands/      # 18 slash commands
+│   └── docs/          # Project documentation
+├── cafekit-web/       # Demo website (Next.js 16.1.3)
+├── packages/          # Shared packages
+│   └── spec/          # Spec utilities
+└── package.json       # Root monorepo config (pnpm)
 ```
 
 ---
@@ -75,29 +94,36 @@ npx prisma db seed
 ## Troubleshooting
 
 ### Port already in use
+
 ```bash
 # Find process using port 3000
 lsof -i :3000
+
 # Kill process
 kill -9 <PID>
 ```
 
 ### Dependencies not installing
+
 ```bash
 # Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 ```
 
-### Database connection failed
-- Check `DATABASE_URL` in `.env`
-- Ensure database server is running
-- Verify network connectivity
+### Python scripts not running
+
+```bash
+# Ensure Python 3.11+
+python3 --version
+
+# Install if needed (macOS)
+brew install python@3.11
+```
 
 ---
 
 ## See Also
 
 - Deploy: `DEPLOY.md`
-- Testing: `TESTING.md`
-- Architecture: `ARCHITECTURE.md`
+- Main docs: `../../README.md`
