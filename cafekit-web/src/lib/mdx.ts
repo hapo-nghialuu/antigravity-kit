@@ -56,8 +56,10 @@ export function getMDXFiles(dir: string = 'docs'): string[] {
 export async function getMDXContent(slug: string): Promise<MDXContent | null> {
   try {
     const filePath = path.join(contentDirectory, `${slug}.mdx`);
+    console.log(`[DEBUG] getMDXContent slug='${slug}' filePath='${filePath}' exists=${fs.existsSync(filePath)}`);
 
     if (!fs.existsSync(filePath)) {
+      console.log(`[DEBUG] File not found: ${filePath}`);
       return null;
     }
 
