@@ -143,7 +143,7 @@ const sidebarNavVi = [
 
 export const docsConfig = {
     mainNav,
-    sidebarNav: sidebarNavEn, // Default to EN for backward compatibility if needed
+    sidebarNav: sidebarNavVi, // Default to VI
 };
 
 export function getDocsConfig(locale: string): DocsConfig {
