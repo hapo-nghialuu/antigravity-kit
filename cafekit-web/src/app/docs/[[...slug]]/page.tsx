@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 async function getRouteInfo(slug?: string[]) {
   const cookieStore = await cookies();
   console.log('Fetching locale from cookies');
-  const locale = cookieStore.get('NEXT_LOCALE')?.value || 'en';
+  const locale = cookieStore.get('NEXT_LOCALE')?.value || 'vi';
 
   // Slug from URL is clean (e.g. ['getting-started'])
   const mdxSlug = (!slug || slug.length === 0)
