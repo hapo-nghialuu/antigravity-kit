@@ -1,137 +1,137 @@
 ---
-title: Documentation
-description: Learn how to use CafeKit Spec to build features faster with spec-driven development for AI coding assistants (Claude Code, Antigravity).
+title: Tài liệu
+description: Tìm hiểu cách sử dụng CafeKit Spec để xây dựng tính năng nhanh hơn với quy trình phát triển hướng spec cho các trợ lý lập trình AI (Claude Code, Antigravity).
 ---
 
-# CafeKit Spec Documentation
+# Tài liệu CafeKit Spec
 
-Welcome to CafeKit Spec - a structured spec-driven development workflow for AI coding assistants ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
+Chào mừng đến với CafeKit Spec - một quy trình phát triển hướng spec có cấu trúc dành cho các trợ lý lập trình AI ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
 
-## What is CafeKit Spec?
+## CafeKit Spec là gì?
 
-CafeKit Spec extends AI coding assistants with 6 powerful workflow commands that guide you through building complex features:
+CafeKit Spec mở rộng các trợ lý lập trình AI với 6 lệnh quy trình mạnh mẽ hướng dẫn bạn xây dựng các tính năng phức tạp:
 
-1. **Initialize** - Create spec workspace
-2. **Requirements** - Capture what you need
-3. **Design** - Define architecture
-4. **Tasks** - Break down implementation
-5. **Implement** - Build with AI guidance
-6. **Status** - Track progress
+1. **Khởi tạo (Initialize)** - Tạo workspace spec
+2. **Yêu cầu (Requirements)** - Nắm bắt những gì bạn cần
+3. **Thiết kế (Design)** - Định nghĩa kiến trúc
+4. **Tasks** - Chia nhỏ việc thực hiện
+5. **Thực hiện (Implement)** - Xây dựng với hướng dẫn của AI
+6. **Trạng thái (Status)** - Theo dõi tiến độ
 
-Instead of ad-hoc prompts, CafeKit Spec gives you a repeatable process for turning ideas into production code.
+Thay vì các prompt ngẫu hứng, CafeKit Spec cung cấp cho bạn một quy trình lặp lại để biến ý tưởng thành code sản phẩm (production code).
 
-## Quick Links
+## Liên kết nhanh
 
-Get started with these essential guides:
+Bắt đầu với các hướng dẫn cơ bản này:
 
-- [Installation](/docs/getting-started/installation) - Get CafeKit Spec installed in under a minute
-- [Spec Workflow](/docs/guides/spec-workflow) - Master the 6-phase workflow for building complex features
+- [Cài đặt](/docs/getting-started/installation) - Cài đặt CafeKit Spec trong chưa đầy một phút
+- [Quy trình Spec](/docs/guides/spec-workflow) - Làm chủ quy trình 6 giai đoạn để xây dựng các tính năng phức tạp
 
-## Why Spec-Driven Development?
+## Tại sao chọn Spec-Driven Development?
 
-Traditional AI coding often leads to:
-- Incomplete requirements causing rework
-- Missing edge cases discovered late
-- Lost context between sessions
-- Inconsistent implementation
+AI coding truyền thống thường dẫn đến:
+- Yêu cầu không đầy đủ gây ra việc phải làm lại
+- Các trường hợp biên (edge cases) bị phát hiện muộn
+- Mất ngữ cảnh giữa các phiên làm việc
+- Triển khai không nhất quán
 
-**CafeKit Spec solves this** by creating a structured workflow.
+**CafeKit Spec giải quyết điều này** bằng cách tạo ra một quy trình có cấu trúc.
 
-**Result:** Faster development, fewer bugs, better documentation.
+**Kết quả:** Phát triển nhanh hơn, ít lỗi hơn, tài liệu tốt hơn.
 
-## Getting Started
+## Bắt đầu
 
-### 1. Install CafeKit Spec
+### 1. Cài đặt CafeKit Spec
 
 ```bash
 npx @haposoft/cafekit-spec
 ```
 
-Installs 6 spec workflow commands to your AI coding assistant.
+Cài đặt 6 lệnh quy trình spec vào trợ lý lập trình AI của bạn.
 
-### 2. Create Your First Spec
+### 2. Tạo Spec đầu tiên của bạn
 
-Follow our interactive quickstart:
+Làm theo hướng dẫn bắt đầu nhanh tương tác của chúng tôi:
 
 ```bash
 /spec-init my-first-feature
 /spec-requirements my-first-feature
 ```
 
-The AI guides you through defining requirements, designing architecture, and breaking down tasks.
+AI hướng dẫn bạn xác định yêu cầu, thiết kế kiến trúc và chia nhỏ các task.
 
-### 3. Implement with AI Guidance
+### 3. Thực hiện với hướng dẫn của AI
 
 ```bash
 /spec-impl my-first-feature
 ```
 
-The AI reads your spec and helps you build task-by-task, with verification at each step.
+AI đọc spec của bạn và giúp bạn xây dựng từng task một, với sự xác minh ở mỗi bước.
 
-[Read the full Quickstart Guide](/docs/getting-started/quickstart)
+[Đọc Hướng dẫn Bắt đầu nhanh đầy đủ](/docs/getting-started/quickstart)
 
-## Core Concepts
+## Các khái niệm cốt lõi
 
 ### Specs
 
-A **spec** is a structured workspace for one feature. It contains:
+Một **spec** là một workspace có cấu trúc cho một tính năng. Nó chứa:
 
-- `requirements.md` - What you're building and why
-- `design.md` - Technical architecture and contracts
-- `tasks/sprint-1.md` - Prioritized task breakdown
-- `status.md` - Implementation progress
+- `requirements.md` - Bạn đang xây dựng cái gì và tại sao
+- `design.md` - Kiến trúc kỹ thuật và các hợp đồng (contracts)
+- `tasks/sprint-1.md` - Phân chia task theo mức độ ưu tiên
+- `status.md` - Tiến độ thực hiện
 
-Specs live in `.specs/` and are committed to Git for team collaboration.
+Specs nằm trong `.specs/` và được commit vào Git để team cùng phối hợp.
 
-### Workflow Commands
+### Các lệnh quy trình (Workflow Commands)
 
-CafeKit Spec adds 6 slash commands to your AI coding assistant:
+CafeKit Spec thêm 6 lệnh slash vào trợ lý lập trình AI của bạn:
 
-| Command | Purpose |
+| Lệnh | Mục đích |
 |---------|---------|
-| `/spec-init` | Create spec workspace |
-| `/spec-requirements` | Gather requirements via Socratic Q&A |
-| `/spec-design` | Generate technical design document |
-| `/spec-tasks` | Break down into implementation tasks |
-| `/spec-impl` | Implement tasks with AI guidance |
-| `/spec-status` | View progress and blockers |
+| `/spec-init` | Tạo workspace spec |
+| `/spec-requirements` | Thu thập yêu cầu thông qua hỏi đáp Socratic |
+| `/spec-design` | Tạo tài liệu thiết kế kỹ thuật |
+| `/spec-tasks` | Chia nhỏ thành các task thực hiện |
+| `/spec-impl` | Thực hiện task với hướng dẫn của AI |
+| `/spec-status` | Xem tiến độ và các vấn đề chặn (blockers) |
 
-## Use Cases
+## Trường hợp sử dụng
 
-### Perfect for:
+### Hoàn hảo cho:
 
-- **Complex features** - Authentication, payments, admin dashboards
-- **New projects** - Architecture decisions need documentation
-- **Team collaboration** - Specs provide shared context
-- **Long-running work** - Track progress across multiple sessions
+- **Các tính năng phức tạp** - Xác thực, thanh toán, bảng điều khiển admin
+- **Dự án mới** - Các quyết định kiến trúc cần tài liệu
+- **Hợp tác nhóm** - Specs cung cấp ngữ cảnh được chia sẻ
+- **Công việc dài hạn** - Theo dõi tiến độ qua nhiều phiên làm việc
 
-### Not needed for:
+### Không cần thiết cho:
 
-- Simple bug fixes (&lt;30 min)
-- Copy changes or typo fixes
-- Minor CSS tweaks
-- Trivial refactors
+- Sửa lỗi đơn giản (<30 phút)
+- Thay đổi nội dung hoặc sửa lỗi chính tả
+- Điều chỉnh CSS nhỏ
+- Tái cấu trúc (refactor) nhỏ nhặt
 
-## Learning Path
+## Lộ trình học tập
 
-Follow this path to master CafeKit Spec:
+Làm theo lộ trình này để làm chủ CafeKit Spec:
 
-1. **[Installation](/docs/getting-started/installation)** (2 min) - Get set up
-2. **[Quickstart](/docs/getting-started/quickstart)** (10 min) - Build your first spec
-3. **[Spec Workflow Guide](/docs/guides/spec-workflow)** (20 min) - Deep dive into each phase
+1. **[Cài đặt](/docs/getting-started/installation)** (2 phút) - Thiết lập môi trường
+2. **[Bắt đầu nhanh](/docs/getting-started/quickstart)** (10 phút) - Xây dựng spec đầu tiên
+3. **[Hướng dẫn quy trình Spec](/docs/guides/spec-workflow)** (20 phút) - Đi sâu vào từng giai đoạn
 
-Total time to productivity: **~30 minutes**
+Tổng thời gian để thành thạo: **~30 phút**
 
-## Getting Help
+## Nhận trợ giúp
 
-- **[FAQ](/docs/faq)** - Common questions answered
-- **[GitHub Issues](https://github.com/hapo-nghialuu/hapo-cafekit/issues)** - Report bugs or request features
+- **[FAQ](/docs/faq)** - Giải đáp các câu hỏi thường gặp
+- **[GitHub Issues](https://github.com/hapo-nghialuu/hapo-cafekit/issues)** - Báo lỗi hoặc yêu cầu tính năng
 
-## What's Next?
+## Bước tiếp theo?
 
-Ready to start? Pick your path:
+Sẵn sàng bắt đầu? Chọn con đường của bạn:
 
-- [Install CafeKit Spec](/docs/getting-started/installation)
-- [Try the Quickstart](/docs/getting-started/quickstart)
+- [Cài đặt CafeKit Spec](/docs/getting-started/installation)
+- [Thử Bắt đầu nhanh](/docs/getting-started/quickstart)
 
-**Happy coding with CafeKit Spec!**
+**Chúc bạn code vui vẻ với CafeKit Spec!**
