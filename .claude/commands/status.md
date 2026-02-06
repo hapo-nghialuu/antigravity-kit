@@ -82,5 +82,5 @@ Show current project and agent status.
 ## Technical
 
 Status uses these scripts:
-- `python .agent/scripts/session_manager.py status`
-- `python .agent/scripts/auto_preview.py status`
+- `python .claude/scripts/session_manager.py status`
+- `python .claude/scripts/auto_preview.py status`

@@ -1,0 +1,21 @@
+{
+  "name": "mcp-management-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP client scripts for managing MCP servers",
+  "scripts": {
+    "build": "tsc",
+    "cli": "npx tsx cli.ts",
+    "list-tools": "npx tsx cli.ts list-tools",
+    "list-prompts": "npx tsx cli.ts list-prompts",
+    "list-resources": "npx tsx cli.ts list-resources"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}

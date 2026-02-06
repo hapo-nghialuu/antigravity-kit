@@ -15,7 +15,7 @@ This command adds features or makes updates to existing application.
 ### Steps:
 
 1. **Understand Current State**
-   - Load project state with `python .agent/scripts/session_manager.py info`
+   - Load project state with `python .claude/scripts/session_manager.py info`
    - Understand existing features, tech stack
 
 2. **Plan Changes**
@@ -29,7 +29,7 @@ This command adds features or makes updates to existing application.
    - I'll create 15 new files
    - Update 8 files
    - Takes ~10 minutes
-   
+
    Should I start?"
    ```
 

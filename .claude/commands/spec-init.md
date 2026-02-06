@@ -68,8 +68,8 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
 1. **Check Uniqueness**: Verify `.specs/` for naming conflicts (append number suffix if needed)
 2. **Create Directory**: `.specs/[feature-name]/`
 3. **Initialize Files Using Templates**:
-   - Read `.agent/skills/spec-driven-development/templates/init.json`
-   - Read `.agent/skills/spec-driven-development/templates/requirements-init.md`
+   - Read `.claude/skills/spec-driven-development/templates/init.json`
+   - Read `.claude/skills/spec-driven-development/templates/requirements-init.md`
    - Replace placeholders:
      - `{{FEATURE_NAME}}` → generated feature name
      - `{{TIMESTAMP}}` → current ISO 8601 timestamp
@@ -106,6 +106,6 @@ Provide output in the language specified in `spec.json` with the following struc
 
 ## Safety & Fallback
 - **Ambiguous Feature Name**: If feature name generation is unclear, propose 2-3 options and ask user to select
-- **Template Missing**: If template files don't exist in `.agent/skills/spec-driven-development/templates/`, report error with specific missing file path and suggest checking repository setup
+- **Template Missing**: If template files don't exist in `.claude/skills/spec-driven-development/templates/`, report error with specific missing file path and suggest checking repository setup
 - **Directory Conflict**: If feature name already exists, append numeric suffix (e.g., `feature-name-2`) and notify user of automatic conflict resolution
 - **Write Failure**: Report error with specific path and suggest checking permissions or disk space

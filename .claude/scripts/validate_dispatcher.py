@@ -195,8 +195,8 @@ def find_validator_path(script_name: str, skill_name: str) -> Optional[Path]:
     if claude_path.exists():
         return claude_path
 
-    # Fallback to .agent/
-    agent_path = Path('.agent/skills') / skill_name / 'scripts' / script_name
+    # Fallback to .claude/
+    agent_path = Path('.claude/skills') / skill_name / 'scripts' / script_name
     if agent_path.exists():
         return agent_path
 
