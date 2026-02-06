@@ -61,7 +61,13 @@ async function resolveMDXPath(fullPath: string): Promise<string | null> {
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const { fullPath } = await getRouteInfo(slug);
-  const resolvedPath = await resolveMDXPath(fullPath);
+  let resolvedPath = await resolveMDXPath(fullPath);
+
+  // Fallback to EN if VI content doesn't exist (same logic as DocPage)
+  if (!resolvedPath) {
+    const fallbackPath = `docs/en/${(!slug || slug.length === 0) ? 'index' : slug.join('/')}`;
+    resolvedPath = await resolveMDXPath(fallbackPath);
+  }
 
   if (!resolvedPath) {
     return {
