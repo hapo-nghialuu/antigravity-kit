@@ -287,32 +287,151 @@ Create `docs/` directory and generate:
 {detected issues}
 ```
 
-### Step 7: Generate CLAUDE.md (Optional)
+### Step 7: Generate CLAUDE.md
 
-If not exists, create root `CLAUDE.md`:
+```bash
+# Check if CLAUDE.md exists
+test -f CLAUDE.md && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**Create or update CLAUDE.md:**
 
 ```markdown
 # {Project Name}
 
-> Project context for Claude Code
-
-## Overview
-{brief description}
-
-## Stack
-{tech stack table}
-
-## Structure
-{key directories}
-
-## Commands
-{quick commands}
-
-## Docs
-See `docs/` folder for detailed documentation.
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
 
 ---
-Last Updated: {date}
+
+## Project Overview
+
+{description from package.json or README}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| {detected from package.json} | {with versions} |
+
+---
+
+## Project Structure
+
+```
+{key directories from analysis}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {description} |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| {from package.json scripts} | `{pm} run {script}` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+```
+
+**Write to file:**
+```bash
+# Generate CLAUDE.md content
+cat > CLAUDE.md << 'EOF'
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+{tech_stack_rows}
+
+---
+
+## Project Structure
+
+```
+{structure}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+{directory_rows}
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+{commands_rows}
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+EOF
 ```
 
 ### Step 8: Report
@@ -400,7 +519,31 @@ Read existing docs, merge with new analysis:
 6. **deployment-guide.md** - Update commands
 7. **project-roadmap.md** - Mark progress
 
-### Step 5: Report
+### Step 5: Update CLAUDE.md
+
+Update `CLAUDE.md` with latest project info:
+
+```bash
+# Read existing CLAUDE.md if exists
+test -f CLAUDE.md && cat CLAUDE.md || echo "NOT_FOUND"
+
+# Update key sections:
+# - Tech Stack (from package.json)
+# - Project Structure (from repomix)
+# - Quick Commands (from package.json scripts)
+# - Last Updated timestamp
+```
+
+**Update content:**
+- Refresh "Tech Stack" table with latest versions
+- Update "Project Structure" if directories changed
+- Sync "Quick Commands" with package.json scripts
+- Update "Last Updated" timestamp
+
+**If CLAUDE.md doesn't exist:**
+- Create new following INIT workflow template
+
+### Step 6: Report
 
 ```markdown
 🔄 Documentation updated!
@@ -417,6 +560,7 @@ Read existing docs, merge with new analysis:
    ✓ design-guidelines.md
    ✓ deployment-guide.md
    ✓ project-roadmap.md
+   ✓ CLAUDE.md (root)
 
 💡 Review docs/ for any manual adjustments needed
 ```
