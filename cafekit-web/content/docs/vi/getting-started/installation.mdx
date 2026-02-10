@@ -16,6 +16,23 @@ Trước khi cài đặt, hãy đảm bảo bạn có:
 - **Model mạnh mẽ** - Bắt buộc sử dụng **Claude Opus 4.5 (Thinking Mode)** để đảm bảo logic tốt nhất cho các kỹ năng lập kế hoạch (`spec-*`).
 - **Git** - Để quản lý phiên bản và cập nhật
 
+### Cho lệnh `/docs init` (Claude Code)
+
+Để sử dụng lệnh tạo documentation, bạn cần cài đặt [repomix](https://github.com/yamadashy/repomix) globally:
+
+```bash
+# Cài đặt repomix globally
+npm install -g repomix
+
+# Hoặc với pnpm
+pnpm install -g repomix
+
+# Hoặc với yarn
+yarn global add repomix
+```
+
+Repomix gom codebase của bạn thành một file duy nhất để AI phân tích và tạo documentation chính xác.
+
 ## Khả năng tương thích nền tảng
 
 CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
@@ -50,29 +67,70 @@ Lệnh này sẽ:
 
 ## Những gì được cài đặt
 
-Sau khi chạy lệnh cài đặt, bạn sẽ có 6 lệnh workflow spec trong thư mục lệnh của nền tảng:
+Sau khi chạy lệnh cài đặt, bạn sẽ có framework CafeKit trong dự án:
 
 ### Claude Code
 ```
-.claude/commands/
-├── spec-init.md           # Khởi tạo spec mới
-├── spec-requirements.md   # Thu thập yêu cầu
-├── spec-design.md         # Tạo tài liệu thiết kế
-├── spec-tasks.md          # Tạo danh sách task
-├── spec-impl.md           # Hướng dẫn implement
-└── spec-status.md         # Theo dõi tiến độ
+.claude/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Quy tắc định tuyến agent
 ```
 
 ### Antigravity
 ```
-.agent/commands/
-├── spec-init.md           # Khởi tạo spec mới
-├── spec-requirements.md   # Thu thập yêu cầu
-├── spec-design.md         # Tạo tài liệu thiết kế
-├── spec-tasks.md          # Tạo danh sách task
-├── spec-impl.md           # Hướng dẫn implement
-└── spec-status.md         # Theo dõi tiến độ
+.agent/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+└── skills/
+    └── spec-driven-development/  # SDD skill
 ```
+
+### Thiết lập Documentation (Chỉ Claude Code)
+
+**Yêu cầu:** Đảm bảo bạn đã cài [repomix](https://github.com/yamadashy/repomix) globally:
+```bash
+npm install -g repomix
+```
+
+Sau khi cài đặt, sử dụng lệnh `/docs` để tạo documentation cho dự án:
+
+```bash
+# Khởi tạo thư mục docs và CLAUDE.md
+/docs init
+
+# Hoặc cập nhật docs hiện có
+/docs update
+```
+
+**Repomix làm gì:** Gom codebase của bạn thành file `repomix-output.xml` để AI phân tích cấu trúc project và tạo documentation chính xác.
+
+Lệnh này sẽ tạo:
+- `CLAUDE.md` - Tổng quan dự án cho AI context
+- Thư mục `docs/` với:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Lưu ý:** Lệnh `/docs` cần `ROUTING.md` và `scripts/` chỉ được cài đặt trên Claude Code. Trên Antigravity, file lệnh được cung cấp nhưng có thể hoạt động hạn chế.
 
 ## Xác nhận cài đặt
 

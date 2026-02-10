@@ -16,6 +16,23 @@ Before installing, ensure you have:
 - **Reasoning Model** - Required to use **Claude Opus 4.5 (Thinking Mode)** to ensure best logic for planning skills (`spec-*`).
 - **Git** - For version control and updates
 
+### For `/docs init` command (Claude Code)
+
+To use the documentation generation command, you need [repomix](https://github.com/yamadashy/repomix) installed globally:
+
+```bash
+# Install repomix globally
+npm install -g repomix
+
+# Or with pnpm
+pnpm install -g repomix
+
+# Or with yarn
+yarn global add repomix
+```
+
+Repomix compacts your codebase into a single file that AI can analyze to generate accurate documentation.
+
 ## Platform Compatibility
 
 CafeKit Spec supports multiple AI coding assistant platforms:
@@ -50,29 +67,70 @@ This command will:
 
 ## What Gets Installed
 
-After running the install command, you'll have 6 spec workflow commands installed in your platform's commands folder:
+After running the install command, you'll have the CafeKit framework installed in your project:
 
 ### Claude Code
 ```
-.claude/commands/
-├── spec-init.md           # Initialize new spec
-├── spec-requirements.md   # Gather requirements
-├── spec-design.md         # Create design doc
-├── spec-tasks.md          # Generate task breakdown
-├── spec-impl.md           # Implementation guide
-└── spec-status.md         # Track progress
+.claude/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Agent routing rules
 ```
 
 ### Antigravity
 ```
-.agent/commands/
-├── spec-init.md           # Initialize new spec
-├── spec-requirements.md   # Gather requirements
-├── spec-design.md         # Create design doc
-├── spec-tasks.md          # Generate task breakdown
-├── spec-impl.md           # Implementation guide
-└── spec-status.md         # Track progress
+.agent/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+└── skills/
+    └── spec-driven-development/  # SDD skill
 ```
+
+### Documentation Setup (Claude Code only)
+
+**Prerequisite:** Ensure you have [repomix](https://github.com/yamadashy/repomix) installed globally:
+```bash
+npm install -g repomix
+```
+
+After installation, use the `/docs` command to generate project documentation:
+
+```bash
+# Initialize docs folder and CLAUDE.md
+/docs init
+
+# Or update existing docs
+/docs update
+```
+
+**What repomix does:** It compacts your codebase into `repomix-output.xml` so AI can analyze your project structure and generate accurate documentation.
+
+This will create:
+- `CLAUDE.md` - Project overview for AI context
+- `docs/` folder with:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Note:** The `/docs` command requires `ROUTING.md` and `scripts/` which are only installed on Claude Code. On Antigravity, the command file is provided but may have limited functionality.
 
 ## Verify Installation
 
