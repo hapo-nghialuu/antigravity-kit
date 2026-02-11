@@ -5,11 +5,14 @@ import { compileMDX } from 'next-mdx-remote/rsc';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { MDXComponents } from '@/components/docs/mdx-components';
+import { fileURLToPath } from 'url';
 
-const contentDirectory = path.join(process.cwd(), 'content');
+// Get the directory where this file is located
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Traverse up to find content directory (works in both dev and production)
+const contentDirectory = path.resolve(__dirname, '../../../content');
 
 export interface Frontmatter {
   title: string;

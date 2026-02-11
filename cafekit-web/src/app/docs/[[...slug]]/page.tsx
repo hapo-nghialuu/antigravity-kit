@@ -6,6 +6,7 @@ import { DocsPager } from '@/components/docs/pager';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { fileURLToPath } from 'url';
 import { cookies } from 'next/headers';
 
 interface PageProps {
@@ -123,9 +124,13 @@ export default async function DocPage({ params }: PageProps) {
   return renderDoc(mdxContent, slug, locale, resolvedPath);
 }
 
+// Get content directory path (works in both dev and production)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const contentDir = path.resolve(__dirname, '../../../../content');
+
 function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: string, resolvedPath: string) {
   // Extract headings for TOC
-  const filePath = path.join(process.cwd(), 'content', `${resolvedPath}.mdx`);
+  const filePath = path.join(contentDir, `${resolvedPath}.mdx`);
   const source = fs.readFileSync(filePath, 'utf-8');
   const { content: rawContent } = matter(source);
   const headings = extractHeadings(rawContent);
