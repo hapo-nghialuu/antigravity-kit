@@ -2,7 +2,7 @@
 
 > Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
 [![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
@@ -36,6 +36,7 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured 6-step 
 
 - **🎯 Multi-platform** - Works with Claude Code, Antigravity, and future AI editors
 - **📋 6-step spec workflow** - From init to implementation tracking
+- **📝 Documentation workflow** - `/docs init` and `/docs update` for project documentation
 - **⚡ Zero-config** - Works out of the box with sensible defaults
 - **🔄 Idempotent** - Safe to re-run, skips existing files
 - **📦 No global install** - Use directly with `npx`
@@ -405,21 +406,27 @@ done
 **Antigravity** (`.agent/`):
 ```
 .agent/
-├── commands/
+├── workflows/
 │   ├── spec-init.md
 │   ├── spec-requirements.md
 │   ├── spec-design.md
 │   ├── spec-tasks.md
 │   ├── spec-impl.md
-│   └── spec-status.md
-└── skills/
-    └── spec-driven-development/
-        ├── SKILL.md
-        ├── rules/
-        └── templates/
+│   ├── spec-status.md
+│   ├── docs_init.md
+│   └── docs_update.md
+├── skills/
+│   └── spec-driven-development/
+│       ├── SKILL.md
+│       ├── rules/
+│       └── templates/
+└── rules/
+    └── AGENTS.md
 ```
 
-**Usage:** `/spec-init`, `/spec-requirements`, etc. (same commands across platforms)
+**Claude Code Usage:** `/spec-init`, `/spec-requirements`, `/docs init`, `/docs update`, etc.
+
+**Antigravity Usage:** `/spec_init`, `/spec_requirements`, `/docs_init`, `/docs_update`, etc. (use underscores for Antigravity workflows)
 
 ### Generated Specs Directory
 
@@ -605,6 +612,13 @@ Task #4: Add protected route middleware
 ---
 
 ## Changelog
+
+### [0.1.5] - 2026-02-11
+
+#### Added
+- **Documentation workflow for Antigravity** - New `/docs_init` and `/docs_update` workflows
+- **AGENTS.md rule file** - Auto-installs `.agent/rules/AGENTS.md` with `activation: always_on`
+- **Full Antigravity support** - Documentation commands now work on both Claude Code and Antigravity
 
 ### [0.1.2] - 2026-02-04
 
