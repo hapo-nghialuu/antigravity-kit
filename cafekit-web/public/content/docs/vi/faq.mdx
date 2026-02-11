@@ -1,0 +1,302 @@
+---
+title: FAQ
+description: Các câu hỏi thường gặp về CafeKit Spec và quy trình phát triển hướng spec.
+---
+
+### CafeKit Spec là gì?
+
+CafeKit Spec là một quy trình phát triển hướng spec (spec-driven development) cho các trợ lý lập trình AI. Nó cung cấp 6 lệnh hướng dẫn bạn xây dựng các tính năng với tài liệu và cấu trúc rõ ràng.
+
+**Định dạng lệnh theo nền tảng:**
+- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
+- **[Antigravity](https://antigravity.google/)**: `/spec-init` (hoặc `@spec-init`), `/spec-requirements`, ...
+
+### Phát triển hướng spec là gì?
+
+Phát triển hướng spec là một phương pháp mà bạn:
+1. **Lập kế hoạch trước khi code** - Xác định yêu cầu và thiết kế ngay từ đầu
+2. **Ghi lại các quyết định** - Tạo các đặc tả (specifications) phục vụ như tài liệu
+3. **Chia nhỏ công việc** - Chia các tính năng thành các task dễ quản lý, theo dõi được
+4. **Thực hiện có hệ thống** - Xây dựng với hướng dẫn và xác minh rõ ràng
+
+### Khi nào tôi nên sử dụng CafeKit Spec?
+
+Sử dụng CafeKit Spec cho:
+- Các tính năng phức tạp (xác thực, thanh toán, bảng điều khiển admin)
+- Thay đổi nhiều file cần sự phối hợp
+- Các tính năng yêu cầu quyết định kiến trúc
+- Công việc dài hạn qua nhiều phiên
+- Dự án nhóm cần ngữ cảnh chia sẻ
+
+**Bỏ qua nó cho:**
+- Sửa lỗi đơn giản (< 30 phút)
+- Thay đổi nội dung hoặc sửa lỗi chính tả
+- Điều chỉnh CSS nhỏ
+- Thay đổi một dòng
+
+### Nó so sánh với AI coding thông thường như thế nào?
+
+| AI Coding Truyền thống | CafeKit Spec |
+|----------------------|--------------|
+| "Build login" | `/spec-init login` → yêu cầu có cấu trúc |
+| Yêu cầu mơ hồ | `/spec-requirements` nắm bắt nhu cầu chi tiết |
+| Không có tài liệu kiến trúc | `/spec-design` tạo bản thiết kế kỹ thuật |
+| Thực hiện tùy hứng | `/spec-tasks` chia nhỏ công việc ưu tiên |
+| Mất ngữ cảnh | `/spec-status` theo dõi tiến độ qua các phiên |
+
+**Kết quả:** Ít lỗi hơn, tài liệu tốt hơn, kết quả nhất quán hơn.
+
+---
+
+## Cài đặt & Thiết lập
+
+### Làm thế nào để tôi cài đặt CafeKit Spec?
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+Lệnh này cài đặt 6 lệnh quy trình spec vào `.claude/commands/`.
+
+### Các yêu cầu tiên quyết là gì?
+
+- Node.js 18+
+- Trợ lý lập trình AI ([Claude Code](https://claude.ai/code) hoặc [Antigravity](https://antigravity.google/))
+- Git (để quản lý phiên bản)
+
+### Tôi có thể sử dụng CafeKit Spec với các trợ lý AI khác không?
+
+CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
+
+| Nền tảng | Trạng thái | Ghi chú |
+|----------|--------|-------|
+| **[Claude Code](https://claude.ai/code)** | Khả dụng | Hỗ trợ đầy đủ với lệnh `/` |
+| **[Antigravity](https://antigravity.google/)** | Khả dụng | Hỗ trợ đầy đủ với lệnh `/` hoặc `@` |
+
+Trình cài đặt tự động phát hiện và cấu hình cho nền tảng của bạn.
+
+### Các file spec được lưu ở đâu?
+
+Các spec được lưu trong thư mục `.specs/` ở thư mục gốc dự án của bạn:
+
+```
+.specs/
+└── feature-name/
+    ├── requirements.md
+    ├── design.md
+    ├── tasks/
+    │   └── sprint-1.md
+    └── status.md
+```
+
+---
+
+## Sử dụng Lệnh Spec
+
+### Làm thế nào để bắt đầu một spec mới?
+
+**Claude Code:**
+```bash
+/spec-init my-feature-name
+```
+
+**Antigravity:**
+```bash
+/spec-init my-feature-name
+# hoặc @spec-init my-feature-name
+```
+
+Lệnh này tạo thư mục `.specs/my-feature-name/` với cấu trúc ban đầu.
+
+### Chuyện gì xảy ra trong mỗi giai đoạn?
+
+| Giai đoạn | Claude Code | Antigravity | Mô tả |
+|-------|-------------|-------------|-------------|
+| **Khởi tạo** | `/spec-init` | `/spec-init` hoặc `@` | Tạo workspace spec |
+| **Yêu cầu** | `/spec-requirements` | `/spec-requirements` hoặc `@` | AI đặt câu hỏi để thu thập yêu cầu |
+| **Thiết kế** | `/spec-design` | `/spec-design` hoặc `@` | Tạo tài liệu kiến trúc kỹ thuật |
+| **Tasks** | `/spec-tasks` | `/spec-tasks` hoặc `@` | Chia nhỏ thiết kế thành các task hành động |
+| **Thực hiện** | `/spec-impl` | `/spec-impl` hoặc `@` | Thực hiện task với hướng dẫn AI |
+| **Trạng thái** | `/spec-status` | `/spec-status` hoặc `@` | Hiển thị tiến độ và bước tiếp theo |
+
+### Tôi có thể bỏ qua các giai đoạn không?
+
+Mặc dù có thể, nhưng **không khuyến khích**. Mỗi giai đoạn xây dựng dựa trên giai đoạn trước:
+- Thiết kế không có yêu cầu sẽ bỏ lỡ các trường hợp biên
+- Tasks không có thiết kế thiếu sự rõ ràng về kỹ thuật
+- Thực hiện không có tasks sẽ thiếu tổ chức
+
+### Một spec tốn bao lâu?
+
+- **Tính năng đơn giản** (CRUD, form): 1-2 giờ
+- **Tính năng trung bình** (auth, API): 3-5 giờ
+- **Tính năng phức tạp** (thanh toán, real-time): 6+ giờ
+
+Thời gian bao gồm cả 6 giai đoạn và thực hiện.
+
+### Tôi có thể làm việc trên nhiều spec cùng lúc không?
+
+Có. Mỗi spec độc lập trong thư mục `.specs/feature-name/` riêng của nó. Chuyển đổi giữa chúng bằng cách chỉ định tên spec:
+
+```bash
+/spec-status feature-a
+/spec-status feature-b
+```
+
+---
+
+## Khắc phục sự cố
+
+### Không tìm thấy lệnh
+
+**Vấn đề:** Các lệnh Spec không hoạt động
+
+**Giải pháp:**
+1. Kiểm tra file tồn tại trong đúng thư mục:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. Khởi động lại trợ lý lập trình AI của bạn
+3. Chạy lại trình cài đặt: `npx @haposoft/cafekit-spec`
+4. Xác minh bạn đã chọn đúng nền tảng khi cài đặt
+
+### Thư mục spec không được tạo
+
+**Vấn đề:** `/spec-init` chạy nhưng không có thư mục `.specs/`
+
+**Giải pháp:**
+- Kiểm tra bạn có quyền ghi ở thư mục gốc dự án
+- Đảm bảo bạn đang ở đúng thư mục dự án
+- Thử tạo `.specs/` thủ công trước
+
+### AI không hiểu tính năng của tôi
+
+**Vấn đề:** Yêu cầu hoặc thiết kế bị chệch hướng
+
+**Giải pháp:**
+1. Cụ thể hơn trong mô tả `/spec-init`
+2. Làm rõ trong phần Q&A `/spec-requirements`
+3. Chỉnh sửa file tạo ra thủ công nếu cần
+4. Chạy lại giai đoạn với nhiều ngữ cảnh hơn
+
+### Task quá lớn/quá nhỏ
+
+**Vấn đề:** Chia nhỏ task không phù hợp với quy trình của bạn
+
+**Giải pháp:**
+- Chỉnh sửa `tasks/sprint-1.md` thủ công
+- Chạy lại `/spec-tasks` với hướng dẫn khác
+- Chia nhỏ hoặc gộp task khi cần thiết
+
+---
+
+## Thực hành tốt nhất
+
+### Tôi có nên commit spec lên Git không?
+
+**Có.** Commit spec để chia sẻ ngữ cảnh với team của bạn:
+
+```bash
+git add .specs/my-feature/
+git commit -m "spec: add user authentication spec"
+```
+
+Specs đóng vai trò như tài liệu sống.
+
+### Làm thế nào để xử lý thay đổi yêu cầu?
+
+1. Chạy lại `/spec-requirements` với ngữ cảnh mới
+2. Chạy lại `/spec-design` để cập nhật kiến trúc
+3. Chạy lại `/spec-tasks` cho danh sách task mới
+4. Tiếp tục thực hiện
+
+Specs mang tính lặp lại - cập nhật chúng khi nhu cầu thay đổi.
+
+### Tên spec nào là tốt?
+
+Sử dụng kebab-case, tên mô tả rõ ràng:
+
+✅ Tốt:
+- `user-authentication`
+- `payment-gateway-integration`
+- `dark-mode-toggle`
+
+❌ Tránh:
+- `feature-1`
+- `new-stuff`
+- `fix-bug`
+
+---
+
+## Câu hỏi nâng cao
+
+### Tôi có thể sử dụng cùng một spec trên các nền tảng khác nhau không?
+
+Có. Các spec được tạo bằng CafeKit không phụ thuộc nền tảng. Thư mục `.specs/` và nội dung của nó hoạt động giống hệt nhau dù bạn đang sử dụng Claude Code hay Antigravity. Bạn có thể:
+
+- Bắt đầu một spec trong Claude Code và tiếp tục trong Antigravity
+- Chia sẻ spec giữa các thành viên team sử dụng nền tảng khác nhau
+- Di chuyển giữa các nền tảng mà không mất dữ liệu spec
+
+### Tôi có thể tùy chỉnh quy trình không?
+
+Có. Sau khi cài đặt, chỉnh sửa các file `.md` trong thư mục lệnh của nền tảng của bạn:
+
+**Claude Code:**
+```bash
+.claude/commands/
+├── spec-init.md          # Tùy chỉnh quy trình init
+├── spec-requirements.md  # Thay đổi phong cách câu hỏi
+└── ...
+```
+
+**Antigravity:**
+```bash
+.agent/commands/
+├── spec-init.md          # Tùy chỉnh quy trình init
+├── spec-requirements.md  # Thay đổi phong cách câu hỏi
+└── ...
+```
+
+Thay đổi có hiệu lực ngay lập tức.
+
+### Làm thế nào để lưu trữ spec đã hoàn thành?
+
+Di chuyển spec vào `.specs/archive/` khi xong:
+
+```bash
+mv .specs/completed-feature .specs/archive/
+```
+
+Việc này giữ Workspace sạch sẽ trong khi vẫn bảo tồn tài liệu.
+
+### Tôi có thể sử dụng mẫu spec (spec templates) không?
+
+Có. Tạo ngữ cảnh điều hướng (steering context) trong `.specs/steering/`:
+
+```bash
+.specs/steering/
+├── tech.md       # Tiêu chuẩn công nghệ
+├── structure.md  # Quy ước dự án
+└── product.md    # Ngữ cảnh sản phẩm
+```
+
+Tất cả spec mới sẽ tham chiếu đến các file này.
+
+### Nếu tôi bị kẹt khi thực hiện?
+
+1. Chạy `/spec-status` để xem trạng thái hiện tại
+2. Xem lại `design.md` để được hướng dẫn
+3. Kiểm tra `tasks/sprint-1.md` để biết chi tiết task hiện tại
+4. Hỏi Claude Code các câu hỏi cụ thể về task
+
+---
+
+## Vẫn còn câu hỏi?
+
+- **Duyệt [GitHub Issues](https://github.com/hapo-nghialuu/hapo-cafekit/issues)** - Xem người khác có câu hỏi tương tự không
+- **Mở một issue mới** - Chúng tôi sẵn lòng giúp đỡ
+- **Kiểm tra [Hướng dẫn quy trình Spec](/docs/guides/spec-workflow)** - Hướng dẫn chi tiết
+
+---
+
+**Chúc bạn code vui vẻ với spec-driven!** ☕✨

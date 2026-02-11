@@ -1,0 +1,112 @@
+---
+title: /spec-status
+description: Check implementation progress
+---
+
+# /spec-status
+
+Check and display the overall status of feature implementation.
+
+## Usage
+
+**Claude Code:**
+```
+/spec-status
+```
+
+**Antigravity:**
+```
+/spec_status
+```
+
+## Description
+
+This command reads all files in the spec directory and displays a progress report:
+- Spec completeness (what's available)
+- Task completion rate
+- Files created
+- Next steps
+
+## Sample Output
+
+```
+> /spec-status
+
+# Spec Status: user-authentication
+
+## 📋 Documents
+✅ spec.md           - Feature overview
+✅ requirements.md    - 12 requirements defined
+✅ design.md          - Technical design complete
+✅ tasks.md           - 8 tasks defined
+✅ implementation.md  - Progress tracking
+
+## 📊 Progress
+[████████████████████░░░░░░░░░░░░░░░░░░] 50% (4/8 tasks)
+
+## ✅ Completed Tasks
+1. Create database migration
+2. Setup JWT utilities
+3. Implement login endpoint
+4. Add password validation
+
+## ⏳ Pending Tasks
+5. Implement logout endpoint
+6. Add rate limiting
+7. Create middleware
+8. Write tests
+
+## 📁 Files Created
+- src/app/api/auth/login/route.ts
+- src/app/api/auth/logout/route.ts
+- src/lib/jwt.ts
+- src/lib/auth.ts
+- migrations/001_create_auth_tables.sql
+
+## 🎯 Next Steps
+Implement Task 5: Implement logout endpoint
+Run: /spec-impl
+```
+
+## Reading Status
+
+### Progress Bar
+- 0-25%: Planning phase
+- 25-50%: Core implementation
+- 50-75%: Feature complete
+- 75-100%: Polish & testing
+
+### Task States
+- ✅ Completed - Implemented and tested
+- 🔄 In Progress - Currently working
+- ⏳ Pending - Not started
+- ⏸️ Blocked - Blocked (dependency not complete)
+
+## Usage in Workflow
+
+### Daily check-in
+```
+> /spec-status
+
+Check end-of-day progress to know what to do tomorrow
+```
+
+### Pre-demo check
+```
+> /spec-status
+
+Check what's done before demo
+```
+
+### Handover
+```
+> /spec-status
+
+Create report for handover to someone else
+```
+
+## Notes
+
+- Status is stored in `implementation.md`
+- Updated automatically when running `/spec-impl`
+- Can be manually edited if needed

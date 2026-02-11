@@ -1,0 +1,250 @@
+---
+title: Documentation
+description: Learn how to use CafeKit Spec to build features faster with spec-driven development for AI coding assistants (Claude Code, Antigravity).
+---
+
+# CafeKit Spec Documentation
+
+Welcome to CafeKit Spec - a structured spec-driven development workflow for AI coding assistants ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
+
+## Multi-Platform Support
+
+CafeKit Spec works with both popular AI assistant platforms:
+
+<Cards columns={2}>
+  <Card href="/docs/platforms/claude">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🤖</span>
+      <div>
+        <h3 className="font-semibold">Claude Code</h3>
+        <span className="text-sm text-gray-500">From Anthropic</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec-init</code></li>
+      <li>✓ File: <code>.claude/CLAUDE.md</code></li>
+      <li>✓ Single AI instance</li>
+    </ul>
+  </Card>
+  <Card href="/docs/platforms/antigravity">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🚀</span>
+      <div>
+        <h3 className="font-semibold">Antigravity</h3>
+        <span className="text-sm text-gray-500">From Google</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec_init</code></li>
+      <li>✓ File: <code>.agent/AGENTS.md</code></li>
+      <li>✓ Multi-agent system</li>
+    </ul>
+  </Card>
+</Cards>
+
+## Two Workflow Types
+
+CafeKit Spec provides 8 commands divided into 2 groups:
+
+### 1. Spec Workflows (6 commands)
+
+Feature development process following Spec-Driven Development standard:
+
+| Command | Purpose |
+|---------|---------|
+| `/spec-init` | Initialize spec workspace |
+| `/spec-requirements` | Gather EARS requirements |
+| `/spec-design` | Technical design |
+| `/spec-tasks` | Break down tasks |
+| `/spec-impl` | Implement code |
+| `/spec-status` | Check progress |
+
+[See Spec Workflows details](/docs/spec)
+
+### 2. Documentation Workflows (2 commands)
+
+Automate project documentation creation and updates:
+
+| Command | Description |
+|---------|-------------|
+| `/docs init` | Create 7 doc files + AI reference |
+| `/docs update` | Update docs after code changes |
+
+[See Documentation Workflows details](/docs/docs-workflow)
+
+## What is CafeKit Spec?
+
+CafeKit Spec extends AI coding assistants with 8 powerful workflow commands that guide you through building complex features and managing project documentation.
+
+### Spec-Driven Development
+
+```text
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  spec-init  │───▶│ requirements│───▶│   design    │
+└─────────────┘    └─────────────┘    └─────────────┘
+                                              │
+                       ┌─────────────┐       │
+                       │  spec-impl  │◀──────┘
+                       └─────────────┘     │
+                              │             │
+                       ┌─────────────┐      │
+                       │ spec-status │──────┘
+                       └─────────────┘
+```
+
+Instead of ad-hoc prompts, CafeKit Spec gives you a repeatable process for turning ideas into production code.
+
+## Quick Links
+
+Get started with these essential guides:
+
+- [Installation](/docs/getting-started/installation) - Get CafeKit Spec installed in under a minute
+- [Quickstart](/docs/getting-started/quickstart) - Build your first spec
+- [Spec Workflows](/docs/spec) - Master the 6 spec commands
+- [Documentation Workflows](/docs/docs-workflow) - Manage project documentation
+
+## Why Spec-Driven Development?
+
+Traditional AI coding often leads to:
+- Incomplete requirements causing rework
+- Missing edge cases discovered late
+- Lost context between sessions
+- Inconsistent implementation
+
+**CafeKit Spec solves this** by creating a structured workflow.
+
+**Result:** Faster development, fewer bugs, better documentation.
+
+## Getting Started
+
+### 1. Install CafeKit Spec
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+Select your platform (Claude Code or Antigravity) in the installation menu.
+
+### 2. Create Your First Spec
+
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
+
+```bash
+/spec-init
+/spec-requirements
+```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_init
+/spec_requirements
+```
+
+  </TabsPanel>
+</Tabs>
+
+The AI guides you through defining requirements, designing architecture, and breaking down tasks.
+
+### 3. Implement with AI Guidance
+
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
+
+```bash
+/spec-impl
+```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_impl
+```
+
+  </TabsPanel>
+</Tabs>
+
+The AI reads your spec and helps you build task-by-task, with verification at each step.
+
+[Read the full Quickstart Guide](/docs/getting-started/quickstart)
+
+## Core Concepts
+
+### Specs
+
+A **spec** is a structured workspace for one feature. It contains:
+
+- `spec.md` - Feature overview
+- `requirements.md` - EARS format requirements
+- `design.md` - Technical design
+- `tasks.md` - Task breakdown
+- `implementation.md` - Implementation progress
+
+Specs live in `specs/` and are committed to Git for team collaboration.
+
+### Documentation
+
+The documentation system automatically creates:
+
+- `codebase-summary.md` - Codebase overview
+- `project-overview-pdr.md` - Product requirements
+- `code-standards.md` - Coding conventions
+- `system-architecture.md` - System architecture
+- `design-guidelines.md` - UI/UX guidelines
+- `deployment-guide.md` - Deployment guide
+- `project-roadmap.md` - Project roadmap
+
+Docs live in `docs/` and help AI assistants understand the project better.
+
+## Use Cases
+
+### Perfect for:
+
+- **Complex features** - Authentication, payments, admin dashboards
+- **New projects** - Architecture decisions need documentation
+- **Team collaboration** - Specs provide shared context
+- **Long-running work** - Track progress across multiple sessions
+
+### Not needed for:
+
+- Simple bug fixes (`<30 min`)
+- Copy changes or typo fixes
+- Minor CSS tweaks
+- Trivial refactors
+
+## Learning Path
+
+Follow this path to master CafeKit Spec:
+
+1. **[Installation](/docs/getting-started/installation)** (2 min) - Get set up
+2. **[Quickstart](/docs/getting-started/quickstart)** (10 min) - Build your first spec
+3. **[Spec Workflows](/docs/spec)** (20 min) - Learn the 6 spec commands
+4. **[Documentation Workflows](/docs/docs-workflow)** (10 min) - Manage documentation
+
+Total time to productivity: **~45 minutes**
+
+## Getting Help
+
+- **[FAQ](/docs/faq)** - Common questions answered
+- **[GitHub Issues](https://github.com/hapo-nghialuu/hapo-cafekit/issues)** - Report bugs or request features
+
+## What's Next?
+
+Ready to start? Pick your path:
+
+- [Install CafeKit Spec](/docs/getting-started/installation)
+- [Claude Code Guide](/docs/platforms/claude)
+- [Antigravity Guide](/docs/platforms/antigravity)
+
+**Happy coding with CafeKit Spec!**

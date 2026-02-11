@@ -1,0 +1,153 @@
+---
+title: Claude Code
+description: Guide for using CafeKit Spec with Claude Code
+---
+
+# Claude Code
+
+Complete guide for using CafeKit Spec with Claude Code - AI assistant from Anthropic.
+
+## Installation
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+Select **Claude Code** in the installation menu.
+
+## File Structure
+
+After installation, files are created in the `.claude/` directory:
+
+```
+.claude/
+├── CLAUDE.md                 # AI quick reference
+├── ROUTING.md                # Agent routing rules
+└── commands/
+    ├── spec-init.ts          # /spec-init
+    ├── spec-requirements.ts  # /spec-requirements
+    ├── spec-design.ts        # /spec-design
+    ├── spec-tasks.ts         # /spec-tasks
+    ├── spec-impl.ts          # /spec-impl
+    ├── spec-status.ts        # /spec-status
+    ├── docs-init.ts          # /docs init
+    └── docs-update.ts        # /docs update
+```
+
+## Command Syntax
+
+All commands in Claude Code use **hyphens**:
+
+### Spec Workflows
+| Command | Description |
+|---------|-------------|
+| `/spec-init` | Initialize new spec |
+| `/spec-requirements` | Analyze requirements |
+| `/spec-design` | Technical design |
+| `/spec-tasks` | Break down tasks |
+| `/spec-impl` | Implement code |
+| `/spec-status` | Check progress |
+
+### Documentation Workflows
+| Command | Description |
+|---------|-------------|
+| `/docs init` | Initialize documentation |
+| `/docs update` | Update documentation |
+
+## Special Files
+
+### CLAUDE.md
+Quick reference file for AI:
+
+```markdown
+# Project Context
+
+## Commands
+- /spec-init - Initialize feature spec
+- /spec-requirements - Create requirements
+...
+
+## Project Structure
+...
+
+## Conventions
+...
+```
+
+### ROUTING.md
+Defines rules for agent routing:
+
+```markdown
+# Agent Routing
+
+## spec-init
+- Trigger: /spec-init
+- Prompt: "Initialize feature spec..."
+
+## spec-impl
+- Trigger: /spec-impl
+- Prompt: "Implement task from spec..."
+```
+
+## Usage Examples
+
+### Initialize new feature
+
+```
+> /spec-init
+
+Feature name: payment-gateway
+Description: Stripe payment gateway integration
+...
+```
+
+### Implement tasks
+
+```
+> /spec-impl
+
+Implement task: 3
+Feature: payment-gateway
+...
+```
+
+### Update documentation
+
+```
+> /docs update
+
+Update docs after adding Stripe integration
+```
+
+## Differences from Antigravity
+
+| | Claude Code | Antigravity |
+|---|---|---|
+| **Syntax** | Hyphens (`/spec-init`) | Underscores (`/spec_init`) |
+| **Directory** | `.claude/` | `.agent/` |
+| **Config file** | `CLAUDE.md` | `AGENTS.md` |
+| **Extra file** | `ROUTING.md` | `GEMINI.md` |
+| **Agent system** | Single Claude instance | Multiple specialized agents |
+
+## Tips
+
+1. **Use TAB completion**: Claude Code supports command autocomplete
+2. **Check status regularly**: `/spec-status` to track progress
+3. **Commit often**: After each successful `/spec-impl`
+4. **Custom ROUTING.md**: Add custom rules for your project
+
+## Troubleshooting
+
+### Commands not showing
+```bash
+# Check installation
+ls -la .claude/commands/
+```
+
+### CLAUDE.md not being read
+- Ensure file is at root: `./CLAUDE.md`
+- Restart Claude Code
+
+### Error running command
+- Check file permissions
+- Re-run installer: `npx @haposoft/cafekit-spec`

@@ -1,0 +1,190 @@
+---
+title: Installation
+description: Get started with CafeKit Spec in under a minute. Install the 6 spec workflow commands for structured feature development.
+---
+
+# Installation
+
+Get CafeKit Spec installed and start using spec-driven development in your projects.
+
+## Prerequisites
+
+Before installing, ensure you have:
+
+- **Node.js 18+** - Required for running the CLI
+- **AI coding assistant** - CafeKit Spec works with [Claude Code](https://claude.ai/code) or [Antigravity](https://antigravity.google/)
+- **Reasoning Model** - Required to use **Claude Opus 4.5 (Thinking Mode)** to ensure best logic for planning skills (`spec-*`).
+- **Git** - For version control and updates
+
+### For `/docs init` command (Claude Code)
+
+To use the documentation generation command, you need [repomix](https://github.com/yamadashy/repomix) installed globally:
+
+```bash
+# Install repomix globally
+npm install -g repomix
+
+# Or with pnpm
+pnpm install -g repomix
+
+# Or with yarn
+yarn global add repomix
+```
+
+Repomix compacts your codebase into a single file that AI can analyze to generate accurate documentation.
+
+## Platform Compatibility
+
+CafeKit Spec supports multiple AI coding assistant platforms:
+
+| Platform | Command Format | Status |
+|----------|---------------|--------|
+| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Available |
+| **[Antigravity](https://antigravity.google/)** | `/spec-init` (or `@spec-init`) | Available |
+
+The installation process automatically detects your platform and installs the appropriate command format.
+
+## Install CafeKit Spec
+
+Run the install command in your project root:
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+The installer will prompt you to select your platform:
+
+```
+? Select your AI coding assistant platform:
+  ❯ Claude Code
+    Antigravity
+```
+
+This command will:
+- Detect your project structure
+- Install 6 spec workflow commands to your platform's commands folder
+- Configure your workspace for spec-driven development
+
+## What Gets Installed
+
+After running the install command, you'll have the CafeKit framework installed in your project:
+
+### Claude Code
+```
+.claude/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Agent routing rules
+```
+
+### Antigravity
+```
+.agent/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+└── skills/
+    └── spec-driven-development/  # SDD skill
+```
+
+### Documentation Setup (Claude Code only)
+
+**Prerequisite:** Ensure you have [repomix](https://github.com/yamadashy/repomix) installed globally:
+```bash
+npm install -g repomix
+```
+
+After installation, use the `/docs` command to generate project documentation:
+
+```bash
+# Initialize docs folder and CLAUDE.md
+/docs init
+
+# Or update existing docs
+/docs update
+```
+
+**What repomix does:** It compacts your codebase into `repomix-output.xml` so AI can analyze your project structure and generate accurate documentation.
+
+This will create:
+- `CLAUDE.md` - Project overview for AI context
+- `docs/` folder with:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Note:** The `/docs` command requires `ROUTING.md` and `scripts/` which are only installed on Claude Code. On Antigravity, the command file is provided but may have limited functionality.
+
+## Verify Installation
+
+Open your AI coding assistant and type the init command for your platform:
+
+### Claude Code
+```
+/spec-init
+```
+
+### Antigravity
+```
+/spec-init
+# or
+@spec-init
+```
+
+You should see the spec initialization workflow start.
+
+## Troubleshooting
+
+### Command not found
+
+If the spec commands don't work:
+
+1. **Check file locations** - Ensure files are in the correct folder:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. **Restart your AI assistant** - Some tools require a restart to detect new commands
+3. **Verify file format** - Commands must be `.md` files with proper frontmatter
+4. **Check platform selection** - Re-run installer and verify correct platform was selected
+
+### Wrong directory
+
+If CafeKit installs to the wrong directory, you can manually move files:
+
+```bash
+# For Claude Code - ensure .claude/commands/ exists
+mkdir -p .claude/commands/
+
+# For Antigravity - ensure .agent/commands/ exists
+mkdir -p .agent/commands/
+
+# Re-run installer
+npx @haposoft/cafekit-spec
+```
+
+## Next Steps
+
+Now that CafeKit Spec is installed:
+
+- **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
+- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full 6-phase process
+
+---
+
+**Need help?** Open an issue on [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) or contact support.
