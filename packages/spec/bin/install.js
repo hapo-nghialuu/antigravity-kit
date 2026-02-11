@@ -281,7 +281,7 @@ function copyGeminiFile(platformKey, results) {
 async function main() {
   console.log();
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║         CafeKit Spec Installer v0.1.5                  ║');
+  console.log('║         CafeKit Spec Installer v0.1.6                  ║');
   console.log('║         Multi-platform SDD Workflow                    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log();
