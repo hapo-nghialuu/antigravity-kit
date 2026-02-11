@@ -1,4 +1,0 @@
-{
-  "buildCommand": "pnpm build && cp -r content .next/server/content",
-  "framework": "nextjs"
-}

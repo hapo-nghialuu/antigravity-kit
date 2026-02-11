@@ -123,8 +123,8 @@ export default async function DocPage({ params }: PageProps) {
   return renderDoc(mdxContent, slug, locale, resolvedPath);
 }
 
-// Get content directory path
-const contentDir = path.join(process.cwd(), 'content');
+// Get content directory path - use public/content for Vercel compatibility
+const contentDir = path.join(process.cwd(), 'public', 'content');
 
 function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: string, resolvedPath: string) {
   // Extract headings for TOC
