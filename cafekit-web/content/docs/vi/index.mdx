@@ -7,25 +7,101 @@ description: Tìm hiểu cách sử dụng CafeKit Spec để xây dựng tính 
 
 Chào mừng đến với CafeKit Spec - một quy trình phát triển hướng spec có cấu trúc dành cho các trợ lý lập trình AI ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
 
+## Hỗ trợ Đa nền tảng
+
+CafeKit Spec hoạt động với cả hai nền tảng AI assistant phổ biến:
+
+<Cards columns={2}>
+  <Card href="/docs/platforms/claude">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🤖</span>
+      <div>
+        <h3 className="font-semibold">Claude Code</h3>
+        <span className="text-sm text-gray-500">Từ Anthropic</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec-init</code></li>
+      <li>✓ File: <code>.claude/CLAUDE.md</code></li>
+      <li>✓ Single AI instance</li>
+    </ul>
+  </Card>
+  <Card href="/docs/platforms/antigravity">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🚀</span>
+      <div>
+        <h3 className="font-semibold">Antigravity</h3>
+        <span className="text-sm text-gray-500">Từ Google</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec_init</code></li>
+      <li>✓ File: <code>.agent/AGENTS.md</code></li>
+      <li>✓ Multi-agent system</li>
+    </ul>
+  </Card>
+</Cards>
+
+## Hai Loại Workflows
+
+CafeKit Spec cung cấp 8 lệnh được chia thành 2 nhóm:
+
+### 1. Spec Workflows (6 lệnh)
+
+Quy trình phát triển tính năng theo chuẩn Spec-Driven Development:
+
+| Lệnh | Mục đích |
+|---------|---------|
+| `/spec-init` | Khởi tạo spec workspace |
+| `/spec-requirements` | Thu thập yêu cầu EARS |
+| `/spec-design` | Thiết kế kỹ thuật |
+| `/spec-tasks` | Chia nhỏ task |
+| `/spec-impl` | Triển khai code |
+| `/spec-status` | Kiểm tra tiến độ |
+
+[Xem chi tiết Spec Workflows](/docs/spec)
+
+### 2. Documentation Workflows (2 lệnh)
+
+Tự động hóa việc tạo và cập nhật tài liệu dự án:
+
+| Lệnh | Mô tả |
+|------|-------|
+| `/docs init` | Tạo 7 file docs + AI reference |
+| `/docs update` | Cập nhật docs sau khi code thay đổi |
+
+[Xem chi tiết Documentation Workflows](/docs/docs-workflow)
+
 ## CafeKit Spec là gì?
 
-CafeKit Spec mở rộng các trợ lý lập trình AI với 6 lệnh quy trình mạnh mẽ hướng dẫn bạn xây dựng các tính năng phức tạp:
+CafeKit Spec mở rộng các trợ lý lập trình AI với 8 lệnh quy trình mạnh mẽ hướng dẫn bạn xây dựng các tính năng phức tạp và quản lý tài liệu dự án.
 
-1. **Khởi tạo (Initialize)** - Tạo workspace spec
-2. **Yêu cầu (Requirements)** - Nắm bắt những gì bạn cần
-3. **Thiết kế (Design)** - Định nghĩa kiến trúc
-4. **Tasks** - Chia nhỏ việc thực hiện
-5. **Thực hiện (Implement)** - Xây dựng với hướng dẫn của AI
-6. **Trạng thái (Status)** - Theo dõi tiến độ
+### Spec-Driven Development
 
-Thay vì các prompt ngẫu hứng, CafeKit Spec cung cấp cho bạn một quy trình lặp lại để biến ý tưởng thành code sản phẩm (production code).
+```text
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  spec-init  │───▶│ requirements│───▶│   design    │
+└─────────────┘    └─────────────┘    └─────────────┘
+                                              │
+                       ┌─────────────┐       │
+                       │  spec-impl  │◀──────┘
+                       └─────────────┘     │
+                              │             │
+                       ┌─────────────┐      │
+                       │ spec-status │──────┘
+                       └─────────────┘
+```
+
+Thay vì các prompt ngẫu hứng, CafeKit Spec cung cấp cho bạn một quy trình lặp lại để biến ý tưởng thành code sản phẩm.
 
 ## Liên kết nhanh
 
 Bắt đầu với các hướng dẫn cơ bản này:
 
 - [Cài đặt](/docs/getting-started/installation) - Cài đặt CafeKit Spec trong chưa đầy một phút
-- [Quy trình Spec](/docs/guides/spec-workflow) - Làm chủ quy trình 6 giai đoạn để xây dựng các tính năng phức tạp
+- [Bắt đầu nhanh](/docs/getting-started/quickstart) - Xây dựng spec đầu tiên của bạn
+- [Spec Workflows](/docs/spec) - Làm chủ 6 lệnh spec
+- [Documentation Workflows](/docs/docs-workflow) - Quản lý tài liệu dự án
 
 ## Tại sao chọn Spec-Driven Development?
 
@@ -47,24 +123,57 @@ AI coding truyền thống thường dẫn đến:
 npx @haposoft/cafekit-spec
 ```
 
-Cài đặt 6 lệnh quy trình spec vào trợ lý lập trình AI của bạn.
+Chọn nền tảng của bạn (Claude Code hoặc Antigravity) trong menu cài đặt.
 
 ### 2. Tạo Spec đầu tiên của bạn
 
-Làm theo hướng dẫn bắt đầu nhanh tương tác của chúng tôi:
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
 
 ```bash
-/spec-init my-first-feature
-/spec-requirements my-first-feature
+/spec-init
+/spec-requirements
 ```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_init
+/spec_requirements
+```
+
+  </TabsPanel>
+</Tabs>
 
 AI hướng dẫn bạn xác định yêu cầu, thiết kế kiến trúc và chia nhỏ các task.
 
-### 3. Thực hiện với hướng dẫn của AI
+### 3. Triển khai với hướng dẫn của AI
+
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
 
 ```bash
-/spec-impl my-first-feature
+/spec-impl
 ```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_impl
+```
+
+  </TabsPanel>
+</Tabs>
 
 AI đọc spec của bạn và giúp bạn xây dựng từng task một, với sự xác minh ở mỗi bước.
 
@@ -76,25 +185,27 @@ AI đọc spec của bạn và giúp bạn xây dựng từng task một, với 
 
 Một **spec** là một workspace có cấu trúc cho một tính năng. Nó chứa:
 
-- `requirements.md` - Bạn đang xây dựng cái gì và tại sao
-- `design.md` - Kiến trúc kỹ thuật và các hợp đồng (contracts)
-- `tasks/sprint-1.md` - Phân chia task theo mức độ ưu tiên
-- `status.md` - Tiến độ thực hiện
+- `spec.md` - Tổng quan feature
+- `requirements.md` - Yêu cầu EARS format
+- `design.md` - Thiết kế kỹ thuật
+- `tasks.md` - Phân chia task
+- `implementation.md` - Tiến độ thực hiện
 
-Specs nằm trong `.specs/` và được commit vào Git để team cùng phối hợp.
+Specs nằm trong `specs/` và được commit vào Git để team cùng phối hợp.
 
-### Các lệnh quy trình (Workflow Commands)
+### Documentation
 
-CafeKit Spec thêm 6 lệnh slash vào trợ lý lập trình AI của bạn:
+Hệ thống docs tự động tạo:
 
-| Lệnh | Mục đích |
-|---------|---------|
-| `/spec-init` | Tạo workspace spec |
-| `/spec-requirements` | Thu thập yêu cầu thông qua hỏi đáp Socratic |
-| `/spec-design` | Tạo tài liệu thiết kế kỹ thuật |
-| `/spec-tasks` | Chia nhỏ thành các task thực hiện |
-| `/spec-impl` | Thực hiện task với hướng dẫn của AI |
-| `/spec-status` | Xem tiến độ và các vấn đề chặn (blockers) |
+- `codebase-summary.md` - Tổng quan codebase
+- `project-overview-pdr.md` - Yêu cầu sản phẩm
+- `code-standards.md` - Quy ước coding
+- `system-architecture.md` - Kiến trúc hệ thống
+- `design-guidelines.md` - Nguyên tắc UI/UX
+- `deployment-guide.md` - Hướng dẫn triển khai
+- `project-roadmap.md` - Lộ trình dự án
+
+Docs nằm trong `docs/` và giúp AI assistant hiểu rõ hơn về dự án.
 
 ## Trường hợp sử dụng
 
@@ -107,7 +218,7 @@ CafeKit Spec thêm 6 lệnh slash vào trợ lý lập trình AI của bạn:
 
 ### Không cần thiết cho:
 
-- Sửa lỗi đơn giản (&lt;30 phút)
+- Sửa lỗi đơn giản (`<30 phút`)
 - Thay đổi nội dung hoặc sửa lỗi chính tả
 - Điều chỉnh CSS nhỏ
 - Tái cấu trúc (refactor) nhỏ nhặt
@@ -118,9 +229,10 @@ Làm theo lộ trình này để làm chủ CafeKit Spec:
 
 1. **[Cài đặt](/docs/getting-started/installation)** (2 phút) - Thiết lập môi trường
 2. **[Bắt đầu nhanh](/docs/getting-started/quickstart)** (10 phút) - Xây dựng spec đầu tiên
-3. **[Hướng dẫn quy trình Spec](/docs/guides/spec-workflow)** (20 phút) - Đi sâu vào từng giai đoạn
+3. **[Spec Workflows](/docs/spec)** (20 phút) - Tìm hiểu 6 lệnh spec
+4. **[Documentation Workflows](/docs/docs-workflow)** (10 phút) - Quản lý tài liệu
 
-Tổng thời gian để thành thạo: **~30 phút**
+Tổng thờì gian để thành thạo: **~45 phút**
 
 ## Nhận trợ giúp
 
@@ -132,6 +244,7 @@ Tổng thời gian để thành thạo: **~30 phút**
 Sẵn sàng bắt đầu? Chọn con đường của bạn:
 
 - [Cài đặt CafeKit Spec](/docs/getting-started/installation)
-- [Thử Bắt đầu nhanh](/docs/getting-started/quickstart)
+- [Hướng dẫn Claude Code](/docs/platforms/claude)
+- [Hướng dẫn Antigravity](/docs/platforms/antigravity)
 
 **Chúc bạn code vui vẻ với CafeKit Spec!**

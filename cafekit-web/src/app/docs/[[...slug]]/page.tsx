@@ -14,14 +14,15 @@ interface PageProps {
   }>;
 }
 
-// With cookie-based i18n, we must use dynamic rendering
-export const dynamic = 'force-dynamic';
-
 // Helper to determine locale and content path from slug
 async function getRouteInfo(slug?: string[]) {
-  const cookieStore = await cookies();
-  console.log('Fetching locale from cookies');
-  const locale = cookieStore.get('NEXT_LOCALE')?.value || 'vi';
+  let locale = 'vi';
+  try {
+    const cookieStore = await cookies();
+    locale = cookieStore.get('NEXT_LOCALE')?.value || 'vi';
+  } catch {
+    // Cookies not available in static generation, default to 'vi'
+  }
 
   // Slug from URL is clean (e.g. ['getting-started'])
   const mdxSlug = (!slug || slug.length === 0)
@@ -60,12 +61,12 @@ async function resolveMDXPath(fullPath: string): Promise<string | null> {
 // Generate metadata from frontmatter
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const { fullPath } = await getRouteInfo(slug);
+  const { fullPath, mdxSlug } = await getRouteInfo(slug);
   let resolvedPath = await resolveMDXPath(fullPath);
 
   // Fallback to EN if VI content doesn't exist (same logic as DocPage)
   if (!resolvedPath) {
-    const fallbackPath = `docs/en/${(!slug || slug.length === 0) ? 'index' : slug.join('/')}`;
+    const fallbackPath = `docs/en/${mdxSlug}`;
     resolvedPath = await resolveMDXPath(fallbackPath);
   }
 
@@ -93,13 +94,13 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function DocPage({ params }: PageProps) {
   const { slug } = await params;
-  const { locale, fullPath } = await getRouteInfo(slug);
+  const { locale, fullPath, mdxSlug } = await getRouteInfo(slug);
   const resolvedPath = await resolveMDXPath(fullPath);
 
   if (!resolvedPath) {
     // Fallback to EN if VI content doesn't exist?
     // Let's try EN path
-    const fallbackPath = `docs/en/${(!slug || slug.length === 0) ? 'index' : slug.join('/')}`;
+    const fallbackPath = `docs/en/${mdxSlug}`;
     const fallbackResolved = await resolveMDXPath(fallbackPath);
 
     if (!fallbackResolved) {

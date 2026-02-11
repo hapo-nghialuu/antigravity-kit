@@ -15,8 +15,13 @@ export default async function DocsLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const cookieStore = await cookies();
-    const locale = cookieStore.get('NEXT_LOCALE')?.value || 'en';
+    let locale = 'vi';
+    try {
+        const cookieStore = await cookies();
+        locale = cookieStore.get('NEXT_LOCALE')?.value || 'vi';
+    } catch {
+        // Cookies not available in static generation, default to 'vi'
+    }
 
     return (
         <div className="min-h-screen bg-background flex flex-col">

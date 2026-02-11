@@ -71,7 +71,6 @@ export async function getMDXContent(slug: string): Promise<MDXContent | null> {
         mdxOptions: {
           remarkPlugins: [remarkGfm],
           rehypePlugins: [
-            rehypeRaw, // Allow raw HTML
             rehypeHighlight,
             rehypeSlug,
             [rehypeAutolinkHeadings, {

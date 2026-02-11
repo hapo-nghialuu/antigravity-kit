@@ -42,24 +42,65 @@ const sidebarNavEn = [
         ],
     },
     {
-        title: "Guides",
+        title: "Spec Workflows",
         items: [
             {
-                title: "Spec Workflow",
-                href: "/docs/guides/spec-workflow",
+                title: "Overview",
+                href: "/docs/spec",
             },
             {
-                title: "Contributing",
-                href: "/docs/guides/contributing",
+                title: "/spec-init",
+                href: "/docs/spec/init",
+            },
+            {
+                title: "/spec-requirements",
+                href: "/docs/spec/requirements",
+            },
+            {
+                title: "/spec-design",
+                href: "/docs/spec/design",
+            },
+            {
+                title: "/spec-tasks",
+                href: "/docs/spec/tasks",
+            },
+            {
+                title: "/spec-impl",
+                href: "/docs/spec/impl",
+            },
+            {
+                title: "/spec-status",
+                href: "/docs/spec/status",
             },
         ],
     },
     {
-        title: "Reference",
+        title: "Documentation Workflows",
         items: [
             {
-                title: "FAQ",
-                href: "/docs/faq",
+                title: "Overview",
+                href: "/docs/docs-workflow",
+            },
+            {
+                title: "/docs init",
+                href: "/docs/docs-workflow/init",
+            },
+            {
+                title: "/docs update",
+                href: "/docs/docs-workflow/update",
+            },
+        ],
+    },
+    {
+        title: "Platform Guides",
+        items: [
+            {
+                title: "Claude Code",
+                href: "/docs/platforms/claude",
+            },
+            {
+                title: "Antigravity",
+                href: "/docs/platforms/antigravity",
             },
         ],
     },
@@ -77,6 +118,19 @@ const sidebarNavEn = [
             {
                 title: "Todo App API",
                 href: "/docs/examples/todo-app",
+            },
+        ],
+    },
+    {
+        title: "Reference",
+        items: [
+            {
+                title: "File Structure",
+                href: "/docs/reference/file-structure",
+            },
+            {
+                title: "FAQ",
+                href: "/docs/faq",
             },
         ],
     },
@@ -101,24 +155,65 @@ const sidebarNavVi = [
         ],
     },
     {
-        title: "Hướng Dẫn",
+        title: "Spec Workflows",
         items: [
             {
-                title: "Quy trình Spec",
-                href: "/docs/guides/spec-workflow",
+                title: "Tổng quan",
+                href: "/docs/spec",
             },
             {
-                title: "Đóng góp",
-                href: "/docs/guides/contributing",
+                title: "/spec-init",
+                href: "/docs/spec/init",
+            },
+            {
+                title: "/spec-requirements",
+                href: "/docs/spec/requirements",
+            },
+            {
+                title: "/spec-design",
+                href: "/docs/spec/design",
+            },
+            {
+                title: "/spec-tasks",
+                href: "/docs/spec/tasks",
+            },
+            {
+                title: "/spec-impl",
+                href: "/docs/spec/impl",
+            },
+            {
+                title: "/spec-status",
+                href: "/docs/spec/status",
             },
         ],
     },
     {
-        title: "Tham Khảo",
+        title: "Documentation Workflows",
         items: [
             {
-                title: "Câu hỏi thường gặp",
-                href: "/docs/faq",
+                title: "Tổng quan",
+                href: "/docs/docs-workflow",
+            },
+            {
+                title: "/docs init",
+                href: "/docs/docs-workflow/init",
+            },
+            {
+                title: "/docs update",
+                href: "/docs/docs-workflow/update",
+            },
+        ],
+    },
+    {
+        title: "Platform Guides",
+        items: [
+            {
+                title: "Claude Code",
+                href: "/docs/platforms/claude",
+            },
+            {
+                title: "Antigravity",
+                href: "/docs/platforms/antigravity",
             },
         ],
     },
@@ -130,12 +225,25 @@ const sidebarNavVi = [
                 href: "/docs/examples",
             },
             {
-                title: "Xác thực người dùng",
+                title: "Xác thực ngườì dùng",
                 href: "/docs/examples/user-authentication",
             },
             {
                 title: "Todo App API",
                 href: "/docs/examples/todo-app",
+            },
+        ],
+    },
+    {
+        title: "Tham Khảo",
+        items: [
+            {
+                title: "Cấu trúc File",
+                href: "/docs/reference/file-structure",
+            },
+            {
+                title: "Câu hỏi thường gặp",
+                href: "/docs/faq",
             },
         ],
     },

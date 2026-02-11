@@ -7,16 +7,90 @@ description: Learn how to use CafeKit Spec to build features faster with spec-dr
 
 Welcome to CafeKit Spec - a structured spec-driven development workflow for AI coding assistants ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
 
+## Multi-Platform Support
+
+CafeKit Spec works with both popular AI assistant platforms:
+
+<Cards columns={2}>
+  <Card href="/docs/platforms/claude">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🤖</span>
+      <div>
+        <h3 className="font-semibold">Claude Code</h3>
+        <span className="text-sm text-gray-500">From Anthropic</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec-init</code></li>
+      <li>✓ File: <code>.claude/CLAUDE.md</code></li>
+      <li>✓ Single AI instance</li>
+    </ul>
+  </Card>
+  <Card href="/docs/platforms/antigravity">
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-2xl">🚀</span>
+      <div>
+        <h3 className="font-semibold">Antigravity</h3>
+        <span className="text-sm text-gray-500">From Google</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>✓ Commands: <code>/spec_init</code></li>
+      <li>✓ File: <code>.agent/AGENTS.md</code></li>
+      <li>✓ Multi-agent system</li>
+    </ul>
+  </Card>
+</Cards>
+
+## Two Workflow Types
+
+CafeKit Spec provides 8 commands divided into 2 groups:
+
+### 1. Spec Workflows (6 commands)
+
+Feature development process following Spec-Driven Development standard:
+
+| Command | Purpose |
+|---------|---------|
+| `/spec-init` | Initialize spec workspace |
+| `/spec-requirements` | Gather EARS requirements |
+| `/spec-design` | Technical design |
+| `/spec-tasks` | Break down tasks |
+| `/spec-impl` | Implement code |
+| `/spec-status` | Check progress |
+
+[See Spec Workflows details](/docs/spec)
+
+### 2. Documentation Workflows (2 commands)
+
+Automate project documentation creation and updates:
+
+| Command | Description |
+|---------|-------------|
+| `/docs init` | Create 7 doc files + AI reference |
+| `/docs update` | Update docs after code changes |
+
+[See Documentation Workflows details](/docs/docs-workflow)
+
 ## What is CafeKit Spec?
 
-CafeKit Spec extends AI coding assistants with 6 powerful workflow commands that guide you through building complex features:
+CafeKit Spec extends AI coding assistants with 8 powerful workflow commands that guide you through building complex features and managing project documentation.
 
-1. **Initialize** - Create spec workspace
-2. **Requirements** - Capture what you need
-3. **Design** - Define architecture
-4. **Tasks** - Break down implementation
-5. **Implement** - Build with AI guidance
-6. **Status** - Track progress
+### Spec-Driven Development
+
+```text
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  spec-init  │───▶│ requirements│───▶│   design    │
+└─────────────┘    └─────────────┘    └─────────────┘
+                                              │
+                       ┌─────────────┐       │
+                       │  spec-impl  │◀──────┘
+                       └─────────────┘     │
+                              │             │
+                       ┌─────────────┐      │
+                       │ spec-status │──────┘
+                       └─────────────┘
+```
 
 Instead of ad-hoc prompts, CafeKit Spec gives you a repeatable process for turning ideas into production code.
 
@@ -25,7 +99,9 @@ Instead of ad-hoc prompts, CafeKit Spec gives you a repeatable process for turni
 Get started with these essential guides:
 
 - [Installation](/docs/getting-started/installation) - Get CafeKit Spec installed in under a minute
-- [Spec Workflow](/docs/guides/spec-workflow) - Master the 6-phase workflow for building complex features
+- [Quickstart](/docs/getting-started/quickstart) - Build your first spec
+- [Spec Workflows](/docs/spec) - Master the 6 spec commands
+- [Documentation Workflows](/docs/docs-workflow) - Manage project documentation
 
 ## Why Spec-Driven Development?
 
@@ -47,24 +123,57 @@ Traditional AI coding often leads to:
 npx @haposoft/cafekit-spec
 ```
 
-Installs 6 spec workflow commands to your AI coding assistant.
+Select your platform (Claude Code or Antigravity) in the installation menu.
 
 ### 2. Create Your First Spec
 
-Follow our interactive quickstart:
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
 
 ```bash
-/spec-init my-first-feature
-/spec-requirements my-first-feature
+/spec-init
+/spec-requirements
 ```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_init
+/spec_requirements
+```
+
+  </TabsPanel>
+</Tabs>
 
 The AI guides you through defining requirements, designing architecture, and breaking down tasks.
 
 ### 3. Implement with AI Guidance
 
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
+
 ```bash
-/spec-impl my-first-feature
+/spec-impl
 ```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec_impl
+```
+
+  </TabsPanel>
+</Tabs>
 
 The AI reads your spec and helps you build task-by-task, with verification at each step.
 
@@ -76,25 +185,27 @@ The AI reads your spec and helps you build task-by-task, with verification at ea
 
 A **spec** is a structured workspace for one feature. It contains:
 
-- `requirements.md` - What you're building and why
-- `design.md` - Technical architecture and contracts
-- `tasks/sprint-1.md` - Prioritized task breakdown
-- `status.md` - Implementation progress
+- `spec.md` - Feature overview
+- `requirements.md` - EARS format requirements
+- `design.md` - Technical design
+- `tasks.md` - Task breakdown
+- `implementation.md` - Implementation progress
 
-Specs live in `.specs/` and are committed to Git for team collaboration.
+Specs live in `specs/` and are committed to Git for team collaboration.
 
-### Workflow Commands
+### Documentation
 
-CafeKit Spec adds 6 slash commands to your AI coding assistant:
+The documentation system automatically creates:
 
-| Command | Purpose |
-|---------|---------|
-| `/spec-init` | Create spec workspace |
-| `/spec-requirements` | Gather requirements via Socratic Q&A |
-| `/spec-design` | Generate technical design document |
-| `/spec-tasks` | Break down into implementation tasks |
-| `/spec-impl` | Implement tasks with AI guidance |
-| `/spec-status` | View progress and blockers |
+- `codebase-summary.md` - Codebase overview
+- `project-overview-pdr.md` - Product requirements
+- `code-standards.md` - Coding conventions
+- `system-architecture.md` - System architecture
+- `design-guidelines.md` - UI/UX guidelines
+- `deployment-guide.md` - Deployment guide
+- `project-roadmap.md` - Project roadmap
+
+Docs live in `docs/` and help AI assistants understand the project better.
 
 ## Use Cases
 
@@ -107,7 +218,7 @@ CafeKit Spec adds 6 slash commands to your AI coding assistant:
 
 ### Not needed for:
 
-- Simple bug fixes (&lt;30 min)
+- Simple bug fixes (`<30 min`)
 - Copy changes or typo fixes
 - Minor CSS tweaks
 - Trivial refactors
@@ -118,9 +229,10 @@ Follow this path to master CafeKit Spec:
 
 1. **[Installation](/docs/getting-started/installation)** (2 min) - Get set up
 2. **[Quickstart](/docs/getting-started/quickstart)** (10 min) - Build your first spec
-3. **[Spec Workflow Guide](/docs/guides/spec-workflow)** (20 min) - Deep dive into each phase
+3. **[Spec Workflows](/docs/spec)** (20 min) - Learn the 6 spec commands
+4. **[Documentation Workflows](/docs/docs-workflow)** (10 min) - Manage documentation
 
-Total time to productivity: **~30 minutes**
+Total time to productivity: **~45 minutes**
 
 ## Getting Help
 
@@ -132,6 +244,7 @@ Total time to productivity: **~30 minutes**
 Ready to start? Pick your path:
 
 - [Install CafeKit Spec](/docs/getting-started/installation)
-- [Try the Quickstart](/docs/getting-started/quickstart)
+- [Claude Code Guide](/docs/platforms/claude)
+- [Antigravity Guide](/docs/platforms/antigravity)
 
 **Happy coding with CafeKit Spec!**

@@ -4,6 +4,7 @@ import { ComponentPropsWithoutRef, ReactNode, createElement, useState, useRef } 
 import Link from 'next/link';
 import { AlertCircle, CheckCircle, Info, AlertTriangle, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTab, TabsPanel } from '@/components/ui/tabs';
 
 type MDXComponentsType = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -299,4 +300,9 @@ export const MDXComponents: MDXComponentsType = {
   Callout,
   Cards,
   Card,
+  // Tabs
+  Tabs,
+  TabsList,
+  TabsTrigger: TabsTab,
+  TabsPanel,
 };

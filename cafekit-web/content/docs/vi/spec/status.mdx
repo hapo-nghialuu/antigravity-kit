@@ -1,0 +1,112 @@
+---
+title: /spec-status
+description: Kiểm tra tiến độ implementation
+---
+
+# /spec-status
+
+Kiểm tra và hiển thị trạng thái tổng quan của feature implementation.
+
+## Sử dụng
+
+**Claude Code:**
+```
+/spec-status
+```
+
+**Antigravity:**
+```
+/spec_status
+```
+
+## Mô tả
+
+Lệnh này đọc tất cả các file trong spec directory và hiển thị báo cáo tiến độ:
+- Spec completeness (đã có những gì)
+- Task completion rate
+- Files được tạo
+- Next steps
+
+## Output mẫu
+
+```
+> /spec-status
+
+# Spec Status: user-authentication
+
+## 📋 Documents
+✅ spec.md           - Feature overview
+✅ requirements.md    - 12 requirements defined
+✅ design.md          - Technical design complete
+✅ tasks.md           - 8 tasks defined
+✅ implementation.md  - Progress tracking
+
+## 📊 Progress
+[38;5;82m████████████████████░░░░░░░░░░░░░░░░░░[0m 50% (4/8 tasks)
+
+## ✅ Completed Tasks
+1. Create database migration
+2. Setup JWT utilities
+3. Implement login endpoint
+4. Add password validation
+
+## ⏳ Pending Tasks
+5. Implement logout endpoint
+6. Add rate limiting
+7. Create middleware
+8. Write tests
+
+## 📁 Files Created
+- src/app/api/auth/login/route.ts
+- src/app/api/auth/logout/route.ts
+- src/lib/jwt.ts
+- src/lib/auth.ts
+- migrations/001_create_auth_tables.sql
+
+## 🎯 Next Steps
+Implement Task 5: Implement logout endpoint
+Run: /spec-impl
+```
+
+## Cách đọc status
+
+### Progress Bar
+- 0-25%: Planning phase
+- 25-50%: Core implementation
+- 50-75%: Feature complete
+- 75-100%: Polish & testing
+
+### Task States
+- ✅ Completed - Đã implement và test
+- 🔄 In Progress - Đang làm
+- ⏳ Pending - Chưa bắt đầu
+- ⏸️ Blocked - Bị block (có dependency chưa xong)
+
+## Sử dụng trong workflow
+
+### Daily check-in
+```
+> /spec-status
+
+Kiểm tra tiến độ cuối ngày để biết mai làm gì
+```
+
+### Pre-demo check
+```
+> /spec-status
+
+Kiểm tra những gì đã xong trước khi demo
+```
+
+### Handover
+```
+> /spec-status
+
+Tạo báo cáo để handover cho ngườì khác
+```
+
+## Lưu ý
+
+- Status được lưu trong `implementation.md`
+- Cập nhật tự động khi chạy `/spec-impl`
+- Có thể edit thủ công nếu cần
