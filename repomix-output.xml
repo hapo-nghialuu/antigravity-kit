@@ -337,6 +337,8 @@ The content is organized as follows:
     create.md
     debug.md
     deploy.md
+    docs_init.md
+    docs_update.md
     enhance.md
     orchestrate.md
     plan.md
@@ -1583,6 +1585,7 @@ packages/
     src/
       antigravity/
         workflows/
+          docs.md
           spec-design.md
           spec-impl.md
           spec-init.md
@@ -1591,12 +1594,14 @@ packages/
           spec-tasks.md
       claude/
         commands/
+          docs.md
           spec-design.md
           spec-impl.md
           spec-init.md
           spec-requirements.md
           spec-status.md
           spec-tasks.md
+        ROUTING.md
       common/
         skills/
           spec-driven-development/
@@ -1624,6 +1629,7 @@ packages/
 .editorconfig
 .gitignore
 .npmrc
+CLAUDE.md
 package.json
 pnpm-workspace.yaml
 README.md
@@ -1632,107 +1638,687 @@ README.md
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".claude/ROUTING.md">
-# CafeKit Routing Guide
+<file path=".agent/workflows/docs_init.md">
+---
+description: Initialize comprehensive documentation for the project. Use when setting up docs for the first time or creating documentation skeleton from existing codebase.
+---
 
-> Project-specific routing and conventions for CafeKit. Complements Claude Code CLI's built-in agent system.
+# /docs_init - Initialize Project Documentation
+
+## Overview
+
+This workflow creates comprehensive documentation structure for your project:
+- Generates 7 core documentation files
+- Creates project context file (.agent/rules/AGENTS.md)
+- Uses repomix for codebase analysis
+
+## ⚠️ IMPORTANT: Execute Immediately
+
+**DO NOT create an implementation plan.** This workflow should be executed directly without planning mode.
+- Run all steps sequentially
+- Create files immediately as described
+- No approval needed between steps
 
 ---
 
-## Quick Agent Selection
+## Step 1: Check Prerequisites
 
-| Domain | Keywords | Agent File |
-|--------|----------|------------|
-| **Frontend** | ui, component, react, css, layout | `.claude/agents/frontend-specialist.md` |
-| **Backend** | api, route, server, endpoint | `.claude/agents/backend-specialist.md` |
-| **Database** | schema, migration, query, table | `.claude/agents/database-architect.md` |
-| **Security** | auth, login, jwt, password | `.claude/agents/security-auditor.md` |
-| **Mobile** | react native, flutter, ios, android | `.claude/agents/mobile-developer.md` |
-| **Debug** | error, bug, crash, not working | `.claude/agents/debugger.md` |
-| **Testing** | test, coverage, unit, e2e | `.claude/agents/test-engineer.md` |
-| **DevOps** | deploy, docker, ci/cd | `.claude/agents/devops-engineer.md` |
-| **Performance** | slow, optimize, cache | `.claude/agents/performance-optimizer.md` |
-| **Docs** | documentation, readme | `.claude/agents/documentation-writer.md` |
+**Check if docs/ already exists:**
+```bash
+ls -la docs/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+```
 
-**Multi-domain:** Use `orchestrator` for requests matching 2+ domains.
+**If docs/ exists:**
+- Ask user: "docs/ already exists. Overwrite / Merge / Skip?"
+- Default: "Merge" (preserve existing, add missing)
 
 ---
 
-## Project-Specific Rules
+## Step 2: Install Repomix
 
-### Socratic Gate (Complex Tasks)
+**Check if repomix is installed:**
+```bash
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
 
-**MANDATORY:** Use `AskUserQuestion` for:
-- "Build/Create/Make [thing]" without details
-- Complex features or architecture
-- Vague requirements
+**If repomix not found:**
+- Detect package manager:
+  ```bash
+  test -f pnpm-lock.yaml && PM="pnpm"
+  test -f yarn.lock && PM="yarn"
+  test -f bun.lockb && PM="bun"
+  PM="${PM:-npm}"
+  ```
 
-**Protocol:**
-1. STOP - Do NOT start coding
-2. INVOKE - Use AskUserQuestion tool
-3. WAIT - For user answers
-4. PROCEED - With clarified requirements
-
-### Clean Code Standards
-
-| Principle | Rule |
-|-----------|------|
-| **SRP** | One function = one thing |
-| **DRY** | Extract duplicates, reuse |
-| **KISS** | Simplest solution that works |
-| **YAGNI** | Don't build unused features |
-
-**Naming:**
-- Variables: `userCount` not `n`
-- Functions: `getUserById()` not `user()`
-- Booleans: `isActive`, `hasPermission`
-
-### Before Editing Files
-
-1. **Check imports:** Who depends on this file?
-2. **Identify impact:** What else needs updating?
-3. **Edit together:** File + all dependents in same task
+// turbo
+- Run `$PM install -g repomix`
+- Verify: `which repomix`
 
 ---
 
-## Slash Commands
+## Step 3: Run Repomix Analysis
 
-| Command | Purpose | Args |
-|---------|---------|------|
-| `/docs init` | Create docs | `[--focus=dirs]` |
-| `/docs update` | Update docs | `[--focus=dirs]` |
-| `/spec-init` | Init spec | `<description>` |
-| `/spec-requirements` | Requirements | `<feature>` |
-| `/spec-design` | Design doc | `<feature> [-y]` |
-| `/spec-tasks` | Task list | `<feature> [-y]` |
-| `/spec-impl` | Implement | `<feature> [task-id]` |
-| `/spec-status` | View status | `[feature]` |
+// turbo
+```bash
+repomix
+ls -la ./repomix-output.xml
+```
 
 ---
 
-## Core Skills
+## Step 4: Auto-Detect Project Information
 
-| Skill | Use When | Location |
-|-------|----------|----------|
-| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
-| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+**Detect Package Manager & Tech Stack:**
+```bash
+test -f pnpm-lock.yaml && echo "PNPM"
+test -f yarn.lock && echo "YARN"
+test -f package-lock.json && echo "NPM"
+test -f bun.lockb && echo "BUN"
+test -f requirements.txt && echo "PIP"
+test -f poetry.lock && echo "POETRY"
+test -f go.mod && echo "GO"
+test -f Cargo.toml && echo "CARGO"
+```
 
-**All skills:** `.claude/skills/` or `.agent/skills/`
+**Read Config Files:**
+- Read `package.json` for name, version, scripts, dependencies
+- Read `pyproject.toml` if Python project
+- Read `go.mod` if Go project
+- Read `README.md` for description
+
+**Extract:**
+- Project name, version, description
+- Tech stack with versions
+- Available scripts/commands
+- Key dependencies
 
 ---
 
-## Project Context
+## Step 5: Detect Project Structure
 
-| File | Purpose | Load When |
-|------|---------|-----------|
-| `CLAUDE.md` | Project overview | Every session |
-| `docs/codebase-summary.md` | Stats, structure | "overview" |
-| `docs/system-architecture.md` | Architecture | "architecture" |
-| `repomix-output.xml` | Full codebase | Deep analysis |
+**Get directory structure:**
+```bash
+find . -maxdepth 3 -type d ! -path './node_modules/*' ! -path './.git/*' ! -path './.*' 2>/dev/null | sort | head -40
+```
+
+**Detect Platforms & Tools:**
+- **Deployment**: `vercel.json`, `netlify.toml`, `Dockerfile`, `fly.toml`, `.github/workflows`
+- **Database**: `prisma/schema.prisma`, `drizzle.config.ts`
+- **API**: `src/app/api`, `src/routes`, `pages/api`
+- **Testing**: Check package.json for `vitest`, `jest`, `playwright`, `cypress`
+- **UI**: Check for `tailwind`, `@base-ui`, `shadcn`, etc.
 
 ---
 
-**Last Updated:** 2025-02-09
+## Step 6: Create docs/ Directory
+
+// turbo
+```bash
+mkdir -p docs/
+```
+
+---
+
+## Step 7: Generate Documentation Files
+
+### 7.1 Create docs/codebase-summary.md
+
+```markdown
+# Codebase Summary
+
+> Auto-generated project overview
+
+## Project Info
+| Property | Value |
+|----------|-------|
+| **Name** | {from package.json} |
+| **Version** | {from package.json} |
+| **Type** | {detected} |
+| **Package Manager** | {detected} |
+
+## Statistics
+| Metric | Value |
+|--------|-------|
+| Files | {from repomix} |
+| Tokens | {from repomix} |
+| Generated | {timestamp} |
+
+## Tech Stack
+| Layer | Technology |
+|-------|------------|
+| Framework | {detected with version} |
+| Language | {detected} |
+| Styling | {detected} |
+| UI Library | {detected} |
+| Database | {if detected} |
+| Testing | {if detected} |
+
+## Project Structure
+```
+{directory tree from analysis}
+```
+
+## Key Directories
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {inferred purpose} |
+```
+
+### 7.2 Create docs/project-overview-pdr.md
+
+```markdown
+# Project Overview (PDR)
+
+## Identity
+- **Name:** {name}
+- **Type:** {type}
+- **Status:** Active
+
+## Description
+{from package.json description or README}
+
+## Features
+{extract from codebase}
+
+## Roadmap
+- [ ] Current sprint
+- [ ] Next milestones
+```
+
+### 7.3 Create docs/code-standards.md
+
+```markdown
+# Code Standards
+
+## Stack
+- Language: {detected}
+- Framework: {detected}
+- Linting: {detected}
+
+## Conventions
+{inferred from codebase patterns}
+
+## Patterns
+{common patterns detected}
+
+## File Organization
+{detected structure}
+```
+
+### 7.4 Create docs/system-architecture.md
+
+```markdown
+# System Architecture
+
+## Overview
+{architecture type: monolith, microservices, serverless, etc.}
+
+## Components
+| Component | Tech | Purpose |
+|-----------|------|---------|
+| Frontend | {detected} | UI layer |
+| Backend | {detected} | API layer |
+| Database | {detected} | Data persistence |
+
+## Data Flow
+{simple description}
+
+## API Structure
+{if detected}
+
+## Database Schema
+{if detected}
+```
+
+### 7.5 Create docs/design-guidelines.md
+
+```markdown
+# Design Guidelines
+
+## System
+- CSS Framework: {Tailwind/Styled/etc}
+- UI Library: {detected}
+- Icons: {detected}
+
+## Patterns
+{detected patterns}
+
+## Responsive
+{breakpoints if Tailwind}
+
+## Theme
+{dark/light mode setup}
+```
+
+### 7.6 Create docs/deployment-guide.md
+
+```markdown
+# Deployment Guide
+
+## Platform
+{detected platform}
+
+## Quick Deploy
+```bash
+{platform-specific commands}
+```
+
+## Environment Variables
+{from .env.example if exists}
+
+## Available Commands
+| Command | Purpose |
+|---------|---------|
+| {from package.json} | {description} |
+```
+
+### 7.7 Create docs/project-roadmap.md
+
+```markdown
+# Project Roadmap
+
+## Current
+{detected state}
+
+## Short Term (30 days)
+- [ ] Tasks
+
+## Medium Term (90 days)
+- [ ] Enhancements
+
+## Long Term (6 months)
+- [ ] Scale
+
+## Technical Debt
+{detected issues}
+```
+
+---
+
+## Step 8: Create .agent/rules/AGENTS.md (Optional)
+
+**Check if .agent/rules/ exists:**
+```bash
+test -d .agent/rules && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**If not exists, create it:**
+// turbo
+```bash
+mkdir -p .agent/rules
+```
+
+**Create .agent/rules/AGENTS.md:**
+
+```markdown
+---
+activation: always_on
+---
+
+# {Project Name}
+
+> Project-specific context for AI agents (Antigravity, Claude Code, etc.). See `.agent/` for workflows and skills.
+
+---
+
+## Project Overview
+
+{description from package.json or README}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| {detected} | {with versions} |
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {description} |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| {from package.json scripts} | `{pm} run {script}` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Agent Workflows
+
+Available workflows in `.agent/workflows/`:
+- `/docs_init` - Initialize documentation
+- `/docs_update` - Update documentation
+
+---
+
+**Last Updated:** {timestamp}
+```
+
+**Note:**
+- File `.agent/rules/AGENTS.md` với `activation: always_on` sẽ được **always active** trong Antigravity
+- Đặt trong `.agent/rules/` để Antigravity tự động nhận diện và load
+- Có thể đồng thờI tạo symlink `AGENTS.md` ở root để dùng cho Claude Code
+
+---
+
+## Step 9: Generate Report
+
+**Output success message:**
+
+```
+✅ Documentation initialized!
+
+📊 Detected:
+   - Project: {name}
+   - Type: {type}
+   - Stack: {summary}
+   - Files: {count} | Tokens: {count}
+
+📁 Generated (docs/):
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+
+📝 Also created:
+   ✓ repomix-output.xml (AI context)
+   ✓ .agent/rules/AGENTS.md (always-active project context)
+
+🚀 Next: Run `/docs_update` after code changes
+```
+
+---
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| repomix not found | Warn, continue with manual analysis |
+| No package.json | Ask user for project type |
+| docs/ exists | Ask: Overwrite/Merge/Skip |
+| Permission denied | Report path, suggest fix |
+
+---
+
+## Notes
+
+- Always use detected values, never placeholders
+- Include versions: "Next.js 14.1.0" not "Next.js"
+- repomix-output.xml helps AI understand full context
+- 7 docs files = comprehensive coverage
+</file>
+
+<file path=".agent/workflows/docs_update.md">
+---
+description: Update existing documentation to match current codebase. Use when code has changed and docs are out of sync, or after adding new features.
+---
+
+# /docs_update - Update Project Documentation
+
+## Overview
+
+This workflow updates all documentation to reflect the current state of the codebase:
+- Re-analyzes project structure
+- Updates all 7 documentation files
+- Syncs AGENTS.md with latest changes
+- Creates backup before updating
+
+## ⚠️ IMPORTANT: Execute Immediately
+
+**DO NOT create an implementation plan.** This workflow should be executed directly without planning mode.
+- Run all steps sequentially
+- Update files immediately as described
+- No approval needed between steps
+
+---
+
+## Step 1: Verify Prerequisites
+
+**Check if docs/ exists:**
+```bash
+ls docs/ 2>/dev/null || echo "ERROR: Run '/docs_init' first"
+```
+
+**If docs/ not found:**
+- Stop and prompt: "❌ docs/ not found. Run `/docs_init` first to create documentation."
+
+---
+
+## Step 2: Create Backup
+
+// turbo
+```bash
+cp -r docs docs.backup.$(date +%Y%m%d_%H%M%S)
+echo "Backup created: docs.backup.{timestamp}"
+```
+
+---
+
+## Step 3: Ensure Repomix Available
+
+**Check if repomix is installed:**
+```bash
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager:
+  ```bash
+  test -f pnpm-lock.yaml && PM="pnpm"
+  test -f yarn.lock && PM="yarn"
+  test -f bun.lockb && PM="bun"
+  PM="${PM:-npm}"
+  ```
+
+// turbo
+- Run `$PM install -g repomix`
+
+---
+
+## Step 4: Re-analyze Codebase
+
+// turbo
+```bash
+repomix
+ls -la ./repomix-output.xml
+```
+
+**Detect recent changes:**
+```bash
+git diff --stat HEAD~5..HEAD 2>/dev/null || echo "No git history"
+```
+
+---
+
+## Step 5: Read Current Documentation
+
+Read all existing docs to understand what needs updating:
+- `docs/codebase-summary.md`
+- `docs/project-overview-pdr.md`
+- `docs/code-standards.md`
+- `docs/system-architecture.md`
+- `docs/design-guidelines.md`
+- `docs/deployment-guide.md`
+- `docs/project-roadmap.md`
+- `.agent/rules/AGENTS.md` (if exists)
+
+---
+
+## Step 6: Detect Updated Project Info
+
+**Re-read config files:**
+- `package.json` - check for new scripts, dependencies, version changes
+- `pyproject.toml`, `go.mod`, etc. - based on project type
+- Check for new directories or removed ones
+
+**Detect changes:**
+- New frameworks/libraries added
+- Version updates
+- New scripts
+- Structure changes
+- New deployment configs
+- New database schemas
+
+---
+
+## Step 7: Update Documentation Files
+
+### 7.1 Update docs/codebase-summary.md
+
+**Refresh:**
+- File count and token count from repomix
+- Tech stack versions (from package.json)
+- Directory structure if changed
+- Timestamp
+
+### 7.2 Update docs/project-overview-pdr.md
+
+**Add:**
+- New features detected in codebase
+- Updated description if changed
+- Any new capabilities
+
+### 7.3 Update docs/code-standards.md
+
+**Sync:**
+- New patterns detected in code
+- Updated conventions
+- New linting rules if config changed
+
+### 7.4 Update docs/system-architecture.md
+
+**Update:**
+- New components or services
+- Changed data flows
+- New API endpoints
+- Database schema changes
+
+### 7.5 Update docs/design-guidelines.md
+
+**Refresh:**
+- New UI components
+- Updated styling patterns
+- Theme changes
+
+### 7.6 Update docs/deployment-guide.md
+
+**Update:**
+- New environment variables
+- Changed deployment commands
+- Platform updates
+
+### 7.7 Update docs/project-roadmap.md
+
+**Progress tracking:**
+- Mark completed items
+- Add new tasks based on TODOs found
+- Update technical debt section
+
+---
+
+## Step 8: Update .agent/rules/AGENTS.md
+
+**Check if .agent/rules/AGENTS.md exists:**
+```bash
+test -f .agent/rules/AGENTS.md && cat .agent/rules/AGENTS.md || echo "NOT_FOUND"
+```
+
+**If exists - Update sections:**
+- **Tech Stack** - Update versions, add new dependencies
+- **Key Directories** - Add new directories
+- **Quick Commands** - Sync with package.json scripts
+- **Last Updated** - Refresh timestamp
+
+**If not exists - Create new:**
+- Use same template as in `/docs_init`
+- Or skip if user không muốn tạo
+
+**Note:** `.agent/rules/AGENTS.md` với `activation: always_on` sẽ luôn active trong Antigravity.
+
+---
+
+## Step 9: Clean Up
+
+// turbo
+**Remove old repomix if needed:**
+```bash
+# Keep repomix-output.xml for AI context
+ls -la repomix-output.xml
+```
+
+---
+
+## Step 10: Generate Report
+
+**Output success message:**
+
+```
+🔄 Documentation updated!
+
+💾 Backup: docs.backup.{timestamp}/
+
+📊 Changes:
+   - Files: {old_count} → {new_count}
+   - Tokens: {old_tokens} → {new_tokens}
+
+📝 Updated:
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+   ✓ .agent/rules/AGENTS.md (if exists)
+
+💡 Review docs/ for any manual adjustments needed
+```
+
+---
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| docs/ not found | Prompt to run `/docs_init` |
+| repomix fails | Continue with manual analysis |
+| Permission denied | Report path, suggest sudo/fix |
+| Conflicts detected | Ask user which version to keep |
+
+---
+
+## Notes
+
+- Always create backup before updating
+- Merge existing content with new analysis
+- Preserve manual edits when possible
+- Update timestamp on all modified files
+- Keep repomix-output.xml for AI context
 </file>
 
 <file path=".claude/settings.local.json">
@@ -36369,618 +36955,6 @@ python3 .claude/scripts/validate_dispatcher.py --file <path> --tool edit
 // setup mcp server in  ~/.gemini\antigravity\mcp_config.json
 </file>
 
-<file path=".claude/commands/docs.md">
----
-name: docs
-description: Documentation management command. Use '/docs init' to create initial docs, '/docs update' to update existing docs.
-allowed-tools: Read, Write, Glob, Grep, Bash
-argument-hint: <init|update> [--focus=dir1,dir2]
----
-
-# /docs - Documentation Management
-
-$ARGUMENTS
-
----
-
-## Purpose
-
-Unified command for project documentation:
-- `/docs init` - Initialize comprehensive documentation (replaces old /init)
-- `/docs update` - Update docs after code changes
-
----
-
-## Parse Arguments
-
-**Extract subcommand:**
-- If `$ARGUMENTS` starts with `init` → Run INIT workflow
-- If `$ARGUMENTS` starts with `update` → Run UPDATE workflow
-- Else → Show usage help
-
-**Extract flags:**
-- `--focus=dir1,dir2` - Focus on specific directories
-- `--dir=./path` - Target specific directory
-
----
-
-## INIT Workflow (`/docs init`)
-
-### Step 1: Check Prerequisites
-
-```bash
-# Check if docs/ already exists
-ls -la docs/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
-
-# Check repomix
-which repomix || npm list -g repomix 2>/dev/null || echo "REPOMIX_NOT_FOUND"
-```
-
-**If docs/ exists:**
-- Ask: "docs/ already exists. Overwrite / Merge / Skip?"
-
-### Step 2: Install Repomix (if needed)
-
-```bash
-# Check if repomix is installed
-which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
-```
-
-**If repomix not found:**
-- Detect package manager: npm, pnpm, yarn, bun
-- Install repomix globally:
-
-```bash
-# Detect package manager
-test -f pnpm-lock.yaml && PM="pnpm"
-test -f yarn.lock && PM="yarn"
-test -f bun.lockb && PM="bun"
-PM="${PM:-npm}"
-
-# Install repomix globally
-$PM install -g repomix
-
-# Verify installation
-which repomix
-```
-
-**Report:**
-```
-📦 Installing repomix... ✅ Done
-```
-
-### Step 3: Run Repomix
-
-```bash
-# Generate codebase compaction
-repomix
-
-# Verify output
-ls -la ./repomix-output.xml
-```
-
-### Step 4: Auto-Detect Project Info
-
-```bash
-# Package manager & config
-test -f pnpm-lock.yaml && echo "PNPM"
-test -f yarn.lock && echo "YARN"
-test -f package-lock.json && echo "NPM"
-test -f bun.lockb && echo "BUN"
-test -f requirements.txt && echo "PIP"
-test -f poetry.lock && echo "POETRY"
-test -f go.mod && echo "GO"
-test -f Cargo.toml && echo "CARGO"
-
-# Read configs
-cat package.json 2>/dev/null
-cat pyproject.toml 2>/dev/null
-cat go.mod 2>/dev/null
-```
-
-**Extract:**
-- Project name, version, description
-- Tech stack with versions
-- Scripts/commands
-- Dependencies
-
-### Step 5: Detect Structure & Platform
-
-```bash
-# Directory structure
-find . -maxdepth 3 -type d ! -path './node_modules/*' ! -path './.git/*' ! -path './.*' 2>/dev/null | sort | head -40
-
-# Deployment platform
-test -f vercel.json && echo "Vercel"
-test -f netlify.toml && echo "Netlify"
-test -f Dockerfile && echo "Docker"
-test -f docker-compose.yml && echo "Docker Compose"
-test -f fly.toml && echo "Fly.io"
-test -d .github/workflows && echo "GitHub Actions"
-
-# Database
-test -f prisma/schema.prisma && echo "Prisma"
-test -f drizzle.config.ts && echo "Drizzle"
-
-# API
-test -d src/app/api && echo "NextJS_API"
-test -d src/routes && echo "Express_Routes"
-
-# Testing
-cat package.json | grep -E '"(vitest|jest|playwright|cypress)"' && echo "Testing"
-```
-
-### Step 6: Generate 7 Documentation Files
-
-Create `docs/` directory and generate:
-
-#### 1. codebase-summary.md
-```markdown
-# Codebase Summary
-
-> Auto-generated project overview
-
-## Project Info
-| Property | Value |
-|----------|-------|
-| **Name** | {detected} |
-| **Version** | {detected} |
-| **Type** | {detected} |
-
-## Statistics
-| Metric | Value |
-|--------|-------|
-| Files | {from repomix} |
-| Tokens | {from repomix} |
-| Generated | {timestamp} |
-
-## Tech Stack
-| Layer | Technology |
-|-------|------------|
-| {detected} | {with versions} |
-
-## Structure
-```
-{directory tree}
-```
-```
-
-#### 2. project-overview-pdr.md
-```markdown
-# Project Overview (PDR)
-
-## Identity
-- **Name:** {name}
-- **Type:** {type}
-- **Status:** Active
-
-## Description
-{from package.json or README}
-
-## Features
-{extracted from codebase}
-
-## Roadmap
-- [ ] Current sprint
-- [ ] Next milestones
-```
-
-#### 3. code-standards.md
-```markdown
-# Code Standards
-
-## Stack
-- Language: {detected}
-- Framework: {detected}
-- Linting: {detected}
-
-## Conventions
-{inferred from codebase patterns}
-
-## Patterns
-{common patterns detected}
-```
-
-#### 4. system-architecture.md
-```markdown
-# System Architecture
-
-## Overview
-{architecture type}
-
-## Components
-| Component | Tech | Purpose |
-|-----------|------|---------|
-| {detected} | {tech} | {purpose} |
-
-## Data Flow
-{simple description}
-
-## API Structure
-{if detected}
-
-## Database
-{if detected}
-```
-
-#### 5. design-guidelines.md
-```markdown
-# Design Guidelines
-
-## System
-- CSS: {Tailwind/Styled/etc}
-- UI Library: {detected}
-
-## Patterns
-{detected patterns}
-
-## Responsive
-{breakpoints}
-```
-
-#### 6. deployment-guide.md
-```markdown
-# Deployment Guide
-
-## Platform
-{detected platform}
-
-## Quick Deploy
-```bash
-{platform commands}
-```
-
-## Environment
-{from .env.example if exists}
-
-## Commands
-| Command | Purpose |
-|---------|---------|
-| {from package.json} | {description} |
-```
-
-#### 7. project-roadmap.md
-```markdown
-# Project Roadmap
-
-## Current
-{detected state}
-
-## Short Term (30d)
-- [ ] Tasks
-
-## Medium Term (90d)
-- [ ] Enhancements
-
-## Long Term (6mo)
-- [ ] Scale
-
-## Tech Debt
-{detected issues}
-```
-
-### Step 7: Generate CLAUDE.md
-
-```bash
-# Check if CLAUDE.md exists
-test -f CLAUDE.md && echo "EXISTS" || echo "NOT_FOUND"
-```
-
-**Create or update CLAUDE.md:**
-
-```markdown
-# {Project Name}
-
-> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
-
----
-
-## Project Overview
-
-{description from package.json or README}
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| {detected from package.json} | {with versions} |
-
----
-
-## Project Structure
-
-```
-{key directories from analysis}
-```
-
----
-
-## Key Directories
-
-| Directory | Purpose |
-|-----------|---------|
-| {detected} | {description} |
-
----
-
-## Quick Commands
-
-| Task | Command |
-|------|---------|
-| {from package.json scripts} | `{pm} run {script}` |
-
----
-
-## Project Docs (On-demand)
-
-| Doc | Purpose | Load when |
-|-----|---------|-----------|
-| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
-| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
-| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
-| `docs/system-architecture.md` | Architecture | "architecture", "design" |
-| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
-
----
-
-## Framework Reference
-
-See `.claude/ROUTING.md` for agent routing and framework rules.
-
----
-
-**Last Updated:** {timestamp}
-```
-
-**Write to file:**
-```bash
-# Generate CLAUDE.md content
-cat > CLAUDE.md << 'EOF'
-# {Project Name}
-
-> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
-
----
-
-## Project Overview
-
-{description}
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-{tech_stack_rows}
-
----
-
-## Project Structure
-
-```
-{structure}
-```
-
----
-
-## Key Directories
-
-| Directory | Purpose |
-|-----------|---------|
-{directory_rows}
-
----
-
-## Quick Commands
-
-| Task | Command |
-|------|---------|
-{commands_rows}
-
----
-
-## Project Docs (On-demand)
-
-| Doc | Purpose | Load when |
-|-----|---------|-----------|
-| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
-| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
-| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
-| `docs/system-architecture.md` | Architecture | "architecture", "design" |
-| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
-| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
-| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
-
----
-
-## Framework Reference
-
-See `.claude/ROUTING.md` for agent routing and framework rules.
-
----
-
-**Last Updated:** {timestamp}
-EOF
-```
-
-### Step 8: Report
-
-```markdown
-✅ Documentation initialized!
-
-📊 Detected:
-   - Project: {name}
-   - Type: {type}
-   - Stack: {summary}
-   - Files: {count} | Tokens: {count}
-
-📁 Generated (docs/):
-   ✓ codebase-summary.md
-   ✓ project-overview-pdr.md
-   ✓ code-standards.md
-   ✓ system-architecture.md
-   ✓ design-guidelines.md
-   ✓ deployment-guide.md
-   ✓ project-roadmap.md
-
-📝 Also created:
-   ✓ repomix-output.xml (AI context)
-   ✓ CLAUDE.md (root)
-
-🚀 Next: Run `/docs update` after code changes
-```
-
----
-
-## UPDATE Workflow (`/docs update`)
-
-### Step 1: Verify
-
-```bash
-# Check docs/ exists
-ls docs/ 2>/dev/null || echo "ERROR: Run '/docs init' first"
-
-# Backup
-cp -r docs docs.backup.$(date +%Y%m%d_%H%M%S)
-```
-
-### Step 2: Ensure Repomix Installed
-
-```bash
-# Check if repomix is installed
-which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
-```
-
-**If repomix not found:**
-- Detect package manager
-- Install repomix globally
-
-```bash
-# Detect package manager
-test -f pnpm-lock.yaml && PM="pnpm"
-test -f yarn.lock && PM="yarn"
-test -f bun.lockb && PM="bun"
-PM="${PM:-npm}"
-
-# Install repomix
-$PM install -g repomix
-```
-
-### Step 3: Re-analyze
-
-```bash
-# Fresh repomix
-repomix
-
-# Detect changes
-git diff --stat HEAD~5..HEAD 2>/dev/null
-```
-
-### Step 4: Update Files
-
-Read existing docs, merge with new analysis:
-
-1. **codebase-summary.md** - Refresh stats, structure
-2. **project-overview-pdr.md** - Add new features
-3. **code-standards.md** - Update patterns
-4. **system-architecture.md** - Sync components
-5. **design-guidelines.md** - Refresh UI patterns
-6. **deployment-guide.md** - Update commands
-7. **project-roadmap.md** - Mark progress
-
-### Step 5: Update CLAUDE.md
-
-Update `CLAUDE.md` with latest project info:
-
-```bash
-# Read existing CLAUDE.md if exists
-test -f CLAUDE.md && cat CLAUDE.md || echo "NOT_FOUND"
-
-# Update key sections:
-# - Tech Stack (from package.json)
-# - Project Structure (from repomix)
-# - Quick Commands (from package.json scripts)
-# - Last Updated timestamp
-```
-
-**Update content:**
-- Refresh "Tech Stack" table with latest versions
-- Update "Project Structure" if directories changed
-- Sync "Quick Commands" with package.json scripts
-- Update "Last Updated" timestamp
-
-**If CLAUDE.md doesn't exist:**
-- Create new following INIT workflow template
-
-### Step 6: Report
-
-```markdown
-🔄 Documentation updated!
-
-📊 Changes:
-   - Files: {old} → {new}
-   - Tokens: {old} → {new}
-
-📝 Updated:
-   ✓ codebase-summary.md
-   ✓ project-overview-pdr.md
-   ✓ code-standards.md
-   ✓ system-architecture.md
-   ✓ design-guidelines.md
-   ✓ deployment-guide.md
-   ✓ project-roadmap.md
-   ✓ CLAUDE.md (root)
-
-💡 Review docs/ for any manual adjustments needed
-```
-
----
-
-## HELP (no valid subcommand)
-
-```markdown
-/docs - Documentation Management
-
-Usage:
-  /docs init    - Create initial documentation
-  /docs update  - Update docs after code changes
-
-Options:
-  --focus=dir1,dir2  - Focus on specific directories
-  --dir=./path       - Target specific directory
-
-Examples:
-  /docs init
-  /docs init --focus=src,api
-  /docs update
-  /docs update --focus=ui
-```
-
----
-
-## Error Handling
-
-| Scenario | Action |
-|----------|--------|
-| repomix not found | Warn, continue with manual analysis |
-| No package.json | Ask user for project type |
-| docs/ exists (init) | Ask: Overwrite/Merge/Skip |
-| docs/ not found (update) | Prompt to run `/docs init` |
-| Permission denied | Report path, suggest fix |
-
----
-
-## Notes
-
-- Always use detected values, never placeholders
-- Include versions: "Next.js 14.1.0" not "Next.js"
-- repomix-output.xml helps AI understand full context
-- 7 docs files = comprehensive coverage
-</file>
-
 <file path=".claude/skills/spec-driven-development/rules/design-discovery-full.md">
 # Full Discovery Process for Technical Design
 
@@ -38415,6 +38389,109 @@ Skill này bao gồm:
 - Fix bug đơn giản
 - Thay đổi nhỏ (< 1 giờ)
 - Hotfix khẩn cấp
+</file>
+
+<file path=".claude/ROUTING.md">
+# CafeKit Routing Guide
+
+> Project-specific routing and conventions for CafeKit. Complements Claude Code CLI's built-in agent system.
+
+---
+
+## Quick Agent Selection
+
+| Domain | Keywords | Agent File |
+|--------|----------|------------|
+| **Frontend** | ui, component, react, css, layout | `.claude/agents/frontend-specialist.md` |
+| **Backend** | api, route, server, endpoint | `.claude/agents/backend-specialist.md` |
+| **Database** | schema, migration, query, table | `.claude/agents/database-architect.md` |
+| **Security** | auth, login, jwt, password | `.claude/agents/security-auditor.md` |
+| **Mobile** | react native, flutter, ios, android | `.claude/agents/mobile-developer.md` |
+| **Debug** | error, bug, crash, not working | `.claude/agents/debugger.md` |
+| **Testing** | test, coverage, unit, e2e | `.claude/agents/test-engineer.md` |
+| **DevOps** | deploy, docker, ci/cd | `.claude/agents/devops-engineer.md` |
+| **Performance** | slow, optimize, cache | `.claude/agents/performance-optimizer.md` |
+| **Docs** | documentation, readme | `.claude/agents/documentation-writer.md` |
+
+**Multi-domain:** Use `orchestrator` for requests matching 2+ domains.
+
+---
+
+## Project-Specific Rules
+
+### Socratic Gate (Complex Tasks)
+
+**MANDATORY:** Use `AskUserQuestion` for:
+- "Build/Create/Make [thing]" without details
+- Complex features or architecture
+- Vague requirements
+
+**Protocol:**
+1. STOP - Do NOT start coding
+2. INVOKE - Use AskUserQuestion tool
+3. WAIT - For user answers
+4. PROCEED - With clarified requirements
+
+### Clean Code Standards
+
+| Principle | Rule |
+|-----------|------|
+| **SRP** | One function = one thing |
+| **DRY** | Extract duplicates, reuse |
+| **KISS** | Simplest solution that works |
+| **YAGNI** | Don't build unused features |
+
+**Naming:**
+- Variables: `userCount` not `n`
+- Functions: `getUserById()` not `user()`
+- Booleans: `isActive`, `hasPermission`
+
+### Before Editing Files
+
+1. **Check imports:** Who depends on this file?
+2. **Identify impact:** What else needs updating?
+3. **Edit together:** File + all dependents in same task
+
+---
+
+## Slash Commands
+
+| Command | Purpose | Args |
+|---------|---------|------|
+| `/docs init` | Create docs | `[--focus=dirs]` |
+| `/docs update` | Update docs | `[--focus=dirs]` |
+| `/spec-init` | Init spec | `<description>` |
+| `/spec-requirements` | Requirements | `<feature>` |
+| `/spec-design` | Design doc | `<feature> [-y]` |
+| `/spec-tasks` | Task list | `<feature> [-y]` |
+| `/spec-impl` | Implement | `<feature> [task-id]` |
+| `/spec-status` | View status | `[feature]` |
+
+---
+
+## Core Skills
+
+| Skill | Use When | Location |
+|-------|----------|----------|
+| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
+| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+
+**All skills:** `.claude/skills/` or `.agent/skills/`
+
+---
+
+## Project Context
+
+| File | Purpose | Load When |
+|------|---------|-----------|
+| `CLAUDE.md` | Project overview | Every session |
+| `docs/codebase-summary.md` | Stats, structure | "overview" |
+| `docs/system-architecture.md` | Architecture | "architecture" |
+| `repomix-output.xml` | Full codebase | Deep analysis |
+
+---
+
+**Last Updated:** 2025-02-09
 </file>
 
 <file path=".claude-bk/.claude-plugin/plugin.json">
@@ -248848,6 +248925,618 @@ MIT © Vudovn
 }
 </file>
 
+<file path="packages/spec/src/antigravity/workflows/docs.md">
+---
+name: docs
+description: Documentation management command. Use '/docs init' to create initial docs, '/docs update' to update existing docs.
+allowed-tools: Read, Write, Glob, Grep, Bash
+argument-hint: <init|update> [--focus=dir1,dir2]
+---
+
+# /docs - Documentation Management
+
+$ARGUMENTS
+
+---
+
+## Purpose
+
+Unified command for project documentation:
+- `/docs init` - Initialize comprehensive documentation (replaces old /init)
+- `/docs update` - Update docs after code changes
+
+---
+
+## Parse Arguments
+
+**Extract subcommand:**
+- If `$ARGUMENTS` starts with `init` → Run INIT workflow
+- If `$ARGUMENTS` starts with `update` → Run UPDATE workflow
+- Else → Show usage help
+
+**Extract flags:**
+- `--focus=dir1,dir2` - Focus on specific directories
+- `--dir=./path` - Target specific directory
+
+---
+
+## INIT Workflow (`/docs init`)
+
+### Step 1: Check Prerequisites
+
+```bash
+# Check if docs/ already exists
+ls -la docs/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+
+# Check repomix
+which repomix || npm list -g repomix 2>/dev/null || echo "REPOMIX_NOT_FOUND"
+```
+
+**If docs/ exists:**
+- Ask: "docs/ already exists. Overwrite / Merge / Skip?"
+
+### Step 2: Install Repomix (if needed)
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager: npm, pnpm, yarn, bun
+- Install repomix globally:
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix globally
+$PM install -g repomix
+
+# Verify installation
+which repomix
+```
+
+**Report:**
+```
+📦 Installing repomix... ✅ Done
+```
+
+### Step 3: Run Repomix
+
+```bash
+# Generate codebase compaction
+repomix
+
+# Verify output
+ls -la ./repomix-output.xml
+```
+
+### Step 4: Auto-Detect Project Info
+
+```bash
+# Package manager & config
+test -f pnpm-lock.yaml && echo "PNPM"
+test -f yarn.lock && echo "YARN"
+test -f package-lock.json && echo "NPM"
+test -f bun.lockb && echo "BUN"
+test -f requirements.txt && echo "PIP"
+test -f poetry.lock && echo "POETRY"
+test -f go.mod && echo "GO"
+test -f Cargo.toml && echo "CARGO"
+
+# Read configs
+cat package.json 2>/dev/null
+cat pyproject.toml 2>/dev/null
+cat go.mod 2>/dev/null
+```
+
+**Extract:**
+- Project name, version, description
+- Tech stack with versions
+- Scripts/commands
+- Dependencies
+
+### Step 5: Detect Structure & Platform
+
+```bash
+# Directory structure
+find . -maxdepth 3 -type d ! -path './node_modules/*' ! -path './.git/*' ! -path './.*' 2>/dev/null | sort | head -40
+
+# Deployment platform
+test -f vercel.json && echo "Vercel"
+test -f netlify.toml && echo "Netlify"
+test -f Dockerfile && echo "Docker"
+test -f docker-compose.yml && echo "Docker Compose"
+test -f fly.toml && echo "Fly.io"
+test -d .github/workflows && echo "GitHub Actions"
+
+# Database
+test -f prisma/schema.prisma && echo "Prisma"
+test -f drizzle.config.ts && echo "Drizzle"
+
+# API
+test -d src/app/api && echo "NextJS_API"
+test -d src/routes && echo "Express_Routes"
+
+# Testing
+cat package.json | grep -E '"(vitest|jest|playwright|cypress)"' && echo "Testing"
+```
+
+### Step 6: Generate 7 Documentation Files
+
+Create `docs/` directory and generate:
+
+#### 1. codebase-summary.md
+```markdown
+# Codebase Summary
+
+> Auto-generated project overview
+
+## Project Info
+| Property | Value |
+|----------|-------|
+| **Name** | {detected} |
+| **Version** | {detected} |
+| **Type** | {detected} |
+
+## Statistics
+| Metric | Value |
+|--------|-------|
+| Files | {from repomix} |
+| Tokens | {from repomix} |
+| Generated | {timestamp} |
+
+## Tech Stack
+| Layer | Technology |
+|-------|------------|
+| {detected} | {with versions} |
+
+## Structure
+```
+{directory tree}
+```
+```
+
+#### 2. project-overview-pdr.md
+```markdown
+# Project Overview (PDR)
+
+## Identity
+- **Name:** {name}
+- **Type:** {type}
+- **Status:** Active
+
+## Description
+{from package.json or README}
+
+## Features
+{extracted from codebase}
+
+## Roadmap
+- [ ] Current sprint
+- [ ] Next milestones
+```
+
+#### 3. code-standards.md
+```markdown
+# Code Standards
+
+## Stack
+- Language: {detected}
+- Framework: {detected}
+- Linting: {detected}
+
+## Conventions
+{inferred from codebase patterns}
+
+## Patterns
+{common patterns detected}
+```
+
+#### 4. system-architecture.md
+```markdown
+# System Architecture
+
+## Overview
+{architecture type}
+
+## Components
+| Component | Tech | Purpose |
+|-----------|------|---------|
+| {detected} | {tech} | {purpose} |
+
+## Data Flow
+{simple description}
+
+## API Structure
+{if detected}
+
+## Database
+{if detected}
+```
+
+#### 5. design-guidelines.md
+```markdown
+# Design Guidelines
+
+## System
+- CSS: {Tailwind/Styled/etc}
+- UI Library: {detected}
+
+## Patterns
+{detected patterns}
+
+## Responsive
+{breakpoints}
+```
+
+#### 6. deployment-guide.md
+```markdown
+# Deployment Guide
+
+## Platform
+{detected platform}
+
+## Quick Deploy
+```bash
+{platform commands}
+```
+
+## Environment
+{from .env.example if exists}
+
+## Commands
+| Command | Purpose |
+|---------|---------|
+| {from package.json} | {description} |
+```
+
+#### 7. project-roadmap.md
+```markdown
+# Project Roadmap
+
+## Current
+{detected state}
+
+## Short Term (30d)
+- [ ] Tasks
+
+## Medium Term (90d)
+- [ ] Enhancements
+
+## Long Term (6mo)
+- [ ] Scale
+
+## Tech Debt
+{detected issues}
+```
+
+### Step 7: Generate CLAUDE.md
+
+```bash
+# Check if CLAUDE.md exists
+test -f CLAUDE.md && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**Create or update CLAUDE.md:**
+
+```markdown
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description from package.json or README}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| {detected from package.json} | {with versions} |
+
+---
+
+## Project Structure
+
+```
+{key directories from analysis}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {description} |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| {from package.json scripts} | `{pm} run {script}` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+```
+
+**Write to file:**
+```bash
+# Generate CLAUDE.md content
+cat > CLAUDE.md << 'EOF'
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+{tech_stack_rows}
+
+---
+
+## Project Structure
+
+```
+{structure}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+{directory_rows}
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+{commands_rows}
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+EOF
+```
+
+### Step 8: Report
+
+```markdown
+✅ Documentation initialized!
+
+📊 Detected:
+   - Project: {name}
+   - Type: {type}
+   - Stack: {summary}
+   - Files: {count} | Tokens: {count}
+
+📁 Generated (docs/):
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+
+📝 Also created:
+   ✓ repomix-output.xml (AI context)
+   ✓ CLAUDE.md (root)
+
+🚀 Next: Run `/docs update` after code changes
+```
+
+---
+
+## UPDATE Workflow (`/docs update`)
+
+### Step 1: Verify
+
+```bash
+# Check docs/ exists
+ls docs/ 2>/dev/null || echo "ERROR: Run '/docs init' first"
+
+# Backup
+cp -r docs docs.backup.$(date +%Y%m%d_%H%M%S)
+```
+
+### Step 2: Ensure Repomix Installed
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager
+- Install repomix globally
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix
+$PM install -g repomix
+```
+
+### Step 3: Re-analyze
+
+```bash
+# Fresh repomix
+repomix
+
+# Detect changes
+git diff --stat HEAD~5..HEAD 2>/dev/null
+```
+
+### Step 4: Update Files
+
+Read existing docs, merge with new analysis:
+
+1. **codebase-summary.md** - Refresh stats, structure
+2. **project-overview-pdr.md** - Add new features
+3. **code-standards.md** - Update patterns
+4. **system-architecture.md** - Sync components
+5. **design-guidelines.md** - Refresh UI patterns
+6. **deployment-guide.md** - Update commands
+7. **project-roadmap.md** - Mark progress
+
+### Step 5: Update CLAUDE.md
+
+Update `CLAUDE.md` with latest project info:
+
+```bash
+# Read existing CLAUDE.md if exists
+test -f CLAUDE.md && cat CLAUDE.md || echo "NOT_FOUND"
+
+# Update key sections:
+# - Tech Stack (from package.json)
+# - Project Structure (from repomix)
+# - Quick Commands (from package.json scripts)
+# - Last Updated timestamp
+```
+
+**Update content:**
+- Refresh "Tech Stack" table with latest versions
+- Update "Project Structure" if directories changed
+- Sync "Quick Commands" with package.json scripts
+- Update "Last Updated" timestamp
+
+**If CLAUDE.md doesn't exist:**
+- Create new following INIT workflow template
+
+### Step 6: Report
+
+```markdown
+🔄 Documentation updated!
+
+📊 Changes:
+   - Files: {old} → {new}
+   - Tokens: {old} → {new}
+
+📝 Updated:
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+   ✓ CLAUDE.md (root)
+
+💡 Review docs/ for any manual adjustments needed
+```
+
+---
+
+## HELP (no valid subcommand)
+
+```markdown
+/docs - Documentation Management
+
+Usage:
+  /docs init    - Create initial documentation
+  /docs update  - Update docs after code changes
+
+Options:
+  --focus=dir1,dir2  - Focus on specific directories
+  --dir=./path       - Target specific directory
+
+Examples:
+  /docs init
+  /docs init --focus=src,api
+  /docs update
+  /docs update --focus=ui
+```
+
+---
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| repomix not found | Warn, continue with manual analysis |
+| No package.json | Ask user for project type |
+| docs/ exists (init) | Ask: Overwrite/Merge/Skip |
+| docs/ not found (update) | Prompt to run `/docs init` |
+| Permission denied | Report path, suggest fix |
+
+---
+
+## Notes
+
+- Always use detected values, never placeholders
+- Include versions: "Next.js 14.1.0" not "Next.js"
+- repomix-output.xml helps AI understand full context
+- 7 docs files = comprehensive coverage
+</file>
+
 <file path="packages/spec/src/antigravity/workflows/spec-status.md">
 ---
 description: Display current status of a specification.
@@ -248934,6 +249623,618 @@ Hiển thị trạng thái hiện tại của một spec hoặc liệt kê tất
 /spec-status mobile-app
 /spec-status
 ```
+</file>
+
+<file path="packages/spec/src/claude/commands/docs.md">
+---
+name: docs
+description: Documentation management command. Use '/docs init' to create initial docs, '/docs update' to update existing docs.
+allowed-tools: Read, Write, Glob, Grep, Bash
+argument-hint: <init|update> [--focus=dir1,dir2]
+---
+
+# /docs - Documentation Management
+
+$ARGUMENTS
+
+---
+
+## Purpose
+
+Unified command for project documentation:
+- `/docs init` - Initialize comprehensive documentation (replaces old /init)
+- `/docs update` - Update docs after code changes
+
+---
+
+## Parse Arguments
+
+**Extract subcommand:**
+- If `$ARGUMENTS` starts with `init` → Run INIT workflow
+- If `$ARGUMENTS` starts with `update` → Run UPDATE workflow
+- Else → Show usage help
+
+**Extract flags:**
+- `--focus=dir1,dir2` - Focus on specific directories
+- `--dir=./path` - Target specific directory
+
+---
+
+## INIT Workflow (`/docs init`)
+
+### Step 1: Check Prerequisites
+
+```bash
+# Check if docs/ already exists
+ls -la docs/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+
+# Check repomix
+which repomix || npm list -g repomix 2>/dev/null || echo "REPOMIX_NOT_FOUND"
+```
+
+**If docs/ exists:**
+- Ask: "docs/ already exists. Overwrite / Merge / Skip?"
+
+### Step 2: Install Repomix (if needed)
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager: npm, pnpm, yarn, bun
+- Install repomix globally:
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix globally
+$PM install -g repomix
+
+# Verify installation
+which repomix
+```
+
+**Report:**
+```
+📦 Installing repomix... ✅ Done
+```
+
+### Step 3: Run Repomix
+
+```bash
+# Generate codebase compaction
+repomix
+
+# Verify output
+ls -la ./repomix-output.xml
+```
+
+### Step 4: Auto-Detect Project Info
+
+```bash
+# Package manager & config
+test -f pnpm-lock.yaml && echo "PNPM"
+test -f yarn.lock && echo "YARN"
+test -f package-lock.json && echo "NPM"
+test -f bun.lockb && echo "BUN"
+test -f requirements.txt && echo "PIP"
+test -f poetry.lock && echo "POETRY"
+test -f go.mod && echo "GO"
+test -f Cargo.toml && echo "CARGO"
+
+# Read configs
+cat package.json 2>/dev/null
+cat pyproject.toml 2>/dev/null
+cat go.mod 2>/dev/null
+```
+
+**Extract:**
+- Project name, version, description
+- Tech stack with versions
+- Scripts/commands
+- Dependencies
+
+### Step 5: Detect Structure & Platform
+
+```bash
+# Directory structure
+find . -maxdepth 3 -type d ! -path './node_modules/*' ! -path './.git/*' ! -path './.*' 2>/dev/null | sort | head -40
+
+# Deployment platform
+test -f vercel.json && echo "Vercel"
+test -f netlify.toml && echo "Netlify"
+test -f Dockerfile && echo "Docker"
+test -f docker-compose.yml && echo "Docker Compose"
+test -f fly.toml && echo "Fly.io"
+test -d .github/workflows && echo "GitHub Actions"
+
+# Database
+test -f prisma/schema.prisma && echo "Prisma"
+test -f drizzle.config.ts && echo "Drizzle"
+
+# API
+test -d src/app/api && echo "NextJS_API"
+test -d src/routes && echo "Express_Routes"
+
+# Testing
+cat package.json | grep -E '"(vitest|jest|playwright|cypress)"' && echo "Testing"
+```
+
+### Step 6: Generate 7 Documentation Files
+
+Create `docs/` directory and generate:
+
+#### 1. codebase-summary.md
+```markdown
+# Codebase Summary
+
+> Auto-generated project overview
+
+## Project Info
+| Property | Value |
+|----------|-------|
+| **Name** | {detected} |
+| **Version** | {detected} |
+| **Type** | {detected} |
+
+## Statistics
+| Metric | Value |
+|--------|-------|
+| Files | {from repomix} |
+| Tokens | {from repomix} |
+| Generated | {timestamp} |
+
+## Tech Stack
+| Layer | Technology |
+|-------|------------|
+| {detected} | {with versions} |
+
+## Structure
+```
+{directory tree}
+```
+```
+
+#### 2. project-overview-pdr.md
+```markdown
+# Project Overview (PDR)
+
+## Identity
+- **Name:** {name}
+- **Type:** {type}
+- **Status:** Active
+
+## Description
+{from package.json or README}
+
+## Features
+{extracted from codebase}
+
+## Roadmap
+- [ ] Current sprint
+- [ ] Next milestones
+```
+
+#### 3. code-standards.md
+```markdown
+# Code Standards
+
+## Stack
+- Language: {detected}
+- Framework: {detected}
+- Linting: {detected}
+
+## Conventions
+{inferred from codebase patterns}
+
+## Patterns
+{common patterns detected}
+```
+
+#### 4. system-architecture.md
+```markdown
+# System Architecture
+
+## Overview
+{architecture type}
+
+## Components
+| Component | Tech | Purpose |
+|-----------|------|---------|
+| {detected} | {tech} | {purpose} |
+
+## Data Flow
+{simple description}
+
+## API Structure
+{if detected}
+
+## Database
+{if detected}
+```
+
+#### 5. design-guidelines.md
+```markdown
+# Design Guidelines
+
+## System
+- CSS: {Tailwind/Styled/etc}
+- UI Library: {detected}
+
+## Patterns
+{detected patterns}
+
+## Responsive
+{breakpoints}
+```
+
+#### 6. deployment-guide.md
+```markdown
+# Deployment Guide
+
+## Platform
+{detected platform}
+
+## Quick Deploy
+```bash
+{platform commands}
+```
+
+## Environment
+{from .env.example if exists}
+
+## Commands
+| Command | Purpose |
+|---------|---------|
+| {from package.json} | {description} |
+```
+
+#### 7. project-roadmap.md
+```markdown
+# Project Roadmap
+
+## Current
+{detected state}
+
+## Short Term (30d)
+- [ ] Tasks
+
+## Medium Term (90d)
+- [ ] Enhancements
+
+## Long Term (6mo)
+- [ ] Scale
+
+## Tech Debt
+{detected issues}
+```
+
+### Step 7: Generate CLAUDE.md
+
+```bash
+# Check if CLAUDE.md exists
+test -f CLAUDE.md && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**Create or update CLAUDE.md:**
+
+```markdown
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description from package.json or README}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| {detected from package.json} | {with versions} |
+
+---
+
+## Project Structure
+
+```
+{key directories from analysis}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {description} |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| {from package.json scripts} | `{pm} run {script}` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+```
+
+**Write to file:**
+```bash
+# Generate CLAUDE.md content
+cat > CLAUDE.md << 'EOF'
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+{tech_stack_rows}
+
+---
+
+## Project Structure
+
+```
+{structure}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+{directory_rows}
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+{commands_rows}
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+EOF
+```
+
+### Step 8: Report
+
+```markdown
+✅ Documentation initialized!
+
+📊 Detected:
+   - Project: {name}
+   - Type: {type}
+   - Stack: {summary}
+   - Files: {count} | Tokens: {count}
+
+📁 Generated (docs/):
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+
+📝 Also created:
+   ✓ repomix-output.xml (AI context)
+   ✓ CLAUDE.md (root)
+
+🚀 Next: Run `/docs update` after code changes
+```
+
+---
+
+## UPDATE Workflow (`/docs update`)
+
+### Step 1: Verify
+
+```bash
+# Check docs/ exists
+ls docs/ 2>/dev/null || echo "ERROR: Run '/docs init' first"
+
+# Backup
+cp -r docs docs.backup.$(date +%Y%m%d_%H%M%S)
+```
+
+### Step 2: Ensure Repomix Installed
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager
+- Install repomix globally
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix
+$PM install -g repomix
+```
+
+### Step 3: Re-analyze
+
+```bash
+# Fresh repomix
+repomix
+
+# Detect changes
+git diff --stat HEAD~5..HEAD 2>/dev/null
+```
+
+### Step 4: Update Files
+
+Read existing docs, merge with new analysis:
+
+1. **codebase-summary.md** - Refresh stats, structure
+2. **project-overview-pdr.md** - Add new features
+3. **code-standards.md** - Update patterns
+4. **system-architecture.md** - Sync components
+5. **design-guidelines.md** - Refresh UI patterns
+6. **deployment-guide.md** - Update commands
+7. **project-roadmap.md** - Mark progress
+
+### Step 5: Update CLAUDE.md
+
+Update `CLAUDE.md` with latest project info:
+
+```bash
+# Read existing CLAUDE.md if exists
+test -f CLAUDE.md && cat CLAUDE.md || echo "NOT_FOUND"
+
+# Update key sections:
+# - Tech Stack (from package.json)
+# - Project Structure (from repomix)
+# - Quick Commands (from package.json scripts)
+# - Last Updated timestamp
+```
+
+**Update content:**
+- Refresh "Tech Stack" table with latest versions
+- Update "Project Structure" if directories changed
+- Sync "Quick Commands" with package.json scripts
+- Update "Last Updated" timestamp
+
+**If CLAUDE.md doesn't exist:**
+- Create new following INIT workflow template
+
+### Step 6: Report
+
+```markdown
+🔄 Documentation updated!
+
+📊 Changes:
+   - Files: {old} → {new}
+   - Tokens: {old} → {new}
+
+📝 Updated:
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+   ✓ CLAUDE.md (root)
+
+💡 Review docs/ for any manual adjustments needed
+```
+
+---
+
+## HELP (no valid subcommand)
+
+```markdown
+/docs - Documentation Management
+
+Usage:
+  /docs init    - Create initial documentation
+  /docs update  - Update docs after code changes
+
+Options:
+  --focus=dir1,dir2  - Focus on specific directories
+  --dir=./path       - Target specific directory
+
+Examples:
+  /docs init
+  /docs init --focus=src,api
+  /docs update
+  /docs update --focus=ui
+```
+
+---
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| repomix not found | Warn, continue with manual analysis |
+| No package.json | Ask user for project type |
+| docs/ exists (init) | Ask: Overwrite/Merge/Skip |
+| docs/ not found (update) | Prompt to run `/docs init` |
+| Permission denied | Report path, suggest fix |
+
+---
+
+## Notes
+
+- Always use detected values, never placeholders
+- Include versions: "Next.js 14.1.0" not "Next.js"
+- repomix-output.xml helps AI understand full context
+- 7 docs files = comprehensive coverage
 </file>
 
 <file path="packages/spec/src/claude/commands/spec-status.md">
@@ -249025,6 +250326,109 @@ Hiển thị trạng thái hiện tại của một spec hoặc liệt kê tất
 /spec-status mobile-app
 /spec-status
 ```
+</file>
+
+<file path="packages/spec/src/claude/ROUTING.md">
+# CafeKit Routing Guide
+
+> Project-specific routing and conventions for CafeKit. Complements Claude Code CLI's built-in agent system.
+
+---
+
+## Quick Agent Selection
+
+| Domain | Keywords | Agent File |
+|--------|----------|------------|
+| **Frontend** | ui, component, react, css, layout | `.claude/agents/frontend-specialist.md` |
+| **Backend** | api, route, server, endpoint | `.claude/agents/backend-specialist.md` |
+| **Database** | schema, migration, query, table | `.claude/agents/database-architect.md` |
+| **Security** | auth, login, jwt, password | `.claude/agents/security-auditor.md` |
+| **Mobile** | react native, flutter, ios, android | `.claude/agents/mobile-developer.md` |
+| **Debug** | error, bug, crash, not working | `.claude/agents/debugger.md` |
+| **Testing** | test, coverage, unit, e2e | `.claude/agents/test-engineer.md` |
+| **DevOps** | deploy, docker, ci/cd | `.claude/agents/devops-engineer.md` |
+| **Performance** | slow, optimize, cache | `.claude/agents/performance-optimizer.md` |
+| **Docs** | documentation, readme | `.claude/agents/documentation-writer.md` |
+
+**Multi-domain:** Use `orchestrator` for requests matching 2+ domains.
+
+---
+
+## Project-Specific Rules
+
+### Socratic Gate (Complex Tasks)
+
+**MANDATORY:** Use `AskUserQuestion` for:
+- "Build/Create/Make [thing]" without details
+- Complex features or architecture
+- Vague requirements
+
+**Protocol:**
+1. STOP - Do NOT start coding
+2. INVOKE - Use AskUserQuestion tool
+3. WAIT - For user answers
+4. PROCEED - With clarified requirements
+
+### Clean Code Standards
+
+| Principle | Rule |
+|-----------|------|
+| **SRP** | One function = one thing |
+| **DRY** | Extract duplicates, reuse |
+| **KISS** | Simplest solution that works |
+| **YAGNI** | Don't build unused features |
+
+**Naming:**
+- Variables: `userCount` not `n`
+- Functions: `getUserById()` not `user()`
+- Booleans: `isActive`, `hasPermission`
+
+### Before Editing Files
+
+1. **Check imports:** Who depends on this file?
+2. **Identify impact:** What else needs updating?
+3. **Edit together:** File + all dependents in same task
+
+---
+
+## Slash Commands
+
+| Command | Purpose | Args |
+|---------|---------|------|
+| `/docs init` | Create docs | `[--focus=dirs]` |
+| `/docs update` | Update docs | `[--focus=dirs]` |
+| `/spec-init` | Init spec | `<description>` |
+| `/spec-requirements` | Requirements | `<feature>` |
+| `/spec-design` | Design doc | `<feature> [-y]` |
+| `/spec-tasks` | Task list | `<feature> [-y]` |
+| `/spec-impl` | Implement | `<feature> [task-id]` |
+| `/spec-status` | View status | `[feature]` |
+
+---
+
+## Core Skills
+
+| Skill | Use When | Location |
+|-------|----------|----------|
+| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
+| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+
+**All skills:** `.claude/skills/` or `.agent/skills/`
+
+---
+
+## Project Context
+
+| File | Purpose | Load When |
+|------|---------|-----------|
+| `CLAUDE.md` | Project overview | Every session |
+| `docs/codebase-summary.md` | Stats, structure | "overview" |
+| `docs/system-architecture.md` | Architecture | "architecture" |
+| `repomix-output.xml` | Full codebase | Deep analysis |
+
+---
+
+**Last Updated:** 2025-02-09
 </file>
 
 <file path="packages/spec/src/common/skills/spec-driven-development/rules/design-discovery-full.md">
@@ -255703,6 +257107,618 @@ Show current project and agent status.
 Status uses these scripts:
 - `python .agent/scripts/session_manager.py status`
 - `python .agent/scripts/auto_preview.py status`
+</file>
+
+<file path=".claude/commands/docs.md">
+---
+name: docs
+description: Documentation management command. Use '/docs init' to create initial docs, '/docs update' to update existing docs.
+allowed-tools: Read, Write, Glob, Grep, Bash
+argument-hint: <init|update> [--focus=dir1,dir2]
+---
+
+# /docs - Documentation Management
+
+$ARGUMENTS
+
+---
+
+## Purpose
+
+Unified command for project documentation:
+- `/docs init` - Initialize comprehensive documentation (replaces old /init)
+- `/docs update` - Update docs after code changes
+
+---
+
+## Parse Arguments
+
+**Extract subcommand:**
+- If `$ARGUMENTS` starts with `init` → Run INIT workflow
+- If `$ARGUMENTS` starts with `update` → Run UPDATE workflow
+- Else → Show usage help
+
+**Extract flags:**
+- `--focus=dir1,dir2` - Focus on specific directories
+- `--dir=./path` - Target specific directory
+
+---
+
+## INIT Workflow (`/docs init`)
+
+### Step 1: Check Prerequisites
+
+```bash
+# Check if docs/ already exists
+ls -la docs/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+
+# Check repomix
+which repomix || npm list -g repomix 2>/dev/null || echo "REPOMIX_NOT_FOUND"
+```
+
+**If docs/ exists:**
+- Ask: "docs/ already exists. Overwrite / Merge / Skip?"
+
+### Step 2: Install Repomix (if needed)
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager: npm, pnpm, yarn, bun
+- Install repomix globally:
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix globally
+$PM install -g repomix
+
+# Verify installation
+which repomix
+```
+
+**Report:**
+```
+📦 Installing repomix... ✅ Done
+```
+
+### Step 3: Run Repomix
+
+```bash
+# Generate codebase compaction
+repomix
+
+# Verify output
+ls -la ./repomix-output.xml
+```
+
+### Step 4: Auto-Detect Project Info
+
+```bash
+# Package manager & config
+test -f pnpm-lock.yaml && echo "PNPM"
+test -f yarn.lock && echo "YARN"
+test -f package-lock.json && echo "NPM"
+test -f bun.lockb && echo "BUN"
+test -f requirements.txt && echo "PIP"
+test -f poetry.lock && echo "POETRY"
+test -f go.mod && echo "GO"
+test -f Cargo.toml && echo "CARGO"
+
+# Read configs
+cat package.json 2>/dev/null
+cat pyproject.toml 2>/dev/null
+cat go.mod 2>/dev/null
+```
+
+**Extract:**
+- Project name, version, description
+- Tech stack with versions
+- Scripts/commands
+- Dependencies
+
+### Step 5: Detect Structure & Platform
+
+```bash
+# Directory structure
+find . -maxdepth 3 -type d ! -path './node_modules/*' ! -path './.git/*' ! -path './.*' 2>/dev/null | sort | head -40
+
+# Deployment platform
+test -f vercel.json && echo "Vercel"
+test -f netlify.toml && echo "Netlify"
+test -f Dockerfile && echo "Docker"
+test -f docker-compose.yml && echo "Docker Compose"
+test -f fly.toml && echo "Fly.io"
+test -d .github/workflows && echo "GitHub Actions"
+
+# Database
+test -f prisma/schema.prisma && echo "Prisma"
+test -f drizzle.config.ts && echo "Drizzle"
+
+# API
+test -d src/app/api && echo "NextJS_API"
+test -d src/routes && echo "Express_Routes"
+
+# Testing
+cat package.json | grep -E '"(vitest|jest|playwright|cypress)"' && echo "Testing"
+```
+
+### Step 6: Generate 7 Documentation Files
+
+Create `docs/` directory and generate:
+
+#### 1. codebase-summary.md
+```markdown
+# Codebase Summary
+
+> Auto-generated project overview
+
+## Project Info
+| Property | Value |
+|----------|-------|
+| **Name** | {detected} |
+| **Version** | {detected} |
+| **Type** | {detected} |
+
+## Statistics
+| Metric | Value |
+|--------|-------|
+| Files | {from repomix} |
+| Tokens | {from repomix} |
+| Generated | {timestamp} |
+
+## Tech Stack
+| Layer | Technology |
+|-------|------------|
+| {detected} | {with versions} |
+
+## Structure
+```
+{directory tree}
+```
+```
+
+#### 2. project-overview-pdr.md
+```markdown
+# Project Overview (PDR)
+
+## Identity
+- **Name:** {name}
+- **Type:** {type}
+- **Status:** Active
+
+## Description
+{from package.json or README}
+
+## Features
+{extracted from codebase}
+
+## Roadmap
+- [ ] Current sprint
+- [ ] Next milestones
+```
+
+#### 3. code-standards.md
+```markdown
+# Code Standards
+
+## Stack
+- Language: {detected}
+- Framework: {detected}
+- Linting: {detected}
+
+## Conventions
+{inferred from codebase patterns}
+
+## Patterns
+{common patterns detected}
+```
+
+#### 4. system-architecture.md
+```markdown
+# System Architecture
+
+## Overview
+{architecture type}
+
+## Components
+| Component | Tech | Purpose |
+|-----------|------|---------|
+| {detected} | {tech} | {purpose} |
+
+## Data Flow
+{simple description}
+
+## API Structure
+{if detected}
+
+## Database
+{if detected}
+```
+
+#### 5. design-guidelines.md
+```markdown
+# Design Guidelines
+
+## System
+- CSS: {Tailwind/Styled/etc}
+- UI Library: {detected}
+
+## Patterns
+{detected patterns}
+
+## Responsive
+{breakpoints}
+```
+
+#### 6. deployment-guide.md
+```markdown
+# Deployment Guide
+
+## Platform
+{detected platform}
+
+## Quick Deploy
+```bash
+{platform commands}
+```
+
+## Environment
+{from .env.example if exists}
+
+## Commands
+| Command | Purpose |
+|---------|---------|
+| {from package.json} | {description} |
+```
+
+#### 7. project-roadmap.md
+```markdown
+# Project Roadmap
+
+## Current
+{detected state}
+
+## Short Term (30d)
+- [ ] Tasks
+
+## Medium Term (90d)
+- [ ] Enhancements
+
+## Long Term (6mo)
+- [ ] Scale
+
+## Tech Debt
+{detected issues}
+```
+
+### Step 7: Generate CLAUDE.md
+
+```bash
+# Check if CLAUDE.md exists
+test -f CLAUDE.md && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**Create or update CLAUDE.md:**
+
+```markdown
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description from package.json or README}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| {detected from package.json} | {with versions} |
+
+---
+
+## Project Structure
+
+```
+{key directories from analysis}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| {detected} | {description} |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| {from package.json scripts} | `{pm} run {script}` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+```
+
+**Write to file:**
+```bash
+# Generate CLAUDE.md content
+cat > CLAUDE.md << 'EOF'
+# {Project Name}
+
+> Project-specific context for Claude Code. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+{description}
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+{tech_stack_rows}
+
+---
+
+## Project Structure
+
+```
+{structure}
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+{directory_rows}
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+{commands_rows}
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** {timestamp}
+EOF
+```
+
+### Step 8: Report
+
+```markdown
+✅ Documentation initialized!
+
+📊 Detected:
+   - Project: {name}
+   - Type: {type}
+   - Stack: {summary}
+   - Files: {count} | Tokens: {count}
+
+📁 Generated (docs/):
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+
+📝 Also created:
+   ✓ repomix-output.xml (AI context)
+   ✓ CLAUDE.md (root)
+
+🚀 Next: Run `/docs update` after code changes
+```
+
+---
+
+## UPDATE Workflow (`/docs update`)
+
+### Step 1: Verify
+
+```bash
+# Check docs/ exists
+ls docs/ 2>/dev/null || echo "ERROR: Run '/docs init' first"
+
+# Backup
+cp -r docs docs.backup.$(date +%Y%m%d_%H%M%S)
+```
+
+### Step 2: Ensure Repomix Installed
+
+```bash
+# Check if repomix is installed
+which repomix 2>/dev/null || npm list -g repomix 2>/dev/null
+```
+
+**If repomix not found:**
+- Detect package manager
+- Install repomix globally
+
+```bash
+# Detect package manager
+test -f pnpm-lock.yaml && PM="pnpm"
+test -f yarn.lock && PM="yarn"
+test -f bun.lockb && PM="bun"
+PM="${PM:-npm}"
+
+# Install repomix
+$PM install -g repomix
+```
+
+### Step 3: Re-analyze
+
+```bash
+# Fresh repomix
+repomix
+
+# Detect changes
+git diff --stat HEAD~5..HEAD 2>/dev/null
+```
+
+### Step 4: Update Files
+
+Read existing docs, merge with new analysis:
+
+1. **codebase-summary.md** - Refresh stats, structure
+2. **project-overview-pdr.md** - Add new features
+3. **code-standards.md** - Update patterns
+4. **system-architecture.md** - Sync components
+5. **design-guidelines.md** - Refresh UI patterns
+6. **deployment-guide.md** - Update commands
+7. **project-roadmap.md** - Mark progress
+
+### Step 5: Update CLAUDE.md
+
+Update `CLAUDE.md` with latest project info:
+
+```bash
+# Read existing CLAUDE.md if exists
+test -f CLAUDE.md && cat CLAUDE.md || echo "NOT_FOUND"
+
+# Update key sections:
+# - Tech Stack (from package.json)
+# - Project Structure (from repomix)
+# - Quick Commands (from package.json scripts)
+# - Last Updated timestamp
+```
+
+**Update content:**
+- Refresh "Tech Stack" table with latest versions
+- Update "Project Structure" if directories changed
+- Sync "Quick Commands" with package.json scripts
+- Update "Last Updated" timestamp
+
+**If CLAUDE.md doesn't exist:**
+- Create new following INIT workflow template
+
+### Step 6: Report
+
+```markdown
+🔄 Documentation updated!
+
+📊 Changes:
+   - Files: {old} → {new}
+   - Tokens: {old} → {new}
+
+📝 Updated:
+   ✓ codebase-summary.md
+   ✓ project-overview-pdr.md
+   ✓ code-standards.md
+   ✓ system-architecture.md
+   ✓ design-guidelines.md
+   ✓ deployment-guide.md
+   ✓ project-roadmap.md
+   ✓ CLAUDE.md (root)
+
+💡 Review docs/ for any manual adjustments needed
+```
+
+---
+
+## HELP (no valid subcommand)
+
+```markdown
+/docs - Documentation Management
+
+Usage:
+  /docs init    - Create initial documentation
+  /docs update  - Update docs after code changes
+
+Options:
+  --focus=dir1,dir2  - Focus on specific directories
+  --dir=./path       - Target specific directory
+
+Examples:
+  /docs init
+  /docs init --focus=src,api
+  /docs update
+  /docs update --focus=ui
+```
+
+---
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| repomix not found | Warn, continue with manual analysis |
+| No package.json | Ask user for project type |
+| docs/ exists (init) | Ask: Overwrite/Merge/Skip |
+| docs/ not found (update) | Prompt to run `/docs init` |
+| Permission denied | Report path, suggest fix |
+
+---
+
+## Notes
+
+- Always use detected values, never placeholders
+- Include versions: "Next.js 14.1.0" not "Next.js"
+- repomix-output.xml helps AI understand full context
+- 7 docs files = comprehensive coverage
 </file>
 
 <file path=".claude/commands/spec-status.md">
@@ -269478,44 +271494,6 @@ const nextConfig: NextConfig = {};
 export default nextConfig;
 </file>
 
-<file path="packages/spec/package.json">
-{
-  "name": "@haposoft/cafekit-spec",
-  "version": "0.1.2",
-  "description": "Spec-Driven Development workflow for AI coding assistants (Claude Code, Antigravity, and more)",
-  "author": "Haposoft <nghialt@haposoft.com>",
-  "license": "MIT",
-  "private": false,
-  "bin": {
-    "cafekit-spec": "./bin/install.js"
-  },
-  "files": [
-    "bin",
-    "src",
-    "README.md"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hapo-nghialuu/hapo-cafekit.git"
-  },
-  "keywords": [
-    "haposoft",
-    "cafekit",
-    "spec-driven",
-    "workflow",
-    "claude-code",
-    "antigravity",
-    "ai-coding",
-    "specification",
-    "requirements",
-    "sdd"
-  ],
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}
-</file>
-
 <file path="packages/spec/README.md">
 # @haposoft/cafekit-spec
 
@@ -271448,141 +273426,6 @@ Before completing orchestration, verify:
 **Begin orchestration now. Select 3+ agents, execute sequentially, run verification scripts, synthesize results.**
 </file>
 
-<file path="cafekit-web/content/docs/vi/getting-started/installation.mdx">
----
-title: Cài đặt
-description: Bắt đầu với CafeKit Spec trong chưa đầy một phút. Cài đặt 6 lệnh workflow spec để phát triển tính năng có cấu trúc.
----
-
-# Cài đặt
-
-Cài đặt CafeKit Spec và bắt đầu sử dụng quy trình phát triển theo spec (spec-driven development) trong dự án của bạn.
-
-## Yêu cầu
-
-Trước khi cài đặt, hãy đảm bảo bạn có:
-
-- **Node.js 18+** - Yêu cầu để chạy CLI
-- **Trợ lý lập trình AI** - CafeKit Spec hoạt động với [Claude Code](https://claude.ai/code) hoặc [Antigravity](https://antigravity.google/)
-- **Model mạnh mẽ** - Bắt buộc sử dụng **Claude Opus 4.5 (Thinking Mode)** để đảm bảo logic tốt nhất cho các kỹ năng lập kế hoạch (`spec-*`).
-- **Git** - Để quản lý phiên bản và cập nhật
-
-## Khả năng tương thích nền tảng
-
-CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
-
-| Nền tảng | Định dạng lệnh | Trạng thái |
-|----------|---------------|--------|
-| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Khả dụng |
-| **[Antigravity](https://antigravity.google/)** | `/spec-init` (hoặc `@spec-init`) | Khả dụng |
-
-Quá trình cài đặt sẽ tự động phát hiện nền tảng của bạn và cài đặt định dạng lệnh phù hợp.
-
-## Cài đặt CafeKit Spec
-
-Chạy lệnh cài đặt tại thư mục gốc của dự án:
-
-```bash
-npx @haposoft/cafekit-spec
-```
-
-Bộ cài đặt sẽ yêu cầu bạn chọn nền tảng:
-
-```
-? Select your AI coding assistant platform:
-  ❯ Claude Code
-    Antigravity
-```
-
-Lệnh này sẽ:
-- Phát hiện cấu trúc dự án của bạn
-- Cài đặt 6 lệnh workflow spec vào thư mục lệnh của nền tảng
-- Cấu hình workspace cho quy trình phát triển theo spec
-
-## Những gì được cài đặt
-
-Sau khi chạy lệnh cài đặt, bạn sẽ có 6 lệnh workflow spec trong thư mục lệnh của nền tảng:
-
-### Claude Code
-```
-.claude/commands/
-├── spec-init.md           # Khởi tạo spec mới
-├── spec-requirements.md   # Thu thập yêu cầu
-├── spec-design.md         # Tạo tài liệu thiết kế
-├── spec-tasks.md          # Tạo danh sách task
-├── spec-impl.md           # Hướng dẫn implement
-└── spec-status.md         # Theo dõi tiến độ
-```
-
-### Antigravity
-```
-.agent/commands/
-├── spec-init.md           # Khởi tạo spec mới
-├── spec-requirements.md   # Thu thập yêu cầu
-├── spec-design.md         # Tạo tài liệu thiết kế
-├── spec-tasks.md          # Tạo danh sách task
-├── spec-impl.md           # Hướng dẫn implement
-└── spec-status.md         # Theo dõi tiến độ
-```
-
-## Xác nhận cài đặt
-
-Mở trợ lý lập trình AI của bạn và gõ lệnh init cho nền tảng tương ứng:
-
-### Claude Code
-```
-/spec-init
-```
-
-### Antigravity
-```
-/spec-init
-# hoặc
-@spec-init
-```
-
-Bạn sẽ thấy workflow khởi tạo spec bắt đầu.
-
-## Khắc phục sự cố
-
-### Không tìm thấy lệnh
-
-Nếu các lệnh spec không hoạt động:
-
-1. **Kiểm tra vị trí file** - Đảm bảo các file nằm đúng thư mục:
-   - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
-2. **Khởi động lại trợ lý AI** - Một số công cụ cần khởi động lại để phát hiện lệnh mới
-3. **Kiểm tra định dạng file** - Các lệnh phải là file `.md` với frontmatter hợp lệ
-4. **Kiểm tra lựa chọn nền tảng** - Chạy lại bộ cài đặt và xác nhận đã chọn đúng nền tảng
-
-### Sai thư mục
-
-Nếu CafeKit cài đặt sai thư mục, bạn có thể di chuyển file thủ công:
-
-```bash
-# Cho Claude Code - đảm bảo .claude/commands/ tồn tại
-mkdir -p .claude/commands/
-
-# Cho Antigravity - đảm bảo .agent/commands/ tồn tại
-mkdir -p .agent/commands/
-
-# Chạy lại bộ cài đặt
-npx @haposoft/cafekit-spec
-```
-
-## Bước tiếp theo
-
-Bây giờ CafeKit Spec đã được cài đặt:
-
-- **[Hướng dẫn nhanh](/docs/getting-started/quickstart)** - Tạo spec đầu tiên trong 5 phút
-- **[Quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu quy trình đầy đủ 6 giai đoạn
-
----
-
-**Cần trợ giúp?** Mở issue trên [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) hoặc liên hệ hỗ trợ.
-</file>
-
 <file path="cafekit-web/content/docs/vi/guides/spec-workflow.mdx">
 ---
 title: Hướng dẫn quy trình Spec
@@ -272534,467 +274377,42 @@ export function extractHeadings(content: string): Array<{ id: string; text: stri
 }
 </file>
 
-<file path="packages/spec/bin/install.js">
-#!/usr/bin/env node
-
-/**
- * CafeKit Spec Installer
- * Multi-platform installer for AI coding assistants
- *
- * Supported platforms:
- * - claude: Claude Code (.claude/)
- * - antigravity: Antigravity (.agent/)
- *
- * To add a new platform:
- * 1. Add to PLATFORMS registry below
- * 2. Add platform-specific commands in src/[platform]/commands/
- * 3. Update detectPlatforms() if using different folder names
- */
-
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
-
-// ═══════════════════════════════════════════════════════════
-// PLATFORM REGISTRY - Add new platforms here
-// ═══════════════════════════════════════════════════════════
-const PLATFORMS = {
-  claude: {
-    id: 'claude',
-    name: 'Claude Code',
-    description: 'Anthropic\'s Claude Code CLI',
-    folder: '.claude',
-    commandsDir: '.claude/commands',
-    skillsDir: '.claude/skills',
-    skillsRef: '.claude/skills',
-    commandPrefix: '/',
-    sourceDir: 'claude',       // Maps to src/claude/
-    sourceSubdir: 'commands'   // Source subfolder within src/claude/
+<file path="packages/spec/package.json">
+{
+  "name": "@haposoft/cafekit-spec",
+  "version": "0.1.4",
+  "description": "Spec-Driven Development workflow for AI coding assistants. Docs commands (/docs init, /docs update) currently supported on Claude Code.",
+  "author": "Haposoft <nghialt@haposoft.com>",
+  "license": "MIT",
+  "private": false,
+  "bin": {
+    "cafekit-spec": "./bin/install.js"
   },
-  antigravity: {
-    id: 'antigravity',
-    name: 'Antigravity',
-    description: 'Google\'s Antigravity Kit',
-    folder: '.agent',
-    commandsDir: '.agent/commands',
-    skillsDir: '.agent/skills',
-    skillsRef: '.agent/skills',
-    commandPrefix: '/',
-    sourceDir: 'antigravity',  // Maps to src/antigravity/
-    sourceSubdir: 'workflows'  // Source subfolder within src/antigravity/
-  }
-  // Add new platforms here:
-  // cursor: {
-  //   id: 'cursor',
-  //   name: 'Cursor',
-  //   description: 'Cursor IDE',
-  //   folder: '.cursor',
-  //   commandsDir: '.cursor/commands',
-  //   sourceDir: 'cursor',
-  //   sourceSubdir: 'commands'
-  // }
-};
-
-// ═══════════════════════════════════════════════════════════
-// DETECTION
-// ═══════════════════════════════════════════════════════════
-
-function detectPlatforms() {
-  const detected = [];
-
-  for (const [key, config] of Object.entries(PLATFORMS)) {
-    if (fs.existsSync(config.folder)) {
-      detected.push(key);
-    }
-  }
-
-  return detected;
-}
-
-function formatPlatformList() {
-  return Object.entries(PLATFORMS)
-    .map(([key, config], index) => {
-      return `${index + 1}) ${config.name} (${config.folder}/)\n   ${config.description}`;
-    })
-    .join('\n');
-}
-
-function getPlatformKeys() {
-  return Object.keys(PLATFORMS);
-}
-
-// ═══════════════════════════════════════════════════════════
-// USER INTERACTION
-// ═══════════════════════════════════════════════════════════
-
-async function promptPlatformSelection() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  const maxChoice = Object.keys(PLATFORMS).length + 1;
-
-  console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║      CafeKit Spec - Platform Selection                 ║');
-  console.log('╚════════════════════════════════════════════════════════╝');
-  console.log();
-  console.log('No existing AI editor configuration detected.\n');
-  console.log('Select which platform(s) to install for:\n');
-  console.log(formatPlatformList());
-  console.log(`${maxChoice}) All platforms`);
-  console.log('0) Cancel');
-  console.log();
-
-  return new Promise((resolve) => {
-    rl.question(`Select (0-${maxChoice}): `, (answer) => {
-      rl.close();
-      const choice = parseInt(answer.trim(), 10);
-
-      if (choice === 0 || isNaN(choice)) {
-        resolve([]);
-      } else if (choice === maxChoice) {
-        resolve(getPlatformKeys());
-      } else if (choice >= 1 && choice <= Object.keys(PLATFORMS).length) {
-        resolve([getPlatformKeys()[choice - 1]]);
-      } else {
-        console.log('Invalid selection. Please run the installer again.');
-        resolve([]);
-      }
-    });
-  });
-}
-
-async function promptMultiPlatformConfirm(detected) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  const platformNames = detected.map(key => PLATFORMS[key].name).join(', ');
-
-  console.log(`\nDetected existing configurations: ${platformNames}`);
-  console.log();
-
-  return new Promise((resolve) => {
-    rl.question('Install for all detected platforms? (Y/n): ', (answer) => {
-      rl.close();
-      const response = answer.trim().toLowerCase();
-      resolve(response === '' || response === 'y' || response === 'yes');
-    });
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
-// FILE OPERATIONS
-// ═══════════════════════════════════════════════════════════
-
-function copyRecursive(src, dest) {
-  const exists = fs.existsSync(src);
-  const stats = exists && fs.statSync(src);
-  const isDirectory = exists && stats.isDirectory();
-
-  if (isDirectory) {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    fs.readdirSync(src).forEach(childItemName => {
-      copyRecursive(path.join(src, childItemName), path.join(dest, childItemName));
-    });
-  } else {
-    fs.copyFileSync(src, dest);
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hapo-nghialuu/hapo-cafekit.git"
+  },
+  "keywords": [
+    "haposoft",
+    "cafekit",
+    "spec-driven",
+    "workflow",
+    "claude-code",
+    "antigravity",
+    "ai-coding",
+    "specification",
+    "requirements",
+    "sdd"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
-
-function copyPlatformFiles(platformKey, results) {
-  const platform = PLATFORMS[platformKey];
-
-  // Source directories - support different subfolder names per platform
-  const sourceSubdir = platform.sourceSubdir || 'commands';
-  const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
-  const skillsSourceDir = path.join(__dirname, '../src/common/skills');
-
-  // Create directories
-  if (!fs.existsSync(platform.commandsDir)) {
-    fs.mkdirSync(platform.commandsDir, { recursive: true });
-  }
-  if (!fs.existsSync(platform.skillsDir)) {
-    fs.mkdirSync(platform.skillsDir, { recursive: true });
-  }
-
-  // Copy skills (shared across all platforms)
-  if (fs.existsSync(skillsSourceDir)) {
-    const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
-    const specSkillDest = path.join(platform.skillsDir, 'spec-driven-development');
-
-    if (fs.existsSync(specSkillSource)) {
-      copyRecursive(specSkillSource, specSkillDest);
-      results.installedSkills++;
-      console.log(`  ✓ Skill installed: spec-driven-development`);
-    }
-  }
-
-  // Copy commands
-  const specFiles = [
-    'spec-init.md',
-    'spec-requirements.md',
-    'spec-design.md',
-    'spec-tasks.md',
-    'spec-impl.md',
-    'spec-status.md'
-  ];
-
-  specFiles.forEach(file => {
-    const source = path.join(commandsSourceDir, file);
-    const dest = path.join(platform.commandsDir, file);
-
-    if (!fs.existsSync(source)) {
-      console.error(`  ✗ Error: Source file not found: ${file}`);
-      results.errors++;
-      return;
-    }
-
-    if (fs.existsSync(dest)) {
-      console.log(`  → Skipped: ${file} (already exists)`);
-      results.skipped++;
-    } else {
-      let content = fs.readFileSync(source, 'utf8');
-      content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
-      fs.writeFileSync(dest, content);
-      console.log(`  ✓ Copied: ${file}`);
-      results.copied++;
-    }
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
-// MAIN
-// ═══════════════════════════════════════════════════════════
-
-async function main() {
-  console.log();
-  console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║         CafeKit Spec Installer v0.1.2                  ║');
-  console.log('║         Multi-platform SDD Workflow                    ║');
-  console.log('╚════════════════════════════════════════════════════════╝');
-  console.log();
-
-  let platforms = detectPlatforms();
-
-  if (platforms.length === 0) {
-    // No platforms detected - prompt user
-    platforms = await promptPlatformSelection();
-
-    if (platforms.length === 0) {
-      console.log('\nInstallation cancelled.');
-      process.exit(0);
-    }
-  } else if (platforms.length > 1) {
-    // Multiple platforms detected - confirm with user
-    const proceed = await promptMultiPlatformConfirm(platforms);
-    if (!proceed) {
-      platforms = await promptPlatformSelection();
-      if (platforms.length === 0) {
-        console.log('\nInstallation cancelled.');
-        process.exit(0);
-      }
-    }
-  }
-
-  // Show detected/selected platforms
-  const platformNames = platforms.map(key => PLATFORMS[key].name).join(', ');
-  console.log(`\nInstalling for: ${platformNames}\n`);
-
-  const results = {
-    copied: 0,
-    skipped: 0,
-    installedSkills: 0,
-    errors: 0,
-    targets: []
-  };
-
-  try {
-    for (const platformKey of platforms) {
-      const platform = PLATFORMS[platformKey];
-      console.log(`${platform.name} (${platform.folder}/)`);
-      console.log('-'.repeat(40));
-
-      copyPlatformFiles(platformKey, results);
-      results.targets.push(platform.commandsDir);
-      console.log();
-    }
-
-    // Summary
-    console.log('╔════════════════════════════════════════════════════════╗');
-    console.log('║         Installation Complete!                         ║');
-    console.log('╚════════════════════════════════════════════════════════╝');
-    console.log();
-    console.log(`  Copied Commands:    ${results.copied}`);
-    console.log(`  Skipped Commands:   ${results.skipped}`);
-    console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
-    console.log(`  Target Directories: ${results.targets.join(', ')}`);
-    if (results.errors > 0) {
-      console.log(`  Errors:             ${results.errors} ⚠`);
-    }
-    console.log();
-    console.log('Next steps:');
-    console.log('  1. Start your AI editor');
-
-    // Show platform-specific commands
-    for (const platformKey of platforms) {
-      const platform = PLATFORMS[platformKey];
-      console.log(`\n  For ${platform.name}:`);
-      console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
-    }
-
-    console.log('\n  2. Follow the workflow: requirements → design → tasks → impl');
-    console.log();
-    console.log('Documentation: https://github.com/hapo-nghialuu/hapo-cafekit');
-    console.log();
-
-    process.exit(results.errors > 0 ? 1 : 0);
-  } catch (error) {
-    console.error(`\n✗ Installation failed: ${error.message}`);
-    process.exit(1);
-  }
-}
-
-main();
-</file>
-
-<file path="cafekit-web/content/docs/en/getting-started/installation.mdx">
----
-title: Installation
-description: Get started with CafeKit Spec in under a minute. Install the 6 spec workflow commands for structured feature development.
----
-
-# Installation
-
-Get CafeKit Spec installed and start using spec-driven development in your projects.
-
-## Prerequisites
-
-Before installing, ensure you have:
-
-- **Node.js 18+** - Required for running the CLI
-- **AI coding assistant** - CafeKit Spec works with [Claude Code](https://claude.ai/code) or [Antigravity](https://antigravity.google/)
-- **Reasoning Model** - Required to use **Claude Opus 4.5 (Thinking Mode)** to ensure best logic for planning skills (`spec-*`).
-- **Git** - For version control and updates
-
-## Platform Compatibility
-
-CafeKit Spec supports multiple AI coding assistant platforms:
-
-| Platform | Command Format | Status |
-|----------|---------------|--------|
-| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Available |
-| **[Antigravity](https://antigravity.google/)** | `/spec-init` (or `@spec-init`) | Available |
-
-The installation process automatically detects your platform and installs the appropriate command format.
-
-## Install CafeKit Spec
-
-Run the install command in your project root:
-
-```bash
-npx @haposoft/cafekit-spec
-```
-
-The installer will prompt you to select your platform:
-
-```
-? Select your AI coding assistant platform:
-  ❯ Claude Code
-    Antigravity
-```
-
-This command will:
-- Detect your project structure
-- Install 6 spec workflow commands to your platform's commands folder
-- Configure your workspace for spec-driven development
-
-## What Gets Installed
-
-After running the install command, you'll have 6 spec workflow commands installed in your platform's commands folder:
-
-### Claude Code
-```
-.claude/commands/
-├── spec-init.md           # Initialize new spec
-├── spec-requirements.md   # Gather requirements
-├── spec-design.md         # Create design doc
-├── spec-tasks.md          # Generate task breakdown
-├── spec-impl.md           # Implementation guide
-└── spec-status.md         # Track progress
-```
-
-### Antigravity
-```
-.agent/commands/
-├── spec-init.md           # Initialize new spec
-├── spec-requirements.md   # Gather requirements
-├── spec-design.md         # Create design doc
-├── spec-tasks.md          # Generate task breakdown
-├── spec-impl.md           # Implementation guide
-└── spec-status.md         # Track progress
-```
-
-## Verify Installation
-
-Open your AI coding assistant and type the init command for your platform:
-
-### Claude Code
-```
-/spec-init
-```
-
-### Antigravity
-```
-/spec-init
-# or
-@spec-init
-```
-
-You should see the spec initialization workflow start.
-
-## Troubleshooting
-
-### Command not found
-
-If the spec commands don't work:
-
-1. **Check file locations** - Ensure files are in the correct folder:
-   - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
-2. **Restart your AI assistant** - Some tools require a restart to detect new commands
-3. **Verify file format** - Commands must be `.md` files with proper frontmatter
-4. **Check platform selection** - Re-run installer and verify correct platform was selected
-
-### Wrong directory
-
-If CafeKit installs to the wrong directory, you can manually move files:
-
-```bash
-# For Claude Code - ensure .claude/commands/ exists
-mkdir -p .claude/commands/
-
-# For Antigravity - ensure .agent/commands/ exists
-mkdir -p .agent/commands/
-
-# Re-run installer
-npx @haposoft/cafekit-spec
-```
-
-## Next Steps
-
-Now that CafeKit Spec is installed:
-
-- **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
-- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full 6-phase process
-
----
-
-**Need help?** Open an issue on [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) or contact support.
 </file>
 
 <file path="cafekit-web/content/docs/en/guides/spec-workflow.mdx">
@@ -273731,6 +275149,554 @@ Archived specs serve as documentation for maintenance.
 **Questions?** Check the [FAQ](/docs/faq) or open an issue on [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit/issues).
 </file>
 
+<file path="cafekit-web/content/docs/vi/getting-started/installation.mdx">
+---
+title: Cài đặt
+description: Bắt đầu với CafeKit Spec trong chưa đầy một phút. Cài đặt 6 lệnh workflow spec để phát triển tính năng có cấu trúc.
+---
+
+# Cài đặt
+
+Cài đặt CafeKit Spec và bắt đầu sử dụng quy trình phát triển theo spec (spec-driven development) trong dự án của bạn.
+
+## Yêu cầu
+
+Trước khi cài đặt, hãy đảm bảo bạn có:
+
+- **Node.js 18+** - Yêu cầu để chạy CLI
+- **Trợ lý lập trình AI** - CafeKit Spec hoạt động với [Claude Code](https://claude.ai/code) hoặc [Antigravity](https://antigravity.google/)
+- **Model mạnh mẽ** - Bắt buộc sử dụng **Claude Opus 4.5 (Thinking Mode)** để đảm bảo logic tốt nhất cho các kỹ năng lập kế hoạch (`spec-*`).
+- **Git** - Để quản lý phiên bản và cập nhật
+
+### Cho lệnh `/docs init` (Claude Code)
+
+Để sử dụng lệnh tạo documentation, bạn cần cài đặt [repomix](https://github.com/yamadashy/repomix) globally:
+
+```bash
+# Cài đặt repomix globally
+npm install -g repomix
+
+# Hoặc với pnpm
+pnpm install -g repomix
+
+# Hoặc với yarn
+yarn global add repomix
+```
+
+Repomix gom codebase của bạn thành một file duy nhất để AI phân tích và tạo documentation chính xác.
+
+## Khả năng tương thích nền tảng
+
+CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
+
+| Nền tảng | Định dạng lệnh | Trạng thái |
+|----------|---------------|--------|
+| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Khả dụng |
+| **[Antigravity](https://antigravity.google/)** | `/spec-init` (hoặc `@spec-init`) | Khả dụng |
+
+Quá trình cài đặt sẽ tự động phát hiện nền tảng của bạn và cài đặt định dạng lệnh phù hợp.
+
+## Cài đặt CafeKit Spec
+
+Chạy lệnh cài đặt tại thư mục gốc của dự án:
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+Bộ cài đặt sẽ yêu cầu bạn chọn nền tảng:
+
+```
+? Select your AI coding assistant platform:
+  ❯ Claude Code
+    Antigravity
+```
+
+Lệnh này sẽ:
+- Phát hiện cấu trúc dự án của bạn
+- Cài đặt 6 lệnh workflow spec vào thư mục lệnh của nền tảng
+- Cấu hình workspace cho quy trình phát triển theo spec
+
+## Những gì được cài đặt
+
+Sau khi chạy lệnh cài đặt, bạn sẽ có framework CafeKit trong dự án:
+
+### Claude Code
+```
+.claude/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Quy tắc định tuyến agent
+```
+
+### Antigravity
+```
+.agent/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+└── skills/
+    └── spec-driven-development/  # SDD skill
+```
+
+### Thiết lập Documentation (Chỉ Claude Code)
+
+**Yêu cầu:** Đảm bảo bạn đã cài [repomix](https://github.com/yamadashy/repomix) globally:
+```bash
+npm install -g repomix
+```
+
+Sau khi cài đặt, sử dụng lệnh `/docs` để tạo documentation cho dự án:
+
+```bash
+# Khởi tạo thư mục docs và CLAUDE.md
+/docs init
+
+# Hoặc cập nhật docs hiện có
+/docs update
+```
+
+**Repomix làm gì:** Gom codebase của bạn thành file `repomix-output.xml` để AI phân tích cấu trúc project và tạo documentation chính xác.
+
+Lệnh này sẽ tạo:
+- `CLAUDE.md` - Tổng quan dự án cho AI context
+- Thư mục `docs/` với:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Lưu ý:** Lệnh `/docs` cần `ROUTING.md` và `scripts/` chỉ được cài đặt trên Claude Code. Trên Antigravity, file lệnh được cung cấp nhưng có thể hoạt động hạn chế.
+
+## Xác nhận cài đặt
+
+Mở trợ lý lập trình AI của bạn và gõ lệnh init cho nền tảng tương ứng:
+
+### Claude Code
+```
+/spec-init
+```
+
+### Antigravity
+```
+/spec-init
+# hoặc
+@spec-init
+```
+
+Bạn sẽ thấy workflow khởi tạo spec bắt đầu.
+
+## Khắc phục sự cố
+
+### Không tìm thấy lệnh
+
+Nếu các lệnh spec không hoạt động:
+
+1. **Kiểm tra vị trí file** - Đảm bảo các file nằm đúng thư mục:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. **Khởi động lại trợ lý AI** - Một số công cụ cần khởi động lại để phát hiện lệnh mới
+3. **Kiểm tra định dạng file** - Các lệnh phải là file `.md` với frontmatter hợp lệ
+4. **Kiểm tra lựa chọn nền tảng** - Chạy lại bộ cài đặt và xác nhận đã chọn đúng nền tảng
+
+### Sai thư mục
+
+Nếu CafeKit cài đặt sai thư mục, bạn có thể di chuyển file thủ công:
+
+```bash
+# Cho Claude Code - đảm bảo .claude/commands/ tồn tại
+mkdir -p .claude/commands/
+
+# Cho Antigravity - đảm bảo .agent/commands/ tồn tại
+mkdir -p .agent/commands/
+
+# Chạy lại bộ cài đặt
+npx @haposoft/cafekit-spec
+```
+
+## Bước tiếp theo
+
+Bây giờ CafeKit Spec đã được cài đặt:
+
+- **[Hướng dẫn nhanh](/docs/getting-started/quickstart)** - Tạo spec đầu tiên trong 5 phút
+- **[Quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu quy trình đầy đủ 6 giai đoạn
+
+---
+
+**Cần trợ giúp?** Mở issue trên [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) hoặc liên hệ hỗ trợ.
+</file>
+
+<file path="packages/spec/bin/install.js">
+#!/usr/bin/env node
+
+/**
+ * CafeKit Spec Installer
+ * Multi-platform installer for AI coding assistants
+ *
+ * Supported platforms:
+ * - claude: Claude Code (.claude/)
+ * - antigravity: Antigravity (.agent/)
+ *
+ * To add a new platform:
+ * 1. Add to PLATFORMS registry below
+ * 2. Add platform-specific commands in src/[platform]/commands/
+ * 3. Update detectPlatforms() if using different folder names
+ */
+
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
+// ═══════════════════════════════════════════════════════════
+// PLATFORM REGISTRY - Add new platforms here
+// ═══════════════════════════════════════════════════════════
+const PLATFORMS = {
+  claude: {
+    id: 'claude',
+    name: 'Claude Code',
+    description: 'Anthropic\'s Claude Code CLI',
+    folder: '.claude',
+    commandsDir: '.claude/commands',
+    skillsDir: '.claude/skills',
+    skillsRef: '.claude/skills',
+    commandPrefix: '/',
+    sourceDir: 'claude',       // Maps to src/claude/
+    sourceSubdir: 'commands'   // Source subfolder within src/claude/
+  },
+  antigravity: {
+    id: 'antigravity',
+    name: 'Antigravity',
+    description: 'Google\'s Antigravity Kit',
+    folder: '.agent',
+    commandsDir: '.agent/commands',
+    skillsDir: '.agent/skills',
+    skillsRef: '.agent/skills',
+    commandPrefix: '/',
+    sourceDir: 'antigravity',  // Maps to src/antigravity/
+    sourceSubdir: 'workflows'  // Source subfolder within src/antigravity/
+  }
+  // Add new platforms here:
+  // cursor: {
+  //   id: 'cursor',
+  //   name: 'Cursor',
+  //   description: 'Cursor IDE',
+  //   folder: '.cursor',
+  //   commandsDir: '.cursor/commands',
+  //   sourceDir: 'cursor',
+  //   sourceSubdir: 'commands'
+  // }
+};
+
+// ═══════════════════════════════════════════════════════════
+// DETECTION
+// ═══════════════════════════════════════════════════════════
+
+function detectPlatforms() {
+  const detected = [];
+
+  for (const [key, config] of Object.entries(PLATFORMS)) {
+    if (fs.existsSync(config.folder)) {
+      detected.push(key);
+    }
+  }
+
+  return detected;
+}
+
+function formatPlatformList() {
+  return Object.entries(PLATFORMS)
+    .map(([key, config], index) => {
+      return `${index + 1}) ${config.name} (${config.folder}/)\n   ${config.description}`;
+    })
+    .join('\n');
+}
+
+function getPlatformKeys() {
+  return Object.keys(PLATFORMS);
+}
+
+// ═══════════════════════════════════════════════════════════
+// USER INTERACTION
+// ═══════════════════════════════════════════════════════════
+
+async function promptPlatformSelection() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const maxChoice = Object.keys(PLATFORMS).length + 1;
+
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║      CafeKit Spec - Platform Selection                 ║');
+  console.log('╚════════════════════════════════════════════════════════╝');
+  console.log();
+  console.log('No existing AI editor configuration detected.\n');
+  console.log('Select which platform(s) to install for:\n');
+  console.log(formatPlatformList());
+  console.log(`${maxChoice}) All platforms`);
+  console.log('0) Cancel');
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question(`Select (0-${maxChoice}): `, (answer) => {
+      rl.close();
+      const choice = parseInt(answer.trim(), 10);
+
+      if (choice === 0 || isNaN(choice)) {
+        resolve([]);
+      } else if (choice === maxChoice) {
+        resolve(getPlatformKeys());
+      } else if (choice >= 1 && choice <= Object.keys(PLATFORMS).length) {
+        resolve([getPlatformKeys()[choice - 1]]);
+      } else {
+        console.log('Invalid selection. Please run the installer again.');
+        resolve([]);
+      }
+    });
+  });
+}
+
+async function promptMultiPlatformConfirm(detected) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const platformNames = detected.map(key => PLATFORMS[key].name).join(', ');
+
+  console.log(`\nDetected existing configurations: ${platformNames}`);
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Install for all detected platforms? (Y/n): ', (answer) => {
+      rl.close();
+      const response = answer.trim().toLowerCase();
+      resolve(response === '' || response === 'y' || response === 'yes');
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILE OPERATIONS
+// ═══════════════════════════════════════════════════════════
+
+function copyRecursive(src, dest) {
+  const exists = fs.existsSync(src);
+  const stats = exists && fs.statSync(src);
+  const isDirectory = exists && stats.isDirectory();
+
+  if (isDirectory) {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    fs.readdirSync(src).forEach(childItemName => {
+      copyRecursive(path.join(src, childItemName), path.join(dest, childItemName));
+    });
+  } else {
+    fs.copyFileSync(src, dest);
+  }
+}
+
+function copyPlatformFiles(platformKey, results) {
+  const platform = PLATFORMS[platformKey];
+
+  // Source directories - support different subfolder names per platform
+  const sourceSubdir = platform.sourceSubdir || 'commands';
+  const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
+  const skillsSourceDir = path.join(__dirname, '../src/common/skills');
+
+  // Create directories
+  if (!fs.existsSync(platform.commandsDir)) {
+    fs.mkdirSync(platform.commandsDir, { recursive: true });
+  }
+  if (!fs.existsSync(platform.skillsDir)) {
+    fs.mkdirSync(platform.skillsDir, { recursive: true });
+  }
+
+  // Copy skills (shared across all platforms)
+  if (fs.existsSync(skillsSourceDir)) {
+    const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
+    const specSkillDest = path.join(platform.skillsDir, 'spec-driven-development');
+
+    if (fs.existsSync(specSkillSource)) {
+      copyRecursive(specSkillSource, specSkillDest);
+      results.installedSkills++;
+      console.log(`  ✓ Skill installed: spec-driven-development`);
+    }
+  }
+
+  // Copy commands
+  const specFiles = [
+    'spec-init.md',
+    'spec-requirements.md',
+    'spec-design.md',
+    'spec-tasks.md',
+    'spec-impl.md',
+    'spec-status.md',
+    'docs.md'
+  ];
+
+  specFiles.forEach(file => {
+    const source = path.join(commandsSourceDir, file);
+    const dest = path.join(platform.commandsDir, file);
+
+    if (!fs.existsSync(source)) {
+      console.error(`  ✗ Error: Source file not found: ${file}`);
+      results.errors++;
+      return;
+    }
+
+    if (fs.existsSync(dest)) {
+      console.log(`  → Skipped: ${file} (already exists)`);
+      results.skipped++;
+    } else {
+      let content = fs.readFileSync(source, 'utf8');
+      content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+      fs.writeFileSync(dest, content);
+      console.log(`  ✓ Copied: ${file}`);
+      results.copied++;
+    }
+  });
+}
+
+// Copy ROUTING.md to .claude/
+function copyRoutingFile(platformKey, results) {
+  const platform = PLATFORMS[platformKey];
+  const source = path.join(__dirname, `../src/${platform.sourceDir}/ROUTING.md`);
+  const dest = path.join(platform.folder, 'ROUTING.md');
+
+  if (fs.existsSync(source)) {
+    if (fs.existsSync(dest)) {
+      console.log(`  → Skipped: ROUTING.md (already exists)`);
+      results.skipped++;
+    } else {
+      fs.copyFileSync(source, dest);
+      console.log(`  ✓ Copied: ROUTING.md`);
+      results.copied++;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════
+
+async function main() {
+  console.log();
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║         CafeKit Spec Installer v0.1.4                  ║');
+  console.log('║         Multi-platform SDD Workflow                    ║');
+  console.log('╚════════════════════════════════════════════════════════╝');
+  console.log();
+
+  let platforms = detectPlatforms();
+
+  if (platforms.length === 0) {
+    // No platforms detected - prompt user
+    platforms = await promptPlatformSelection();
+
+    if (platforms.length === 0) {
+      console.log('\nInstallation cancelled.');
+      process.exit(0);
+    }
+  } else if (platforms.length > 1) {
+    // Multiple platforms detected - confirm with user
+    const proceed = await promptMultiPlatformConfirm(platforms);
+    if (!proceed) {
+      platforms = await promptPlatformSelection();
+      if (platforms.length === 0) {
+        console.log('\nInstallation cancelled.');
+        process.exit(0);
+      }
+    }
+  }
+
+  // Show detected/selected platforms
+  const platformNames = platforms.map(key => PLATFORMS[key].name).join(', ');
+  console.log(`\nInstalling for: ${platformNames}\n`);
+
+  const results = {
+    copied: 0,
+    skipped: 0,
+    installedSkills: 0,
+    errors: 0,
+    targets: []
+  };
+
+  try {
+    for (const platformKey of platforms) {
+      const platform = PLATFORMS[platformKey];
+      console.log(`${platform.name} (${platform.folder}/)`);
+      console.log('-'.repeat(40));
+
+      copyPlatformFiles(platformKey, results);
+
+      // Copy ROUTING.md for Claude Code platform
+      if (platformKey === 'claude') {
+        copyRoutingFile(platformKey, results);
+      }
+
+      results.targets.push(platform.commandsDir);
+      console.log();
+    }
+
+    // Note: CLAUDE.md and docs/ are generated via /docs init command
+
+    // Summary
+    console.log('╔════════════════════════════════════════════════════════╗');
+    console.log('║         Installation Complete!                         ║');
+    console.log('╚════════════════════════════════════════════════════════╝');
+    console.log();
+    console.log(`  Copied Commands:    ${results.copied}`);
+    console.log(`  Skipped Commands:   ${results.skipped}`);
+    console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
+    console.log(`  Target Directories: ${results.targets.join(', ')}`);
+    if (results.errors > 0) {
+      console.log(`  Errors:             ${results.errors} ⚠`);
+    }
+    console.log();
+    console.log('Next steps:');
+    console.log('  1. Start your AI editor');
+
+    // Show platform-specific commands
+    for (const platformKey of platforms) {
+      const platform = PLATFORMS[platformKey];
+      console.log(`\n  For ${platform.name}:`);
+      console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
+    }
+
+    console.log('\n  2. Follow the workflow: requirements → design → tasks → impl');
+    console.log();
+    console.log('Documentation: https://github.com/hapo-nghialuu/hapo-cafekit');
+    console.log();
+
+    process.exit(results.errors > 0 ? 1 : 0);
+  } catch (error) {
+    console.error(`\n✗ Installation failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+main();
+</file>
+
 <file path=".agent/ARCHITECTURE.md">
 # Antigravity Kit Architecture
 
@@ -274022,6 +275988,199 @@ For details, see [scripts/README.md](scripts/README.md)
 | Plan     | `project-planner`     | brainstorming, plan-writing           |
 </file>
 
+<file path="cafekit-web/content/docs/en/getting-started/installation.mdx">
+---
+title: Installation
+description: Get started with CafeKit Spec in under a minute. Install the 6 spec workflow commands for structured feature development.
+---
+
+# Installation
+
+Get CafeKit Spec installed and start using spec-driven development in your projects.
+
+## Prerequisites
+
+Before installing, ensure you have:
+
+- **Node.js 18+** - Required for running the CLI
+- **AI coding assistant** - CafeKit Spec works with [Claude Code](https://claude.ai/code) or [Antigravity](https://antigravity.google/)
+- **Reasoning Model** - Required to use **Claude Opus 4.5 (Thinking Mode)** to ensure best logic for planning skills (`spec-*`).
+- **Git** - For version control and updates
+
+### For `/docs init` command (Claude Code)
+
+To use the documentation generation command, you need [repomix](https://github.com/yamadashy/repomix) installed globally:
+
+```bash
+# Install repomix globally
+npm install -g repomix
+
+# Or with pnpm
+pnpm install -g repomix
+
+# Or with yarn
+yarn global add repomix
+```
+
+Repomix compacts your codebase into a single file that AI can analyze to generate accurate documentation.
+
+## Platform Compatibility
+
+CafeKit Spec supports multiple AI coding assistant platforms:
+
+| Platform | Command Format | Status |
+|----------|---------------|--------|
+| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Available |
+| **[Antigravity](https://antigravity.google/)** | `/spec-init` (or `@spec-init`) | Available |
+
+The installation process automatically detects your platform and installs the appropriate command format.
+
+## Install CafeKit Spec
+
+Run the install command in your project root:
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+The installer will prompt you to select your platform:
+
+```
+? Select your AI coding assistant platform:
+  ❯ Claude Code
+    Antigravity
+```
+
+This command will:
+- Detect your project structure
+- Install 6 spec workflow commands to your platform's commands folder
+- Configure your workspace for spec-driven development
+
+## What Gets Installed
+
+After running the install command, you'll have the CafeKit framework installed in your project:
+
+### Claude Code
+```
+.claude/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Agent routing rules
+```
+
+### Antigravity
+```
+.agent/
+├── commands/
+│   ├── spec-init.md           # Initialize new spec
+│   ├── spec-requirements.md   # Gather requirements
+│   ├── spec-design.md         # Create design doc
+│   ├── spec-tasks.md          # Generate task breakdown
+│   ├── spec-impl.md           # Implementation guide
+│   ├── spec-status.md         # Track progress
+│   └── docs.md                # Documentation management
+└── skills/
+    └── spec-driven-development/  # SDD skill
+```
+
+### Documentation Setup (Claude Code only)
+
+**Prerequisite:** Ensure you have [repomix](https://github.com/yamadashy/repomix) installed globally:
+```bash
+npm install -g repomix
+```
+
+After installation, use the `/docs` command to generate project documentation:
+
+```bash
+# Initialize docs folder and CLAUDE.md
+/docs init
+
+# Or update existing docs
+/docs update
+```
+
+**What repomix does:** It compacts your codebase into `repomix-output.xml` so AI can analyze your project structure and generate accurate documentation.
+
+This will create:
+- `CLAUDE.md` - Project overview for AI context
+- `docs/` folder with:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Note:** The `/docs` command requires `ROUTING.md` and `scripts/` which are only installed on Claude Code. On Antigravity, the command file is provided but may have limited functionality.
+
+## Verify Installation
+
+Open your AI coding assistant and type the init command for your platform:
+
+### Claude Code
+```
+/spec-init
+```
+
+### Antigravity
+```
+/spec-init
+# or
+@spec-init
+```
+
+You should see the spec initialization workflow start.
+
+## Troubleshooting
+
+### Command not found
+
+If the spec commands don't work:
+
+1. **Check file locations** - Ensure files are in the correct folder:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. **Restart your AI assistant** - Some tools require a restart to detect new commands
+3. **Verify file format** - Commands must be `.md` files with proper frontmatter
+4. **Check platform selection** - Re-run installer and verify correct platform was selected
+
+### Wrong directory
+
+If CafeKit installs to the wrong directory, you can manually move files:
+
+```bash
+# For Claude Code - ensure .claude/commands/ exists
+mkdir -p .claude/commands/
+
+# For Antigravity - ensure .agent/commands/ exists
+mkdir -p .agent/commands/
+
+# Re-run installer
+npx @haposoft/cafekit-spec
+```
+
+## Next Steps
+
+Now that CafeKit Spec is installed:
+
+- **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
+- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full 6-phase process
+
+---
+
+**Need help?** Open an issue on [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) or contact support.
+</file>
+
 <file path="cafekit-web/src/app/docs/[[...slug]]/page.tsx">
 import { notFound } from 'next/navigation';
 import { getMDXContent, getMDXFiles, extractHeadings, type MDXContent } from '@/lib/mdx';
@@ -274186,6 +276345,133 @@ function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: s
     </div>
   );
 }
+</file>
+
+<file path="CLAUDE.md">
+# CafeKit
+
+> AI Agent templates - Skills, Agents, and Workflows for enhanced coding assistance. See `.claude/ROUTING.md` for agent routing rules.
+
+---
+
+## Project Overview
+
+CafeKit is a comprehensive AI coding assistant toolkit that provides structured workflows, skills, and templates for enhanced software development. It implements Spec-Driven Development (SDD) - a methodology that bridges the gap between natural language requirements and implementation through structured specifications.
+
+The project supports both **Claude Code** (Anthropic) and **Antigravity** (Google) platforms.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Web Framework | Next.js 16.1.3 |
+| UI Library | React 19.2.3 |
+| Styling | Tailwind CSS v4 |
+| Language | TypeScript 5.7.2 |
+| Package Manager | pnpm |
+| UI Components | @base-ui/react, lucide-react |
+| Content | MDX, next-mdx-remote, gray-matter |
+| Themes | next-themes |
+
+---
+
+## Project Structure
+
+```
+.
+├── .claude/                    # Claude Code configuration
+│   ├── commands/               # Slash commands (spec-init, spec-design, etc.)
+│   ├── skills/                 # Claude skills
+│   ├── scripts/                # Utility scripts
+│   └── ROUTING.md              # Agent routing rules
+├── .agent/                     # Antigravity configuration
+│   ├── agents/                 # Agent definitions
+│   ├── skills/                 # 40+ reusable skills
+│   ├── workflows/              # Workflow definitions
+│   ├── ARCHITECTURE.md         # Architecture docs
+│   └── CONVENTIONS.md          # Platform conventions
+├── cafekit-web/                # Documentation website (Next.js 16)
+│   ├── app/                    # Next.js app router
+│   ├── components/             # React components
+│   ├── content/docs/           # MDX documentation (en, vi)
+│   └── package.json
+├── packages/
+│   └── spec/                   # NPM package @haposoft/cafekit-spec
+├── docs/                       # Project documentation
+│   ├── codebase-summary.md
+│   ├── project-overview-pdr.md
+│   ├── code-standards.md
+│   ├── system-architecture.md
+│   ├── design-guidelines.md
+│   ├── deployment-guide.md
+│   └── project-roadmap.md
+└── repomix-output.xml          # AI context file
+```
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| `.claude/` | Claude Code commands and skills |
+| `.agent/` | Antigravity agents, skills, workflows |
+| `cafekit-web/` | Next.js documentation website |
+| `packages/spec/` | NPM package @haposoft/cafekit-spec |
+| `docs/` | Project documentation |
+
+---
+
+## Quick Commands
+
+| Task | Command |
+|------|---------|
+| Install dependencies | `pnpm install` |
+| Dev server (root) | `pnpm dev` |
+| Dev server (web) | `pnpm --filter cafekit-web dev` |
+| Build all | `pnpm build` |
+| Build web | `pnpm --filter cafekit-web build` |
+| Lint | `pnpm --filter cafekit-web lint` |
+| Publish package | `cd packages/spec && npm publish` |
+
+---
+
+## Project Docs (On-demand)
+
+| Doc | Purpose | Load when |
+|-----|---------|-----------|
+| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
+| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
+| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
+| `docs/system-architecture.md` | Architecture | "architecture", "design" |
+| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
+| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
+| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+
+---
+
+## Spec-Driven Development Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/spec-init` | Initialize feature specification |
+| `/spec-requirements` | Generate EARS-format requirements |
+| `/spec-design` | Create technical design |
+| `/spec-tasks` | Break down into implementable tasks |
+| `/spec-impl` | Implement specific tasks |
+| `/spec-status` | Check spec progress |
+
+---
+
+## Framework Reference
+
+See `.claude/ROUTING.md` for agent routing and framework rules.
+
+---
+
+**Last Updated:** 2026-02-10
 </file>
 
 <file path=".agent/rules/GEMINI.md">

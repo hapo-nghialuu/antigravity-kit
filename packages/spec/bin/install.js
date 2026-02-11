@@ -197,7 +197,7 @@ function copyPlatformFiles(platformKey, results) {
     }
   }
 
-  // Copy commands
+  // Copy commands/workflows
   const specFiles = [
     'spec-init.md',
     'spec-requirements.md',
@@ -205,7 +205,8 @@ function copyPlatformFiles(platformKey, results) {
     'spec-tasks.md',
     'spec-impl.md',
     'spec-status.md',
-    'docs.md'
+    'docs_init.md',
+    'docs_update.md'
   ];
 
   specFiles.forEach(file => {
@@ -249,6 +250,30 @@ function copyRoutingFile(platformKey, results) {
   }
 }
 
+// Copy GEMINI.md rule file to .agent/rules/ for Antigravity
+function copyGeminiFile(platformKey, results) {
+  const platform = PLATFORMS[platformKey];
+  const rulesDir = path.join(platform.folder, 'rules');
+  const source = path.join(__dirname, `../src/${platform.sourceDir}/GEMINI.md`);
+  const dest = path.join(rulesDir, 'GEMINI.md');
+
+  if (fs.existsSync(source)) {
+    // Create rules directory if not exists
+    if (!fs.existsSync(rulesDir)) {
+      fs.mkdirSync(rulesDir, { recursive: true });
+    }
+
+    if (fs.existsSync(dest)) {
+      console.log(`  → Skipped: rules/GEMINI.md (already exists)`);
+      results.skipped++;
+    } else {
+      fs.copyFileSync(source, dest);
+      console.log(`  ✓ Copied: rules/GEMINI.md`);
+      results.copied++;
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════
@@ -256,7 +281,7 @@ function copyRoutingFile(platformKey, results) {
 async function main() {
   console.log();
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║         CafeKit Spec Installer v0.1.4                  ║');
+  console.log('║         CafeKit Spec Installer v0.1.5                  ║');
   console.log('║         Multi-platform SDD Workflow                    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log();
@@ -306,6 +331,11 @@ async function main() {
       // Copy ROUTING.md for Claude Code platform
       if (platformKey === 'claude') {
         copyRoutingFile(platformKey, results);
+      }
+
+      // Copy GEMINI.md for Antigravity platform
+      if (platformKey === 'antigravity') {
+        copyGeminiFile(platformKey, results);
       }
 
       results.targets.push(platform.commandsDir);
