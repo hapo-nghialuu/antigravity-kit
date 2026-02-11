@@ -93,9 +93,79 @@ Next steps:
 Documentation: https://github.com/hapo-nghialuu/hapo-cafekit
 ```
 
+## Workflows
+
+CafeKit Spec provides two workflow categories:
+
+### 1. Spec-Driven Development Workflows (`spec-*`)
+
+**Purpose:** Structured feature development from idea to implementation
+
+**Claude Code Commands:**
+| Command | Purpose | Phase |
+|---------|---------|-------|
+| `/spec-init` | Initialize new feature spec | 1 |
+| `/spec-requirements` | Generate EARS requirements | 2 |
+| `/spec-design` | Create technical design | 3 |
+| `/spec-tasks` | Break down into tasks | 4 |
+| `/spec-impl` | Implement specific tasks | 5 |
+| `/spec-status` | Check progress | 6 |
+
+**Antigravity Workflows:**
+| Workflow | Purpose | Phase |
+|----------|---------|-------|
+| `/spec_init` | Initialize new feature spec | 1 |
+| `/spec_requirements` | Generate EARS requirements | 2 |
+| `/spec_design` | Create technical design | 3 |
+| `/spec_tasks` | Break down into tasks | 4 |
+| `/spec_impl` | Implement specific tasks | 5 |
+| `/spec_status` | Check progress | 6 |
+
+**Generated Files:**
+```
+.specs/
+└── feature-name/
+    ├── spec.json
+    ├── requirements.md
+    ├── design.md
+    └── tasks/
+```
+
+---
+
+### 2. Documentation Workflows (`docs`)
+
+**Purpose:** Project documentation management and maintenance
+
+**Claude Code Commands:**
+| Command | Purpose |
+|---------|---------|
+| `/docs init` | Initialize comprehensive documentation |
+| `/docs update` | Update docs after code changes |
+
+**Antigravity Workflows:**
+| Workflow | Purpose |
+|----------|---------|
+| `/docs_init` | Initialize comprehensive documentation |
+| `/docs_update` | Update docs after code changes |
+
+**Generated Files:**
+```
+docs/
+├── codebase-summary.md
+├── project-overview-pdr.md
+├── code-standards.md
+├── system-architecture.md
+├── design-guidelines.md
+├── deployment-guide.md
+└── project-roadmap.md
+```
+
+---
+
 ## Quick Start
 
-### Complete Example - Building User Authentication
+### A. Spec Workflow - Building User Authentication
 
 ```bash
 # Step 1: Initialize spec
@@ -382,6 +452,40 @@ done
 
 ---
 
+### B. Docs Workflow - Initialize Project Documentation
+
+**Claude Code:**
+```bash
+# Initialize documentation
+/docs init
+
+# AI creates:
+# - docs/codebase-summary.md
+# - docs/project-overview-pdr.md
+# - docs/code-standards.md
+# - docs/system-architecture.md
+# - docs/design-guidelines.md
+# - docs/deployment-guide.md
+# - docs/project-roadmap.md
+# - .agent/rules/AGENTS.md (for Antigravity) or CLAUDE.md (for Claude Code)
+
+# Update after code changes
+/docs update
+```
+
+**Antigravity:**
+```bash
+# Initialize documentation
+/docs_init
+
+# AI creates the same 7 docs files + AGENTS.md
+
+# Update after code changes
+/docs_update
+```
+
+---
+
 ## File Structure
 
 ### Platform-Specific Installation
@@ -390,43 +494,38 @@ done
 ```
 .claude/
 ├── commands/
-│   ├── spec-init.md
+│   ├── spec-init.md          # Spec workflows
 │   ├── spec-requirements.md
 │   ├── spec-design.md
 │   ├── spec-tasks.md
 │   ├── spec-impl.md
-│   └── spec-status.md
+│   ├── spec-status.md
+│   └── docs.md               # Docs workflows
 └── skills/
     └── spec-driven-development/
-        ├── SKILL.md
-        ├── rules/
-        └── templates/
 ```
 
 **Antigravity** (`.agent/`):
 ```
 .agent/
-├── workflows/
+├── workflows/                   # Antigravity workflows (underscore naming)
 │   ├── spec-init.md
 │   ├── spec-requirements.md
 │   ├── spec-design.md
 │   ├── spec-tasks.md
 │   ├── spec-impl.md
 │   ├── spec-status.md
-│   ├── docs_init.md
+│   ├── docs_init.md            # Docs workflows
 │   └── docs_update.md
 ├── skills/
 │   └── spec-driven-development/
-│       ├── SKILL.md
-│       ├── rules/
-│       └── templates/
 └── rules/
-    └── AGENTS.md
+    └── GEMINI.md               # System rules (always_on)
 ```
 
-**Claude Code Usage:** `/spec-init`, `/spec-requirements`, `/docs init`, `/docs update`, etc.
-
-**Antigravity Usage:** `/spec_init`, `/spec_requirements`, `/docs_init`, `/docs_update`, etc. (use underscores for Antigravity workflows)
+**Command Naming:**
+- **Claude Code:** Uses hyphens (`/spec-init`, `/docs init`)
+- **Antigravity:** Uses underscores (`/spec_init`, `/docs_init`)
 
 ### Generated Specs Directory
 
@@ -473,7 +572,7 @@ This installs commands to both `.claude/` and `.agent/`. The `.specs/` directory
 
 ### Q: Can I customize the workflow steps?
 
-A: Yes. Edit the `.md` files in `.claude/commands/` after installation.
+A: Yes. Edit the `.md` files in `.claude/commands/` (Claude Code) or `.agent/workflows/` (Antigravity) after installation.
 
 ### Q: Is it safe to re-run `npx @haposoft/cafekit-spec`?
 
@@ -486,6 +585,14 @@ A: Defaults to English.
 ### Q: Can I use this for multiple features simultaneously?
 
 A: Yes. Each spec has its own directory in `.specs/`. Work on multiple in parallel.
+
+### Q: Why are the command names different between Claude Code and Antigravity?
+
+A: Each platform has different conventions:
+- **Claude Code** uses hyphens: `/spec-init`, `/docs update`
+- **Antigravity** uses underscores: `/spec_init`, `/docs_init`
+
+The functionality is identical, only the naming convention differs.
 
 ---
 
@@ -509,17 +616,15 @@ npx @haposoft/cafekit-spec
 
 ### "Command not found" after installation
 
-**Cause:** Claude Code may need to reload commands.
-
-**Solution:**
+**Claude Code:**
 - Commands load automatically
 - If not visible, restart Claude Code extension
+- Verify: `ls .claude/commands/spec-*.md`
 
-**Verify installation:**
-```bash
-# Check files exist
-ls .claude/commands/spec-*.md
-```
+**Antigravity:**
+- Workflows load automatically when IDE opens the project
+- Verify: `ls .agent/workflows/*.md`
+- Check `GEMINI.md` is in `.agent/rules/` for system rules
 
 ---
 
@@ -617,8 +722,9 @@ Task #4: Add protected route middleware
 
 #### Added
 - **Documentation workflow for Antigravity** - New `/docs_init` and `/docs_update` workflows
-- **AGENTS.md rule file** - Auto-installs `.agent/rules/AGENTS.md` with `activation: always_on`
+- **GEMINI.md rule file** - Auto-installs `.agent/rules/GEMINI.md` with system rules for Antigravity
 - **Full Antigravity support** - Documentation commands now work on both Claude Code and Antigravity
+- **AGENTS.md auto-generation** - Created automatically when running `/docs_init` or `/docs_update`
 
 ### [0.1.2] - 2026-02-04
 

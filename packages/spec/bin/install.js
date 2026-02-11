@@ -39,7 +39,7 @@ const PLATFORMS = {
     name: 'Antigravity',
     description: 'Google\'s Antigravity Kit',
     folder: '.agent',
-    commandsDir: '.agent/commands',
+    commandsDir: '.agent/workflows',  // Antigravity uses workflows/ not commands/
     skillsDir: '.agent/skills',
     skillsRef: '.agent/skills',
     commandPrefix: '/',
