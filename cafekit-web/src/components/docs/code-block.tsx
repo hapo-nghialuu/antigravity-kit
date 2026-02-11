@@ -1,40 +1,38 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
+import { ComponentPropsWithoutRef, useRef, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface CodeBlockProps {
-    code: string;
-    language?: string;
-    showLineNumbers?: boolean;
-    className?: string;
-}
+export function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<'pre'>) {
+    const preRef = useRef<HTMLPreElement>(null);
+    const [isCopied, setIsCopied] = useState(false);
 
-export function CodeBlock({ code, showLineNumbers = false, className }: CodeBlockProps) {
-    const [copied, setCopied] = useState(false);
-
-    const copyToClipboard = async () => {
-        await navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        if (preRef.current) {
+            const text = preRef.current.innerText;
+            await navigator.clipboard.writeText(text);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
     };
 
-    return (
-        <div className={`relative group ${className}`}>
-            <pre className={`p-4 rounded-lg bg-zinc-900 dark:bg-zinc-950 overflow-x-auto border border-zinc-800 font-mono text-sm ${showLineNumbers ? 'pl-12' : ''}`}>
-                <code className="text-zinc-100">{code}</code>
-            </pre>
-            <button
-                onClick={copyToClipboard}
-                className="absolute top-3 right-3 p-2 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors opacity-0 group-hover:opacity-100"
-                aria-label="Copy code"
-            >
-                {copied ? (
-                    <CheckIcon className="w-4 h-4 text-green-400" />
-                ) : (
-                    <CopyIcon className="w-4 h-4 text-zinc-400" />
-                )}
-            </button>
-        </div>
-    );
+  return (
+    <div className="relative group my-6">
+        <pre
+          ref={preRef}
+          className="p-4 rounded-lg bg-[#0d1117] dark:bg-[#0d1117] overflow-x-auto border border-border font-mono text-sm leading-relaxed"
+          {...props}
+        >
+          {children}
+        </pre>
+        <button
+            onClick={handleCopy}
+            className="absolute top-3 right-3 p-2 rounded-md bg-zinc-800/50 text-zinc-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-zinc-700 hover:text-zinc-200"
+            aria-label="Copy code"
+        >
+            {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+        </button>
+    </div>
+  );
 }
