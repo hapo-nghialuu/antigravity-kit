@@ -30,7 +30,7 @@ export function DecisionTree() {
         <span className="text-emerald-400">☰</span>
         <h3 className="text-lg font-semibold text-white">Interactive Command Selector</h3>
       </div>
-      
+
       <p className="text-zinc-400 text-sm mb-6">
         Click any command to see its purpose, or follow the decision tree below to find the right command for your task.
       </p>
@@ -64,7 +64,6 @@ export function DecisionTree() {
           {/* Lines from start */}
           <path d="M 400 40 L 400 60" stroke="#52525b" strokeWidth="2" />
           <path d="M 400 60 L 150 60" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 60 L 400 60" stroke="#52525b" strokeWidth="2" />
           <path d="M 400 60 L 650 60" stroke="#52525b" strokeWidth="2" />
           <path d="M 150 60 L 150 80" stroke="#52525b" strokeWidth="2" />
           <path d="M 400 60 L 400 80" stroke="#52525b" strokeWidth="2" />
@@ -82,35 +81,35 @@ export function DecisionTree() {
 
           {/* Second level - Feature flow */}
           <path d="M 150 105 L 150 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 150 130 L 80 130" stroke="#52525b" strokeWidth="2" /
-          <path d="M 150 130 L 220 130" stroke="#52525b" strokeWidth="2" /
-          <path d="M 80 130 L 80 150" stroke="#52525b" strokeWidth="2" /
-          <path d="M 220 130 L 220 150" stroke="#52525b" strokeWidth="2" /
+          <path d="M 150 130 L 80 130" stroke="#52525b" strokeWidth="2" />
+          <path d="M 150 130 L 220 130" stroke="#52525b" strokeWidth="2" />
+          <path d="M 80 130 L 80 150" stroke="#52525b" strokeWidth="2" />
+          <path d="M 220 130 L 220 150" stroke="#52525b" strokeWidth="2" />
 
           {/* Commands */}
           <rect x="30" y="150" width="100" height="25" rx="5" fill="#1e40af" />
           <text x="80" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-init</text>
 
-          <rect x="170" y="150" width="100" height="25" rx="5" fill="#1e40af" /
+          <rect x="170" y="150" width="100" height="25" rx="5" fill="#1e40af" />
           <text x="220" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-requirements</text>
 
           {/* Docs flow */}
-          <path d="M 400 105 L 400 130" stroke="#52525b" strokeWidth="2" /
-          <path d="M 400 130 L 350 130" stroke="#52525b" strokeWidth="2" /
-          <path d="M 400 130 L 450 130" stroke="#52525b" strokeWidth="2" /
-          <path d="M 350 130 L 350 150" stroke="#52525b" strokeWidth="2" /
-          <path d="M 450 130 L 450 150" stroke="#52525b" strokeWidth="2" /
+          <path d="M 400 105 L 400 130" stroke="#52525b" strokeWidth="2" />
+          <path d="M 400 130 L 350 130" stroke="#52525b" strokeWidth="2" />
+          <path d="M 400 130 L 450 130" stroke="#52525b" strokeWidth="2" />
+          <path d="M 350 130 L 350 150" stroke="#52525b" strokeWidth="2" />
+          <path d="M 450 130 L 450 150" stroke="#52525b" strokeWidth="2" />
 
-          <rect x="300" y="150" width="100" height="25" rx="5" fill="#059669" /
+          <rect x="300" y="150" width="100" height="25" rx="5" fill="#059669" />
           <text x="350" y="167" textAnchor="middle" fill="white" fontSize="11">/docs init</text>
 
-          <rect x="400" y="150" width="100" height="25" rx="5" fill="#059669" /
+          <rect x="400" y="150" width="100" height="25" rx="5" fill="#059669" />
           <text x="450" y="167" textAnchor="middle" fill="white" fontSize="11">/docs update</text>
 
           {/* Status flow */}
-          <path d="M 650 105 L 650 150" stroke="#52525b" strokeWidth="2" /
+          <path d="M 650 105 L 650 150" stroke="#52525b" strokeWidth="2" />
 
-          <rect x="600" y="150" width="100" height="25" rx="5" fill="#7c3aed" /
+          <rect x="600" y="150" width="100" height="25" rx="5" fill="#7c3aed" />
           <text x="650" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-status</text>
 
           {/* Legend */}
