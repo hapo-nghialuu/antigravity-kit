@@ -1,5 +1,6 @@
 # Antigravity Kit
 
+<<<<<<< HEAD
 > AI Agent templates with Skills, Agents, and Workflows
 
 <div  align="center">
@@ -7,6 +8,9 @@
     <a href="https://unikorn.vn/p/antigravity-kit?ref=unikorn" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/antigravity-kit/rank?theme=dark&type=daily" alt="Antigravity Kit - Hàng ngày" style="width: 250px; height: 64px;" width="250" height="64" /></a>
     <a href="https://launch.j2team.dev/products/antigravity-kit" target="_blank"><img src="https://launch.j2team.dev/badge/antigravity-kit/dark" alt="Antigravity Kit on J2TEAM Launch" width="250" height="54" /></a>
 </div>
+=======
+> Spec-Driven Development workflow for AI coding assistants
+>>>>>>> new-refactor
 
 ## Quick Install
 
@@ -14,12 +18,53 @@
 npx @vudovn/ag-kit init
 ```
 
+<<<<<<< HEAD
 Or install globally:
 
 ```bash
 npm install -g @vudovn/ag-kit
 ag-kit init
 ```
+=======
+## What is CafeKit Spec?
+
+CafeKit Spec is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 6 slash commands that guide you through building complex features:
+
+| Command | Purpose |
+|---------|---------|
+| `/spec-init` | Initialize feature specification |
+| `/spec-requirements` | Generate EARS-format requirements |
+| `/spec-design` | Create technical design |
+| `/spec-tasks` | Break down into implementable tasks |
+| `/spec-impl` | Implement specific tasks |
+| `/spec-status` | Check progress |
+
+## Why Spec-Driven Development?
+
+Traditional AI coding often leads to:
+- Incomplete requirements causing rework
+- Missing edge cases discovered late
+- Lost context between sessions
+
+**CafeKit Spec solves this** with a structured 6-phase workflow:
+
+```
+Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /spec-impl → /spec-status
+```
+
+## Platform Compatibility
+
+| Platform | Status | Directory | Installation |
+|----------|--------|-----------|--------------|
+| **Claude Code** (Anthropic) | ✅ Fully supported | `.claude/` | `npx @haposoft/cafekit-spec` |
+| **Antigravity** (Google) | ✅ Fully supported | `.agent/` | `npx @haposoft/cafekit-spec` |
+
+## Quick Start
+
+```bash
+# 1. Install (auto-detects your platform)
+npx @haposoft/cafekit-spec
+>>>>>>> new-refactor
 
 This installs the `.agent` folder containing all templates into your project.
 

@@ -1,0 +1,3 @@
+module.exports=[86174,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(2083);a.n(d("[project]/cafekit-web/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},67054,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(2083);a.n(d("[project]/cafekit-web/node_modules/next/dist/client/components/builtin/global-error.js"))},83292,a=>{"use strict";a.i(86174);var b=a.i(67054);a.n(b)}];
+
+//# sourceMappingURL=cc419_next_dist_client_components_builtin_global-error_d90def9a.js.map

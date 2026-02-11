@@ -1,0 +1,190 @@
+---
+title: Cài đặt
+description: Bắt đầu với CafeKit Spec trong chưa đầy một phút. Cài đặt 6 lệnh workflow spec để phát triển tính năng có cấu trúc.
+---
+
+# Cài đặt
+
+Cài đặt CafeKit Spec và bắt đầu sử dụng quy trình phát triển theo spec (spec-driven development) trong dự án của bạn.
+
+## Yêu cầu
+
+Trước khi cài đặt, hãy đảm bảo bạn có:
+
+- **Node.js 18+** - Yêu cầu để chạy CLI
+- **Trợ lý lập trình AI** - CafeKit Spec hoạt động với [Claude Code](https://claude.ai/code) hoặc [Antigravity](https://antigravity.google/)
+- **Model mạnh mẽ** - Bắt buộc sử dụng **Claude Opus 4.5 (Thinking Mode)** để đảm bảo logic tốt nhất cho các kỹ năng lập kế hoạch (`spec-*`).
+- **Git** - Để quản lý phiên bản và cập nhật
+
+### Cho lệnh `/docs init` (Claude Code)
+
+Để sử dụng lệnh tạo documentation, bạn cần cài đặt [repomix](https://github.com/yamadashy/repomix) globally:
+
+```bash
+# Cài đặt repomix globally
+npm install -g repomix
+
+# Hoặc với pnpm
+pnpm install -g repomix
+
+# Hoặc với yarn
+yarn global add repomix
+```
+
+Repomix gom codebase của bạn thành một file duy nhất để AI phân tích và tạo documentation chính xác.
+
+## Khả năng tương thích nền tảng
+
+CafeKit Spec hỗ trợ nhiều nền tảng trợ lý lập trình AI:
+
+| Nền tảng | Định dạng lệnh | Trạng thái |
+|----------|---------------|--------|
+| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Khả dụng |
+| **[Antigravity](https://antigravity.google/)** | `/spec-init` (hoặc `@spec-init`) | Khả dụng |
+
+Quá trình cài đặt sẽ tự động phát hiện nền tảng của bạn và cài đặt định dạng lệnh phù hợp.
+
+## Cài đặt CafeKit Spec
+
+Chạy lệnh cài đặt tại thư mục gốc của dự án:
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+Bộ cài đặt sẽ yêu cầu bạn chọn nền tảng:
+
+```
+? Select your AI coding assistant platform:
+  ❯ Claude Code
+    Antigravity
+```
+
+Lệnh này sẽ:
+- Phát hiện cấu trúc dự án của bạn
+- Cài đặt 6 lệnh workflow spec vào thư mục lệnh của nền tảng
+- Cấu hình workspace cho quy trình phát triển theo spec
+
+## Những gì được cài đặt
+
+Sau khi chạy lệnh cài đặt, bạn sẽ có framework CafeKit trong dự án:
+
+### Claude Code
+```
+.claude/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+├── skills/
+│   └── spec-driven-development/  # SDD skill
+└── ROUTING.md                 # Quy tắc định tuyến agent
+```
+
+### Antigravity
+```
+.agent/
+├── commands/
+│   ├── spec-init.md           # Khởi tạo spec mới
+│   ├── spec-requirements.md   # Thu thập yêu cầu
+│   ├── spec-design.md         # Tạo tài liệu thiết kế
+│   ├── spec-tasks.md          # Tạo danh sách task
+│   ├── spec-impl.md           # Hướng dẫn implement
+│   ├── spec-status.md         # Theo dõi tiến độ
+│   └── docs.md                # Quản lý documentation
+└── skills/
+    └── spec-driven-development/  # SDD skill
+```
+
+### Thiết lập Documentation (Chỉ Claude Code)
+
+**Yêu cầu:** Đảm bảo bạn đã cài [repomix](https://github.com/yamadashy/repomix) globally:
+```bash
+npm install -g repomix
+```
+
+Sau khi cài đặt, sử dụng lệnh `/docs` để tạo documentation cho dự án:
+
+```bash
+# Khởi tạo thư mục docs và CLAUDE.md
+/docs init
+
+# Hoặc cập nhật docs hiện có
+/docs update
+```
+
+**Repomix làm gì:** Gom codebase của bạn thành file `repomix-output.xml` để AI phân tích cấu trúc project và tạo documentation chính xác.
+
+Lệnh này sẽ tạo:
+- `CLAUDE.md` - Tổng quan dự án cho AI context
+- Thư mục `docs/` với:
+  - `codebase-summary.md`
+  - `project-overview-pdr.md`
+  - `code-standards.md`
+  - `system-architecture.md`
+  - `design-guidelines.md`
+  - `deployment-guide.md`
+  - `project-roadmap.md`
+
+**Lưu ý:** Lệnh `/docs` cần `ROUTING.md` và `scripts/` chỉ được cài đặt trên Claude Code. Trên Antigravity, file lệnh được cung cấp nhưng có thể hoạt động hạn chế.
+
+## Xác nhận cài đặt
+
+Mở trợ lý lập trình AI của bạn và gõ lệnh init cho nền tảng tương ứng:
+
+### Claude Code
+```
+/spec-init
+```
+
+### Antigravity
+```
+/spec-init
+# hoặc
+@spec-init
+```
+
+Bạn sẽ thấy workflow khởi tạo spec bắt đầu.
+
+## Khắc phục sự cố
+
+### Không tìm thấy lệnh
+
+Nếu các lệnh spec không hoạt động:
+
+1. **Kiểm tra vị trí file** - Đảm bảo các file nằm đúng thư mục:
+   - Claude Code: `.claude/commands/`
+   - Antigravity: `.agent/commands/`
+2. **Khởi động lại trợ lý AI** - Một số công cụ cần khởi động lại để phát hiện lệnh mới
+3. **Kiểm tra định dạng file** - Các lệnh phải là file `.md` với frontmatter hợp lệ
+4. **Kiểm tra lựa chọn nền tảng** - Chạy lại bộ cài đặt và xác nhận đã chọn đúng nền tảng
+
+### Sai thư mục
+
+Nếu CafeKit cài đặt sai thư mục, bạn có thể di chuyển file thủ công:
+
+```bash
+# Cho Claude Code - đảm bảo .claude/commands/ tồn tại
+mkdir -p .claude/commands/
+
+# Cho Antigravity - đảm bảo .agent/commands/ tồn tại
+mkdir -p .agent/commands/
+
+# Chạy lại bộ cài đặt
+npx @haposoft/cafekit-spec
+```
+
+## Bước tiếp theo
+
+Bây giờ CafeKit Spec đã được cài đặt:
+
+- **[Hướng dẫn nhanh](/docs/getting-started/quickstart)** - Tạo spec đầu tiên trong 5 phút
+- **[Quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu quy trình đầy đủ 6 giai đoạn
+
+---
+
+**Cần trợ giúp?** Mở issue trên [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit) hoặc liên hệ hỗ trợ.

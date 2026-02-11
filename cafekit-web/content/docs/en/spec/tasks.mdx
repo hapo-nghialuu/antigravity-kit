@@ -1,0 +1,102 @@
+---
+title: /spec-tasks
+description: Break down design into implementable tasks
+---
+
+# /spec-tasks
+
+Decompose technical design into small, implementable tasks.
+
+## Usage
+
+**Claude Code:**
+```
+/spec-tasks
+```
+
+**Antigravity:**
+```
+/spec_tasks
+```
+
+## Description
+
+This command reads `design.md` and creates `tasks.md` with a list of specific tasks. Each task is designed to be implemented in a single work session.
+
+## Task Structure
+
+Each task includes:
+
+```markdown
+### Task [N]: [Title]
+
+**Objective**: Task objective
+
+**Files to Modify**:
+- `path/to/file1.ts` - Description of changes
+- `path/to/file2.ts` - Description of changes
+
+**Implementation Details**:
+- Specific implementation details
+- Points to note
+
+**Verification**:
+- [ ] Criteria 1
+- [ ] Criteria 2
+
+**Dependencies**: Dependent tasks (if any)
+```
+
+## Task Sizing
+
+- **Small task**: 30 minutes - 1 hour
+- **Medium task**: 1-2 hours
+- **Large task**: 2-4 hours (should be broken down further)
+
+## Output
+
+File `specs/[feature-name]/tasks.md`:
+
+```markdown
+# Implementation Tasks: [Feature Name]
+
+## Phase 1: Setup
+
+### Task 1: Create database migration
+**Objective**: Create users and sessions tables
+**Files to Modify**:
+- `migrations/001_create_auth_tables.sql`
+**Verification**:
+- [ ] Migration runs successfully
+- [ ] Tables created with correct schema
+
+### Task 2: Setup JWT utilities
+**Objective**: Create helper functions for JWT
+**Files to Modify**:
+- `src/lib/jwt.ts`
+**Verification**:
+- [ ] Can sign and verify token
+- [ ] Expiration handled correctly
+
+## Phase 2: API Implementation
+
+### Task 3: Implement login endpoint
+**Objective**: Create POST /api/auth/login
+**Files to Modify**:
+- `src/app/api/auth/login/route.ts`
+- `src/lib/auth.ts`
+**Dependencies**: Task 1, Task 2
+...
+```
+
+## Usage Workflow
+
+1. Create tasks.md from design
+2. Review and adjust task list
+3. Arrange order (dependencies)
+4. Start implementing each task
+
+## Next Steps
+
+- [`/spec-impl`](/docs/spec/impl) - Implement each task
+- [`/spec-status`](/docs/spec/status) - Track progress

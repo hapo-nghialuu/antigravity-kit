@@ -1,0 +1,521 @@
+---
+title: Ví dụ Todo App API
+description: Ví dụ thân thiện với người mới về cách xây dựng REST API cho ứng dụng todo với CafeKit Spec.
+---
+
+# Ví dụ Todo App API
+
+Ví dụ thân thiện với người mới này chỉ cho bạn cách xây dựng một REST API cho ứng dụng todo. Nó hoàn hảo để học quy trình CafeKit Spec.
+
+## Tổng quan
+
+**Tính năng:** Todo list REST API
+**Độ phức tạp:** Người mới bắt đầu
+**Thời gian ước tính:** 3-4 giờ
+**Stack:** Node.js, Express, PostgreSQL
+
+---
+
+## Giai đoạn 1: Khởi tạo
+
+```bash
+/spec-init todo-app-api
+```
+
+**Mô tả ban đầu:**
+> REST API cho ứng dụng todo với các thao tác CRUD. Người dùng có thể tạo, đọc, cập nhật và xóa todo. Mỗi todo có tiêu đề, mô tả, trạng thái hoàn thành và mức độ ưu tiên. Bao gồm lọc theo trạng thái và mức độ ưu tiên.
+
+---
+
+## Giai đoạn 2: Yêu cầu
+
+```markdown
+# Todo App API - Requirements
+
+## Purpose
+Cung cấp REST API để quản lý các mục todo cá nhân với khả năng lọc và sắp xếp.
+
+## Target Users
+- Người dùng cá nhân quản lý công việc
+- Frontend developers sử dụng API
+
+## Functional Requirements
+
+### FR-1: Create Todo
+Khi người dùng gửi một todo mới với tiêu đề,
+hệ thống sẽ tạo và trả về mục todo
+với ID duy nhất và timestamp.
+
+**Acceptance Criteria:**
+- Tiêu đề là bắt buộc (1-200 ký tự)
+- Mô tả là tùy chọn (tối đa 1000 ký tự)
+- Mức độ ưu tiên mặc định là "medium"
+- Trạng thái mặc định là "pending"
+- Timestamp tạo được tự động sinh ra
+
+### FR-2: List Todos
+Khi yêu cầu danh sách todos,
+hệ thống sẽ trả về danh sách được phân trang
+với tùy chọn lọc và sắp xếp.
+
+**Acceptance Criteria:**
+- Phân trang: mặc định 20 mục mỗi trang
+- Lọc theo trạng thái: pending, in-progress, completed
+- Lọc theo mức ưu tiên: low, medium, high
+- Sắp xếp theo: created_at, priority, title
+- Sắp xếp mặc định: created_at DESC
+
+### FR-3: Update Todo
+Khi cập nhật một todo,
+hệ thống sẽ sửa đổi các trường được chỉ định
+và cập nhật timestamp.
+
+**Acceptance Criteria:**
+- Hỗ trợ cập nhật một phần (partial updates)
+- Timestamp cập nhật được tự động sinh ra
+- Trả về todo đã cập nhật
+- 404 nếu không tìm thấy todo
+
+### FR-4: Delete Todo
+Khi xóa một todo,
+hệ thống sẽ loại bỏ nó vĩnh viễn.
+
+**Acceptance Criteria:**
+- Trả về 204 khi thành công
+- 404 nếu không tìm thấy todo
+- Không thể hoàn tác (undone)
+
+### FR-5: Toggle Completion
+Khi chuyển đổi trạng thái todo,
+hệ thống sẽ chuyển đổi giữa pending và completed.
+
+**Acceptance Criteria:**
+- Thiết lập timestamp completed_at khi hoàn thành
+- Xóa completed_at khi mở lại
+- Endpoint chuyên dụng để thuận tiện
+
+## Non-Functional Requirements
+
+### Performance
+- Thời gian phản hồi API < 100ms cho các thao tác liệt kê
+- Hỗ trợ 100 người dùng đồng thời
+- Phân trang ngăn chặn payload lớn
+
+### Data Integrity
+- Tiêu đề không được để trống
+- Mức độ ưu tiên phải là giá trị enum hợp lệ
+- Chuyển đổi trạng thái phải hợp lệ
+```
+
+---
+
+## Giai đoạn 3: Thiết kế
+
+```markdown
+# Todo App API - Design
+
+## API Endpoints
+
+### GET /api/todos
+Liệt kê tất cả todos với lọc và phân trang.
+
+**Query Parameters:**
+```
+?page=1&limit=20
+&status=pending
+&priority=high
+&sort_by=created_at&order=desc
+```
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Buy groceries",
+      "description": "Milk, eggs, bread",
+      "status": "pending",
+      "priority": "high",
+      "created_at": "2026-01-15T10:00:00Z",
+      "updated_at": "2026-01-15T10:00:00Z",
+      "completed_at": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45,
+    "total_pages": 3
+  }
+}
+```
+
+### POST /api/todos
+Tạo một todo mới.
+
+**Request:**
+```json
+{
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "priority": "high"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "high",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T10:00:00Z",
+  "completed_at": null
+}
+```
+
+**Response (400):**
+```json
+{
+  "error": "Title is required",
+  "field": "title"
+}
+```
+
+### GET /api/todos/:id
+Lấy một todo theo ID.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "high",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T10:00:00Z",
+  "completed_at": null
+}
+```
+
+**Response (404):**
+```json
+{
+  "error": "Todo not found"
+}
+```
+
+### PATCH /api/todos/:id
+Cập nhật một todo (hỗ trợ cập nhật một phần).
+
+**Request:**
+```json
+{
+  "title": "Buy groceries and supplies",
+  "priority": "medium"
+}
+```
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries and supplies",
+  "description": "Milk, eggs, bread",
+  "status": "pending",
+  "priority": "medium",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-01-15T11:30:00Z",
+  "completed_at": null
+}
+```
+
+### DELETE /api/todos/:id
+Xóa một todo.
+
+**Response (204):** No content
+
+### PATCH /api/todos/:id/toggle
+Chuyển đổi trạng thái hoàn thành.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "title": "Buy groceries",
+  "status": "completed",
+  "completed_at": "2026-01-15T14:00:00Z"
+}
+```
+
+## Database Schema
+
+```sql
+CREATE TYPE todo_status AS ENUM ('pending', 'in_progress', 'completed');
+CREATE TYPE todo_priority AS ENUM ('low', 'medium', 'high');
+
+CREATE TABLE todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  status todo_status DEFAULT 'pending',
+  priority todo_priority DEFAULT 'medium',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_todos_status ON todos(status);
+CREATE INDEX idx_todos_priority ON todos(priority);
+CREATE INDEX idx_todos_created_at ON todos(created_at DESC);
+CREATE INDEX idx_todos_status_priority ON todos(status, priority);
+```
+
+## Project Structure
+
+```
+src/
+├── routes/
+│   └── todos.ts          # Route handlers
+├── controllers/
+│   └── todoController.ts # Business logic
+├── models/
+│   └── Todo.ts           # Data access
+├── validators/
+│   └── todoValidator.ts  # Input validation
+└── app.ts                # Express app setup
+```
+```
+
+---
+
+## Giai đoạn 4: Tasks
+
+```markdown
+# Todo App API - Sprint Plan
+
+**Estimated Time:** 3.5 hours
+
+## TASK 1: Project Setup (30 min)
+**Priority:** P0
+**Dependencies:** None
+
+**OUTPUT:**
+- Initialize Node.js project
+- Install dependencies (express, pg, zod)
+- Setup project structure
+- Configure database connection
+
+## TASK 2: Database Setup (30 min)
+**Priority:** P0
+**Dependencies:** None
+
+**OUTPUT:**
+- Create todos table migration
+- Create enum types
+- Add indexes
+- Seed test data
+
+## TASK 3: Create Todo Endpoint (30 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- POST /api/todos
+- Input validation
+- Database insert
+- Response formatting
+
+## TASK 4: List Todos Endpoint (45 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- GET /api/todos
+- Query parameter parsing
+- Filtering logic
+- Pagination
+- Sorting
+
+## TASK 5: Get Single Todo Endpoint (20 min)
+**Priority:** P0
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- GET /api/todos/:id
+- 404 handling
+- Response formatting
+
+## TASK 6: Update Todo Endpoint (30 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- PATCH /api/todos/:id
+- Partial update handling
+- Validation
+- Timestamp updates
+
+## TASK 7: Delete Todo Endpoint (20 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- DELETE /api/todos/:id
+- 204 response
+- Error handling
+
+## TASK 8: Toggle Completion Endpoint (30 min)
+**Priority:** P1
+**Dependencies:** TASK 2
+
+**OUTPUT:**
+- PATCH /api/todos/:id/toggle
+- Status switching logic
+- completed_at timestamp handling
+
+## TASK 9: API Tests (45 min)
+**Priority:** P1
+**Dependencies:** All above
+
+**OUTPUT:**
+- Integration tests for all endpoints
+- Test coverage for filters
+- Error case testing
+```
+
+---
+
+## Giai đoạn 5: Điểm nổi bật khi thực hiện
+
+### Validation Schema (Zod)
+
+```typescript
+import { z } from 'zod';
+
+export const createTodoSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+});
+
+export const updateTodoSchema = createTodoSchema.partial();
+
+export const listTodosQuerySchema = z.object({
+  page: z.coerce.number().positive().default(1),
+  limit: z.coerce.number().positive().max(100).default(20),
+  status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  sort_by: z.enum(['created_at', 'priority', 'title']).default('created_at'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+});
+```
+
+### Controller Pattern
+
+```typescript
+export class TodoController {
+  async list(req: Request, res: Response) {
+    const query = listTodosQuerySchema.parse(req.query);
+    const todos = await TodoModel.findMany(query);
+    res.json({
+      data: todos.data,
+      pagination: todos.pagination,
+    });
+  }
+
+  async create(req: Request, res: Response) {
+    const data = createTodoSchema.parse(req.body);
+    const todo = await TodoModel.create(data);
+    res.status(201).json(todo);
+  }
+
+  // ... other methods
+}
+```
+
+### Toggle Completion Logic
+
+```typescript
+async toggleCompletion(id: string) {
+  const todo = await this.findById(id);
+  if (!todo) throw new NotFoundError('Todo not found');
+
+  const newStatus = todo.status === 'completed' ? 'pending' : 'completed';
+  const completedAt = newStatus === 'completed' ? new Date() : null;
+
+  return this.update(id, {
+    status: newStatus,
+    completed_at: completedAt,
+  });
+}
+```
+
+---
+
+## Giai đoạn 6: Testing the API
+
+### Example Requests
+
+```bash
+# Create a todo
+curl -X POST http://localhost:3000/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy groceries","priority":"high"}'
+
+# List todos with filters
+curl "http://localhost:3000/api/todos?status=pending&priority=high&sort_by=created_at"
+
+# Update a todo
+curl -X PATCH http://localhost:3000/api/todos/uuid \
+  -H "Content-Type: application/json" \
+  -d '{"status":"in_progress"}'
+
+# Toggle completion
+curl -X PATCH http://localhost:3000/api/todos/uuid/toggle
+
+# Delete a todo
+curl -X DELETE http://localhost:3000/api/todos/uuid
+```
+
+---
+
+## Bài học chính
+
+### Những gì đã làm tốt
+- Thiết kế API rõ ràng giúp việc thực hiện đơn giản
+- Zod validation phát hiện các trường hợp biên sớm
+- Phân trang ngăn chặn các vấn đề hiệu suất
+- Các kiểu Enum đảm bảo tính toàn vẹn dữ liệu
+
+### Tránh các cạm bẫy phổ biến
+- Luôn trả về cấu trúc phản hồi nhất quán
+- Xử lý cập nhật một phần chính xác với PATCH
+- Index các khóa ngoại và các cột thường được lọc
+- Sử dụng transaction cho các thao tác phức tạp
+
+### Chiến lược Testing
+- Unit tests cho logic validation
+- Integration tests cho các API endpoint
+- Test các kết hợp bộ lọc
+- Xác minh các trường hợp biên của phân trang
+
+---
+
+## Bước tiếp theo
+
+Để mở rộng API này:
+
+1. **Thêm xác thực (Add Authentication)** - Xem ví dụ [Xác thực người dùng](/docs/examples/user-authentication)
+2. **Thêm danh mục (Add Categories)** - Nhóm todos vào category/dự án
+3. **Thêm ngày hết hạn (Add Due Dates)** - Lên lịch todos với lời nhắc
+4. **Thêm nhiệm vụ phụ (Add Subtasks)** - Chia todos thành các bước nhỏ hơn
+
+---
+
+**Hãy tự mình thử!** Sử dụng ví dụ này làm mẫu cho các dự án API của riêng bạn.

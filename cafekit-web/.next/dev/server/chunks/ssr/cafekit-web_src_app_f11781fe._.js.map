@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///Users/luutrungnghia/projects/antigravity-kit/cafekit-web/src/app/icon.png.mjs%20%28structured%20image%20object%29"],"sourcesContent":["import src from \"IMAGE\";\nexport default { src, width: 1024, height: 1024 }\n"],"names":[],"mappings":";;;;AAAA;;uCACe;IAAE,KAAA,yJAAG;IAAE,OAAO;IAAM,QAAQ;AAAK"}}]
+}

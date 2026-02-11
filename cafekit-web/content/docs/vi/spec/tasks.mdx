@@ -1,0 +1,102 @@
+---
+title: /spec-tasks
+description: Chia nhỏ design thành các task implementable
+---
+
+# /spec-tasks
+
+Phân rã technical design thành các task nhỏ, có thể triển khai được.
+
+## Sử dụng
+
+**Claude Code:**
+```
+/spec-tasks
+```
+
+**Antigravity:**
+```
+/spec_tasks
+```
+
+## Mô tả
+
+Lệnh này đọc `design.md` và tạo `tasks.md` với danh sách các task cụ thể. Mỗi task được thiết kế để có thể implement trong một phiên làm việc.
+
+## Cấu trúc Task
+
+Mỗi task bao gồm:
+
+```markdown
+### Task [N]: [Tiêu đề]
+
+**Objective**: Mục tiêu của task
+
+**Files to Modify**:
+- `path/to/file1.ts` - Mô tả thay đổi
+- `path/to/file2.ts` - Mô tả thay đổi
+
+**Implementation Details**:
+- Chi tiết cụ thể cách implement
+- Các điểm cần lưu ý
+
+**Verification**:
+- [ ] Criteria 1
+- [ ] Criteria 2
+
+**Dependencies**: Task phụ thuộc (nếu có)
+```
+
+## Task Sizing
+
+- **Task nhỏ**: 30 phút - 1 giờ
+- **Task vừa**: 1-2 giờ
+- **Task lớn**: 2-4 giờ (nên tách nhỏ hơn)
+
+## Output
+
+File `specs/[feature-name]/tasks.md`:
+
+```markdown
+# Implementation Tasks: [Feature Name]
+
+## Phase 1: Setup
+
+### Task 1: Create database migration
+**Objective**: Tạo bảng users và sessions
+**Files to Modify**:
+- `migrations/001_create_auth_tables.sql`
+**Verification**:
+- [ ] Migration chạy thành công
+- [ ] Bảng được tạo đúng schema
+
+### Task 2: Setup JWT utilities
+**Objective**: Tạo helper functions cho JWT
+**Files to Modify**:
+- `src/lib/jwt.ts`
+**Verification**:
+- [ ] Có thể sign và verify token
+- [ ] Xử lý expiration đúng
+
+## Phase 2: API Implementation
+
+### Task 3: Implement login endpoint
+**Objective**: Tạo POST /api/auth/login
+**Files to Modify**:
+- `src/app/api/auth/login/route.ts`
+- `src/lib/auth.ts`
+**Dependencies**: Task 1, Task 2
+...
+```
+
+## Quy trình sử dụng
+
+1. Tạo tasks.md từ design
+2. Review và điều chỉnh task list
+3. Sắp xếp thứ tự (dependencies)
+4. Bắt đầu implement từng task
+
+## Bước tiếp theo
+
+- [`/spec-impl`](/docs/spec/impl) - Triển khai từng task
+- [`/spec-status`](/docs/spec/status) - Theo dõi tiến độ

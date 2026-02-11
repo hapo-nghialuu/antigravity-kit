@@ -1,0 +1,211 @@
+---
+title: Cấu trúc File
+description: Tổng quan về cấu trúc file được tạo bởi CafeKit Spec
+---
+
+# Cấu trúc File
+
+Tổng quan về tất cả các file và thư mục được tạo bởi CafeKit Spec.
+
+## Claude Code Structure
+
+```
+project-root/
+├── .claude/
+│   ├── CLAUDE.md              # AI quick reference
+│   ├── ROUTING.md             # Agent routing rules
+│   └── commands/
+│       ├── spec-init.ts       # Khởi tạo spec
+│       ├── spec-requirements.ts
+│       ├── spec-design.ts
+│       ├── spec-tasks.ts
+│       ├── spec-impl.ts
+│       ├── spec-status.ts
+│       ├── docs-init.ts
+│       └── docs-update.ts
+├── specs/
+│   └── [feature-name]/
+│       ├── spec.md
+│       ├── requirements.md
+│       ├── design.md
+│       ├── tasks.md
+│       └── implementation.md
+└── docs/
+    ├── codebase-summary.md
+    ├── project-overview-pdr.md
+    ├── code-standards.md
+    ├── system-architecture.md
+    ├── design-guidelines.md
+    ├── deployment-guide.md
+    ├── project-roadmap.md
+    └── .backups/
+        └── [timestamp]/
+```
+
+## Antigravity Structure
+
+```
+project-root/
+├── .agent/
+│   ├── AGENTS.md              # AI quick reference
+│   ├── GEMINI.md              # Gemini context
+│   ├── ARCHITECTURE.md        # Architecture docs
+│   ├── CONVENTIONS.md         # Platform conventions
+│   ├── agents/
+│   │   ├── spec-init.json
+│   │   ├── spec-requirements.json
+│   │   ├── spec-design.json
+│   │   ├── spec-tasks.json
+│   │   ├── spec-impl.json
+│   │   ├── spec-status.json
+│   │   ├── docs-init.json
+│   │   └── docs-update.json
+│   ├── skills/
+│   │   └── [40+ skills]
+│   └── workflows/
+│       ├── spec_init.yaml
+│       ├── spec_requirements.yaml
+│       ├── spec_design.yaml
+│       ├── spec_tasks.yaml
+│       ├── spec_impl.yaml
+│       ├── spec_status.yaml
+│       ├── docs_init.yaml
+│       └── docs_update.yaml
+├── specs/
+│   └── [feature-name]/
+│       ├── spec.md
+│       ├── requirements.md
+│       ├── design.md
+│       ├── tasks.md
+│       └── implementation.md
+└── docs/
+    ├── codebase-summary.md
+    ├── project-overview-pdr.md
+    ├── code-standards.md
+    ├── system-architecture.md
+    ├── design-guidelines.md
+    ├── deployment-guide.md
+    ├── project-roadmap.md
+    └── .backups/
+        └── [timestamp]/
+```
+
+## Chi tiết File
+
+### AI Config Files
+
+| File | Claude | Antigravity | Mục đích |
+|------|--------|-------------|----------|
+| `CLAUDE.md` / `AGENTS.md` | ✅ | ✅ | Quick reference cho AI |
+| `ROUTING.md` | ✅ | ❌ | Agent routing rules |
+| `GEMINI.md` | ❌ | ✅ | Gemini-specific context |
+| `ARCHITECTURE.md` | ❌ | ✅ | Framework architecture |
+| `CONVENTIONS.md` | ❌ | ✅ | Platform conventions |
+
+### Spec Files
+
+| File | Mô tả | Tạo bởi |
+|------|-------|---------|
+| `spec.md` | Feature overview | `/spec-init` |
+| `requirements.md` | EARS requirements | `/spec-requirements` |
+| `design.md` | Technical design | `/spec-design` |
+| `tasks.md` | Task breakdown | `/spec-tasks` |
+| `implementation.md` | Progress tracking | `/spec-impl`, `/spec-status` |
+
+### Documentation Files
+
+| File | Mô tả | Cập nhật bởi |
+|------|-------|--------------|
+| `codebase-summary.md` | Tech stack, structure | `/docs init`, `/docs update` |
+| `project-overview-pdr.md` | Product requirements | `/docs init`, `/docs update` |
+| `code-standards.md` | Coding conventions | `/docs init`, `/docs update` |
+| `system-architecture.md` | Architecture docs | `/docs init`, `/docs update` |
+| `design-guidelines.md` | UI/UX guidelines | `/docs init`, `/docs update` |
+| `deployment-guide.md` | Deployment guide | `/docs init`, `/docs update` |
+| `project-roadmap.md` | Project roadmap | `/docs init`, `/docs update` |
+
+## So sánh Platform
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        PROJECT ROOT                         │
+├─────────────────────────────────────────────────────────────┤
+│  CLAUDE CODE                    │  ANTIGRAVITY              │
+│  .claude/                       │  .agent/                  │
+│  ├── CLAUDE.md                  │  ├── AGENTS.md            │
+│  ├── ROUTING.md                 │  ├── GEMINI.md            │
+│  └── commands/                  │  ├── ARCHITECTURE.md      │
+│      ├── spec-init.ts           │  ├── CONVENTIONS.md       │
+│      ├── spec-requirements.ts   │  ├── agents/              │
+│      ├── spec-design.ts         │  ├── skills/              │
+│      ├── spec-tasks.ts          │  └── workflows/           │
+│      ├── spec-impl.ts           │                           │
+│      ├── spec-status.ts         │                           │
+│      ├── docs-init.ts           │                           │
+│      └── docs-update.ts         │                           │
+├─────────────────────────────────────────────────────────────┤
+│  COMMON (cả hai platform)                                   │
+│  specs/                        docs/                        │
+│  └── [feature]/                ├── codebase-summary.md      │
+│      ├── spec.md               ├── project-overview-pdr.md  │
+│      ├── requirements.md       ├── code-standards.md        │
+│      ├── design.md             ├── system-architecture.md   │
+│      ├── tasks.md              ├── design-guidelines.md     │
+│      └── implementation.md     ├── deployment-guide.md      │
+│                                ├── project-roadmap.md       │
+│                                └── .backups/                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Quyền và Git
+
+### Nên commit
+- `CLAUDE.md` / `AGENTS.md`
+- `specs/` (tất cả spec files)
+- `docs/` (documentation)
+
+### Không nên commit
+- `.backups/` (tự động tạo, có thể lớn)
+- `repomix-output.xml` (tạo lại được)
+
+### Gitignore mẫu
+
+```gitignore
+# CafeKit Spec backups
+docs/.backups/
+repomix-output.xml
+```
+
+## Di chuyển giữa Platform
+
+### Từ Claude Code sang Antigravity
+```bash
+# Backup specs và docs
+cp -r specs specs-backup
+cp -r docs docs-backup
+
+# Cài đặt Antigravity
+npx @haposoft/cafekit-spec
+# Chọn Antigravity
+
+# Restore specs và docs
+cp -r specs-backup/* specs/
+cp -r docs-backup/* docs/
+```
+
+### Từ Antigravity sang Claude Code
+```bash
+# Backup specs và docs
+cp -r specs specs-backup
+cp -r docs docs-backup
+
+# Cài đặt Claude Code
+npx @haposoft/cafekit-spec
+# Chọn Claude Code
+
+# Restore specs và docs
+cp -r specs-backup/* specs/
+cp -r docs-backup/* docs/
+```
+
+Specs và docs là **platform-agnostic**, chỉ cần chuyển là dùng được ngay.

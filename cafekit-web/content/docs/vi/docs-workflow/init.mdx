@@ -1,0 +1,155 @@
+---
+title: /docs init
+description: Khởi tạo tài liệu dự án cho AI assistant
+---
+
+# /docs init
+
+Khởi tạo toàn bộ tài liệu dự án để AI assistant có thể hiểu và làm việc hiệu quả.
+
+## Sử dụng
+
+**Claude Code:**
+```
+/docs init
+```
+
+**Antigravity:**
+```
+/docs_init
+```
+
+## Mô tả
+
+Lệnh này quét toàn bộ codebase và tạo 7 file documentation chuẩn hóa, cùng với file reference cho AI.
+
+## Output
+
+### Documentation Files
+
+```
+docs/
+├── codebase-summary.md      # Tổng quan codebase
+├── project-overview-pdr.md  # Product requirements
+├── code-standards.md        # Coding conventions
+├── system-architecture.md   # Architecture docs
+├── design-guidelines.md     # UI/UX guidelines
+├── deployment-guide.md      # Deployment guide
+└── project-roadmap.md       # Project roadmap
+```
+
+### AI Context Files
+
+```
+# Cho Antigravity:
+.agent/
+├── AGENTS.md                # Quick reference cho AI
+├── rules/
+│   └── 001-project.md       # Project context
+└── ...
+
+# Cho Claude Code:
+.claude/
+├── CLAUDE.md                # Quick reference cho AI
+├── commands/
+└── ...
+```
+
+### repomix-output.xml
+
+File AI context được tạo ở root:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<repository
+  name="project-name"
+  description="Auto-generated from codebase"
+>
+  <directory structure="...">
+    ...
+  </directory>
+  <files>
+    ...
+  </files>
+</repository>
+```
+
+## Nội dung từng file
+
+### codebase-summary.md
+- Tech stack (frameworks, libraries)
+- Project structure
+- Key directories
+- Dependencies
+
+### project-overview-pdr.md
+- Product goals
+- User personas
+- Core features
+- Success metrics
+
+### code-standards.md
+- Naming conventions
+- File organization
+- Code style
+- Testing standards
+
+### system-architecture.md
+- System overview
+- Data flow
+- Component diagram
+- External integrations
+
+### design-guidelines.md
+- Design system
+- Component library
+- Color palette
+- Typography
+
+### deployment-guide.md
+- Environment setup
+- Build process
+- Deployment steps
+- Monitoring
+
+### project-roadmap.md
+- Current phase
+- Milestones
+- Timeline
+- Dependencies
+
+## Quy trình
+
+```
+1. Scan codebase
+   └── AI đọc tất cả files quan trọng
+
+2. Analyze structure
+   └── Phân tích architecture, patterns
+
+3. Generate docs
+   └── Tạo 7 markdown files
+
+4. Create AI reference
+   └── AGENTS.md hoặc CLAUDE.md
+
+5. Export repomix
+   └── repomix-output.xml cho AI context
+```
+
+## Thờì gian chạy
+
+- **Small project** (< 100 files): ~1-2 phút
+- **Medium project** (100-1000 files): ~3-5 phút
+- **Large project** (> 1000 files): ~5-10 phút
+
+## Lưu ý
+
+- `/docs init` sẽ **ghi đè** file nếu đã tồn tại
+- Backup được tạo tự động trước khi ghi đè
+- Nên review và edit docs sau khi tạo
+
+## Bước tiếp theo
+
+- Review các file trong `docs/`
+- Edit để bổ sung thông tin cụ thể
+- Chạy [`/docs update`](/docs/docs-workflow/update) khi code thay đổi

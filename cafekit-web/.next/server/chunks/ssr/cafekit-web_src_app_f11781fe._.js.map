@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../cafekit-web/src/app/icon.png.mjs%20%28structured%20image%20object%29"],"sourcesContent":["import src from \"IMAGE\";\nexport default { src, width: 1024, height: 1024 }\n"],"names":[],"mappings":"qGACe,CAAE,IADjB,AACiB,EADjB,CAAA,CAAA,OACiB,OAAG,CAAE,MAAO,KAAM,OAAQ,IAAK"}

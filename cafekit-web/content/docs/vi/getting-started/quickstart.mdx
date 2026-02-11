@@ -1,0 +1,274 @@
+---
+title: Bắt đầu nhanh
+description: Tạo spec tính năng đầu tiên của bạn trong 5 phút với quy trình từng bước của CafeKit.
+---
+
+## Bạn sẽ xây dựng gì
+
+Trong hướng dẫn này, bạn sẽ tạo một spec cho **tính năng đăng nhập người dùng** sử dụng tất cả 6 giai đoạn của quy trình CafeKit.
+
+**Thời gian hoàn thành:** 5-10 phút
+
+## Bước 1: Khởi tạo Spec
+
+Bắt đầu bằng cách tạo một không gian làm việc (workspace) spec mới:
+
+```bash
+/spec-init login-feature
+```
+
+**Chuyện gì xảy ra:**
+- Tạo thư mục `.specs/login-feature/`
+- Tạo cấu trúc thư mục ban đầu
+- Thiết lập các file theo dõi
+
+**Kết quả mong đợi:**
+```
+✅ Spec initialized: login-feature
+📁 Created .specs/login-feature/
+📄 Next step: Run /spec-requirements
+```
+
+## Bước 2: Thu thập yêu cầu
+
+Xác định những gì tính năng của bạn cần làm:
+
+```bash
+/spec-requirements login-feature
+```
+
+Trợ lý AI sẽ hỏi bạn các câu hỏi như:
+
+- **Mục tiêu chính của tính năng này là gì?**
+  - "Cho phép người dùng đăng nhập bằng email và mật khẩu"
+
+- **Ai sẽ sử dụng tính năng này?**
+  - "Người dùng cuối của ứng dụng"
+
+- **Các chức năng bắt buộc là gì?**
+  - Xác thực email/mật khẩu
+  - Quản lý phiên (session)
+  - Xử lý lỗi khi thông tin không hợp lệ
+
+- **Có ràng buộc hoặc yêu cầu kỹ thuật nào không?**
+  - Phải hoạt động trên di động và máy tính bàn
+  - Sử dụng JWT để xác thực
+  - Yêu cầu mật khẩu: tối thiểu 8 ký tự, 1 chữ hoa, 1 số
+
+**Chuyện gì xảy ra:**
+- AI hướng dẫn bạn qua các câu hỏi Socratic
+- Ghi lại tất cả yêu cầu chức năng và phi chức năng
+- Tạo file `requirements.md` trong `.specs/login-feature/`
+
+**Kết quả mong đợi:**
+```
+✅ Requirements captured
+📄 Saved to .specs/login-feature/requirements.md
+📋 Next step: Run /spec-design
+```
+
+## Bước 3: Tạo tài liệu thiết kế
+
+Tạo thiết kế kỹ thuật từ các yêu cầu của bạn:
+
+```bash
+/spec-design login-feature
+```
+
+**Chuyện gì xảy ra:**
+- AI đọc các yêu cầu của bạn
+- Tạo sơ đồ kiến trúc
+- Định nghĩa các endpoint API, lược đồ cơ sở dữ liệu (database schema), thành phần UI
+- Xác định các trường hợp biên (edge cases) và kịch bản lỗi
+- Tạo file `design.md`
+
+**Mẫu kết quả thiết kế:**
+
+```markdown
+# Login Feature - Design Document
+
+## Architecture
+- Frontend: React login form component
+- Backend: POST /api/auth/login endpoint
+- Database: users table with hashed passwords
+
+## API Design
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123"
+}
+
+## Database Schema
+users table:
+- id (UUID, primary key)
+- email (string, unique)
+- password_hash (string)
+- created_at (timestamp)
+
+## UI Components
+- LoginForm.tsx
+- PasswordInput.tsx (with visibility toggle)
+- ErrorMessage.tsx
+
+## Security Measures
+- bcrypt password hashing
+- Rate limiting (5 attempts per minute)
+- JWT token expiry (24 hours)
+```
+
+**Kết quả mong đợi:**
+```
+✅ Design document created
+📄 Saved to .specs/login-feature/design.md
+🎯 Next step: Run /spec-tasks
+```
+
+## Bước 4: Tạo danh sách công việc (Task Breakdown)
+
+Chia nhỏ thiết kế thành các task có thể thực hiện được:
+
+```bash
+/spec-tasks login-feature
+```
+
+**Chuyện gì xảy ra:**
+- AI phân tích tài liệu thiết kế
+- Tạo danh sách task được ưu tiên
+- Ước lượng thời gian cho từng task
+- Xác định sự phụ thuộc giữa các task
+- Tạo file `tasks.md` (kế hoạch sprint)
+
+**Mẫu danh sách task:**
+
+```markdown
+# Login Feature - Sprint Plan
+
+## TASK 1: Setup Database Schema (30 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** None
+
+- Create users table migration
+- Add email uniqueness constraint
+- Test migration rollback
+
+## TASK 2: Implement Password Hashing (45 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1
+
+- Install bcrypt
+- Create hashPassword() utility
+- Create verifyPassword() utility
+- Write unit tests
+
+## TASK 3: Create Login API Endpoint (1 hour)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1, TASK 2
+
+- POST /api/auth/login route
+- Validate email/password
+- Generate JWT token
+- Handle errors (invalid credentials, rate limiting)
+
+## TASK 4: Build Login Form UI (1 hour)
+**Priority:** P1 (High)
+**Dependencies:** TASK 3
+
+- Create LoginForm component
+- Form validation (email format, password requirements)
+- Loading states
+- Error message display
+```
+
+**Kết quả mong đợi:**
+```
+✅ Task breakdown created
+📄 Saved to .specs/login-feature/tasks/sprint-1.md
+🚀 Next step: Run /spec-impl
+```
+
+## Bước 5: Thực hiện Task (Implement)
+
+Bắt đầu code dựa trên kế hoạch sprint của bạn:
+
+```bash
+/spec-impl login-feature
+```
+
+**Chuyện gì xảy ra:**
+- AI đọc danh sách task
+- Yêu cầu bạn chọn task nào để thực hiện
+- Hướng dẫn bạn qua quá trình code
+- Viết code, chạy test, xác nhận hoàn thành
+
+**Mẫu tương tác:**
+
+```
+AI: Which task would you like to implement?
+1. TASK 1: Setup Database Schema
+2. TASK 2: Implement Password Hashing
+3. TASK 3: Create Login API Endpoint
+4. TASK 4: Build Login Form UI
+
+You: 1
+
+AI: Starting TASK 1: Setup Database Schema
+✅ Created migration file: migrations/001_create_users_table.sql
+✅ Added email uniqueness constraint
+✅ Tested migration: Up + Down successful
+📋 TASK 1 complete. Next: TASK 2?
+```
+
+## Bước 6: Theo dõi tiến độ
+
+Giám sát trạng thái thực hiện của bạn:
+
+```bash
+/spec-status login-feature
+```
+
+**Chuyện gì xảy ra:**
+- AI đọc các task đã hoàn thành
+- Hiển thị bảng điều khiển tiến độ
+- Xác định các vấn đề (blockers) hoặc mục đang chờ xử lý
+
+**Mẫu báo cáo trạng thái:**
+
+```
+# Login Feature - Status Report
+
+## Progress: 75% (3/4 tasks complete)
+
+✅ TASK 1: Setup Database Schema (DONE)
+✅ TASK 2: Implement Password Hashing (DONE)
+✅ TASK 3: Create Login API Endpoint (DONE)
+⏳ TASK 4: Build Login Form UI (IN PROGRESS)
+
+## Blockers: None
+
+## Next Steps:
+- Complete TASK 4 (LoginForm UI)
+- Run end-to-end tests
+- Deploy to staging
+```
+
+## Chúc mừng!
+
+Bạn đã hoàn thành quy trình CafeKit spec đầu tiên. Bạn đã học cách:
+
+- ✅ Khởi tạo spec với `/spec-init`
+- ✅ Thu thập yêu cầu với `/spec-requirements`
+- ✅ Thiết kế kiến trúc với `/spec-design`
+- ✅ Chia nhỏ task với `/spec-tasks`
+- ✅ Code với sự hướng dẫn của AI bằng `/spec-impl`
+- ✅ Theo dõi tiến độ với `/spec-status`
+
+## Bước tiếp theo
+
+- **[Hướng dẫn quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu sâu về từng giai đoạn
+- **[Thực hành tốt nhất](/docs/guides/best-practices)** - Học các thủ thuật nâng cao
+- **[Ví dụ](/docs/examples)** - Xem các spec thực tế
+
+---
+
+**Câu hỏi?** Kiểm tra [FAQ](/docs/faq) hoặc mở issue trên [GitHub](https://github.com/hapo-nghialuu/hapo-cafekit/issues).

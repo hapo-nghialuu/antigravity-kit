@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[49676,["/_next/static/chunks/1f42331463e36ce8.js","/_next/static/chunks/36f35623c0dad750.js"],"ViewportBoundary"]
+3:I[49676,["/_next/static/chunks/1f42331463e36ce8.js","/_next/static/chunks/36f35623c0dad750.js"],"MetadataBoundary"]
+4:"$Sreact.suspense"
+5:I[12922,["/_next/static/chunks/1f42331463e36ce8.js","/_next/static/chunks/36f35623c0dad750.js"],"IconMark"]
+0:{"buildId":"5i6hOvthd62hrzWHuWDWN","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"CafeKit - Smart Agent Kit for Claude Code"}],["$","meta","1",{"name":"description","content":"Spec-driven workflows, 20 specialist agents, and 39 domain skills for structured AI-assisted development. Built for Antigravity & Claude Code."}],["$","link","2",{"rel":"icon","href":"/icon.png?icon.1cd4e23e.png","sizes":"1024x1024","type":"image/png"}],["$","$L5","3",{}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}

@@ -1,0 +1,1 @@
+self.__NEXT_FONT_MANIFEST="{\n  \"app\": {\n    \"[project]/cafekit-web/src/app/docs/[[...slug]]/page\": [\n      \"static/media/fba5a26ea33df6a3-s.p.1bbdebe6.woff2\",\n      \"static/media/70bc3e132a0a741e-s.p.15008bfb.woff2\"\n    ]\n  },\n  \"appUsingSizeAdjust\": true,\n  \"pages\": {},\n  \"pagesUsingSizeAdjust\": false\n}"

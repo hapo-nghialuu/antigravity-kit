@@ -1,0 +1,110 @@
+---
+title: /spec-impl
+description: Triển khai code theo task đã chia
+---
+
+# /spec-impl
+
+Triển khai (implement) code cho một hoặc nhiều task từ tasks.md.
+
+## Sử dụng
+
+**Claude Code:**
+```
+/spec-impl
+```
+
+**Antigravity:**
+```
+/spec_impl
+```
+
+## Mô tả
+
+Lệnh này hướng dẫn AI triển khai code cho các task chưa hoàn thành trong `tasks.md`. Sau khi implement, cập nhật `implementation.md` với trạng thái.
+
+## Quy trình
+
+1. AI đọc `tasks.md` để xem các task chưa hoàn thành
+2. Ngườì dùng chọn task muốn implement (hoặc AI đề xuất)
+3. AI implement code theo specification
+4. Cập nhật `implementation.md` với:
+   - Task đã hoàn thành
+   - Files đã tạo/thay đổi
+   - Notes về implementation
+
+## Cách sử dụng
+
+### Implement task cụ thể
+
+```
+> /spec-impl
+
+Implement task: 3
+Feature: user-authentication
+...
+```
+
+### Implement nhiều task
+
+```
+> /spec-impl
+
+Implement tasks: 1, 2, 3
+Feature: user-authentication
+...
+```
+
+### AI chọn task tiếp theo
+
+```
+> /spec-impl
+
+Feature: user-authentication
+Auto-select next task: yes
+...
+```
+
+## Output
+
+File `specs/[feature-name]/implementation.md` được tạo/cập nhật:
+
+```markdown
+# Implementation Progress: [Feature Name]
+
+## Completed Tasks
+
+### Task 1: Create database migration ✅
+**Completed**: 2024-01-15
+**Files Changed**:
+- `migrations/001_create_auth_tables.sql` (created)
+- `src/lib/db.ts` (modified)
+
+**Notes**:
+- Sử dụng UUID cho user id
+- Thêm index cho email field
+
+### Task 2: Setup JWT utilities ✅
+**Completed**: 2024-01-15
+**Files Changed**:
+- `src/lib/jwt.ts` (created)
+- `.env.example` (modified)
+
+## Current Status
+- Total tasks: 8
+- Completed: 2
+- Remaining: 6
+
+## Next Task
+Task 3: Implement login endpoint
+```
+
+## Tips
+
+- Mỗi lần nên implement 1-2 task để dễ review
+- Luôn chạy test sau khi implement
+- Commit code thường xuyên
+
+## Bước tiếp theo
+
+- [`/spec-status`](/docs/spec/status) - Kiểm tra tổng quan tiến độ
