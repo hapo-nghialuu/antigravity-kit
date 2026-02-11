@@ -173,7 +173,6 @@ function Card({ title, children, href }: CardProps) {
     <>
       <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors flex items-center gap-2">
           {title}
-          {href && <span className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary">→</span>}
       </h3>
       <p className="text-sm text-muted-foreground">{children}</p>
     </>
