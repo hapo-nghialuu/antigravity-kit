@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from './code-block';
+import { DecisionTree } from './decision-tree';
 import { Tabs, TabsList, TabsTab, TabsPanel } from '@/components/ui/tabs';
 
 type MDXComponentsType = {
@@ -277,4 +278,6 @@ export const MDXComponents: MDXComponentsType = {
   TabsList,
   TabsTrigger: TabsTab,
   TabsPanel,
+  // Interactive
+  DecisionTree,
 };
