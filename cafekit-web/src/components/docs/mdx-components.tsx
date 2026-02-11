@@ -163,35 +163,56 @@ function Cards({ children, cols = 2 }: CardsProps) {
 }
 
 interface CardProps {
-  title: string;
+  title?: string;
   children: ReactNode;
   href?: string;
 }
 
 function Card({ title, children, href }: CardProps) {
-  const content = (
-    <>
-      <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors flex items-center gap-2">
+  // If title is provided, use the original layout
+  if (title) {
+    const content = (
+      <>
+        <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors flex items-center gap-2">
           {title}
-      </h3>
-      <p className="text-sm text-muted-foreground">{children}</p>
-    </>
-  );
+        </h3>
+        <p className="text-sm text-muted-foreground">{children}</p>
+      </>
+    );
 
+    if (href) {
+      return (
+        <Link
+          href={href}
+          className="group block p-6 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all no-underline"
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <div className="p-6 rounded-lg border border-border bg-card text-card-foreground">
+        {content}
+      </div>
+    );
+  }
+
+  // Without title, render children directly
   if (href) {
     return (
       <Link
         href={href}
         className="group block p-6 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all no-underline"
       >
-        {content}
+        {children}
       </Link>
     );
   }
 
   return (
     <div className="p-6 rounded-lg border border-border bg-card text-card-foreground">
-      {content}
+      {children}
     </div>
   );
 }

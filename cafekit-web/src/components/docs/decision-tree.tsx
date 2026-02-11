@@ -7,31 +7,38 @@ interface Command {
   id: string;
   label: string;
   href: string;
-  color: string;
+  category: 'docs-init' | 'docs-update' | 'spec' | 'status';
 }
 
 const commands: Command[] = [
-  { id: 'spec-init', label: '/spec-init', href: '/docs/spec/init', color: 'bg-blue-600' },
-  { id: 'spec-requirements', label: '/spec-requirements', href: '/docs/spec/requirements', color: 'bg-blue-500' },
-  { id: 'spec-design', label: '/spec-design', href: '/docs/spec/design', color: 'bg-blue-400' },
-  { id: 'spec-tasks', label: '/spec-tasks', href: '/docs/spec/tasks', color: 'bg-indigo-500' },
-  { id: 'spec-impl', label: '/spec-impl', href: '/docs/spec/impl', color: 'bg-indigo-600' },
-  { id: 'spec-status', label: '/spec-status', href: '/docs/spec/status', color: 'bg-purple-500' },
-  { id: 'docs-init', label: '/docs init', href: '/docs/docs-workflow/init', color: 'bg-emerald-500' },
-  { id: 'docs-update', label: '/docs update', href: '/docs/docs-workflow/update', color: 'bg-emerald-600' },
+  { id: 'docs-init', label: '/docs init', href: '/docs/docs-workflow/init', category: 'docs-init' },
+  { id: 'docs-update', label: '/docs update', href: '/docs/docs-workflow/update', category: 'docs-update' },
+  { id: 'spec-init', label: '/spec-init', href: '/docs/spec/init', category: 'spec' },
+  { id: 'spec-requirements', label: '/spec-requirements', href: '/docs/spec/requirements', category: 'spec' },
+  { id: 'spec-design', label: '/spec-design', href: '/docs/spec/design', category: 'spec' },
+  { id: 'spec-tasks', label: '/spec-tasks', href: '/docs/spec/tasks', category: 'spec' },
+  { id: 'spec-impl', label: '/spec-impl', href: '/docs/spec/impl', category: 'spec' },
+  { id: 'spec-status', label: '/spec-status', href: '/docs/spec/status', category: 'status' },
 ];
+
+const categoryStyles = {
+  'docs-init': 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700',
+  'docs-update': 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700',
+  spec: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700',
+  status: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700',
+};
 
 export function DecisionTree() {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
 
   return (
-    <div className="my-8 p-6 rounded-xl bg-zinc-900/50 border border-zinc-800">
+    <div className="my-8 p-6 rounded-xl border bg-card">
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-emerald-400">☰</span>
-        <h3 className="text-lg font-semibold text-white">Interactive Command Selector</h3>
+        <span className="text-primary">☰</span>
+        <h3 className="text-lg font-semibold">Interactive Command Selector</h3>
       </div>
 
-      <p className="text-zinc-400 text-sm mb-6">
+      <p className="text-muted-foreground text-sm mb-6">
         Click any command to see its purpose, or follow the decision tree below to find the right command for your task.
       </p>
 
@@ -45,8 +52,8 @@ export function DecisionTree() {
             onMouseLeave={() => setActiveCommand(null)}
             className={`
               px-3 py-1.5 rounded-full text-sm font-mono transition-all
-              ${cmd.color} text-white hover:opacity-80 hover:scale-105
-              ${activeCommand === cmd.id ? 'ring-2 ring-white/50' : ''}
+              ${categoryStyles[cmd.category]}
+              ${activeCommand === cmd.id ? 'ring-2 ring-primary/50' : ''}
             `}
           >
             {cmd.label}
@@ -54,68 +61,146 @@ export function DecisionTree() {
         ))}
       </div>
 
-      {/* Simple flowchart */}
-      <div className="bg-zinc-950 rounded-lg p-6 overflow-x-auto">
-        <svg viewBox="0 0 800 300" className="w-full min-w-[600px]">
-          {/* Starting point */}
-          <rect x="350" y="10" width="100" height="30" rx="15" fill="#3b82f6" />
-          <text x="400" y="30" textAnchor="middle" fill="white" fontSize="12">What do you need?</text>
+      {/* Decision Tree Flowchart - Sequential Spec Workflow */}
+      <div className="bg-muted/50 rounded-lg p-8 overflow-x-auto">
+        <svg viewBox="0 0 1000 720" className="w-full min-w-[800px]">
+          {/* Color definitions */}
+          <defs>
+            <linearGradient id="conditionGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#52525b" />
+              <stop offset="100%" stopColor="#3f3f46" />
+            </linearGradient>
+            <linearGradient id="actionGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#18181b" />
+              <stop offset="100%" stopColor="#27272a" />
+            </linearGradient>
+          </defs>
 
-          {/* Lines from start */}
-          <path d="M 400 40 L 400 60" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 60 L 150 60" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 60 L 650 60" stroke="#52525b" strokeWidth="2" />
-          <path d="M 150 60 L 150 80" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 60 L 400 80" stroke="#52525b" strokeWidth="2" />
-          <path d="M 650 60 L 650 80" stroke="#52525b" strokeWidth="2" />
+          {/* Start Node */}
+          <ellipse cx="500" cy="35" rx="100" ry="22" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
+          <text x="500" y="42" textAnchor="middle" fill="#e4e4e7" fontSize="14" fontWeight="500">Bạn cần làm gì?</text>
 
-          {/* First level options */}
-          <rect x="100" y="80" width="100" height="25" rx="5" fill="#6366f1" />
-          <text x="150" y="97" textAnchor="middle" fill="white" fontSize="11">New feature?</text>
+          {/* Branch Lines from Start */}
+          <path d="M 500 57 L 500 70" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 500 70 L 160 70" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 500 70 L 357 70" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 500 70 L 643 70" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 500 70 L 840 70" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          <rect x="350" y="80" width="100" height="25" rx="5" fill="#6366f1" />
-          <text x="400" y="97" textAnchor="middle" fill="white" fontSize="11">Update docs?</text>
+          {/* Vertical drops to diamond top points */}
+          <path d="M 160 70 L 160 85" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 357 70 L 357 85" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 70 L 643 85" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 840 70 L 840 85" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          <rect x="600" y="80" width="100" height="25" rx="5" fill="#6366f1" />
-          <text x="650" y="97" textAnchor="middle" fill="white" fontSize="11">Check progress?</text>
+          {/* COLUMN 1: Docs Init - Diamond */}
+          <polygon points="160,85 205,110 160,135 115,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
+          <text x="160" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Chưa có</text>
+          <text x="160" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">docs AI?</text>
 
-          {/* Second level - Feature flow */}
-          <path d="M 150 105 L 150 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 150 130 L 80 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 150 130 L 220 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 80 130 L 80 150" stroke="#52525b" strokeWidth="2" />
-          <path d="M 220 130 L 220 150" stroke="#52525b" strokeWidth="2" />
+          {/* COLUMN 2: Docs Update - Diamond */}
+          <polygon points="357,85 402,110 357,135 312,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
+          <text x="357" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Cần update</text>
+          <text x="357" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">docs AI?</text>
 
-          {/* Commands */}
-          <rect x="30" y="150" width="100" height="25" rx="5" fill="#1e40af" />
-          <text x="80" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-init</text>
+          {/* COLUMN 3: New Feature - Diamond */}
+          <polygon points="643,85 698,115 643,145 588,115" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
+          <text x="643" y="112" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">Tính năng</text>
+          <text x="643" y="128" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">mới?</text>
 
-          <rect x="170" y="150" width="100" height="25" rx="5" fill="#1e40af" />
-          <text x="220" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-requirements</text>
+          {/* COLUMN 4: Check Status - Diamond */}
+          <polygon points="840,85 885,110 840,135 795,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
+          <text x="840" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Kiểm tra</text>
+          <text x="840" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">tiến độ?</text>
 
-          {/* Docs flow */}
-          <path d="M 400 105 L 400 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 130 L 350 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 400 130 L 450 130" stroke="#52525b" strokeWidth="2" />
-          <path d="M 350 130 L 350 150" stroke="#52525b" strokeWidth="2" />
-          <path d="M 450 130 L 450 150" stroke="#52525b" strokeWidth="2" />
+          {/* Action Lines from diamonds */}
+          {/* Col 1 - Docs Init */}
+          <path d="M 160 135 L 160 160" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          <rect x="300" y="150" width="100" height="25" rx="5" fill="#059669" />
-          <text x="350" y="167" textAnchor="middle" fill="white" fontSize="11">/docs init</text>
+          {/* Col 2 - Docs Update */}
+          <path d="M 357 135 L 357 160" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          <rect x="400" y="150" width="100" height="25" rx="5" fill="#059669" />
-          <text x="450" y="167" textAnchor="middle" fill="white" fontSize="11">/docs update</text>
+          {/* Col 3 - Spec (SEQUENTIAL vertical flow) */}
+          <path d="M 643 145 L 643 170" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 205 L 643 230" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 275 L 643 300" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 345 L 643 370" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 415 L 643 440" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          {/* Status flow */}
-          <path d="M 650 105 L 650 150" stroke="#52525b" strokeWidth="2" />
+          {/* Col 4 - Status */}
+          <path d="M 840 135 L 840 160" stroke="#71717a" strokeWidth="3" fill="none" />
 
-          <rect x="600" y="150" width="100" height="25" rx="5" fill="#7c3aed" />
-          <text x="650" y="167" textAnchor="middle" fill="white" fontSize="11">/spec-status</text>
+          {/* Action Nodes - COLUMN 1: Docs Init */}
+          <g className="cursor-pointer">
+            <Link href="/docs/docs-workflow/init">
+              <rect x="100" y="160" width="120" height="40" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="160" y="185" textAnchor="middle" fill="#fafafa" fontSize="13" fontFamily="monospace">/docs init</text>
+            </Link>
+          </g>
 
-          {/* Legend */}
-          <text x="400" y="220" textAnchor="middle" fill="#71717a" fontSize="10">
-            Click any command above to view documentation
-          </text>
+          {/* Action Nodes - COLUMN 2: Docs Update */}
+          <g className="cursor-pointer">
+            <Link href="/docs/docs-workflow/update">
+              <rect x="297" y="160" width="120" height="40" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="357" y="185" textAnchor="middle" fill="#fafafa" fontSize="13" fontFamily="monospace">/docs update</text>
+            </Link>
+          </g>
+
+          {/* Action Nodes - COLUMN 3: Spec Workflow (SEQUENTIAL) */}
+          {/* spec-init */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/init">
+              <rect x="583" y="170" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="193" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-init</text>
+            </Link>
+          </g>
+
+          {/* spec-requirements */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/requirements">
+              <rect x="583" y="230" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="253" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-requirements</text>
+            </Link>
+          </g>
+
+          {/* spec-design */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/design">
+              <rect x="583" y="300" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="323" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-design</text>
+            </Link>
+          </g>
+
+          {/* spec-tasks */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/tasks">
+              <rect x="583" y="370" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="393" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-tasks</text>
+            </Link>
+          </g>
+
+          {/* spec-impl */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/impl">
+              <rect x="583" y="440" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="463" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-impl</text>
+            </Link>
+          </g>
+
+          {/* Action Nodes - COLUMN 4: Status */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/status">
+              <rect x="780" y="160" width="120" height="40" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="840" y="185" textAnchor="middle" fill="#fafafa" fontSize="13" fontFamily="monospace">/spec-status</text>
+            </Link>
+          </g>
+
+          {/* Platform Labels */}
+          <text x="160" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
+          <text x="357" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
+          <text x="643" y="500" textAnchor="middle" fill="#71717a" fontSize="11">Full Spec Workflow (tuần tự)</text>
+          <text x="840" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
+
         </svg>
       </div>
     </div>
