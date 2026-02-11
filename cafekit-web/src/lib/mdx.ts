@@ -9,10 +9,10 @@ import remarkGfm from 'remark-gfm';
 import { MDXComponents } from '@/components/docs/mdx-components';
 import { fileURLToPath } from 'url';
 
-// Get the directory where this file is located
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Traverse up to find content directory (works in both dev and production)
-const contentDirectory = path.resolve(__dirname, '../../../content');
+// Get content directory - in production on Vercel, it's at project root
+const contentDirectory = process.env.VERCEL
+  ? path.join(process.cwd(), 'content')
+  : path.join(process.cwd(), 'content');
 
 export interface Frontmatter {
   title: string;
