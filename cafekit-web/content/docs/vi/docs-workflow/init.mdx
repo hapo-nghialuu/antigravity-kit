@@ -12,12 +12,21 @@ Khởi tạo toàn bộ tài liệu dự án để AI assistant có thể hiểu
 **Claude Code:**
 ```
 /docs init
+/docs init --focus=src,api
 ```
 
 **Antigravity:**
 ```
 /docs_init
+/docs_init --focus=src,api
 ```
+
+### Flags tùy chọn
+
+| Flag | Mô tả | Ví dụ |
+|------|-------|-------|
+| `--focus=dir1,dir2` | Tập trung vào các thư mục cụ thể | `--focus=src,components` |
+| `--dir=./path` | Chỉ định thư mục target | `--dir=./my-project` |
 
 ## Mô tả
 
@@ -147,6 +156,15 @@ File AI context được tạo ở root:
 - `/docs init` sẽ **ghi đè** file nếu đã tồn tại
 - Backup được tạo tự động trước khi ghi đè
 - Nên review và edit docs sau khi tạo
+
+## Xử lý Lỗi
+
+| Tình huống | Hành động |
+|------------|-----------|
+| `docs/` đã tồn tại | Hỏi: Overwrite / Merge / Skip |
+| Thiếu `package.json` | Yêu cầu user cung cấp project type |
+| `repomix` chưa cài | Cảnh báo, tiếp tục với manual analysis |
+| Không có quyền ghi | Báo lỗi path, gợi ý fix |
 
 ## Bước tiếp theo
 

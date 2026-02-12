@@ -51,6 +51,8 @@ Plus **AGENTS.md** (Antigravity) hoặc **CLAUDE.md** (Claude Code) - File refer
 
 ## Files Được Tạo
 
+### Documentation Files
+
 ```
 docs/
 ├── codebase-summary.md
@@ -61,10 +63,21 @@ docs/
 ├── deployment-guide.md
 ├── project-roadmap.md
 └── repomix-output.xml      # AI context file
+```
 
-.agent/ hoặc .claude/
-├── AGENTS.md hoặc CLAUDE.md  # AI quick reference
-└── ...
+### AI Reference Files
+
+**Cho Antigravity:**
+```
+.agent/
+└── rules/
+    └── AGENTS.md           # Always-active project context
+```
+
+**Cho Claude Code:**
+```
+.claude/
+└── CLAUDE.md               # Project quick reference
 ```
 
 ## Quy trình sử dụng

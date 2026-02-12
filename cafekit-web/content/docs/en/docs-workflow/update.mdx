@@ -12,12 +12,21 @@ Update documentation to reflect changes in the codebase.
 **Claude Code:**
 ```
 /docs update
+/docs update --focus=src,ui
 ```
 
 **Antigravity:**
 ```
 /docs_update
+/docs_update --focus=src,ui
 ```
+
+### Optional Flags
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--focus=dir1,dir2` | Only update docs related to specified directories | `--focus=src,components` |
+| `--dir=./path` | Target specific directory | `--dir=./my-project` |
 
 ## Description
 
@@ -56,13 +65,14 @@ This command scans the current codebase, compares it with existing documentation
 Before updating, the system creates a backup:
 
 ```
-docs/
-├── codebase-summary.md
-├── .backups/
-│   └── 2024-01-15_143052/    # Timestamp backup
-│       ├── codebase-summary.md
-│       ├── project-overview-pdr.md
-│       └── ...
+project-root/
+├── docs/
+│   ├── codebase-summary.md
+│   └── ...
+└── docs.backup.20240115_143052/    # Timestamp backup (sibling to docs/)
+    ├── codebase-summary.md
+    ├── project-overview-pdr.md
+    └── ...
 ```
 
 ## Scenarios
@@ -136,6 +146,15 @@ Update:
 - ❌ Mid-feature development
 - ❌ While debugging
 - ❌ When there are many uncommitted changes
+
+## Error Handling
+
+| Scenario | Action |
+|----------|--------|
+| `docs/` not found | Prompt to run `/docs init` first |
+| `repomix` fails | Continue with manual analysis |
+| Permission denied | Report path, suggest sudo/fix |
+| Conflicts detected | Ask user which version to keep |
 
 ## Notes
 

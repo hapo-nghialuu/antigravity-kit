@@ -51,6 +51,8 @@ Plus **AGENTS.md** (Antigravity) or **CLAUDE.md** (Claude Code) - Quick referenc
 
 ## Generated Files
 
+### Documentation Files
+
 ```
 docs/
 ├── codebase-summary.md
@@ -61,10 +63,21 @@ docs/
 ├── deployment-guide.md
 ├── project-roadmap.md
 └── repomix-output.xml      # AI context file
+```
 
-.agent/ or .claude/
-├── AGENTS.md or CLAUDE.md  # AI quick reference
-└── ...
+### AI Reference Files
+
+**For Antigravity:**
+```
+.agent/
+└── rules/
+    └── AGENTS.md           # Always-active project context
+```
+
+**For Claude Code:**
+```
+.claude/
+└── CLAUDE.md               # Project quick reference
 ```
 
 ## Usage Workflow
