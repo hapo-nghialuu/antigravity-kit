@@ -146,8 +146,8 @@ CafeKit Spec provides two workflow categories:
 **Antigravity Workflows:**
 | Workflow | Purpose |
 |----------|---------|
-| `/docs_init` | Initialize comprehensive documentation |
-| `/docs_update` | Update docs after code changes |
+| `/docs-init` | Initialize comprehensive documentation |
+| `/docs-update` | Update docs after code changes |
 
 **Generated Files:**
 ```
@@ -476,12 +476,12 @@ done
 **Antigravity:**
 ```bash
 # Initialize documentation
-/docs_init
+/docs-init
 
 # AI creates the same 7 docs files + AGENTS.md
 
 # Update after code changes
-/docs_update
+/docs-update
 ```
 
 ---
@@ -515,8 +515,8 @@ done
 │   ├── spec-tasks.md
 │   ├── spec-impl.md
 │   ├── spec-status.md
-│   ├── docs_init.md            # Docs workflows
-│   └── docs_update.md
+│   ├── docs-init.md            # Docs workflows
+│   └── docs-update.md
 ├── skills/
 │   └── spec-driven-development/
 └── rules/
@@ -525,7 +525,7 @@ done
 
 **Command Naming:**
 - **Claude Code:** Uses hyphens (`/spec-init`, `/docs init`)
-- **Antigravity:** Uses underscores (`/spec_init`, `/docs_init`)
+- **Antigravity:** Uses underscores (`/spec_init`, `/docs-init`)
 
 ### Generated Specs Directory
 
@@ -590,7 +590,7 @@ A: Yes. Each spec has its own directory in `.specs/`. Work on multiple in parall
 
 A: Each platform has different conventions:
 - **Claude Code** uses hyphens: `/spec-init`, `/docs update`
-- **Antigravity** uses underscores: `/spec_init`, `/docs_init`
+- **Antigravity** uses underscores: `/spec_init`, `/docs-init`
 
 The functionality is identical, only the naming convention differs.
 
@@ -721,10 +721,10 @@ Task #4: Add protected route middleware
 ### [0.1.5] - 2026-02-11
 
 #### Added
-- **Documentation workflow for Antigravity** - New `/docs_init` and `/docs_update` workflows
+- **Documentation workflow for Antigravity** - New `/docs-init` and `/docs_update` workflows
 - **GEMINI.md rule file** - Auto-installs `.agent/rules/GEMINI.md` with system rules for Antigravity
 - **Full Antigravity support** - Documentation commands now work on both Claude Code and Antigravity
-- **AGENTS.md auto-generation** - Created automatically when running `/docs_init` or `/docs_update`
+- **AGENTS.md auto-generation** - Created automatically when running `/docs-init` or `/docs_update`
 
 ### [0.1.2] - 2026-02-04
 

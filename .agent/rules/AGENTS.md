@@ -62,8 +62,8 @@ Spec-Driven Development workflow for AI coding assistants. It works with both Cl
 ## Agent Workflows
 
 Available workflows in `.agent/workflows/`:
-- `/docs_init` - Initialize documentation
-- `/docs_update` - Update documentation
+- `/docs-init` - Initialize documentation
+- `/docs-update` - Update documentation
 
 ---
 
