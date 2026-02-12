@@ -16,20 +16,33 @@ export function LanguageSwitcher() {
     const pathname = usePathname();
     const router = useRouter();
     const [locale, setLocale] = useState('en');
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         // Determine initial locale from cookie
         const match = document.cookie.match(new RegExp('(^| )NEXT_LOCALE=([^;]+)'));
         if (match) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLocale(match[2]);
         }
     }, []);
 
-
     // Only show on docs pages
     if (!pathname?.startsWith('/docs')) {
         return null;
+    }
+
+    // Prevent hydration mismatch by not rendering until mounted
+    if (!mounted) {
+        return (
+            <button
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2 px-2")}
+                disabled
+            >
+                <Languages className="h-4 w-4" />
+                <span className="hidden sm:inline-block">English</span>
+            </button>
+        );
     }
 
     const switchLanguage = (target: 'en' | 'vi') => {

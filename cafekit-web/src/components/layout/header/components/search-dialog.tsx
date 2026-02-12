@@ -90,6 +90,7 @@ const searchGroups: SearchGroup[] = [
 
 export default function SearchDialog() {
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
 
     function handleItemClick(item: SearchItem) {
@@ -98,6 +99,7 @@ export default function SearchDialog() {
     }
 
     useEffect(() => {
+        setMounted(true);
         const down = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -108,6 +110,41 @@ export default function SearchDialog() {
         document.addEventListener('keydown', down);
         return () => document.removeEventListener('keydown', down);
     }, []);
+
+    // Prevent hydration mismatch by not rendering until mounted
+    if (!mounted) {
+        return (
+            <div className="flex items-center gap-2">
+                {/* Mobile placeholder */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Search"
+                    className="md:hidden"
+                    disabled
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </Button>
+                {/* Desktop placeholder */}
+                <Button
+                    variant="outline"
+                    className="hidden md:flex w-full justify-start text-sm text-muted-foreground font-normal h-9 bg-transparent"
+                    disabled
+                >
+                    <svg className="w-4 h-4 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="flex-1 text-left">Search docs...</span>
+                    <KbdGroup className="hidden sm:inline-flex">
+                        <Kbd>⌘</Kbd>
+                        <Kbd>K</Kbd>
+                    </KbdGroup>
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <CommandDialog onOpenChange={setOpen} open={open}>
