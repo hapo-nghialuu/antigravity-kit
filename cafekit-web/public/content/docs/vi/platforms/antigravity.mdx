@@ -37,12 +37,12 @@ Sau khi cài đặt, các file được tạo trong thư mục `.agent/`:
 ├── skills/
 │   └── ...                   # 40+ reusable skills
 └── workflows/
-    ├── spec_init.yaml
-    ├── spec_requirements.yaml
-    ├── spec_design.yaml
-    ├── spec_tasks.yaml
-    ├── spec_impl.yaml
-    ├── spec_status.yaml
+    ├── spec-init.yaml
+    ├── spec-requirements.yaml
+    ├── spec-design.yaml
+    ├── spec-tasks.yaml
+    ├── spec-impl.yaml
+    ├── spec-status.yaml
     ├── docs-init.yaml
     └── docs-update.yaml
 ```
@@ -54,12 +54,12 @@ Tất cả commands trong Antigravity sử dụng **dấu gạch dưới** (unde
 ### Spec Workflows
 | Command | Mô tả |
 |---------|-------|
-| `/spec_init` | Khởi tạo spec mới |
-| `/spec_requirements` | Phân tích yêu cầu |
-| `/spec_design` | Thiết kế kỹ thuật |
-| `/spec_tasks` | Chia nhỏ task |
-| `/spec_impl` | Triển khai code |
-| `/spec_status` | Kiểm tra tiến độ |
+| `/spec-init` | Khởi tạo spec mới |
+| `/spec-requirements` | Phân tích yêu cầu |
+| `/spec-design` | Thiết kế kỹ thuật |
+| `/spec-tasks` | Chia nhỏ task |
+| `/spec-impl` | Triển khai code |
+| `/spec-status` | Kiểm tra tiến độ |
 
 ### Documentation Workflows
 | Command | Mô tả |
@@ -76,8 +76,8 @@ File reference nhanh cho AI:
 # Project Context
 
 ## Agents
-- spec_init - Initialize feature spec
-- spec_impl - Implement tasks
+- spec-init - Initialize feature spec
+- spec-impl - Implement tasks
 ...
 
 ## Skills
@@ -120,7 +120,7 @@ Mô tả kiến trúc framework:
 ### Khởi tạo feature mới
 
 ```
-> /spec_init
+> /spec-init
 
 Feature name: payment-gateway
 Description: Tích hợp cổng thanh toán Stripe
@@ -130,7 +130,7 @@ Description: Tích hợp cổng thanh toán Stripe
 ### Triển khai từng task
 
 ```
-> /spec_impl
+> /spec-impl
 
 Implement task: 3
 Feature: payment-gateway
@@ -149,7 +149,7 @@ Cập nhật docs sau khi thêm Stripe integration
 
 | | Antigravity | Claude Code |
 |---|---|---|
-| **Syntax** | Underscores (`/spec_init`) | Hyphens (`/spec-init`) |
+| **Syntax** | Underscores (`/spec-init`) | Hyphens (`/spec-init`) |
 | **Directory** | `.agent/` | `.claude/` |
 | **Config file** | `AGENTS.md` | `CLAUDE.md` |
 | **Extra files** | `GEMINI.md`, `ARCHITECTURE.md` | `ROUTING.md` |
@@ -162,7 +162,7 @@ Antigravity sử dụng nhiều specialized agents:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  spec_init  │────▶│ spec_design │────▶│  spec_impl  │
+│  spec-init  │────▶│ spec-design │────▶│  spec-impl  │
 │    agent    │     │    agent    │     │    agent    │
 └─────────────┘     └─────────────┘     └─────────────┘
       │                                       │
