@@ -10,6 +10,10 @@ interface Command {
   category: 'docs-init' | 'docs-update' | 'spec' | 'status';
 }
 
+interface DecisionTreeProps {
+  locale?: 'en' | 'vi';
+}
+
 const commands: Command[] = [
   { id: 'docs-init', label: '/docs init', href: '/docs/docs-workflow/init', category: 'docs-init' },
   { id: 'docs-update', label: '/docs update', href: '/docs/docs-workflow/update', category: 'docs-update' },
@@ -28,18 +32,56 @@ const categoryStyles = {
   status: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700',
 };
 
-export function DecisionTree() {
+const translations = {
+  en: {
+    title: 'Interactive Command Selector',
+    description: 'Click any command to see its purpose, or follow the decision tree below to find the right command for your task.',
+    startNode: 'What do you need?',
+    col1Condition1: 'No AI docs',
+    col1Condition2: 'yet?',
+    col2Condition1: 'Need to update',
+    col2Condition2: 'AI docs?',
+    col3Condition1: 'New',
+    col3Condition2: 'feature?',
+    col4Condition1: 'Check',
+    col4Condition2: 'progress?',
+    col1Label: 'Claude Code / Antigravity',
+    col2Label: 'Claude Code / Antigravity',
+    col3Label: 'Full Spec Workflow (sequential)',
+    col4Label: 'Claude Code / Antigravity',
+  },
+  vi: {
+    title: 'Chọn Command',
+    description: 'Click vào bất kỳ command nào để xem mô tả, hoặc theo sơ đồ quyết định bên dưới để tìm command phù hợp.',
+    startNode: 'Bạn cần làm gì?',
+    col1Condition1: 'Chưa có',
+    col1Condition2: 'docs AI?',
+    col2Condition1: 'Cần update',
+    col2Condition2: 'docs AI?',
+    col3Condition1: 'Tính năng',
+    col3Condition2: 'mới?',
+    col4Condition1: 'Kiểm tra',
+    col4Condition2: 'tiến độ?',
+    col1Label: 'Claude Code / Antigravity',
+    col2Label: 'Claude Code / Antigravity',
+    col3Label: 'Full Spec Workflow (tuần tự)',
+    col4Label: 'Claude Code / Antigravity',
+  },
+};
+
+export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
+  const t = translations[locale];
 
   return (
     <div className="my-8 p-6 rounded-xl border bg-card">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-primary">☰</span>
-        <h3 className="text-lg font-semibold">Interactive Command Selector</h3>
+        <h3 className="text-lg font-semibold">{t.title}</h3>
       </div>
 
       <p className="text-muted-foreground text-sm mb-6">
-        Click any command to see its purpose, or follow the decision tree below to find the right command for your task.
+        {t.description}
       </p>
 
       {/* Command pills */}
@@ -78,7 +120,7 @@ export function DecisionTree() {
 
           {/* Start Node */}
           <ellipse cx="500" cy="35" rx="100" ry="22" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
-          <text x="500" y="42" textAnchor="middle" fill="#e4e4e7" fontSize="14" fontWeight="500">Bạn cần làm gì?</text>
+          <text x="500" y="42" textAnchor="middle" fill="#e4e4e7" fontSize="14" fontWeight="500">{t.startNode}</text>
 
           {/* Branch Lines from Start */}
           <path d="M 500 57 L 500 70" stroke="#71717a" strokeWidth="3" fill="none" />
@@ -95,23 +137,23 @@ export function DecisionTree() {
 
           {/* COLUMN 1: Docs Init - Diamond */}
           <polygon points="160,85 205,110 160,135 115,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
-          <text x="160" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Chưa có</text>
-          <text x="160" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">docs AI?</text>
+          <text x="160" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col1Condition1}</text>
+          <text x="160" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col1Condition2}</text>
 
           {/* COLUMN 2: Docs Update - Diamond */}
           <polygon points="357,85 402,110 357,135 312,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
-          <text x="357" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Cần update</text>
-          <text x="357" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">docs AI?</text>
+          <text x="357" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col2Condition1}</text>
+          <text x="357" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col2Condition2}</text>
 
           {/* COLUMN 3: New Feature - Diamond */}
           <polygon points="643,85 698,115 643,145 588,115" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
-          <text x="643" y="112" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">Tính năng</text>
-          <text x="643" y="128" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">mới?</text>
+          <text x="643" y="112" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">{t.col3Condition1}</text>
+          <text x="643" y="128" textAnchor="middle" fill="#e4e4e7" fontSize="12" fontWeight="500">{t.col3Condition2}</text>
 
           {/* COLUMN 4: Check Status - Diamond */}
           <polygon points="840,85 885,110 840,135 795,110" fill="url(#conditionGrad)" stroke="#71717a" strokeWidth="2" />
-          <text x="840" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">Kiểm tra</text>
-          <text x="840" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">tiến độ?</text>
+          <text x="840" y="105" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col4Condition1}</text>
+          <text x="840" y="118" textAnchor="middle" fill="#e4e4e7" fontSize="11" fontWeight="500">{t.col4Condition2}</text>
 
           {/* Action Lines from diamonds */}
           {/* Col 1 - Docs Init */}
@@ -196,10 +238,10 @@ export function DecisionTree() {
           </g>
 
           {/* Platform Labels */}
-          <text x="160" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
-          <text x="357" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
-          <text x="643" y="500" textAnchor="middle" fill="#71717a" fontSize="11">Full Spec Workflow (tuần tự)</text>
-          <text x="840" y="225" textAnchor="middle" fill="#71717a" fontSize="11">Claude Code / Antigravity</text>
+          <text x="160" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col1Label}</text>
+          <text x="357" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col2Label}</text>
+          <text x="643" y="500" textAnchor="middle" fill="#71717a" fontSize="11">{t.col3Label}</text>
+          <text x="840" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col4Label}</text>
 
         </svg>
       </div>
