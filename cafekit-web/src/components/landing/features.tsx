@@ -1,4 +1,4 @@
-import { Target, FileText, Rocket } from "lucide-react";
+import { Target, FileText, Rocket, BookOpen } from "lucide-react";
 
 const features = [
   {
@@ -10,6 +10,11 @@ const features = [
     icon: FileText,
     title: "Living Documentation",
     description: "Every spec creates documentation that stays with your project. Perfect for team collaboration and maintenance.",
+  },
+  {
+    icon: BookOpen,
+    title: "Documentation Automation",
+    description: "Auto-generate project documentation with /docs init and keep it updated with /docs update. Create AGENTS.md, CLAUDE.md, and 7+ project docs.",
   },
   {
     icon: Rocket,
@@ -29,7 +34,7 @@ export function Features() {
           CafeKit Spec provides a complete workflow for spec-driven development with Claude Code & Antigravity
         </p>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => {
             const Icon = feature.icon;
             return (

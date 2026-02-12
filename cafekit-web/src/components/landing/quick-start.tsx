@@ -10,15 +10,18 @@ export function QuickStart() {
   const codeExample = `# 1. Install CafeKit Spec
 npx @haposoft/cafekit-spec
 
-# 2. Initialize a new spec
-/spec-init user-authentication
+# 2. Initialize project docs (optional but recommended)
+/docs init
 
-# 3. Follow the 6-phase workflow
+# 3. Start building features with spec workflow
+/spec-init user-authentication
 /spec-requirements user-authentication
 /spec-design user-authentication
 /spec-tasks user-authentication
 /spec-impl user-authentication
-/spec-status user-authentication`;
+
+# 4. Update docs when project changes
+/docs update`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(codeExample);
