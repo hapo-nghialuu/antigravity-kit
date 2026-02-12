@@ -16,12 +16,12 @@ interface PageProps {
 
 // Helper to determine locale and content path from slug
 async function getRouteInfo(slug?: string[]) {
-  let locale = 'vi';
+  let locale = 'en';
   try {
     const cookieStore = await cookies();
-    locale = cookieStore.get('NEXT_LOCALE')?.value || 'vi';
+    locale = cookieStore.get('NEXT_LOCALE')?.value || 'en';
   } catch {
-    // Cookies not available in static generation, default to 'vi'
+    // Cookies not available in static generation, default to 'en'
   }
 
   // Slug from URL is clean (e.g. ['getting-started'])
