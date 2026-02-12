@@ -1,22 +1,28 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { docsConfig } from '@/lib/docs-config';
+import { getDocsConfig } from '@/lib/docs-config';
 
 interface BreadcrumbsProps {
   slug?: string[];
+  locale?: string;
 }
 
-export function Breadcrumbs({ slug }: BreadcrumbsProps) {
+export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
   // Simple breadcrumb logic based on slug
   // For production, you might want to map slugs to titles from config
 
+  // Translations for breadcrumb root
+  const rootTitle = locale === 'vi' ? 'Tài liệu' : 'Docs';
+  const introTitle = locale === 'vi' ? 'Giới thiệu' : 'Introduction';
+
   const crumbs = [
-    { title: 'Docs', href: '/docs' },
+    { title: rootTitle, href: '/docs' },
   ];
 
   if (slug) {
     // Logic to find titles could be complex, for now let's use slug parts or look up
     // Flatten config to find titles
+    const docsConfig = getDocsConfig(locale);
     const flatNav = docsConfig.sidebarNav.flatMap(section => section.items);
 
     let currentPath = '/docs';
@@ -33,7 +39,7 @@ export function Breadcrumbs({ slug }: BreadcrumbsProps) {
     });
   } else {
     // Root docs page
-    crumbs.push({ title: 'Introduction', href: '/docs' });
+    crumbs.push({ title: introTitle, href: '/docs' });
   }
 
   // Remove duplicates if any (e.g. Docs > Introduction might overlap if slug is empty)

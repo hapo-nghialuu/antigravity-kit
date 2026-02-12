@@ -42,6 +42,23 @@ const sidebarNavEn = [
         ],
     },
     {
+        title: "Documentation Workflows",
+        items: [
+            {
+                title: "Overview",
+                href: "/docs/docs-workflow",
+            },
+            {
+                title: "/docs init",
+                href: "/docs/docs-workflow/init",
+            },
+            {
+                title: "/docs update",
+                href: "/docs/docs-workflow/update",
+            },
+        ],
+    },
+    {
         title: "Spec Workflows",
         items: [
             {
@@ -75,25 +92,12 @@ const sidebarNavEn = [
         ],
     },
     {
-        title: "Documentation Workflows",
-        items: [
-            {
-                title: "Overview",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
-            },
-        ],
-    },
-    {
         title: "Platform Guides",
         items: [
+            {
+                title: "Platform Guides",
+                href: "/docs/platforms",
+            },
             {
                 title: "Claude Code",
                 href: "/docs/platforms/claude",
@@ -125,6 +129,10 @@ const sidebarNavEn = [
         title: "Reference",
         items: [
             {
+                title: "Reference",
+                href: "/docs/reference",
+            },
+            {
                 title: "File Structure",
                 href: "/docs/reference/file-structure",
             },
@@ -138,7 +146,7 @@ const sidebarNavEn = [
 
 const sidebarNavVi = [
     {
-        title: "Bắt Đầu",
+        title: "Bắt đầu",
         items: [
             {
                 title: "Giới thiệu",
@@ -151,6 +159,23 @@ const sidebarNavVi = [
             {
                 title: "Bắt đầu nhanh",
                 href: "/docs/getting-started/quickstart",
+            },
+        ],
+    },
+    {
+        title: "Documentation Workflows",
+        items: [
+            {
+                title: "Tổng quan",
+                href: "/docs/docs-workflow",
+            },
+            {
+                title: "/docs init",
+                href: "/docs/docs-workflow/init",
+            },
+            {
+                title: "/docs update",
+                href: "/docs/docs-workflow/update",
             },
         ],
     },
@@ -188,7 +213,7 @@ const sidebarNavVi = [
         ],
     },
     {
-        title: "Documentation Workflows",
+        title: "Platform Guides",
         items: [
             {
                 title: "Tổng quan",
@@ -207,6 +232,10 @@ const sidebarNavVi = [
     {
         title: "Platform Guides",
         items: [
+            {
+                title: "Hướng dẫn Nền tảng",
+                href: "/docs/platforms",
+            },
             {
                 title: "Claude Code",
                 href: "/docs/platforms/claude",
@@ -237,6 +266,10 @@ const sidebarNavVi = [
     {
         title: "Tham Khảo",
         items: [
+            {
+                title: "Tham khảo",
+                href: "/docs/reference",
+            },
             {
                 title: "Cấu trúc File",
                 href: "/docs/reference/file-structure",

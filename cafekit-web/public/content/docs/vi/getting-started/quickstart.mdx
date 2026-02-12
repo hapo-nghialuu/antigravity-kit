@@ -9,6 +9,20 @@ Trong hướng dẫn này, bạn sẽ tạo một spec cho **tính năng đăng 
 
 **Thời gian hoàn thành:** 5-10 phút
 
+## Trước khi bắt đầu: Thiết lập Documentation (Tùy chọn)
+
+Để đạt kết quả tốt nhất khi làm việc với AI, nên thiết lập documentation dự án trước. Điều này giúp AI hiểu cấu trúc và quy ước của dự án trước khi bạn bắt đầu tạo spec.
+
+```bash
+/docs init
+```
+
+Lệnh này sẽ phân tích codebase và tạo:
+- `CLAUDE.md` - Tổng quan dự án cho AI
+- Thư mục `docs/` với các tiêu chuẩn coding, kiến trúc và hướng dẫn
+
+Bạn cũng có thể cập nhật docs sau bằng `/docs update`.
+
 ## Bước 1: Khởi tạo Spec
 
 Bắt đầu bằng cách tạo một không gian làm việc (workspace) spec mới:
@@ -265,8 +279,8 @@ Bạn đã hoàn thành quy trình CafeKit spec đầu tiên. Bạn đã học c
 
 ## Bước tiếp theo
 
-- **[Hướng dẫn quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu sâu về từng giai đoạn
-- **[Thực hành tốt nhất](/docs/guides/best-practices)** - Học các thủ thuật nâng cao
+- **[Documentation Workflows](/docs/docs-workflow)** - Tìm hiểu cách tạo và duy trì documentation dự án
+- **[Quy trình Spec](/docs/spec)** - Tìm hiểu sâu về từng giai đoạn
 - **[Ví dụ](/docs/examples)** - Xem các spec thực tế
 
 ---
