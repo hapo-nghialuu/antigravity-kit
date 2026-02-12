@@ -2,7 +2,7 @@
 description: Update existing documentation to match current codebase. Use when code has changed and docs are out of sync, or after adding new features.
 ---
 
-# /docs_update - Update Project Documentation
+# /docs-update - Update Project Documentation
 
 ## Overview
 
@@ -25,11 +25,11 @@ This workflow updates all documentation to reflect the current state of the code
 
 **Check if docs/ exists:**
 ```bash
-ls docs/ 2>/dev/null || echo "ERROR: Run '/docs_init' first"
+ls docs/ 2>/dev/null || echo "ERROR: Run '/docs-init' first"
 ```
 
 **If docs/ not found:**
-- Stop and prompt: "❌ docs/ not found. Run `/docs_init` first to create documentation."
+- Stop and prompt: "❌ docs/ not found. Run `/docs-init` first to create documentation."
 
 ---
 
@@ -179,7 +179,7 @@ test -f .agent/rules/AGENTS.md && cat .agent/rules/AGENTS.md || echo "NOT_FOUND"
 - **Last Updated** - Refresh timestamp
 
 **If not exists - Create new:**
-- Use same template as in `/docs_init`
+- Use same template as in `/docs-init`
 - Or skip if user không muốn tạo
 
 **Note:** `.agent/rules/AGENTS.md` với `activation: always_on` sẽ luôn active trong Antigravity.
@@ -229,7 +229,7 @@ ls -la repomix-output.xml
 
 | Scenario | Action |
 |----------|--------|
-| docs/ not found | Prompt to run `/docs_init` |
+| docs/ not found | Prompt to run `/docs-init` |
 | repomix fails | Continue with manual analysis |
 | Permission denied | Report path, suggest sudo/fix |
 | Conflicts detected | Ask user which version to keep |

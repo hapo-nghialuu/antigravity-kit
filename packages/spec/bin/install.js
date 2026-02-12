@@ -205,8 +205,8 @@ function copyPlatformFiles(platformKey, results) {
     'spec-tasks.md',
     'spec-impl.md',
     'spec-status.md',
-    'docs_init.md',
-    'docs_update.md'
+    'docs-init.md',
+    'docs-update.md'
   ];
 
   specFiles.forEach(file => {
