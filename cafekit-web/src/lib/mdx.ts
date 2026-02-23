@@ -21,6 +21,7 @@ export interface Frontmatter {
 export interface MDXContent {
   frontmatter: Frontmatter;
   content: React.ReactElement;
+  rawContent: string;
   slug: string;
 }
 
@@ -58,11 +59,13 @@ export async function getMDXContent(slug: string): Promise<MDXContent | null> {
   try {
     const filePath = path.join(contentDirectory, `${slug}.mdx`);
 
-    if (!fs.existsSync(filePath)) {
+    let source: string;
+    try {
+      source = await fs.promises.readFile(filePath, 'utf-8');
+    } catch {
       return null;
     }
 
-    const source = fs.readFileSync(filePath, 'utf-8');
     const { data, content: rawContent } = matter(source);
 
     const { content } = await compileMDX({
@@ -89,6 +92,7 @@ export async function getMDXContent(slug: string): Promise<MDXContent | null> {
     return {
       frontmatter: data as Frontmatter,
       content,
+      rawContent,
       slug,
     };
   } catch (error) {
@@ -131,8 +135,10 @@ export function extractHeadings(content: string): Array<{ id: string; text: stri
     const text = match[2];
     const id = text
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-');
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{L}\p{N}-]/gu, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
 
     headings.push({ id, text, level });
   }

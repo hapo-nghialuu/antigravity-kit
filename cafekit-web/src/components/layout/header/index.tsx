@@ -33,13 +33,8 @@ export default function Header() {
 
                     {/* Right Section */}
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {/* Search - Desktop */}
-                        <div className="hidden md:block w-64">
-                            <SearchDialog />
-                        </div>
-
-                        {/* Mobile Search Button */}
-                        <div className="md:hidden">
+                        {/* Search */}
+                        <div className="w-auto md:w-64">
                             <SearchDialog />
                         </div>
 

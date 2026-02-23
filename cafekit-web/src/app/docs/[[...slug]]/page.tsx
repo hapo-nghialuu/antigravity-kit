@@ -1,11 +1,8 @@
 import { notFound } from 'next/navigation';
-import { getMDXContent, getMDXFiles, extractHeadings, type MDXContent } from '@/lib/mdx';
+import { getMDXContent, extractHeadings, type MDXContent } from '@/lib/mdx';
 import { TableOfContents, TOCHeading } from '@/components/docs/toc';
 import { Breadcrumbs } from '@/components/docs/breadcrumbs';
 import { DocsPager } from '@/components/docs/pager';
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
 import { cookies } from 'next/headers';
 
 interface PageProps {
@@ -24,13 +21,10 @@ async function getRouteInfo(slug?: string[]) {
     // Cookies not available in static generation, default to 'en'
   }
 
-  // Slug from URL is clean (e.g. ['getting-started'])
   const mdxSlug = (!slug || slug.length === 0)
     ? 'index'
     : slug.join('/');
 
-  // Construct full path relative to content directory
-  // content/docs/{locale}/{mdxSlug}
   const fullPath = `docs/${locale}/${mdxSlug}`;
 
   return { locale, fullPath, mdxSlug };
@@ -38,54 +32,43 @@ async function getRouteInfo(slug?: string[]) {
 
 // Helper to resolve MDX path (handles both file.mdx and folder/index.mdx)
 async function resolveMDXPath(fullPath: string): Promise<string | null> {
-  // Try direct file path first
-  let mdxContent = await getMDXContent(fullPath);
-  if (mdxContent) {
-    return fullPath;
-  }
+  const mdxContent = await getMDXContent(fullPath);
+  if (mdxContent) return fullPath;
 
-  // Try as directory with index.mdx
   const indexPath = `${fullPath}/index`;
-  mdxContent = await getMDXContent(indexPath);
-  if (mdxContent) {
-    return indexPath;
-  }
-
-  // Fallback to English if requested locale missing? 
-  // For strict cookie implementation, maybe we want fallback. 
-  // Let's keep it strict for now or add fallback logic if desired.
+  const indexContent = await getMDXContent(indexPath);
+  if (indexContent) return indexPath;
 
   return null;
+}
+
+// Shared helper: resolve doc path with EN fallback
+async function resolveDocPath(slug: string[] | undefined): Promise<{ mdxContent: MDXContent; locale: string } | null> {
+  const { locale, fullPath, mdxSlug } = await getRouteInfo(slug);
+  let resolvedPath = await resolveMDXPath(fullPath);
+
+  if (!resolvedPath) {
+    resolvedPath = await resolveMDXPath(`docs/en/${mdxSlug}`);
+  }
+
+  if (!resolvedPath) return null;
+
+  const mdxContent = await getMDXContent(resolvedPath);
+  if (!mdxContent) return null;
+
+  return { mdxContent, locale };
 }
 
 // Generate metadata from frontmatter
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const { fullPath, mdxSlug } = await getRouteInfo(slug);
-  let resolvedPath = await resolveMDXPath(fullPath);
+  const result = await resolveDocPath(slug);
 
-  // Fallback to EN if VI content doesn't exist (same logic as DocPage)
-  if (!resolvedPath) {
-    const fallbackPath = `docs/en/${mdxSlug}`;
-    resolvedPath = await resolveMDXPath(fallbackPath);
+  if (!result) {
+    return { title: 'Not Found', description: 'Page not found' };
   }
 
-  if (!resolvedPath) {
-    return {
-      title: 'Not Found',
-      description: 'Page not found',
-    };
-  }
-
-  const mdxContent = await getMDXContent(resolvedPath);
-
-  if (!mdxContent) {
-    return {
-      title: 'Not Found',
-      description: 'Page not found',
-    };
-  }
-
+  const { mdxContent } = result;
   return {
     title: `${mdxContent.frontmatter.title} | CafeKit Documentation`,
     description: mdxContent.frontmatter.description || mdxContent.frontmatter.title,
@@ -94,46 +77,18 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function DocPage({ params }: PageProps) {
   const { slug } = await params;
-  const { locale, fullPath, mdxSlug } = await getRouteInfo(slug);
-  const resolvedPath = await resolveMDXPath(fullPath);
+  const result = await resolveDocPath(slug);
 
-  if (!resolvedPath) {
-    // Fallback to EN if VI content doesn't exist?
-    // Let's try EN path
-    const fallbackPath = `docs/en/${mdxSlug}`;
-    const fallbackResolved = await resolveMDXPath(fallbackPath);
+  if (!result) notFound();
 
-    if (!fallbackResolved) {
-      notFound();
-    }
-    // Found EN content as fallback
-    const mdxContent = await getMDXContent(fallbackResolved);
-    if (!mdxContent) notFound();
-
-    return renderDoc(mdxContent, slug, locale, fallbackResolved);
-  }
-
-  // Get MDX content
-  const mdxContent = await getMDXContent(resolvedPath);
-
-  if (!mdxContent) {
-    notFound();
-  }
-
-  return renderDoc(mdxContent, slug, locale, resolvedPath);
+  const { mdxContent, locale } = result;
+  return renderDoc(mdxContent, slug, locale);
 }
 
-// Get content directory path - use public/content for Vercel compatibility
-const contentDir = path.join(process.cwd(), 'public', 'content');
+function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: string) {
+  // Use rawContent already available from getMDXContent — no double file read
+  const headings = extractHeadings(mdxContent.rawContent);
 
-function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: string, resolvedPath: string) {
-  // Extract headings for TOC
-  const filePath = path.join(contentDir, `${resolvedPath}.mdx`);
-  const source = fs.readFileSync(filePath, 'utf-8');
-  const { content: rawContent } = matter(source);
-  const headings = extractHeadings(rawContent);
-
-  // Filter to only h2 and h3 for TOC
   const tocHeadings: TOCHeading[] = headings
     .filter((h) => h.level === 2 || h.level === 3)
     .map((h) => ({
