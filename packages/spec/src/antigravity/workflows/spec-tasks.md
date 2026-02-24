@@ -121,17 +121,17 @@ Provide brief summary in the language specified in spec.json:
 ### Next Phase: Implementation
 
 **Before Starting Implementation**:
-- **IMPORTANT**: Clear conversation history and free up context before running `/spec-impl`
+- **IMPORTANT**: Clear conversation history and free up context before running `/code`
 - This applies when starting first task OR switching between tasks
 - Fresh context ensures clean state and proper task focus
 
 **If Tasks Approved**:
-- Execute specific task: `/spec-impl $ARGUMENTS 1.1` (recommended: clear context between each task)
-- Execute multiple tasks: `/spec-impl $ARGUMENTS 1.1,1.2` (use cautiously, clear context between tasks)
-- Without arguments: `/spec-impl $ARGUMENTS` (executes all pending tasks - NOT recommended due to context bloat)
+- Execute coding pass from approved spec tasks: `/code $ARGUMENTS`
+- After coding, run `/test` then `/review`
+- Repeat in small passes and clear context between iterations when needed
 
 **If Modifications Needed**:
 - Provide feedback and re-run `/spec-tasks $ARGUMENTS`
 - Existing tasks used as reference (merge mode)
 
-**Note**: The implementation phase will guide you through executing tasks with appropriate context and validation.
+**Note**: Continue with `/test` then `/review` after `/code` to complete the workflow.

@@ -64,7 +64,9 @@ Hiển thị trạng thái hiện tại của một spec hoặc liệt kê tất
 - `tasks.md` ✅/❌
 
 ### Next Action
-[Recommended next step based on phase]
+- If phase = `requirements-generated`: Run `/spec-design <feature-name>`
+- If phase = `design-generated`: Run `/spec-tasks <feature-name>`
+- If phase = `tasks-generated`: Run `/code <feature-name>`, then `/test`, then `/review`
 ```
 
 ### All Specs List

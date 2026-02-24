@@ -9,10 +9,10 @@ description: Spec-Driven Development workflow for creating comprehensive feature
 
 ## Overview
 
-Skill này cung cấp quy trình 5 bước để biến ý tưởng thành spec có thể implement:
+Skill này cung cấp quy trình 7 bước để biến ý tưởng thành spec và triển khai thực tế:
 
 ```
-Idea → Requirements → Design → Tasks → Implementation
+Idea - Requirements - Design - Tasks - Code - Test - Review
 ```
 
 ## Available Workflows
@@ -23,7 +23,9 @@ Idea → Requirements → Design → Tasks → Implementation
 | `/spec-requirements <feature>` | Sinh requirements (EARS format) |
 | `/spec-design <feature>` | Sinh design doc + research |
 | `/spec-tasks <feature>` | Sinh task list |
-| `/spec-impl <feature> <task-id>` | Hướng dẫn implement task |
+| `/code <feature>` | Implement task từ spec tasks |
+| `/test` | Run tests cho phần code vừa implement |
+| `/review` | Review code quality trước khi merge |
 | `/spec-status <feature>` | Xem trạng thái hiện tại |
 
 ## Quick Start
@@ -41,8 +43,14 @@ Idea → Requirements → Design → Tasks → Implementation
 # 4. Sinh tasks
 /spec-tasks mobile-app
 
-# 5. Implement
-/spec-impl mobile-app 1.1
+# 5. Code
+/code mobile-app
+
+# 6. Test
+/test
+
+# 7. Review
+/review
 ```
 
 ## Data Structure

@@ -39,7 +39,7 @@ Agent activated → Check frontmatter "skills:" → Read SKILL.md (INDEX) → Re
 | **SIMPLE CODE**  | "fix", "add", "change" (single file)       | TIER 0 + TIER 1 (lite)         | Inline Edit                 |
 | **COMPLEX CODE** | "build", "create", "implement", "refactor" | TIER 0 + TIER 1 (full) + Agent | **{task-slug}.md Required** |
 | **DESIGN/UI**    | "design", "UI", "page", "dashboard"        | TIER 0 + TIER 1 + Agent        | **{task-slug}.md Required** |
-| **SLASH CMD**    | /spec-init, /spec-requirements, /spec-design, /spec-tasks, /spec-impl, /spec-status, /docs_init, /docs_update | Command-specific flow | Variable |
+| **SLASH CMD**    | /spec-init, /spec-requirements, /spec-design, /spec-tasks, /spec-status, /code, /test, /review, /docs-init, /docs-update | Command-specific flow | Variable |
 
 ---
 
@@ -131,15 +131,15 @@ When user's prompt is NOT in English:
 | `/spec-requirements <feature>` | Sinh requirements (EARS format) |
 | `/spec-design <feature>` | Sinh design doc + research |
 | `/spec-tasks <feature>` | Sinh task list |
-| `/spec-impl <feature> <task-id>` | Hướng dẫn implement task |
+| `/code <feature>` | Implement task từ spec và chuyển qua test/review |
 | `/spec-status <feature>` | Xem trạng thái hiện tại |
 
 ### Documentation
 
 | Command | Mô tả |
 |---------|-------|
-| `/docs_init` | Initialize project documentation |
-| `/docs_update` | Update existing documentation |
+| `/docs-init` | Initialize project documentation |
+| `/docs-update` | Update existing documentation |
 
 **Usage:**
 - Read `.agent/skills/spec-driven-development/SKILL.md` for detailed workflow information
