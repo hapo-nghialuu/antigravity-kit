@@ -110,7 +110,9 @@ The project supports both **Claude Code** (Anthropic) and **Antigravity** (Googl
 | `/spec-requirements` | Generate EARS-format requirements |
 | `/spec-design` | Create technical design |
 | `/spec-tasks` | Break down into implementable tasks |
-| `/spec-impl` | Implement specific tasks |
+| `/code` | Implement approved tasks |
+| `/test` | Validate implementation |
+| `/review` | Review code quality |
 | `/spec-status` | Check spec progress |
 
 ---

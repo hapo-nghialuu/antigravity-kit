@@ -1,9 +1,9 @@
 ---
-name: spec-driven-development
-description: Spec-Driven Development workflow for creating comprehensive feature specifications. Use for new features, complex changes, or when you need structured requirements, design, and task breakdown.
+name: specs
+description: Specs workflow for creating comprehensive feature specifications. Use for new features, complex changes, or when you need structured requirements, design, and task breakdown.
 ---
 
-# Spec-Driven Development (SDD)
+# Specs (SDD)
 
 > Hệ thống tạo specification có cấu trúc, từ ý tưởng mơ hồ đến task list cụ thể.
 

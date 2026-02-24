@@ -70,7 +70,9 @@
 | `/spec-requirements` | Requirements | `<feature>` |
 | `/spec-design` | Design doc | `<feature> [-y]` |
 | `/spec-tasks` | Task list | `<feature> [-y]` |
-| `/spec-impl` | Implement | `<feature> [task-id]` |
+| `/code` | Implement | `<feature> [task-id]` |
+| `/test` | Validate implementation | `[scope]` |
+| `/review` | Review code quality | `[scope]` |
 | `/spec-status` | View status | `[feature]` |
 
 ---
@@ -79,8 +81,7 @@
 
 | Skill | Use When | Location |
 |-------|----------|----------|
-| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
-| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+| **specs** | New features, specs | `.claude/skills/specs/` |
 
 **All skills:** `.claude/skills/` or `.agent/skills/`
 
@@ -97,4 +98,4 @@
 
 ---
 
-**Last Updated:** 2025-02-09
+**Last Updated:** 2026-02-24

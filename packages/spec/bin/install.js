@@ -19,60 +19,26 @@ const path = require('path');
 const readline = require('readline');
 const packageJson = require('../package.json');
 
+function loadClaudeMigrationManifest() {
+  const manifestPath = path.join(__dirname, '../src/claude/migration-manifest.json');
+
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    console.warn(`⚠ Failed to parse Claude migration manifest: ${error.message}`);
+    return null;
+  }
+}
+
+const CLAUDE_MIGRATION_MANIFEST = loadClaudeMigrationManifest();
+
 const DEPENDENCY_TEMPLATES = {
   commands: {
-    claude: {
-      'code.md': `---
-name: code
-description: Implement approved work from specification tasks and then hand off to test and review.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash
-argument-hint: <feature-name>
----
-
-# /code - Implement from spec tasks
-
-Use this command after /spec-tasks.
-
-1. Read .specs/$ARGUMENTS/tasks.md and identify the next pending task.
-2. Implement only that task following project standards.
-3. Run tests.
-4. Run code review.
-
-Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /review
-`,
-      'test.md': `---
-name: test
-description: Run project tests and report failures concisely.
-allowed-tools: Bash, Read, Grep
-argument-hint: [scope]
----
-
-# /test
-
-Run the project's test command and report:
-- total passed/failed
-- failing test names
-- root cause hints
-- next fix action
-`,
-      'review.md': `---
-name: review
-description: Review recent code changes for quality, security, and maintainability.
-allowed-tools: Bash, Read, Grep, Glob
-argument-hint: [scope]
----
-
-# /review
-
-Review recent code changes. Prioritize:
-- correctness
-- security
-- regressions
-- maintainability
-
-Output findings by severity and include concrete fixes.
-`
-    },
+    claude: {},
     antigravity: {
       'code.md': `---
 description: Implement approved work from specification tasks and then hand off to test and review.
@@ -124,29 +90,7 @@ Output findings by severity and include concrete fixes.
     }
   },
   agents: {
-    claude: {
-      'fullstack-developer.md': `---
-name: fullstack-developer
-description: Implement approved tasks from specification artifacts.
----
-
-Implement code changes from approved spec tasks with minimal scope and clear diffs.
-`,
-      'tester.md': `---
-name: tester
-description: Run tests and summarize failures with actionable fixes.
----
-
-Run relevant test suites and provide concise failure analysis.
-`,
-      'code-reviewer.md': `---
-name: code-reviewer
-description: Review code quality, security, and maintainability.
----
-
-Review code changes and report findings by severity with concrete remediation.
-`
-    },
+    claude: {},
     antigravity: {
       'frontend-specialist.md': `---
 name: frontend-specialist
@@ -340,6 +284,7 @@ function ensureDependencyFile(targetPath, content, results, label) {
     return;
   }
 
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.writeFileSync(targetPath, content, 'utf8');
   console.log(`  ✓ Dependency installed: ${label}`);
   results.dependencyChecks++;
@@ -362,12 +307,22 @@ function ensureWorkflowDependencies(platformKey, platform, results) {
 
 function getPlatformSpecFiles(platformKey) {
   if (platformKey === 'claude') {
+    const manifestCommands = CLAUDE_MIGRATION_MANIFEST?.commands?.core;
+    if (Array.isArray(manifestCommands) && manifestCommands.length > 0) {
+      return manifestCommands;
+    }
+
     return [
       'spec-init.md',
       'spec-requirements.md',
       'spec-design.md',
       'spec-tasks.md',
       'spec-status.md',
+      'code.md',
+      'test.md',
+      'review.md',
+      'review/codebase.md',
+      'review/codebase/parallel.md',
       'docs.md'
     ];
   }
@@ -394,6 +349,7 @@ function copyPlatformFiles(platformKey, results) {
   const sourceSubdir = platform.sourceSubdir || 'commands';
   const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
   const skillsSourceDir = path.join(__dirname, '../src/common/skills');
+  const agentsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/agents`);
 
   // Create directories
   if (!fs.existsSync(platform.commandsDir)) {
@@ -408,14 +364,73 @@ function copyPlatformFiles(platformKey, results) {
 
   // Copy skills (shared across all platforms)
   if (fs.existsSync(skillsSourceDir)) {
-    const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
-    const specSkillDest = path.join(platform.skillsDir, 'spec-driven-development');
+    const specSkillSource = path.join(skillsSourceDir, 'specs');
+    const specSkillDest = path.join(platform.skillsDir, 'specs');
 
     if (fs.existsSync(specSkillSource)) {
       copyRecursive(specSkillSource, specSkillDest);
       results.installedSkills++;
-      console.log(`  ✓ Skill installed: spec-driven-development`);
+      console.log(`  ✓ Skill installed: specs`);
     }
+
+    if (platformKey === 'claude') {
+      const requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
+
+      requiredSkills
+        .filter((skillName) => skillName !== 'specs')
+        .forEach((skillName) => {
+          const skillSource = path.join(skillsSourceDir, skillName);
+          const skillDest = path.join(platform.skillsDir, skillName);
+
+          if (fs.existsSync(skillSource)) {
+            copyRecursive(skillSource, skillDest);
+            results.installedSkills++;
+            console.log(`  ✓ Skill installed: ${skillName}`);
+          } else {
+            results.missingDependencies++;
+            console.log(`  ⚠ Missing dependency template: ${path.join(platform.skillsDir, skillName)}`);
+          }
+        });
+    }
+  }
+
+  // Copy agents
+  if (platformKey === 'claude') {
+    if (fs.existsSync(agentsSourceDir)) {
+      const requiredAgents = CLAUDE_MIGRATION_MANIFEST?.agents?.required || [
+        'tester.md',
+        'code-reviewer.md',
+        'fullstack-developer.md',
+        'debugger.md'
+      ];
+
+      requiredAgents.forEach((fileName) => {
+        const source = path.join(agentsSourceDir, fileName);
+        const dest = path.join(platform.agentsDir, fileName);
+
+        if (!fs.existsSync(source)) {
+          console.log(`  ⚠ Missing dependency template: ${path.join(platform.agentsDir, fileName)}`);
+          results.missingDependencies++;
+          results.dependencyChecks++;
+          return;
+        }
+
+        if (fs.existsSync(dest)) {
+          console.log(`  → Dependency exists: ${path.join(platform.agentsDir, fileName)}`);
+          results.dependencyChecks++;
+        } else {
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.copyFileSync(source, dest);
+          console.log(`  ✓ Dependency installed: ${path.join(platform.agentsDir, fileName)}`);
+          results.dependencyChecks++;
+          results.installedDependencies++;
+        }
+      });
+    } else {
+      results.missingDependencies++;
+      console.log(`  ⚠ Missing dependency template: ${platform.agentsDir}`);
+    }
+
   }
 
   ensureWorkflowDependencies(platformKey, platform, results);
@@ -437,6 +452,7 @@ function copyPlatformFiles(platformKey, results) {
       console.log(`  → Skipped: ${file} (already exists)`);
       results.skipped++;
     } else {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
       let content = fs.readFileSync(source, 'utf8');
       content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
       fs.writeFileSync(dest, content);
@@ -457,7 +473,9 @@ function copyRoutingFile(platformKey, results) {
       console.log(`  → Skipped: ROUTING.md (already exists)`);
       results.skipped++;
     } else {
-      fs.copyFileSync(source, dest);
+      let content = fs.readFileSync(source, 'utf8');
+      content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+      fs.writeFileSync(dest, content);
       console.log(`  ✓ Copied: ROUTING.md`);
       results.copied++;
     }

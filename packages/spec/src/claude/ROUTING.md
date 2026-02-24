@@ -8,7 +8,7 @@
 
 | Domain | Keywords | Agent File |
 |--------|----------|------------|
-| **Frontend** | ui, component, react, css, layout | `.claude/agents/frontend-specialist.md` |
+| **Frontend** | ui, component, react, css, layout | `.claude/agents/ui-ux-designer.md` |
 | **Backend** | api, route, server, endpoint | `.claude/agents/fullstack-developer.md` |
 | **Database** | schema, migration, query, table | `.claude/agents/fullstack-developer.md` |
 | **Security** | auth, login, jwt, password | `.claude/agents/code-reviewer.md` |
@@ -17,7 +17,7 @@
 | **Testing** | test, coverage, unit, e2e | `.claude/agents/tester.md` |
 | **DevOps** | deploy, docker, ci/cd | `.claude/agents/fullstack-developer.md` |
 | **Performance** | slow, optimize, cache | `.claude/agents/code-reviewer.md` |
-| **Docs** | documentation, readme | `.claude/agents/code-reviewer.md` |
+| **Docs** | documentation, readme | `.claude/agents/docs-manager.md` |
 
 **Multi-domain:** Use `fullstack-developer` and coordinate with `tester` + `code-reviewer`.
 
@@ -71,6 +71,8 @@
 | `/spec-design` | Design doc | `<feature> [-y]` |
 | `/spec-tasks` | Task list | `<feature> [-y]` |
 | `/code` | Implement | `<feature> [task-id]` |
+| `/test` | Validate implementation | `[scope]` |
+| `/review` | Review code quality | `[scope]` |
 | `/spec-status` | View status | `[feature]` |
 
 ---
@@ -79,10 +81,9 @@
 
 | Skill | Use When | Location |
 |-------|----------|----------|
-| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
-| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+| **specs** | New features, specs | `{{SKILLS_DIR}}/specs/` |
 
-**All skills:** `.claude/skills/`
+**All skills:** `{{SKILLS_DIR}}/`
 
 ---
 

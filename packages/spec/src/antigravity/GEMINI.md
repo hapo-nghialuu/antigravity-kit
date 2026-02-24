@@ -142,7 +142,7 @@ When user's prompt is NOT in English:
 | `/docs-update` | Update existing documentation |
 
 **Usage:**
-- Read `.agent/skills/spec-driven-development/SKILL.md` for detailed workflow information
+- Read `.agent/skills/specs/SKILL.md` for detailed workflow information
 - Each workflow has its own file in `.agent/workflows/` with specific instructions
 
 ---
@@ -151,7 +151,7 @@ When user's prompt is NOT in English:
 
 ### Skills
 
-- **spec-driven-development**: Complete SDD workflow from idea to implementation
+- **specs**: Complete SDD workflow from idea to implementation
 
 ### Workflows Location
 

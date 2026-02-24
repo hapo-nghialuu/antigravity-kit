@@ -31,14 +31,14 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
      - This provides complete project memory and context
 
 2. **Read Guidelines**:
-   - Read `{{SKILLS_DIR}}/spec-driven-development/rules/ears-format.md` for EARS syntax rules
-   - Read `{{SKILLS_DIR}}/spec-driven-development/templates/requirements.md` for document structure
+   - Read `{{SKILLS_DIR}}/specs/rules/ears-format.md` for EARS syntax rules
+   - Read `{{SKILLS_DIR}}/specs/templates/requirements.md` for document structure
 
 3. **Analyze Existing Codebase** (for Extension/Enhancement features):
    - Search for related files: `**/*.{tsx,jsx,ts,js,vue,py}`
    - Read existing components/modules related to the feature
    - Identify what's already implemented vs what needs to be added
-   
+
    **CRITICAL: DO NOT STOP OR ASK USER.** Instead:
    - Note findings and CONTINUE to Step 4
    - If existing implementation found:

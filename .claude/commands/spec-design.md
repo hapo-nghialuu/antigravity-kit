@@ -27,9 +27,9 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 **Read all necessary context**:
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md` (if exists)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
-- `.claude/skills/spec-driven-development/templates/design.md` for document structure
-- `.claude/skills/spec-driven-development/rules/design-principles.md` for design principles
-- `.claude/skills/spec-driven-development/templates/research.md` for discovery log structure
+- `.claude/skills/specs/templates/design.md` for document structure
+- `.claude/skills/specs/rules/design-principles.md` for design principles
+- `.claude/skills/specs/templates/research.md` for discovery log structure
 
 **Validate requirements approval**:
 - If `-y` flag provided: Auto-approve requirements in spec.json
@@ -48,7 +48,7 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 2. **Execute Appropriate Discovery Process**:
 
    **For Complex/New Features**:
-   - Read and execute `.claude/skills/spec-driven-development/rules/design-discovery-full.md`
+   - Read and execute `.claude/skills/specs/rules/design-discovery-full.md`
    - Conduct thorough research using WebSearch/WebFetch:
      - Latest architectural patterns and best practices
      - External dependency verification (APIs, libraries, versions, compatibility)
@@ -56,7 +56,7 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
      - Performance benchmarks and security considerations
 
    **For Extensions**:
-   - Read and execute `.claude/skills/spec-driven-development/rules/design-discovery-light.md`
+   - Read and execute `.claude/skills/specs/rules/design-discovery-light.md`
    - Focus on integration points, existing patterns, compatibility
    - Use Grep to analyze existing codebase patterns
 
@@ -82,8 +82,8 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 ### Step 3: Generate Design Document
 
 1. **Load Design Template and Rules**:
-   - Read `.claude/skills/spec-driven-development/templates/design.md` for structure
-   - Read `.claude/skills/spec-driven-development/rules/design-principles.md` for principles
+   - Read `.claude/skills/specs/templates/design.md` for structure
+   - Read `.claude/skills/specs/rules/design-principles.md` for principles
 
 2. **Generate Design Document**:
    - **Follow template structure strictly**
