@@ -1,112 +1,74 @@
 ---
 title: /spec-status
-description: Kiểm tra tiến độ implementation
+description: Kiểm tra phase hiện tại, phê duyệt và tiến độ của spec
 ---
 
 # /spec-status
 
-Kiểm tra và hiển thị trạng thái tổng quan của feature implementation.
+Xem trạng thái của một spec hoặc liệt kê tất cả spec.
 
 ## Sử dụng
 
 **Claude Code:**
-```
+```bash
+/spec-status user-authentication
 /spec-status
 ```
 
 **Antigravity:**
-```
+```bash
+/spec-status user-authentication
 /spec-status
 ```
 
 ## Mô tả
 
-Lệnh này đọc tất cả các file trong spec directory và hiển thị báo cáo tiến độ:
-- Spec completeness (đã có những gì)
-- Task completion rate
-- Files được tạo
-- Next steps
+`/spec-status` đọc metadata từ `.specs/*/spec.json` và tóm tắt:
+- Phase hiện tại
+- Trạng thái generated/approved của requirements, design, tasks
+- Thời điểm cập nhật gần nhất
+- Hành động tiếp theo được khuyến nghị
 
-## Output mẫu
+## Ví dụ một spec
 
+```text
+> /spec-status user-authentication
+
+## 📊 Spec Status: user-authentication
+
+| Property | Value |
+|----------|-------|
+| Phase | tasks-generated |
+| Updated | 2026-02-24T10:20:00Z |
+
+### Approvals
+- Requirements: ✅ Generated | ✅ Approved
+- Design: ✅ Generated | ✅ Approved
+- Tasks: ✅ Generated | ❌ Approved
+
+### Files
+- spec.json ✅
+- requirements.md ✅
+- research.md ✅
+- design.md ✅
+- tasks.md ✅
+
+### Next Action
+Chạy `/code user-authentication`, sau đó `/test`, rồi `/review`.
 ```
+
+## Ví dụ tất cả spec
+
+```text
 > /spec-status
 
-# Spec Status: user-authentication
-
-## 📋 Documents
-✅ spec.md           - Feature overview
-✅ requirements.md    - 12 requirements defined
-✅ design.md          - Technical design complete
-✅ tasks.md           - 8 tasks defined
-✅ implementation.md  - Progress tracking
-
-## 📊 Progress
-[38;5;82m████████████████████░░░░░░░░░░░░░░░░░░[0m 50% (4/8 tasks)
-
-## ✅ Completed Tasks
-1. Create database migration
-2. Setup JWT utilities
-3. Implement login endpoint
-4. Add password validation
-
-## ⏳ Pending Tasks
-5. Implement logout endpoint
-6. Add rate limiting
-7. Create middleware
-8. Write tests
-
-## 📁 Files Created
-- src/app/api/auth/login/route.ts
-- src/app/api/auth/logout/route.ts
-- src/lib/jwt.ts
-- src/lib/auth.ts
-- migrations/001_create_auth_tables.sql
-
-## 🎯 Next Steps
-Implement Task 5: Implement logout endpoint
-Run: /spec-impl
-```
-
-## Cách đọc status
-
-### Progress Bar
-- 0-25%: Planning phase
-- 25-50%: Core implementation
-- 50-75%: Feature complete
-- 75-100%: Polish & testing
-
-### Task States
-- ✅ Completed - Đã implement và test
-- 🔄 In Progress - Đang làm
-- ⏳ Pending - Chưa bắt đầu
-- ⏸️ Blocked - Bị block (có dependency chưa xong)
-
-## Sử dụng trong workflow
-
-### Daily check-in
-```
-> /spec-status
-
-Kiểm tra tiến độ cuối ngày để biết mai làm gì
-```
-
-### Pre-demo check
-```
-> /spec-status
-
-Kiểm tra những gì đã xong trước khi demo
-```
-
-### Handover
-```
-> /spec-status
-
-Tạo báo cáo để handover cho ngườì khác
+| Feature | Phase | Last Updated |
+|---------|-------|--------------|
+| user-authentication | tasks-generated | 2026-02-24 |
+| payment-gateway | requirements-generated | 2026-02-23 |
 ```
 
 ## Lưu ý
 
-- Status được lưu trong `implementation.md`
-- Cập nhật tự động khi chạy `/spec-impl`
-- Có thể edit thủ công nếu cần
+- Nguồn dữ liệu chính là `.specs/[feature-name]/spec.json`
+- Trạng thái được cập nhật khi bạn đi qua `/spec-*`, `/code`, `/test`, `/review`

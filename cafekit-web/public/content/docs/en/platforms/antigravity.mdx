@@ -5,7 +5,7 @@ description: Guide for using CafeKit Spec with Antigravity
 
 # Antigravity
 
-Complete guide for using CafeKit Spec with Antigravity - AI assistant framework from Google.
+Complete guide for using CafeKit Spec with Antigravity.
 
 ## Installation
 
@@ -13,190 +13,98 @@ Complete guide for using CafeKit Spec with Antigravity - AI assistant framework 
 npx @haposoft/cafekit-spec
 ```
 
-Select **Antigravity** in the installation menu.
+Select **Antigravity** in the installer menu.
 
 ## File Structure
 
-After installation, files are created in the `.agent/` directory:
+After installation, CafeKit Spec adds workflow files to `.agent/`:
 
 ```
 .agent/
-├── AGENTS.md                 # AI quick reference
-├── GEMINI.md                 # Gemini-specific context
-├── ARCHITECTURE.md           # Architecture docs
-├── CONVENTIONS.md            # Platform conventions
+├── workflows/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   ├── docs-init.md
+│   └── docs-update.md
 ├── agents/
-│   ├── spec-init.json        # spec-init agent
-│   ├── spec-requirements.json
-│   ├── spec-design.json
-│   ├── spec-tasks.json
-│   ├── spec-impl.json
-│   ├── spec-status.json
-│   ├── docs-init.json
-│   └── docs-update.json
+│   ├── frontend-specialist.md
+│   ├── test-engineer.md
+│   └── code-archaeologist.md
 ├── skills/
-│   └── ...                   # 40+ reusable skills
-└── workflows/
-    ├── spec-init.yaml
-    ├── spec-requirements.yaml
-    ├── spec-design.yaml
-    ├── spec-tasks.yaml
-    ├── spec-impl.yaml
-    ├── spec-status.yaml
-    ├── docs-init.yaml
-    └── docs-update.yaml
+│   └── specs/
+└── rules/
+    └── GEMINI.md
 ```
 
-## Command Syntax
+## Command Set
 
-All commands in Antigravity use **underscores**:
+Antigravity supports both `/command` and `@command` styles.
 
-### Spec Workflows
+### Spec workflow
 | Command | Description |
 |---------|-------------|
-| `/spec-init` | Initialize new spec |
-| `/spec-requirements` | Analyze requirements |
-| `/spec-design` | Technical design |
-| `/spec-tasks` | Break down tasks |
-| `/spec-impl` | Implement code |
-| `/spec-status` | Check progress |
+| `/spec-init` | Initialize a new spec |
+| `/spec-requirements` | Gather and generate requirements |
+| `/spec-design` | Generate technical design |
+| `/spec-tasks` | Generate implementation tasks |
+| `/code` | Implement next approved task |
+| `/test` | Run tests and summarize failures |
+| `/review` | Review code correctness and security |
+| `/spec-status` | Show current spec status |
 
-### Documentation Workflows
+### Documentation workflow
 | Command | Description |
 |---------|-------------|
-| `/docs-init` | Initialize documentation |
-| `/docs-update` | Update documentation |
-
-## Special Files
-
-### AGENTS.md
-Quick reference file for AI:
-
-```markdown
-# Project Context
-
-## Agents
-- spec-init - Initialize feature spec
-- spec-impl - Implement tasks
-...
-
-## Skills
-- file_read, file_write, file_edit
-- task_create, task_update
-...
-```
-
-### GEMINI.md
-Special context for Gemini model:
-
-```markdown
-# Gemini Configuration
-
-## Model Settings
-- Temperature: 0.2
-- Max tokens: 8000
-
-## Context Window
-- Priority: AGENTS.md > GEMINI.md > codebase
-```
-
-### ARCHITECTURE.md
-Framework architecture description:
-
-```markdown
-# Antigravity Architecture
-
-## Agent System
-- Specialized agents per workflow
-- Skills-based composition
-
-## Workflow Engine
-- YAML-defined workflows
-- State management
-```
+| `/docs-init` | Initialize project docs |
+| `/docs-update` | Update docs after changes |
 
 ## Usage Examples
 
-### Initialize new feature
+### Start a feature
 
 ```
-> /spec-init
-
-Feature name: payment-gateway
-Description: Stripe payment gateway integration
-...
+> /spec-init payment-gateway
+# or
+> @spec-init payment-gateway
 ```
 
-### Implement tasks
+### Implement from tasks
 
 ```
-> /spec-impl
-
-Implement task: 3
-Feature: payment-gateway
-...
+> /code payment-gateway
+> /test
+> /review
 ```
 
 ### Update documentation
 
 ```
 > /docs-update
-
-Update docs after adding Stripe integration
 ```
 
 ## Differences from Claude Code
 
 | | Antigravity | Claude Code |
 |---|---|---|
-| **Syntax** | Underscores (`/spec-init`) | Hyphens (`/spec-init`) |
-| **Directory** | `.agent/` | `.claude/` |
-| **Config file** | `AGENTS.md` | `CLAUDE.md` |
-| **Extra files** | `GEMINI.md`, `ARCHITECTURE.md` | `ROUTING.md` |
-| **Agent system** | Multiple specialized agents | Single Claude instance |
-| **Skills** | 40+ reusable skills | Built-in capabilities |
-
-## Multi-Agent System
-
-Antigravity uses multiple specialized agents:
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  spec-init  │────▶│ spec-design │────▶│  spec-impl  │
-│    agent    │     │    agent    │     │    agent    │
-└─────────────┘     └─────────────┘     └─────────────┘
-      │                                       │
-      ▼                                       ▼
-┌─────────────┐                         ┌─────────────┐
-│  Codebase   │◀────────────────────────│   skills    │
-│   Context   │                         │  (40+ tools)│
-└─────────────┘                         └─────────────┘
-```
-
-Each agent has:
-- Its own prompt template
-- Appropriate skill set
-- Optimized context window
-
-## Tips
-
-1. **Use skills**: Antigravity has 40+ reusable skills
-2. **Agent routing**: System automatically selects appropriate agent
-3. **GEMINI.md**: Customize for Gemini model
-4. **Workflow YAML**: Can edit workflows directly
+| Workflow directory | `.agent/workflows/` | `.claude/commands/` |
+| Agent directory | `.agent/agents/` | `.claude/agents/` |
+| Routing rules file | `.agent/rules/GEMINI.md` | `.claude/ROUTING.md` |
+| Command trigger | `/...` or `@...` | `/...` |
 
 ## Troubleshooting
 
 ### Commands not showing
 ```bash
-# Check installation
 ls -la .agent/workflows/
 ```
 
-### AGENTS.md not being read
-- Ensure file is at root: `./AGENTS.md`
-- Check Antigravity configuration
-
-### Error running command
-- Check agent definitions
+### Command execution issues
+- Restart Antigravity
+- Verify workflow files use `.md` with valid frontmatter
 - Re-run installer: `npx @haposoft/cafekit-spec`

@@ -1,93 +1,59 @@
 ---
 title: /spec-design
-description: Create technical design document from requirements
+description: Generate technical design from approved requirements
 ---
 
 # /spec-design
 
-Create technical design document based on analyzed requirements.
+Generate a technical design document for your feature.
 
 ## Usage
 
 **Claude Code:**
-```
-/spec-design
+```bash
+/spec-design user-authentication
 ```
 
 **Antigravity:**
-```
-/spec-design
+```bash
+/spec-design user-authentication
+# or
+@spec-design user-authentication
 ```
 
 ## Description
 
-This command reads `spec.md` and `requirements.md` to create `design.md` - a document describing detailed technical implementation approach.
+`/spec-design` reads:
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md`
 
-## Design Document Content
+It then generates:
+- `.specs/[feature-name]/design.md`
+- `.specs/[feature-name]/research.md` (when discovery/research is needed)
 
-### 1. Technical Architecture
+## What the Design Covers
 
-Describe overall architecture:
-- Layer/component structure
-- Data flow
-- Integration points
+- Architecture and boundaries
+- Component responsibilities and interfaces
+- Data models and contracts
+- System flows (Mermaid where needed)
+- Error handling strategy
+- Testing strategy
+- Security and performance considerations (when applicable)
 
-### 2. Data Model
+## Output Example
 
+```text
+✅ Updated: .specs/user-authentication/design.md
+✅ Updated: .specs/user-authentication/research.md
 ```
-┌─────────────┐       ┌─────────────┐
-│    User     │───────│   Session   │
-├─────────────┤       ├─────────────┤
-│ id          │       │ id          │
-│ email       │       │ user_id     │
-│ password    │       │ token       │
-│ created_at  │       │ expires_at  │
-└─────────────┘       └─────────────┘
-```
 
-### 3. API Design
+## Notes
 
-| Method | Endpoint | Description | Request | Response |
-|--------|----------|-------------|---------|----------|
-| POST | /api/auth/login | Login | `{email, password}` | `{token}` |
-| POST | /api/auth/logout | Logout | `{token}` | `{success}` |
-
-### 4. Error Handling
-
-| Error Code | HTTP Status | Description |
-|------------|-------------|-------------|
-| AUTH001 | 401 | Invalid credentials |
-| AUTH002 | 403 | Account locked |
-
-### 5. Security Considerations
-
-- JWT secret rotation
-- Rate limiting
-- Password hashing (bcrypt)
-
-## Output
-
-File `specs/[feature-name]/design.md`:
-
-```markdown
-# Technical Design: [Feature Name]
-
-## 1. Architecture
-...
-
-## 2. Data Model
-...
-
-## 3. API Design
-...
-
-## 4. Implementation Notes
-...
-
-## 5. Testing Strategy
-...
-```
+- Converts requirements (**what**) into implementation design (**how**)
+- Should be reviewed before task generation
+- Updates phase metadata in `spec.json`
 
 ## Next Steps
 
-- [`/spec-tasks`](/docs/spec/tasks) - Break design into small tasks
+- [`/spec-tasks`](/docs/spec/tasks) - Generate actionable implementation tasks

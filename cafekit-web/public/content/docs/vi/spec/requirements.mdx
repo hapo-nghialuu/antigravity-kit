@@ -1,91 +1,63 @@
 ---
 title: /spec-requirements
-description: Phân tích yêu cầu và tạo requirements EARS format
+description: Sinh requirements chi tiết, có thể kiểm thử theo định dạng EARS
 ---
 
 # /spec-requirements
 
-Phân tích yêu cầu từ PRD/Product Context và tạo requirements theo định dạng EARS.
+Sinh requirements từ mô tả dự án trong spec đã khởi tạo.
 
 ## Sử dụng
 
 **Claude Code:**
-```
-/spec-requirements
+```bash
+/spec-requirements user-authentication
 ```
 
 **Antigravity:**
-```
-/spec-requirements
+```bash
+/spec-requirements user-authentication
+# hoặc
+@spec-requirements user-authentication
 ```
 
 ## Mô tả
 
-Lệnh này đọc file `spec.md` và context từ project để tạo `requirements.md` với định dạng EARS (Easy Approach to Requirements Syntax) - một chuẩn viết requirements rõ ràng, có thể kiểm tra được.
+`/spec-requirements` đọc:
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md` (mô tả đầu vào của dự án)
 
-## Định dạng EARS
+Sau đó lệnh ghi requirements chi tiết trở lại `requirements.md` với acceptance criteria theo EARS.
 
-### Cấu trúc
+## Mẫu EARS
 
-```
-[REQ-001] [Loại] [Priority]: Mô tả yêu cầu
-```
+- `When [sự kiện], [hệ thống] shall [phản hồi]`
+- `If [điều kiện], [hệ thống] shall [phản hồi]`
+- `While [trạng thái], [hệ thống] shall [phản hồi]`
+- `Where [feature flag], [hệ thống] shall [phản hồi]`
+- `The [hệ thống] shall [phản hồi]`
 
-### Loại (Type)
-
-| Loại | Mô tả | Ví dụ |
-|------|-------|-------|
-| **Functional** | Hành vi hệ thống | "Khi ngườì dùng nhấn đăng nhập, hệ thống sẽ xác thực thông tin" |
-| **Non-Functional** | Yêu cầu chất lượng | "Thờì gian phản hồi < 2 giây" |
-| **Constraint** | Giới hạn kỹ thuật | "Phải sử dụng PostgreSQL" |
-| **Assumption** | Giả định | "Ngườì dùng có email hợp lệ" |
-
-### Mức độ ưu tiên (Priority)
-
-| Mức | Mô tả |
-|-----|-------|
-| **Must** | Bắt buộc có |
-| **Should** | Nên có, nhưng có thể linh hoạt |
-| **Could** | Có thể có nếu thờì gian cho phép |
-
-## Output
-
-File `specs/[feature-name]/requirements.md`:
+## Định dạng output (ví dụ)
 
 ```markdown
-# Requirements: [Feature Name]
+# Requirements Document
 
-## Functional Requirements
+## Requirements
 
-[REQ-001] [Functional] [Must]: Khi ngườì dùng nhập đúng username/password,
-hệ thống sẽ trả về JWT token
+### Requirement 1: Đăng nhập người dùng
+**Objective:** Là người dùng cuối, tôi muốn đăng nhập an toàn để truy cập tài khoản của mình.
 
-[REQ-002] [Functional] [Must]: Khi ngườì dùng nhập sai mật khẩu 5 lần,
-hệ thống sẽ khóa tài khoản trong 30 phút
-
-## Non-Functional Requirements
-
-[REQ-010] [Non-Functional] [Must]: API authentication phải phản hồi
-trong vòng 500ms
-
-## Constraints
-
-[REQ-020] [Constraint] [Must]: Phải sử dụng JWT với HS256 algorithm
+#### Acceptance Criteria
+1. When người dùng gửi thông tin hợp lệ, dịch vụ xác thực shall trả về session token hợp lệ.
+2. If người dùng gửi thông tin không hợp lệ, dịch vụ xác thực shall trả về lỗi xác thực.
 ```
-
-## Quy trình
-
-1. AI đọc `spec.md` và project context
-2. Phân tích và tạo requirements EARS
-3. Ngườì dùng review và sửa đổi
-4. Lưu vào `requirements.md`
 
 ## Lưu ý
 
-- Requirements phải **measurable** (có thể đo lường)
-- Mỗi REQ nên có 1 responsibility duy nhất
-- Priority giúp team biết đâu là critical path
+- Tập trung vào **cái cần xây**, không đi vào chi tiết triển khai
+- Requirements cần rõ ràng, kiểm thử được, xác minh được
+- Lệnh cập nhật metadata phase trong `spec.json`
 
 ## Bước tiếp theo
 
-- [`/spec-design`](/docs/spec/design) - Dựa trên requirements để thiết kế kỹ thuật
+- [`/spec-design`](/docs/spec/design) - Sinh thiết kế kỹ thuật từ requirements đã duyệt

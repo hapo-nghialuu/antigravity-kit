@@ -82,8 +82,16 @@ const sidebarNavEn = [
                 href: "/docs/spec/tasks",
             },
             {
-                title: "/spec-impl",
-                href: "/docs/spec/impl",
+                title: "/code",
+                href: "/docs/spec/code",
+            },
+            {
+                title: "/test",
+                href: "/docs/spec/test",
+            },
+            {
+                title: "/review",
+                href: "/docs/spec/review",
             },
             {
                 title: "/spec-status",
@@ -203,8 +211,16 @@ const sidebarNavVi = [
                 href: "/docs/spec/tasks",
             },
             {
-                title: "/spec-impl",
-                href: "/docs/spec/impl",
+                title: "/code",
+                href: "/docs/spec/code",
+            },
+            {
+                title: "/test",
+                href: "/docs/spec/test",
+            },
+            {
+                title: "/review",
+                href: "/docs/spec/review",
             },
             {
                 title: "/spec-status",

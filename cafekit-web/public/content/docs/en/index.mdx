@@ -33,7 +33,7 @@ CafeKit Spec works with both popular AI assistant platforms:
     </div>
     <ul className="text-sm text-gray-600 space-y-1">
       <li>Commands: <code>/spec-init</code></li>
-      <li>File: <code>.claude/CLAUDE.md</code></li>
+      <li>File: <code>.claude/ROUTING.md</code></li>
       <li>Single AI instance</li>
     </ul>
   </Card>
@@ -49,7 +49,7 @@ CafeKit Spec works with both popular AI assistant platforms:
     </div>
     <ul className="text-sm text-gray-600 space-y-1">
       <li>Commands: <code>/spec-init</code></li>
-      <li>File: <code>.agent/AGENTS.md</code></li>
+      <li>File: <code>.agent/rules/GEMINI.md</code></li>
       <li>Multi-agent system</li>
     </ul>
   </Card>
@@ -62,7 +62,7 @@ Get started with these essential guides:
 - [Installation](/docs/getting-started/installation) - Get CafeKit Spec installed in under a minute
 - [Quickstart](/docs/getting-started/quickstart) - Build your first spec
 - [Documentation Workflows](/docs/docs-workflow) - Manage project documentation
-- [Spec Workflows](/docs/spec) - Master the 6 spec commands
+- [Spec Workflows](/docs/spec) - Master the spec command chain
 
 ## Why Spec-Driven Development?
 
@@ -123,14 +123,18 @@ The AI guides you through defining requirements, designing architecture, and bre
   <TabsPanel value="claude">
 
 ```bash
-/spec-impl
+/code
+/test
+/review
 ```
 
   </TabsPanel>
   <TabsPanel value="antigravity">
 
 ```bash
-/spec-impl
+/code
+/test
+/review
 ```
 
   </TabsPanel>
@@ -146,13 +150,13 @@ The AI reads your spec and helps you build task-by-task, with verification at ea
 
 A **spec** is a structured workspace for one feature. It contains:
 
-- `spec.md` - Feature overview
+- `spec.json` - Phase and approval status
 - `requirements.md` - EARS format requirements
 - `design.md` - Technical design
 - `tasks.md` - Task breakdown
-- `implementation.md` - Implementation progress
+- `spec.json` - Phase and approval status
 
-Specs live in `specs/` and are committed to Git for team collaboration.
+Specs live in `.specs/` and are committed to Git for team collaboration.
 
 ### Documentation
 
@@ -191,7 +195,7 @@ Follow this path to master CafeKit Spec:
 1. **[Installation](/docs/getting-started/installation)** (2 min) - Get set up
 2. **[Quickstart](/docs/getting-started/quickstart)** (10 min) - Build your first spec
 3. **[Documentation Workflows](/docs/docs-workflow)** (10 min) - Manage project documentation
-4. **[Spec Workflows](/docs/spec)** (20 min) - Learn the 6 spec commands
+4. **[Spec Workflows](/docs/spec)** (20 min) - Learn the complete command chain
 
 Total time to productivity: **~45 minutes**
 

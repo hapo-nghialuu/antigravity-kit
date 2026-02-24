@@ -1,91 +1,63 @@
 ---
 title: /spec-requirements
-description: Analyze requirements and create EARS format requirements
+description: Generate detailed, testable requirements in EARS format
 ---
 
 # /spec-requirements
 
-Analyze requirements from PRD/Product Context and create requirements in EARS format.
+Generate requirements from the project description in your initialized spec.
 
 ## Usage
 
 **Claude Code:**
-```
-/spec-requirements
+```bash
+/spec-requirements user-authentication
 ```
 
 **Antigravity:**
-```
-/spec-requirements
+```bash
+/spec-requirements user-authentication
+# or
+@spec-requirements user-authentication
 ```
 
 ## Description
 
-This command reads the `spec.md` file and project context to create `requirements.md` in EARS (Easy Approach to Requirements Syntax) format - a standard for writing clear, testable requirements.
+`/spec-requirements` reads:
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md` (Project Description input)
 
-## EARS Format
+Then it writes detailed requirements back into `requirements.md` using EARS-style acceptance criteria.
 
-### Structure
+## EARS Pattern Examples
 
-```
-[REQ-001] [Type] [Priority]: Requirement description
-```
+- `When [event], the [system] shall [response]`
+- `If [condition], the [system] shall [response]`
+- `While [state], the [system] shall [response]`
+- `Where [feature flag], the [system] shall [response]`
+- `The [system] shall [response]`
 
-### Type
-
-| Type | Description | Example |
-|------|-------------|---------|
-| **Functional** | System behavior | "When user clicks login, system will authenticate credentials" |
-| **Non-Functional** | Quality requirements | "Response time < 2 seconds" |
-| **Constraint** | Technical limitations | "Must use PostgreSQL" |
-| **Assumption** | Assumptions | "User has valid email" |
-
-### Priority Levels
-
-| Level | Description |
-|-------|-------------|
-| **Must** | Required |
-| **Should** | Should have, but flexible |
-| **Could** | Can have if time permits |
-
-## Output
-
-File `specs/[feature-name]/requirements.md`:
+## Output Format (Example)
 
 ```markdown
-# Requirements: [Feature Name]
+# Requirements Document
 
-## Functional Requirements
+## Requirements
 
-[REQ-001] [Functional] [Must]: When user enters correct username/password,
-system will return JWT token
+### Requirement 1: User Sign-in
+**Objective:** As an end user, I want to sign in securely, so that I can access my account.
 
-[REQ-002] [Functional] [Must]: When user enters wrong password 5 times,
-system will lock account for 30 minutes
-
-## Non-Functional Requirements
-
-[REQ-010] [Non-Functional] [Must]: Authentication API must respond
-within 500ms
-
-## Constraints
-
-[REQ-020] [Constraint] [Must]: Must use JWT with HS256 algorithm
+#### Acceptance Criteria
+1. When a user submits valid credentials, the authentication service shall return a valid session token.
+2. If a user submits invalid credentials, the authentication service shall return an authentication error.
 ```
-
-## Process
-
-1. AI reads `spec.md` and project context
-2. AI analyzes and creates EARS requirements
-3. User reviews and modifies
-4. Saves to `requirements.md`
 
 ## Notes
 
-- Requirements must be **measurable**
-- Each REQ should have a single responsibility
-- Priority helps team identify the critical path
+- Focuses on **what** to build, not implementation details
+- Requirements should be clear, testable, and verifiable
+- Updates phase metadata in `spec.json`
 
 ## Next Steps
 
-- [`/spec-design`](/docs/spec/design) - Use requirements to create technical design
+- [`/spec-design`](/docs/spec/design) - Generate technical design from approved requirements
