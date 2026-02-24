@@ -2,7 +2,7 @@
 description: Initialize comprehensive documentation for the project. Use when setting up docs for the first time or creating documentation skeleton from existing codebase.
 ---
 
-# /docs_init - Initialize Project Documentation
+# /docs-init - Initialize Project Documentation
 
 ## Overview
 
@@ -367,8 +367,8 @@ activation: always_on
 ## Agent Workflows
 
 Available workflows in `.agent/workflows/`:
-- `/docs_init` - Initialize documentation
-- `/docs_update` - Update documentation
+- `/docs-init` - Initialize documentation
+- `/docs-update` - Update documentation
 
 ---
 
@@ -408,7 +408,7 @@ Available workflows in `.agent/workflows/`:
    ✓ repomix-output.xml (AI context)
    ✓ .agent/rules/AGENTS.md (always-active project context)
 
-🚀 Next: Run `/docs_update` after code changes
+🚀 Next: Run `/docs-update` after code changes
 ```
 
 ---

@@ -37,14 +37,14 @@ After installation, files are created in the `.agent/` directory:
 ├── skills/
 │   └── ...                   # 40+ reusable skills
 └── workflows/
-    ├── spec_init.yaml
-    ├── spec_requirements.yaml
-    ├── spec_design.yaml
-    ├── spec_tasks.yaml
-    ├── spec_impl.yaml
-    ├── spec_status.yaml
-    ├── docs_init.yaml
-    └── docs_update.yaml
+    ├── spec-init.yaml
+    ├── spec-requirements.yaml
+    ├── spec-design.yaml
+    ├── spec-tasks.yaml
+    ├── spec-impl.yaml
+    ├── spec-status.yaml
+    ├── docs-init.yaml
+    └── docs-update.yaml
 ```
 
 ## Command Syntax
@@ -54,18 +54,18 @@ All commands in Antigravity use **underscores**:
 ### Spec Workflows
 | Command | Description |
 |---------|-------------|
-| `/spec_init` | Initialize new spec |
-| `/spec_requirements` | Analyze requirements |
-| `/spec_design` | Technical design |
-| `/spec_tasks` | Break down tasks |
-| `/spec_impl` | Implement code |
-| `/spec_status` | Check progress |
+| `/spec-init` | Initialize new spec |
+| `/spec-requirements` | Analyze requirements |
+| `/spec-design` | Technical design |
+| `/spec-tasks` | Break down tasks |
+| `/spec-impl` | Implement code |
+| `/spec-status` | Check progress |
 
 ### Documentation Workflows
 | Command | Description |
 |---------|-------------|
-| `/docs_init` | Initialize documentation |
-| `/docs_update` | Update documentation |
+| `/docs-init` | Initialize documentation |
+| `/docs-update` | Update documentation |
 
 ## Special Files
 
@@ -76,8 +76,8 @@ Quick reference file for AI:
 # Project Context
 
 ## Agents
-- spec_init - Initialize feature spec
-- spec_impl - Implement tasks
+- spec-init - Initialize feature spec
+- spec-impl - Implement tasks
 ...
 
 ## Skills
@@ -120,7 +120,7 @@ Framework architecture description:
 ### Initialize new feature
 
 ```
-> /spec_init
+> /spec-init
 
 Feature name: payment-gateway
 Description: Stripe payment gateway integration
@@ -130,7 +130,7 @@ Description: Stripe payment gateway integration
 ### Implement tasks
 
 ```
-> /spec_impl
+> /spec-impl
 
 Implement task: 3
 Feature: payment-gateway
@@ -140,7 +140,7 @@ Feature: payment-gateway
 ### Update documentation
 
 ```
-> /docs_update
+> /docs-update
 
 Update docs after adding Stripe integration
 ```
@@ -149,7 +149,7 @@ Update docs after adding Stripe integration
 
 | | Antigravity | Claude Code |
 |---|---|---|
-| **Syntax** | Underscores (`/spec_init`) | Hyphens (`/spec-init`) |
+| **Syntax** | Underscores (`/spec-init`) | Hyphens (`/spec-init`) |
 | **Directory** | `.agent/` | `.claude/` |
 | **Config file** | `AGENTS.md` | `CLAUDE.md` |
 | **Extra files** | `GEMINI.md`, `ARCHITECTURE.md` | `ROUTING.md` |
@@ -162,7 +162,7 @@ Antigravity uses multiple specialized agents:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  spec_init  │────▶│ spec_design │────▶│  spec_impl  │
+│  spec-init  │────▶│ spec-design │────▶│  spec-impl  │
 │    agent    │     │    agent    │     │    agent    │
 └─────────────┘     └─────────────┘     └─────────────┘
       │                                       │
