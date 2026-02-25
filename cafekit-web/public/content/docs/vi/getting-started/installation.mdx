@@ -1,6 +1,6 @@
 ---
 title: Cài đặt
-description: Bắt đầu với CafeKit Spec trong chưa đầy một phút. Cài đặt 6 lệnh workflow spec để phát triển tính năng có cấu trúc.
+description: Bắt đầu với CafeKit Spec trong chưa đầy một phút. Cài đặt chuỗi lệnh workflow spec để phát triển tính năng có cấu trúc.
 ---
 
 # Cài đặt
@@ -51,7 +51,7 @@ Bộ cài đặt sẽ yêu cầu bạn chọn nền tảng:
 
 Lệnh này sẽ:
 - Phát hiện cấu trúc dự án của bạn
-- Cài đặt 6 lệnh workflow spec vào thư mục lệnh của nền tảng
+- Cài đặt bộ lệnh cốt lõi (`/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-status`, `/code`, `/test`, `/review`)
 - Cấu hình workspace cho quy trình phát triển theo spec
 
 ## Những gì được cài đặt
@@ -62,31 +62,47 @@ Sau khi chạy lệnh cài đặt, bạn sẽ có framework CafeKit trong dự �
 ```
 .claude/
 ├── commands/
-│   ├── spec-init.md           # Khởi tạo spec mới
-│   ├── spec-requirements.md   # Thu thập yêu cầu
-│   ├── spec-design.md         # Tạo tài liệu thiết kế
-│   ├── spec-tasks.md          # Tạo danh sách task
-│   ├── spec-impl.md           # Hướng dẫn implement
-│   ├── spec-status.md         # Theo dõi tiến độ
-│   └── docs.md                # Quản lý documentation
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   └── docs.md
+├── agents/
+│   ├── tester.md
+│   ├── code-reviewer.md
+│   ├── fullstack-developer.md
+│   └── debugger.md
 ├── skills/
-│   └── spec-driven-development/  # SDD skill
-└── ROUTING.md                 # Quy tắc định tuyến agent
+│   └── specs/
+└── ROUTING.md
 ```
 
 ### Antigravity
 ```
 .agent/
-├── commands/
-│   ├── spec-init.md           # Khởi tạo spec mới
-│   ├── spec-requirements.md   # Thu thập yêu cầu
-│   ├── spec-design.md         # Tạo tài liệu thiết kế
-│   ├── spec-tasks.md          # Tạo danh sách task
-│   ├── spec-impl.md           # Hướng dẫn implement
-│   ├── spec-status.md         # Theo dõi tiến độ
-│   └── docs.md                # Quản lý documentation
-└── skills/
-    └── spec-driven-development/  # SDD skill
+├── workflows/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   ├── docs-init.md
+│   └── docs-update.md
+├── agents/
+│   ├── frontend-specialist.md
+│   ├── test-engineer.md
+│   └── code-archaeologist.md
+├── skills/
+│   └── specs/
+└── rules/
+    └── GEMINI.md
 ```
 
 ### Thiết lập Documentation (Chỉ Claude Code)
@@ -94,7 +110,7 @@ Sau khi chạy lệnh cài đặt, bạn sẽ có framework CafeKit trong dự �
 Sử dụng lệnh `/docs` để tạo documentation cho dự án:
 
 ```bash
-# Khởi tạo thư mục docs và CLAUDE.md
+# Khởi tạo bộ docs nền của dự án
 /docs init
 
 # Hoặc cập nhật docs hiện có
@@ -102,7 +118,7 @@ Sử dụng lệnh `/docs` để tạo documentation cho dự án:
 ```
 
 Lệnh này sẽ tạo:
-- `CLAUDE.md` - Tổng quan dự án cho AI context
+- File context theo nền tảng (`CLAUDE.md` hoặc `.agent/rules/AGENTS.md`)
 - Thư mục `docs/` với:
   - `codebase-summary.md`
   - `project-overview-pdr.md`
@@ -112,7 +128,7 @@ Lệnh này sẽ tạo:
   - `deployment-guide.md`
   - `project-roadmap.md`
 
-**Lưu ý:** Lệnh `/docs` cần `ROUTING.md` và `scripts/` chỉ được cài đặt trên Claude Code. Trên Antigravity, file lệnh được cung cấp nhưng có thể hoạt động hạn chế.
+**Lưu ý:** `/docs` được cung cấp dưới dạng `/docs init` và `/docs update`. Mức độ hoạt động phụ thuộc vào khả năng của môi trường AI và context của dự án.
 
 ## Xác nhận cài đặt
 
@@ -140,7 +156,7 @@ Nếu các lệnh spec không hoạt động:
 
 1. **Kiểm tra vị trí file** - Đảm bảo các file nằm đúng thư mục:
    - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
+   - Antigravity: `.agent/workflows/`
 2. **Khởi động lại trợ lý AI** - Một số công cụ cần khởi động lại để phát hiện lệnh mới
 3. **Kiểm tra định dạng file** - Các lệnh phải là file `.md` với frontmatter hợp lệ
 4. **Kiểm tra lựa chọn nền tảng** - Chạy lại bộ cài đặt và xác nhận đã chọn đúng nền tảng
@@ -153,8 +169,8 @@ Nếu CafeKit cài đặt sai thư mục, bạn có thể di chuyển file thủ
 # Cho Claude Code - đảm bảo .claude/commands/ tồn tại
 mkdir -p .claude/commands/
 
-# Cho Antigravity - đảm bảo .agent/commands/ tồn tại
-mkdir -p .agent/commands/
+# Cho Antigravity - đảm bảo .agent/workflows/ tồn tại
+mkdir -p .agent/workflows/
 
 # Chạy lại bộ cài đặt
 npx @haposoft/cafekit-spec
@@ -165,7 +181,7 @@ npx @haposoft/cafekit-spec
 Bây giờ CafeKit Spec đã được cài đặt:
 
 - **[Hướng dẫn nhanh](/docs/getting-started/quickstart)** - Tạo spec đầu tiên trong 5 phút
-- **[Quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu quy trình đầy đủ 6 giai đoạn
+- **[Quy trình Spec](/docs/guides/spec-workflow)** - Tìm hiểu đầy đủ chuỗi lệnh spec
 
 ---
 

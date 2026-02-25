@@ -1,110 +1,52 @@
 ---
-title: /spec-impl
-description: Triển khai code theo task đã chia
+title: /code
+description: Triển khai task đã duyệt từ spec và chuyển tiếp sang test/review
 ---
 
-# /spec-impl
+# /code
 
-Triển khai (implement) code cho một hoặc nhiều task từ tasks.md.
+Triển khai code cho task pending tiếp theo trong `.specs/[feature-name]/tasks.md`.
 
 ## Sử dụng
 
 **Claude Code:**
-```
-/spec-impl
+```bash
+/code user-authentication
 ```
 
 **Antigravity:**
-```
-/spec-impl
+```bash
+/code user-authentication
 ```
 
 ## Mô tả
 
-Lệnh này hướng dẫn AI triển khai code cho các task chưa hoàn thành trong `tasks.md`. Sau khi implement, cập nhật `implementation.md` với trạng thái.
+`/code` là giai đoạn triển khai sau `/spec-tasks`. Lệnh này tập trung xử lý từng task một để thay đổi nhỏ gọn, dễ test và dễ review.
 
 ## Quy trình
 
-1. AI đọc `tasks.md` để xem các task chưa hoàn thành
-2. Ngườì dùng chọn task muốn implement (hoặc AI đề xuất)
-3. AI implement code theo specification
-4. Cập nhật `implementation.md` với:
-   - Task đã hoàn thành
-   - Files đã tạo/thay đổi
-   - Notes về implementation
+1. Đọc `.specs/[feature-name]/tasks.md`
+2. Xác định task pending tiếp theo
+3. Triển khai đúng task đó
+4. Chạy `/test [feature-name]`
+5. Chạy `/review [feature-name]`
 
-## Cách sử dụng
 
-### Implement task cụ thể
+## Kết quả
 
-```
-> /spec-impl
+Kết quả thường thấy sau `/code`:
+- Hoàn tất code cho task hiện tại
+- Chạy kiểm thử qua `/test`
+- Kiểm tra chất lượng/bảo mật qua `/review`
 
-Implement task: 3
-Feature: user-authentication
-...
-```
+## Mẹo
 
-### Implement nhiều task
-
-```
-> /spec-impl
-
-Implement tasks: 1, 2, 3
-Feature: user-authentication
-...
-```
-
-### AI chọn task tiếp theo
-
-```
-> /spec-impl
-
-Feature: user-authentication
-Auto-select next task: yes
-...
-```
-
-## Output
-
-File `specs/[feature-name]/implementation.md` được tạo/cập nhật:
-
-```markdown
-# Implementation Progress: [Feature Name]
-
-## Completed Tasks
-
-### Task 1: Create database migration ✅
-**Completed**: 2024-01-15
-**Files Changed**:
-- `migrations/001_create_auth_tables.sql` (created)
-- `src/lib/db.ts` (modified)
-
-**Notes**:
-- Sử dụng UUID cho user id
-- Thêm index cho email field
-
-### Task 2: Setup JWT utilities ✅
-**Completed**: 2024-01-15
-**Files Changed**:
-- `src/lib/jwt.ts` (created)
-- `.env.example` (modified)
-
-## Current Status
-- Total tasks: 8
-- Completed: 2
-- Remaining: 6
-
-## Next Task
-Task 3: Implement login endpoint
-```
-
-## Tips
-
-- Mỗi lần nên implement 1-2 task để dễ review
-- Luôn chạy test sau khi implement
-- Commit code thường xuyên
+- Mỗi lần chỉ triển khai một task để diff sạch
+- Giữ thứ tự task trong `tasks.md`
+- Luôn đi kèm `/code` với `/test` và `/review`
 
 ## Bước tiếp theo
 
-- [`/spec-status`](/docs/spec/status) - Kiểm tra tổng quan tiến độ
+- [`/test`](/docs/spec/test) - Kiểm tra implementation
+- [`/review`](/docs/spec/review) - Review chất lượng và regression
+- [`/spec-status`](/docs/spec/status) - Xem tiến độ tổng quan

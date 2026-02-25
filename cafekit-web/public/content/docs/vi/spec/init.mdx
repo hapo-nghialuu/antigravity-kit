@@ -1,82 +1,69 @@
 ---
 title: /spec-init
-description: Khởi tạo file đặc tả cho feature mới
+description: Khởi tạo workspace spec mới từ mô tả tính năng
 ---
 
 # /spec-init
 
-Khởi tạo file đặc tả ban đầu cho một tính năng mới.
+Khởi tạo một workspace spec mới trong `.specs/`.
 
 ## Sử dụng
 
 **Claude Code:**
-```
-/spec-init
+```bash
+/spec-init "xác thực người dùng bằng email và mật khẩu"
 ```
 
 **Antigravity:**
-```
-/spec-init
+```bash
+/spec-init "xác thực người dùng bằng email và mật khẩu"
+# hoặc
+@spec-init "xác thực người dùng bằng email và mật khẩu"
 ```
 
 ## Mô tả
 
-Lệnh này tạo ra file `specs/[feature-name]/spec.md` với cấu trúc chuẩn. Đây là bước đầu tiên trong Spec-Driven Development.
+`/spec-init` là bước đầu tiên của quy trình CafeKit Spec.
 
-## Quy trình
+Lệnh này tạo thư mục mới tại `.specs/[feature-name]/` và khởi tạo:
+- `spec.json` (metadata phase + trạng thái phê duyệt)
+- `requirements.md` (nơi chứa mô tả đầu vào của dự án)
 
-1. **Nhập tên feature**: VD: "user-authentication", "payment-gateway"
-2. **Mô tả ngắn**: Tóm tắt mục đích của feature
-3. **Tầm quan trọng**: Tại sao feature này cần thiết
-4. **Mục tiêu**: Những gì cần đạt được
-5. **Phạm vi**: In scope và Out of scope
-6. **Giả định**: Những điều giả định trước khi bắt đầu
+## Điều gì xảy ra
 
-## Output
+1. Sinh tên feature từ mô tả của bạn
+2. Tạo `.specs/[feature-name]/`
+3. Ghi file `spec.json` ban đầu
+4. Ghi file `requirements.md` ban đầu với mô tả dự án
 
-File `specs/[feature-name]/spec.md` được tạo với nội dung:
+## Ví dụ output
+
+```text
+> /spec-init "xác thực người dùng bằng email và mật khẩu"
+
+✅ Created: .specs/user-authentication/
+✅ Created: .specs/user-authentication/spec.json
+✅ Created: .specs/user-authentication/requirements.md
+```
+
+`requirements.md` ban đầu có dạng:
 
 ```markdown
-# Feature Spec: [Feature Name]
+# Requirements Document
 
-## 1. Overview
-Mô tả tổng quan về feature...
+## Project Description (Input)
+Xác thực người dùng bằng email và mật khẩu
 
-## 2. Goals
-- Goal 1
-- Goal 2
-
-## 3. Scope
-### In Scope
-- ...
-
-### Out of Scope
-- ...
-
-## 4. Assumptions
-- ...
-```
-
-## Ví dụ
-
-```
-> /spec-init
-
-Feature name: user-authentication
-Description: Hệ thống xác thực ngườì dùng với JWT
-...
-
-✅ Created: specs/user-authentication/spec.md
+## Requirements
+<!-- Will be generated in /spec-requirements phase -->
 ```
 
 ## Lưu ý
 
-- Tên feature nên dùng `kebab-case` (vd: `user-authentication`)
-- File này sẽ được cập nhật trong các bước sau
-- Có thể chỉnh sửa thủ công sau khi tạo
+- Tên feature được sinh theo `kebab-case`
+- Phase này chỉ khởi tạo cấu trúc và metadata
+- Requirements/design/tasks được tạo ở các phase tiếp theo
 
 ## Bước tiếp theo
 
-Sau khi có spec.md, chạy:
-- [`/spec-requirements`](/docs/spec/requirements) - Tạo requirements chi tiết
-- [`/spec-design`](/docs/spec/design) - Thiết kế kỹ thuật
+- [`/spec-requirements`](/docs/spec/requirements) - Sinh requirements chi tiết từ mô tả dự án

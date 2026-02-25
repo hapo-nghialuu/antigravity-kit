@@ -21,6 +21,11 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
 
 ## Execution Steps
 
+0. **Validate Phase State (Plan-Style Gate)**:
+   - Read `.specs/$ARGUMENTS/spec.json` first
+   - If missing feature directory or spec.json: stop and ask user to run `/spec-init <project-description>` first
+   - If `phase` is `design-generated` or `tasks-generated`: stop and explain requirements phase already completed; ask user to edit/re-run only with explicit intent to regenerate requirements
+
 1. **Load Context**:
    - Read `.specs/$ARGUMENTS/spec.json` for language and metadata
    - Read `.specs/$ARGUMENTS/requirements.md` for project description
@@ -32,6 +37,12 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
 2. **Read Guidelines**:
    - Read `{{SKILLS_DIR}}/specs/rules/ears-format.md` for EARS syntax rules
    - Read `{{SKILLS_DIR}}/specs/templates/requirements.md` for document structure
+   - **Load project docs context (Plan-style quality gate)** when available:
+     - `docs/codebase-summary.md`
+     - `docs/code-standards.md`
+     - `docs/system-architecture.md`
+     - `docs/project-overview-pdr.md`
+   - If any docs file is missing, continue and note the missing context in output (do not block generation)
 
 3. **Analyze Existing Codebase** (for Extension/Enhancement features):
    - Search for related files: `**/*.{tsx,jsx,ts,js,vue,py}`

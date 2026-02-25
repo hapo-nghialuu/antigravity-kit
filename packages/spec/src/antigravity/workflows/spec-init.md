@@ -1,6 +1,6 @@
 ---
 description: Initialize a new specification with detailed project description
-allowed-tools: Read, Write, Glob
+allowed-tools: Read, Write, Glob, AskUserQuestion
 argument-hint: <project-description>
 ---
 

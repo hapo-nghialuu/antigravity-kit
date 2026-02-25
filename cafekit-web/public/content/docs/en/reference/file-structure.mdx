@@ -12,24 +12,30 @@ Overview of all files and directories created by CafeKit Spec.
 ```
 project-root/
 ├── .claude/
-│   ├── CLAUDE.md              # AI quick reference
-│   ├── ROUTING.md             # Agent routing rules
-│   └── commands/
-│       ├── spec-init.ts       # Initialize spec
-│       ├── spec-requirements.ts
-│       ├── spec-design.ts
-│       ├── spec-tasks.ts
-│       ├── spec-impl.ts
-│       ├── spec-status.ts
-│       ├── docs-init.ts
-│       └── docs-update.ts
-├── specs/
+│   ├── commands/
+│   │   ├── spec-init.md
+│   │   ├── spec-requirements.md
+│   │   ├── spec-design.md
+│   │   ├── spec-tasks.md
+│   │   ├── spec-status.md
+│   │   ├── code.md
+│   │   ├── test.md
+│   │   ├── review.md
+│   │   └── docs.md
+│   ├── agents/
+│   │   ├── tester.md
+│   │   ├── code-reviewer.md
+│   │   ├── fullstack-developer.md
+│   │   └── debugger.md
+│   ├── skills/
+│   │   └── specs/
+│   └── ROUTING.md
+├── .specs/
 │   └── [feature-name]/
-│       ├── spec.md
+│       ├── spec.json
 │       ├── requirements.md
 │       ├── design.md
-│       ├── tasks.md
-│       └── implementation.md
+│       └── tasks.md
 └── docs/
     ├── codebase-summary.md
     ├── project-overview-pdr.md
@@ -47,37 +53,31 @@ project-root/
 ```
 project-root/
 ├── .agent/
-│   ├── AGENTS.md              # AI quick reference
-│   ├── GEMINI.md              # Gemini context
-│   ├── ARCHITECTURE.md        # Architecture docs
-│   ├── CONVENTIONS.md         # Platform conventions
+│   ├── workflows/
+│   │   ├── spec-init.md
+│   │   ├── spec-requirements.md
+│   │   ├── spec-design.md
+│   │   ├── spec-tasks.md
+│   │   ├── spec-status.md
+│   │   ├── code.md
+│   │   ├── test.md
+│   │   ├── review.md
+│   │   ├── docs-init.md
+│   │   └── docs-update.md
 │   ├── agents/
-│   │   ├── spec-init.json
-│   │   ├── spec-requirements.json
-│   │   ├── spec-design.json
-│   │   ├── spec-tasks.json
-│   │   ├── spec-impl.json
-│   │   ├── spec-status.json
-│   │   ├── docs-init.json
-│   │   └── docs-update.json
+│   │   ├── frontend-specialist.md
+│   │   ├── test-engineer.md
+│   │   └── code-archaeologist.md
 │   ├── skills/
-│   │   └── [40+ skills]
-│   └── workflows/
-│       ├── spec-init.yaml
-│       ├── spec-requirements.yaml
-│       ├── spec-design.yaml
-│       ├── spec-tasks.yaml
-│       ├── spec-impl.yaml
-│       ├── spec-status.yaml
-│       ├── docs-init.yaml
-│       └── docs-update.yaml
-├── specs/
+│   │   └── specs/
+│   └── rules/
+│       └── GEMINI.md
+├── .specs/
 │   └── [feature-name]/
-│       ├── spec.md
+│       ├── spec.json
 │       ├── requirements.md
 │       ├── design.md
-│       ├── tasks.md
-│       └── implementation.md
+│       └── tasks.md
 └── docs/
     ├── codebase-summary.md
     ├── project-overview-pdr.md
@@ -96,21 +96,17 @@ project-root/
 
 | File | Claude | Antigravity | Purpose |
 |------|--------|-------------|---------|
-| `CLAUDE.md` / `AGENTS.md` | ✅ | ✅ | Quick reference for AI |
-| `ROUTING.md` | ✅ | ❌ | Agent routing rules |
-| `GEMINI.md` | ❌ | ✅ | Gemini-specific context |
-| `ARCHITECTURE.md` | ❌ | ✅ | Framework architecture |
-| `CONVENTIONS.md` | ❌ | ✅ | Platform conventions |
+| `ROUTING.md` | ✅ | ❌ | Claude command routing rules |
+| `rules/GEMINI.md` | ❌ | ✅ | Antigravity workspace behavior rules |
 
 ### Spec Files
 
 | File | Description | Created by |
 |------|-------------|------------|
-| `spec.md` | Feature overview | `/spec-init` |
+| `spec.json` | Phase and approval status | `/spec-init` |
 | `requirements.md` | EARS requirements | `/spec-requirements` |
 | `design.md` | Technical design | `/spec-design` |
 | `tasks.md` | Task breakdown | `/spec-tasks` |
-| `implementation.md` | Progress tracking | `/spec-impl`, `/spec-status` |
 
 ### Documentation Files
 
@@ -132,26 +128,27 @@ project-root/
 ├─────────────────────────────────────────────────────────────┤
 │  CLAUDE CODE                    │  ANTIGRAVITY              │
 │  .claude/                       │  .agent/                  │
-│  ├── CLAUDE.md                  │  ├── AGENTS.md            │
-│  ├── ROUTING.md                 │  ├── GEMINI.md            │
-│  └── commands/                  │  ├── ARCHITECTURE.md      │
-│      ├── spec-init.ts           │  ├── CONVENTIONS.md       │
-│      ├── spec-requirements.ts   │  ├── agents/              │
-│      ├── spec-design.ts         │  ├── skills/              │
-│      ├── spec-tasks.ts          │  └── workflows/           │
-│      ├── spec-impl.ts           │                           │
-│      ├── spec-status.ts         │                           │
-│      ├── docs-init.ts           │                           │
-│      └── docs-update.ts         │                           │
+│  ├── commands/                  │  ├── workflows/           │
+│  │   ├── spec-init.md           │  │   ├── spec-init.md     │
+│  │   ├── spec-requirements.md   │  │   ├── spec-design.md   │
+│  │   ├── spec-design.md         │  │   ├── spec-tasks.md    │
+│  │   ├── spec-tasks.md          │  │   ├── code.md          │
+│  │   ├── spec-status.md         │  │   ├── test.md          │
+│  │   ├── code.md                │  │   ├── review.md        │
+│  │   ├── test.md                │  │   └── spec-status.md   │
+│  │   └── review.md              │  ├── agents/              │
+│  ├── agents/                    │  ├── skills/specs/        │
+│  ├── skills/specs/              │  └── rules/GEMINI.md      │
+│  └── ROUTING.md                 │                           │
 ├─────────────────────────────────────────────────────────────┤
 │  COMMON (both platforms)                                    │
-│  specs/                        docs/                        │
+│  .specs/                       docs/                        │
 │  └── [feature]/                ├── codebase-summary.md      │
-│      ├── spec.md               ├── project-overview-pdr.md  │
+│      ├── spec.json             ├── project-overview-pdr.md  │
 │      ├── requirements.md       ├── code-standards.md        │
 │      ├── design.md             ├── system-architecture.md   │
-│      ├── tasks.md              ├── design-guidelines.md     │
-│      └── implementation.md     ├── deployment-guide.md      │
+│      └── tasks.md              ├── design-guidelines.md     │
+│                                ├── deployment-guide.md      │
 │                                ├── project-roadmap.md       │
 │                                └── .backups/                │
 └─────────────────────────────────────────────────────────────┘
@@ -160,8 +157,8 @@ project-root/
 ## Permissions and Git
 
 ### Should commit
-- `CLAUDE.md` / `AGENTS.md`
-- `specs/` (all spec files)
+- `.specs/` (all spec files)
+- `.claude/` or `.agent/` workflow config
 - `docs/` (documentation)
 
 ### Should not commit
@@ -181,7 +178,7 @@ repomix-output.xml
 ### From Claude Code to Antigravity
 ```bash
 # Backup specs and docs
-cp -r specs specs-backup
+cp -r .specs .specs-backup
 cp -r docs docs-backup
 
 # Install Antigravity
@@ -189,14 +186,14 @@ npx @haposoft/cafekit-spec
 # Select Antigravity
 
 # Restore specs and docs
-cp -r specs-backup/* specs/
+cp -r .specs-backup/* .specs/
 cp -r docs-backup/* docs/
 ```
 
 ### From Antigravity to Claude Code
 ```bash
 # Backup specs and docs
-cp -r specs specs-backup
+cp -r .specs .specs-backup
 cp -r docs docs-backup
 
 # Install Claude Code
@@ -204,7 +201,7 @@ npx @haposoft/cafekit-spec
 # Select Claude Code
 
 # Restore specs and docs
-cp -r specs-backup/* specs/
+cp -r .specs-backup/* .specs/
 cp -r docs-backup/* docs/
 ```
 

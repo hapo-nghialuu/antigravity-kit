@@ -1,102 +1,64 @@
 ---
 title: /spec-tasks
-description: Chia nhỏ design thành các task implementable
+description: Sinh task triển khai có thể thực thi từ bản thiết kế
 ---
 
 # /spec-tasks
 
-Phân rã technical design thành các task nhỏ, có thể triển khai được.
+Sinh các task sẵn sàng triển khai từ bản thiết kế đã duyệt.
 
 ## Sử dụng
 
 **Claude Code:**
-```
-/spec-tasks
+```bash
+/spec-tasks user-authentication
+/spec-tasks user-authentication -y
 ```
 
 **Antigravity:**
-```
-/spec-tasks
+```bash
+/spec-tasks user-authentication
+/spec-tasks user-authentication -y
+# hoặc
+@spec-tasks user-authentication
 ```
 
 ## Mô tả
 
-Lệnh này đọc `design.md` và tạo `tasks.md` với danh sách các task cụ thể. Mỗi task được thiết kế để có thể implement trong một phiên làm việc.
+`/spec-tasks` đọc:
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md`
+- `.specs/[feature-name]/design.md`
 
-## Cấu trúc Task
+Sau đó ghi:
+- `.specs/[feature-name]/tasks.md`
 
-Mỗi task bao gồm:
+Danh sách task sẽ được sắp thứ tự, ánh xạ requirements và sẵn sàng cho `/code`.
 
-```markdown
-### Task [N]: [Tiêu đề]
+## Định dạng task
 
-**Objective**: Mục tiêu của task
-
-**Files to Modify**:
-- `path/to/file1.ts` - Mô tả thay đổi
-- `path/to/file2.ts` - Mô tả thay đổi
-
-**Implementation Details**:
-- Chi tiết cụ thể cách implement
-- Các điểm cần lưu ý
-
-**Verification**:
-- [ ] Criteria 1
-- [ ] Criteria 2
-
-**Dependencies**: Task phụ thuộc (nếu có)
-```
-
-## Task Sizing
-
-- **Task nhỏ**: 30 phút - 1 giờ
-- **Task vừa**: 1-2 giờ
-- **Task lớn**: 2-4 giờ (nên tách nhỏ hơn)
-
-## Output
-
-File `specs/[feature-name]/tasks.md`:
+Định dạng phổ biến trong `tasks.md`:
 
 ```markdown
-# Implementation Tasks: [Feature Name]
+- [ ] 1. Thiết lập mô-đun xác thực
+- [ ] 1.1 Tạo auth service interface
+  - Định nghĩa method login/logout/session
+  - _Requirements: 1, 2_
 
-## Phase 1: Setup
-
-### Task 1: Create database migration
-**Objective**: Tạo bảng users và sessions
-**Files to Modify**:
-- `migrations/001_create_auth_tables.sql`
-**Verification**:
-- [ ] Migration chạy thành công
-- [ ] Bảng được tạo đúng schema
-
-### Task 2: Setup JWT utilities
-**Objective**: Tạo helper functions cho JWT
-**Files to Modify**:
-- `src/lib/jwt.ts`
-**Verification**:
-- [ ] Có thể sign và verify token
-- [ ] Xử lý expiration đúng
-
-## Phase 2: API Implementation
-
-### Task 3: Implement login endpoint
-**Objective**: Tạo POST /api/auth/login
-**Files to Modify**:
-- `src/app/api/auth/login/route.ts`
-- `src/lib/auth.ts`
-**Dependencies**: Task 1, Task 2
-...
+- [ ] 2. Thêm login endpoint
+- [ ] 2.1 Triển khai POST /api/auth/login
+  - Validate input và trả token/session
+  - _Requirements: 1, 3_
 ```
 
-## Quy trình sử dụng
+## Lưu ý
 
-1. Tạo tasks.md từ design
-2. Review và điều chỉnh task list
-3. Sắp xếp thứ tự (dependencies)
-4. Bắt đầu implement từng task
+- Task nên nhỏ, rõ ràng và theo thứ tự hợp lý
+- Mỗi requirement cần được cover bởi ít nhất một task
+- `-y` có thể auto-approve các điều kiện tiên quyết trước khi sinh task
 
 ## Bước tiếp theo
 
-- [`/spec-impl`](/docs/spec/impl) - Triển khai từng task
-- [`/spec-status`](/docs/spec/status) - Theo dõi tiến độ
+- [`/code`](/docs/spec/code) - Triển khai task pending tiếp theo
+- [`/test`](/docs/spec/test) - Kiểm tra implementation
+- [`/review`](/docs/spec/review) - Review chất lượng và regression

@@ -21,16 +21,35 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 
 ## Execution Steps
 
+### Step 0: Validate Phase State (Plan-Style Gate)
+
+- Read `.specs/$ARGUMENTS/spec.json` first
+- If feature directory or `spec.json` is missing: stop and instruct user to run `/spec-init <project-description>`, `/spec-requirements <feature-name>`, and `/spec-design <feature-name>` first
+- If design has not been generated yet (phase before design): stop and instruct user to run `/spec-design $ARGUMENTS`
+- If `phase` is already `tasks-generated`: explain tasks phase already exists and only continue for explicit regeneration/merge intent
+
 ### Step 1: Load Context
 
 **Read all necessary context**:
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md`
 - `.specs/$ARGUMENTS/tasks.md` (if exists, for merge mode)
+- `.specs/$ARGUMENTS/research.md` (if exists, includes validation log)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
+- **Load project docs context (Plan-style quality gate)** when available:
+  - `docs/codebase-summary.md`
+  - `docs/code-standards.md`
+  - `docs/system-architecture.md`
+  - `docs/project-overview-pdr.md`
+- If any docs file is missing, continue and mention missing context in execution output (do not block generation)
 
 **Validate approvals**:
 - If `-y` flag provided: Auto-approve requirements and design in spec.json
 - Otherwise: Verify both approved (stop if not, see Safety & Fallback)
+- **Backward compatibility fallback (older specs):**
+  - If `validation` object is missing, treat validation status as `not-run`
+  - If `design_context` object is missing, treat `validation_recommended` as `false`
+- If `spec.json.validation.status == "completed"`, treat validation as satisfied
+- If validation is missing and `design_context.validation_recommended == true`, warn user to run `/spec-validate $ARGUMENTS` before continuing (do not hard-block)
 - Determine sequential mode based on presence of `--sequential`
 
 ### Step 2: Generate Implementation Tasks

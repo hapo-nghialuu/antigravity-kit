@@ -25,7 +25,8 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflo
 - Enables spec-driven development with clear phase separation
 - Creates living documentation for every feature
 - Works with zero configuration
-- **Idempotent** - Safe to re-run, won't overwrite existing files
+- **Idempotent by default** - Safe to re-run, skips existing files
+- **Upgrade mode available** - Use `--upgrade` (or `--force`) to refresh managed templates
 
 **What it doesn't do:**
 - Generate code (commands guide AI to help you write code)
@@ -63,6 +64,11 @@ The installer will:
 3. **Copy** workflow commands to the appropriate directory
 4. **Install** shared skills for spec-driven development
 5. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
+
+Installer modes:
+- **Default install mode**: `npx @haposoft/cafekit-spec` (skip existing files)
+- **Upgrade mode**: `npx @haposoft/cafekit-spec --upgrade` (overwrite managed templates)
+- **Alias**: `--force` / `-f` behaves the same as `--upgrade`
 
 **Example output (Claude Code):**
 ```
@@ -111,11 +117,12 @@ CafeKit Spec provides two workflow categories:
 | `/spec-init` | Initialize new feature spec | 1 |
 | `/spec-requirements` | Generate EARS requirements | 2 |
 | `/spec-design` | Create technical design | 3 |
-| `/spec-tasks` | Break down into tasks | 4 |
-| `/code` | Implement tasks from spec artifacts | 5 |
-| `/test` | Run tests for implemented changes | 6 |
-| `/review` | Review code quality and risks | 7 |
-| `/spec-status` | Check progress | 8 |
+| `/spec-validate` | Validate design decisions via interview | 4 |
+| `/spec-tasks` | Break down into tasks | 5 |
+| `/code` | Implement tasks from spec artifacts | 6 |
+| `/test` | Run tests for implemented changes | 7 |
+| `/review` | Review code quality and risks | 8 |
+| `/spec-status` | Check progress | 9 |
 
 **Antigravity Workflows:**
 | Workflow | Purpose | Phase |
@@ -123,11 +130,12 @@ CafeKit Spec provides two workflow categories:
 | `/spec-init` | Initialize new feature spec | 1 |
 | `/spec-requirements` | Generate EARS requirements | 2 |
 | `/spec-design` | Create technical design | 3 |
-| `/spec-tasks` | Break down into tasks | 4 |
-| `/code` | Implement tasks from spec artifacts | 5 |
-| `/test` | Run tests for implemented changes | 6 |
-| `/review` | Review code quality and risks | 7 |
-| `/spec-status` | Check progress | 8 |
+| `/spec-validate` | Validate design decisions via interview | 4 |
+| `/spec-tasks` | Break down into tasks | 5 |
+| `/code` | Implement tasks from spec artifacts | 6 |
+| `/test` | Run tests for implemented changes | 7 |
+| `/review` | Review code quality and risks | 8 |
+| `/spec-status` | Check progress | 9 |
 
 **Generated Files:**
 ```
@@ -201,7 +209,15 @@ docs/
 # - Database schema
 # - Component structure
 
-# Step 4: Break down tasks
+# Step 4: Validate design decisions (recommended for medium/high-risk features)
+/spec-validate user-authentication
+
+# AI confirms:
+# - Critical trade-offs and assumptions
+# - Risk-sensitive defaults
+# - Follow-up actions before task generation
+
+# Step 5: Break down tasks
 /spec-tasks user-authentication
 
 # AI creates:
@@ -209,16 +225,16 @@ docs/
 # - Dependencies
 # - Estimated complexity
 
-# Step 5: Code
+# Step 6: Code
 /code user-authentication
 
-# Step 6: Test
+# Step 7: Test
 /test
 
-# Step 7: Review
+# Step 8: Review
 /review
 
-# Step 8: Check status
+# Step 9: Check status
 /spec-status user-authentication
 
 # AI reports:
@@ -232,7 +248,7 @@ docs/
 ### Workflow Diagram
 
 ```
-Idea - /spec-init - /spec-requirements - /spec-design - /spec-tasks - /code - /test - /review - /spec-status
+Idea - /spec-init - /spec-requirements - /spec-design - /spec-validate - /spec-tasks - /code - /test - /review - /spec-status
        |<----------------------------------------------|-----------------------------|
                                                       |
                                                    iterate
@@ -351,7 +367,26 @@ User clicks -> dispatch action -> update context -> localStorage -> re-render
 
 ---
 
-### 4. /spec-tasks
+### 4. /spec-validate
+
+**Purpose:** Validate design assumptions, trade-offs, and risk-sensitive decisions before task generation.
+
+**When to use:** After `/spec-design`, especially for medium/high-risk features or external integrations.
+
+**What it does:**
+- Interviews critical decision points using structured questions
+- Appends validation log to `research.md`
+- Updates validation metadata in `spec.json`
+- Recommends follow-up actions before task breakdown
+
+**Example:**
+```bash
+/spec-validate dark-mode-toggle
+```
+
+---
+
+### 5. /spec-tasks
 
 **Purpose:** Break design into implementable tasks.
 
@@ -606,7 +641,17 @@ A: Yes. Edit the `.md` files in `.claude/commands/` (Claude Code) or `.agent/wor
 
 ### Q: Is it safe to re-run `npx @haposoft/cafekit-spec`?
 
-A: Yes. It's idempotent (skips existing files).
+A: Yes. Default mode is idempotent and skips existing files.
+
+### Q: How do I update existing installed templates to the latest version?
+
+A: Run installer in upgrade mode:
+```bash
+npx @haposoft/cafekit-spec --upgrade
+# or
+npx @haposoft/cafekit-spec --force
+```
+This overwrites files managed by the installer (commands/workflows, managed dependencies, and routing/rules templates).
 
 ### Q: What language is the spec generated in?
 

@@ -21,7 +21,9 @@ const commands: Command[] = [
   { id: 'spec-requirements', label: '/spec-requirements', href: '/docs/spec/requirements', category: 'spec' },
   { id: 'spec-design', label: '/spec-design', href: '/docs/spec/design', category: 'spec' },
   { id: 'spec-tasks', label: '/spec-tasks', href: '/docs/spec/tasks', category: 'spec' },
-  { id: 'spec-impl', label: '/spec-impl', href: '/docs/spec/impl', category: 'spec' },
+  { id: 'code', label: '/code', href: '/docs/spec/code', category: 'spec' },
+  { id: 'test', label: '/test', href: '/docs/spec/test', category: 'spec' },
+  { id: 'review', label: '/review', href: '/docs/spec/review', category: 'spec' },
   { id: 'spec-status', label: '/spec-status', href: '/docs/spec/status', category: 'status' },
 ];
 
@@ -105,7 +107,7 @@ export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
 
       {/* Decision Tree Flowchart - Sequential Spec Workflow */}
       <div className="bg-muted/50 rounded-lg p-8 overflow-x-auto">
-        <svg viewBox="0 0 1000 720" className="w-full min-w-[800px]">
+        <svg viewBox="0 0 1000 820" className="w-full min-w-[800px]">
           {/* Color definitions */}
           <defs>
             <linearGradient id="conditionGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -168,6 +170,8 @@ export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
           <path d="M 643 275 L 643 300" stroke="#71717a" strokeWidth="3" fill="none" />
           <path d="M 643 345 L 643 370" stroke="#71717a" strokeWidth="3" fill="none" />
           <path d="M 643 415 L 643 440" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 475 L 643 500" stroke="#71717a" strokeWidth="3" fill="none" />
+          <path d="M 643 535 L 643 560" stroke="#71717a" strokeWidth="3" fill="none" />
 
           {/* Col 4 - Status */}
           <path d="M 840 135 L 840 160" stroke="#71717a" strokeWidth="3" fill="none" />
@@ -221,11 +225,27 @@ export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
             </Link>
           </g>
 
-          {/* spec-impl */}
+          {/* code */}
           <g className="cursor-pointer">
-            <Link href="/docs/spec/impl">
+            <Link href="/docs/spec/code">
               <rect x="583" y="440" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
-              <text x="643" y="463" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/spec-impl</text>
+              <text x="643" y="463" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/code</text>
+            </Link>
+          </g>
+
+          {/* test */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/test">
+              <rect x="583" y="500" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="523" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/test</text>
+            </Link>
+          </g>
+
+          {/* review */}
+          <g className="cursor-pointer">
+            <Link href="/docs/spec/review">
+              <rect x="583" y="560" width="120" height="35" rx="6" fill="url(#actionGrad)" stroke="#a1a1aa" strokeWidth="2" />
+              <text x="643" y="583" textAnchor="middle" fill="#fafafa" fontSize="12" fontFamily="monospace">/review</text>
             </Link>
           </g>
 
@@ -240,7 +260,7 @@ export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
           {/* Platform Labels */}
           <text x="160" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col1Label}</text>
           <text x="357" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col2Label}</text>
-          <text x="643" y="500" textAnchor="middle" fill="#71717a" fontSize="11">{t.col3Label}</text>
+          <text x="643" y="620" textAnchor="middle" fill="#71717a" fontSize="11">{t.col3Label}</text>
           <text x="840" y="225" textAnchor="middle" fill="#71717a" fontSize="11">{t.col4Label}</text>
 
         </svg>

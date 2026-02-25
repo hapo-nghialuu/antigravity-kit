@@ -1,0 +1,46 @@
+---
+title: /review
+description: Review thay đổi code gần đây về correctness, security và regression
+---
+
+# /review
+
+Review các thay đổi implementation gần đây trước khi chốt.
+
+## Sử dụng
+
+**Claude Code:**
+```bash
+/review
+/review user-authentication
+```
+
+**Antigravity:**
+```bash
+/review
+/review user-authentication
+# hoặc
+@review
+```
+
+## Mô tả
+
+`/review` kiểm tra các thay đổi gần đây với trọng tâm:
+- correctness
+- vấn đề bảo mật
+- rủi ro regression
+- khả năng bảo trì
+
+Kết quả review nên được sắp theo mức độ nghiêm trọng và có hướng sửa cụ thể.
+
+## Lưu ý
+
+- Chạy sau khi `/test` pass
+- Giữ finding bám sát phạm vi đã thay đổi
+- Sửa các lỗi severity cao trước khi đóng task
+
+## Bước tiếp theo
+
+- Áp dụng các bản sửa cần thiết (nếu có)
+- Chạy lại `/test` và `/review` khi cần
+- Kiểm tra tiến độ cuối cùng bằng [`/spec-status`](/docs/spec/status)

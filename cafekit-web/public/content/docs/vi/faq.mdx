@@ -5,11 +5,11 @@ description: Các câu hỏi thường gặp về CafeKit Spec và quy trình ph
 
 ### CafeKit Spec là gì?
 
-CafeKit Spec là một quy trình phát triển hướng spec (spec-driven development) cho các trợ lý lập trình AI. Nó cung cấp 6 lệnh hướng dẫn bạn xây dựng các tính năng với tài liệu và cấu trúc rõ ràng.
+CafeKit Spec là một quy trình phát triển hướng spec (spec-driven development) cho các trợ lý lập trình AI.
 
-**Định dạng lệnh theo nền tảng:**
-- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
-- **[Antigravity](https://antigravity.google/)**: `/spec-init` (hoặc `@spec-init`), `/spec-requirements`, ...
+**Chuỗi lệnh theo nền tảng:**
+- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status`
+- **[Antigravity](https://antigravity.google/)**: `/spec-init` (hoặc `@spec-init`), `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status`
 
 ### Phát triển hướng spec là gì?
 
@@ -56,7 +56,7 @@ Sử dụng CafeKit Spec cho:
 npx @haposoft/cafekit-spec
 ```
 
-Lệnh này cài đặt 6 lệnh quy trình spec vào `.claude/commands/`.
+Lệnh này cài đặt bộ lệnh workflow spec vào nền tảng đã chọn.
 
 ### Các yêu cầu tiên quyết là gì?
 
@@ -82,11 +82,10 @@ Các spec được lưu trong thư mục `.specs/` ở thư mục gốc dự án
 ```
 .specs/
 └── feature-name/
+    ├── spec.json
     ├── requirements.md
     ├── design.md
-    ├── tasks/
-    │   └── sprint-1.md
-    └── status.md
+    └── tasks.md
 ```
 
 ---
@@ -116,8 +115,10 @@ Lệnh này tạo thư mục `.specs/my-feature-name/` với cấu trúc ban đ�
 | **Yêu cầu** | `/spec-requirements` | `/spec-requirements` hoặc `@` | AI đặt câu hỏi để thu thập yêu cầu |
 | **Thiết kế** | `/spec-design` | `/spec-design` hoặc `@` | Tạo tài liệu kiến trúc kỹ thuật |
 | **Tasks** | `/spec-tasks` | `/spec-tasks` hoặc `@` | Chia nhỏ thiết kế thành các task hành động |
-| **Thực hiện** | `/spec-impl` | `/spec-impl` hoặc `@` | Thực hiện task với hướng dẫn AI |
-| **Trạng thái** | `/spec-status` | `/spec-status` hoặc `@` | Hiển thị tiến độ và bước tiếp theo |
+| **Triển khai** | `/code` | `/code` hoặc `@` | Triển khai task pending tiếp theo |
+| **Kiểm thử** | `/test` | `/test` hoặc `@` | Chạy test và báo lỗi |
+| **Review** | `/review` | `/review` hoặc `@` | Review correctness, security và regressions |
+| **Trạng thái** | `/spec-status` | `/spec-status` hoặc `@` | Hiển thị phase hiện tại và trạng thái phê duyệt |
 
 ### Tôi có thể bỏ qua các giai đoạn không?
 
@@ -132,7 +133,7 @@ Mặc dù có thể, nhưng **không khuyến khích**. Mỗi giai đoạn xây 
 - **Tính năng trung bình** (auth, API): 3-5 giờ
 - **Tính năng phức tạp** (thanh toán, real-time): 6+ giờ
 
-Thời gian bao gồm cả 6 giai đoạn và thực hiện.
+Thời gian bao gồm requirements, design, tasks, implementation, test và review.
 
 ### Tôi có thể làm việc trên nhiều spec cùng lúc không?
 
@@ -154,7 +155,7 @@ Có. Mỗi spec độc lập trong thư mục `.specs/feature-name/` riêng củ
 **Giải pháp:**
 1. Kiểm tra file tồn tại trong đúng thư mục:
    - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
+   - Antigravity: `.agent/workflows/`
 2. Khởi động lại trợ lý lập trình AI của bạn
 3. Chạy lại trình cài đặt: `npx @haposoft/cafekit-spec`
 4. Xác minh bạn đã chọn đúng nền tảng khi cài đặt
@@ -251,7 +252,7 @@ Có. Sau khi cài đặt, chỉnh sửa các file `.md` trong thư mục lệnh 
 
 **Antigravity:**
 ```bash
-.agent/commands/
+.agent/workflows/
 ├── spec-init.md          # Tùy chỉnh quy trình init
 ├── spec-requirements.md  # Thay đổi phong cách câu hỏi
 └── ...

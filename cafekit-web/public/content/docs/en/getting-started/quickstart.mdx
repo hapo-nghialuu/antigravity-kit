@@ -5,7 +5,7 @@ description: Create your first feature spec in 5 minutes with CafeKit's step-by-
 
 ## What You'll Build
 
-In this quickstart, you'll create a spec for a **user login feature** using all 6 phases of the CafeKit workflow.
+In this quickstart, you'll create a spec for a **user login feature** using the full workflow of the CafeKit workflow.
 
 **Time to complete:** 5-10 minutes
 
@@ -18,7 +18,7 @@ For the best results when working with AI, it's recommended to set up your proje
 ```
 
 This will analyze your codebase and create:
-- `CLAUDE.md` - Project overview for AI context
+- `docs/` folder with project standards and architecture context
 - `docs/` folder with coding standards, architecture, and guidelines
 
 You can also update docs later with `/docs update`.
@@ -197,8 +197,8 @@ Break the design into actionable implementation tasks:
 **Expected output:**
 ```
 ✅ Task breakdown created
-📄 Saved to .specs/login-feature/tasks/sprint-1.md
-🚀 Next step: Run /spec-impl
+📄 Saved to .specs/login-feature/tasks.md
+🚀 Next step: Run /code login-feature
 ```
 
 ## Step 5: Implement Tasks
@@ -206,31 +206,25 @@ Break the design into actionable implementation tasks:
 Start implementing based on your sprint plan:
 
 ```bash
-/spec-impl login-feature
+/code login-feature
 ```
 
 **What happens:**
 - AI reads task breakdown
-- Prompts you to select which task to implement
-- Guides you through implementation
-- Writes code, runs tests, verifies completion
+- Selects the next pending task
+- Implements that task
+- Hands off to `/test` and `/review`
 
 **Sample interaction:**
 
 ```
-AI: Which task would you like to implement?
-1. TASK 1: Setup Database Schema
-2. TASK 2: Implement Password Hashing
-3. TASK 3: Create Login API Endpoint
-4. TASK 4: Build Login Form UI
-
-You: 1
-
-AI: Starting TASK 1: Setup Database Schema
+AI: Reading tasks.md for login-feature...
+AI: Next pending task is TASK 1: Setup Database Schema
 ✅ Created migration file: migrations/001_create_users_table.sql
 ✅ Added email uniqueness constraint
-✅ Tested migration: Up + Down successful
-📋 TASK 1 complete. Next: TASK 2?
+✅ TASK 1 complete
+➡️ Next: run /test login-feature
+➡️ Then: run /review login-feature
 ```
 
 ## Step 6: Track Progress
@@ -274,7 +268,8 @@ You've completed your first CafeKit spec workflow. You learned how to:
 - ✅ Gather requirements with `/spec-requirements`
 - ✅ Design architecture with `/spec-design`
 - ✅ Break down tasks with `/spec-tasks`
-- ✅ Implement with AI guidance using `/spec-impl`
+- ✅ Implement with `/code`
+- ✅ Validate and review with `/test` and `/review`
 - ✅ Track progress with `/spec-status`
 
 ## Next Steps

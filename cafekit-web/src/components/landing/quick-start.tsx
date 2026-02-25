@@ -18,7 +18,9 @@ npx @haposoft/cafekit-spec
 /spec-requirements user-authentication
 /spec-design user-authentication
 /spec-tasks user-authentication
-/spec-impl user-authentication
+/code user-authentication
+/test user-authentication
+/review user-authentication
 
 # 4. Update docs when project changes
 /docs update`;

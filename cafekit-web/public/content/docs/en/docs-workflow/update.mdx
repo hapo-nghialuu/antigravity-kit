@@ -1,144 +1,47 @@
 ---
 title: /docs update
-description: Update documentation after code changes
+description: Update documentation to reflect latest codebase changes
 ---
 
 # /docs update
 
-Update documentation to reflect changes in the codebase.
+Refresh project documentation after significant code changes.
 
 ## Usage
 
 **Claude Code:**
-```
+```bash
 /docs update
 ```
 
 **Antigravity:**
-```
+```bash
 /docs-update
 ```
 
 ## Description
 
-This command scans the current codebase, compares it with existing documentation, and updates the changed parts.
+`/docs update` re-analyzes the current codebase and updates documentation sections that changed.
 
-## Difference from `/docs init`
+Typical behavior:
+1. Verify `docs/` exists
+2. Create backup/snapshot
+3. Re-scan codebase context (including repomix output)
+4. Update documentation files to match current implementation
 
-| | `/docs init` | `/docs update` |
-|---|---|---|
-| **Purpose** | Create docs from scratch | Update existing docs |
-| **Overwrite** | All files | Only changed parts |
-| **Backup** | Yes | Yes |
-| **Time** | Longer | Faster |
+## Common Update Targets
 
-## Process
-
-```
-1. Scan current codebase
-   └── Read all files
-
-2. Compare with old docs
-   └── Diff to find changes
-
-3. Update changed sections
-   └── Only modify what's needed
-
-4. Backup old docs
-   └── Save copy before update
-
-5. Merge and save
-   └── Preserve manual edits
-```
-
-## Backup
-
-Before updating, the system creates a backup:
-
-```
-docs/
-├── codebase-summary.md
-├── .backups/
-│   └── 2024-01-15_143052/    # Timestamp backup
-│       ├── codebase-summary.md
-│       ├── project-overview-pdr.md
-│       └── ...
-```
-
-## Scenarios
-
-### Scenario 1: Adding new features
-```
-# Before: Codebase has feature A
-# After: Add feature B
-
-> /docs update
-
-Update:
-- codebase-summary.md (add feature B)
-- system-architecture.md (new diagram)
-- project-roadmap.md (mark as done)
-```
-
-### Scenario 2: Refactoring architecture
-```
-# Before: Monolith
-# After: Microservices
-
-> /docs update
-
-Update:
-- system-architecture.md (complete rewrite)
-- codebase-summary.md (update structure)
-- deployment-guide.md (update deploy process)
-```
-
-### Scenario 3: Changing tech stack
-```
-# Before: Express + MongoDB
-# After: Fastify + PostgreSQL
-
-> /docs update
-
-Update:
-- codebase-summary.md (new tech stack)
-- system-architecture.md (new data layer)
-```
-
-## Preserve Manual Edits
-
-`/docs update` tries to preserve manual edits:
-
-```markdown
-# In docs/code-standards.md
-
-## Naming Conventions
-
-# [AUTO-GENERATED - Will be updated]
-- Functions: camelCase
-- Classes: PascalCase
-
-# [MANUAL - Preserve on update]
-## Special Cases
-- API routes: always use kebab-case
-- Database tables: always plural
-```
+- `docs/codebase-summary.md`
+- `docs/project-overview-pdr.md`
+- `docs/code-standards.md`
+- `docs/system-architecture.md`
+- `docs/design-guidelines.md`
+- `docs/deployment-guide.md`
+- `docs/project-roadmap.md`
+- Platform context file (`CLAUDE.md` or `.agent/rules/AGENTS.md`)
 
 ## Best Practices
 
-### When to update
-- ✅ After merging large PRs
-- ✅ After refactoring
-- ✅ End of week/start of week
-- ✅ Before handover
-
-### When NOT to update
-- ❌ Mid-feature development
-- ❌ While debugging
-- ❌ When there are many uncommitted changes
-
-## Notes
-
-- Always commit code before `/docs update`
-- Review changes after update
-- Restore from backup if needed
+- Commit code before running updates
+- Review docs diff after update
+- Re-run when architecture or deployment setup changes significantly
