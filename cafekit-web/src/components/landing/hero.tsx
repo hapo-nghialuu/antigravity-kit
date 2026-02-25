@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee, Sparkles } from "lucide-react";
+import { Coffee, Sparkles, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 export function Hero() {
@@ -9,9 +9,21 @@ export function Hero() {
   const installCommand = "npx @haposoft/cafekit-spec";
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(installCommand);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(installCommand);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for non-secure contexts or older browsers
+      const el = document.createElement('textarea');
+      el.value = installCommand;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -58,6 +70,7 @@ export function Hero() {
             </code>
             <button
               onClick={handleCopy}
+              aria-label="Copy install command"
               className="rounded-md bg-amber-900/10 px-3 py-1.5 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
             >
               {copied ? "Copied!" : "Copy"}
@@ -71,19 +84,7 @@ export function Hero() {
             className="group inline-flex h-12 items-center gap-2 rounded-full bg-amber-900 px-8 font-medium text-white shadow-lg transition-all hover:bg-amber-800 hover:shadow-xl dark:bg-amber-700 dark:hover:bg-amber-600"
           >
             Read Documentation
-            <svg
-              className="h-4 w-4 transition-transform group-hover:translate-x-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
 
           <a

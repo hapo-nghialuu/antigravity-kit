@@ -31,8 +31,8 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
      - This provides complete project memory and context
 
 2. **Read Guidelines**:
-   - Read `.claude/skills/spec-driven-development/rules/ears-format.md` for EARS syntax rules
-   - Read `.claude/skills/spec-driven-development/templates/requirements.md` for document structure
+   - Read `.claude/skills/specs/rules/ears-format.md` for EARS syntax rules
+   - Read `.claude/skills/specs/templates/requirements.md` for document structure
 
 3. **Analyze Existing Codebase** (for Extension/Enhancement features):
    - Search for related files: `**/*.{tsx,jsx,ts,js,vue,py}`

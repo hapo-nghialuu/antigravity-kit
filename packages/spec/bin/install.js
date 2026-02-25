@@ -17,6 +17,105 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const packageJson = require('../package.json');
+
+function loadClaudeMigrationManifest() {
+  const manifestPath = path.join(__dirname, '../src/claude/migration-manifest.json');
+
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    console.warn(`⚠ Failed to parse Claude migration manifest: ${error.message}`);
+    return null;
+  }
+}
+
+const CLAUDE_MIGRATION_MANIFEST = loadClaudeMigrationManifest();
+
+const DEPENDENCY_TEMPLATES = {
+  commands: {
+    claude: {},
+    antigravity: {
+      'code.md': `---
+description: Implement approved work from specification tasks and then hand off to test and review.
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash
+argument-hint: <feature-name>
+---
+
+# /code - Implement from spec tasks
+
+Use this workflow after /spec-tasks.
+
+1. Read .specs/$ARGUMENTS/tasks.md and identify the next pending task.
+2. Implement only that task following project standards.
+3. Run /test.
+4. Run /review.
+
+Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /review
+`,
+      'test.md': `---
+description: Run project tests and report failures concisely.
+allowed-tools: Bash, Read, Grep
+argument-hint: [scope]
+---
+
+# /test
+
+Run the project's test command and report:
+- total passed/failed
+- failing test names
+- root cause hints
+- next fix action
+`,
+      'review.md': `---
+description: Review recent code changes for quality, security, and maintainability.
+allowed-tools: Bash, Read, Grep, Glob
+argument-hint: [scope]
+---
+
+# /review
+
+Review recent code changes. Prioritize:
+- correctness
+- security
+- regressions
+- maintainability
+
+Output findings by severity and include concrete fixes.
+`
+    }
+  },
+  agents: {
+    claude: {},
+    antigravity: {
+      'frontend-specialist.md': `---
+name: frontend-specialist
+description: Implement approved UI and interaction tasks from specifications.
+---
+
+Implement UI tasks from approved specs with accessibility and responsive behavior.
+`,
+      'test-engineer.md': `---
+name: test-engineer
+description: Execute tests and report reliability issues.
+---
+
+Run test suites, highlight failures, and propose precise fixes.
+`,
+      'code-archaeologist.md': `---
+name: code-archaeologist
+description: Review recent changes for regressions and hidden impacts.
+---
+
+Inspect changed code paths, dependencies, and potential regressions.
+`
+    }
+  }
+};
 
 // ═══════════════════════════════════════════════════════════
 // PLATFORM REGISTRY - Add new platforms here
@@ -29,6 +128,7 @@ const PLATFORMS = {
     folder: '.claude',
     commandsDir: '.claude/commands',
     skillsDir: '.claude/skills',
+    agentsDir: '.claude/agents',
     skillsRef: '.claude/skills',
     commandPrefix: '/',
     sourceDir: 'claude',       // Maps to src/claude/
@@ -41,6 +141,7 @@ const PLATFORMS = {
     folder: '.agent',
     commandsDir: '.agent/workflows',  // Antigravity uses workflows/ not commands/
     skillsDir: '.agent/skills',
+    agentsDir: '.agent/agents',
     skillsRef: '.agent/skills',
     commandPrefix: '/',
     sourceDir: 'antigravity',  // Maps to src/antigravity/
@@ -169,6 +270,78 @@ function copyRecursive(src, dest) {
   }
 }
 
+function ensureDependencyFile(targetPath, content, results, label) {
+  if (fs.existsSync(targetPath)) {
+    console.log(`  → Dependency exists: ${label}`);
+    results.dependencyChecks++;
+    return;
+  }
+
+  if (!content) {
+    console.log(`  ⚠ Missing dependency template: ${label}`);
+    results.dependencyChecks++;
+    results.missingDependencies++;
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, content, 'utf8');
+  console.log(`  ✓ Dependency installed: ${label}`);
+  results.dependencyChecks++;
+  results.installedDependencies++;
+}
+
+function ensureWorkflowDependencies(platformKey, platform, results) {
+  const commandTemplates = DEPENDENCY_TEMPLATES.commands[platformKey] || {};
+  Object.entries(commandTemplates).forEach(([fileName, content]) => {
+    const targetPath = path.join(platform.commandsDir, fileName);
+    ensureDependencyFile(targetPath, content, results, path.join(platform.commandsDir, fileName));
+  });
+
+  const agentTemplates = DEPENDENCY_TEMPLATES.agents[platformKey] || {};
+  Object.entries(agentTemplates).forEach(([fileName, content]) => {
+    const targetPath = path.join(platform.agentsDir, fileName);
+    ensureDependencyFile(targetPath, content, results, path.join(platform.agentsDir, fileName));
+  });
+}
+
+function getPlatformSpecFiles(platformKey) {
+  if (platformKey === 'claude') {
+    const manifestCommands = CLAUDE_MIGRATION_MANIFEST?.commands?.core;
+    if (Array.isArray(manifestCommands) && manifestCommands.length > 0) {
+      return manifestCommands;
+    }
+
+    return [
+      'spec-init.md',
+      'spec-requirements.md',
+      'spec-design.md',
+      'spec-tasks.md',
+      'spec-status.md',
+      'code.md',
+      'test.md',
+      'review.md',
+      'review/codebase.md',
+      'review/codebase/parallel.md',
+      'docs.md'
+    ];
+  }
+
+  if (platformKey === 'antigravity') {
+    return [
+      'spec-init.md',
+      'spec-requirements.md',
+      'spec-design.md',
+      'spec-tasks.md',
+      'spec-status.md',
+      'docs-init.md',
+      'docs-update.md'
+    ];
+  }
+
+  return [];
+}
+
 function copyPlatformFiles(platformKey, results) {
   const platform = PLATFORMS[platformKey];
 
@@ -176,6 +349,7 @@ function copyPlatformFiles(platformKey, results) {
   const sourceSubdir = platform.sourceSubdir || 'commands';
   const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
   const skillsSourceDir = path.join(__dirname, '../src/common/skills');
+  const agentsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/agents`);
 
   // Create directories
   if (!fs.existsSync(platform.commandsDir)) {
@@ -184,30 +358,85 @@ function copyPlatformFiles(platformKey, results) {
   if (!fs.existsSync(platform.skillsDir)) {
     fs.mkdirSync(platform.skillsDir, { recursive: true });
   }
+  if (!fs.existsSync(platform.agentsDir)) {
+    fs.mkdirSync(platform.agentsDir, { recursive: true });
+  }
 
   // Copy skills (shared across all platforms)
   if (fs.existsSync(skillsSourceDir)) {
-    const specSkillSource = path.join(skillsSourceDir, 'spec-driven-development');
-    const specSkillDest = path.join(platform.skillsDir, 'spec-driven-development');
+    const specSkillSource = path.join(skillsSourceDir, 'specs');
+    const specSkillDest = path.join(platform.skillsDir, 'specs');
 
     if (fs.existsSync(specSkillSource)) {
       copyRecursive(specSkillSource, specSkillDest);
       results.installedSkills++;
-      console.log(`  ✓ Skill installed: spec-driven-development`);
+      console.log(`  ✓ Skill installed: specs`);
+    }
+
+    if (platformKey === 'claude') {
+      const requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
+
+      requiredSkills
+        .filter((skillName) => skillName !== 'specs')
+        .forEach((skillName) => {
+          const skillSource = path.join(skillsSourceDir, skillName);
+          const skillDest = path.join(platform.skillsDir, skillName);
+
+          if (fs.existsSync(skillSource)) {
+            copyRecursive(skillSource, skillDest);
+            results.installedSkills++;
+            console.log(`  ✓ Skill installed: ${skillName}`);
+          } else {
+            results.missingDependencies++;
+            console.log(`  ⚠ Missing dependency template: ${path.join(platform.skillsDir, skillName)}`);
+          }
+        });
     }
   }
 
+  // Copy agents
+  if (platformKey === 'claude') {
+    if (fs.existsSync(agentsSourceDir)) {
+      const requiredAgents = CLAUDE_MIGRATION_MANIFEST?.agents?.required || [
+        'tester.md',
+        'code-reviewer.md',
+        'fullstack-developer.md',
+        'debugger.md'
+      ];
+
+      requiredAgents.forEach((fileName) => {
+        const source = path.join(agentsSourceDir, fileName);
+        const dest = path.join(platform.agentsDir, fileName);
+
+        if (!fs.existsSync(source)) {
+          console.log(`  ⚠ Missing dependency template: ${path.join(platform.agentsDir, fileName)}`);
+          results.missingDependencies++;
+          results.dependencyChecks++;
+          return;
+        }
+
+        if (fs.existsSync(dest)) {
+          console.log(`  → Dependency exists: ${path.join(platform.agentsDir, fileName)}`);
+          results.dependencyChecks++;
+        } else {
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.copyFileSync(source, dest);
+          console.log(`  ✓ Dependency installed: ${path.join(platform.agentsDir, fileName)}`);
+          results.dependencyChecks++;
+          results.installedDependencies++;
+        }
+      });
+    } else {
+      results.missingDependencies++;
+      console.log(`  ⚠ Missing dependency template: ${platform.agentsDir}`);
+    }
+
+  }
+
+  ensureWorkflowDependencies(platformKey, platform, results);
+
   // Copy commands/workflows
-  const specFiles = [
-    'spec-init.md',
-    'spec-requirements.md',
-    'spec-design.md',
-    'spec-tasks.md',
-    'spec-impl.md',
-    'spec-status.md',
-    'docs-init.md',
-    'docs-update.md'
-  ];
+  const specFiles = getPlatformSpecFiles(platformKey);
 
   specFiles.forEach(file => {
     const source = path.join(commandsSourceDir, file);
@@ -223,6 +452,7 @@ function copyPlatformFiles(platformKey, results) {
       console.log(`  → Skipped: ${file} (already exists)`);
       results.skipped++;
     } else {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
       let content = fs.readFileSync(source, 'utf8');
       content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
       fs.writeFileSync(dest, content);
@@ -243,7 +473,9 @@ function copyRoutingFile(platformKey, results) {
       console.log(`  → Skipped: ROUTING.md (already exists)`);
       results.skipped++;
     } else {
-      fs.copyFileSync(source, dest);
+      let content = fs.readFileSync(source, 'utf8');
+      content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+      fs.writeFileSync(dest, content);
       console.log(`  ✓ Copied: ROUTING.md`);
       results.copied++;
     }
@@ -281,7 +513,7 @@ function copyGeminiFile(platformKey, results) {
 async function main() {
   console.log();
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║         CafeKit Spec Installer v0.1.6                  ║');
+  console.log(`║         CafeKit Spec Installer v${String(packageJson.version).padEnd(5, ' ')}               ║`);
   console.log('║         Multi-platform SDD Workflow                    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log();
@@ -316,6 +548,9 @@ async function main() {
     copied: 0,
     skipped: 0,
     installedSkills: 0,
+    dependencyChecks: 0,
+    installedDependencies: 0,
+    missingDependencies: 0,
     errors: 0,
     targets: []
   };
@@ -349,9 +584,12 @@ async function main() {
     console.log('║         Installation Complete!                         ║');
     console.log('╚════════════════════════════════════════════════════════╝');
     console.log();
-    console.log(`  Copied Commands:    ${results.copied}`);
-    console.log(`  Skipped Commands:   ${results.skipped}`);
+    console.log(`  Copied Files:       ${results.copied}`);
+    console.log(`  Skipped Files:      ${results.skipped}`);
     console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
+    console.log(`  Dependency Checks:  ${results.dependencyChecks}`);
+    console.log(`  Installed Deps:     ${results.installedDependencies}`);
+    console.log(`  Missing Deps:       ${results.missingDependencies}`);
     console.log(`  Target Directories: ${results.targets.join(', ')}`);
     if (results.errors > 0) {
       console.log(`  Errors:             ${results.errors} ⚠`);
@@ -367,9 +605,12 @@ async function main() {
       console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
     }
 
-    console.log('\n  2. Follow the workflow: requirements → design → tasks → impl');
+    console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - review');
     console.log();
     console.log('Documentation: https://github.com/hapo-nghialuu/hapo-cafekit');
+    if (results.missingDependencies > 0) {
+      console.log('Note: some dependency templates could not be installed. Please check command/agent directories.');
+    }
     console.log();
 
     process.exit(results.errors > 0 ? 1 : 0);

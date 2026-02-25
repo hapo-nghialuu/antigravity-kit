@@ -12,8 +12,8 @@ export default function DocsSidebar({ locale = 'en' }: { locale?: string }) {
 
     return (
         <nav className="space-y-6">
-            {config.sidebarNav.map((section) => (
-                <div key={section.title}>
+            {config.sidebarNav.map((section, i) => (
+                <div key={`${section.title}-${i}`}>
                     <h3 className="mb-2 px-2 text-sm font-semibold text-foreground tracking-tight flex items-center gap-1">
                         {section.title}
                     </h3>

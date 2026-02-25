@@ -216,23 +216,6 @@ const sidebarNavVi = [
         title: "Platform Guides",
         items: [
             {
-                title: "Tổng quan",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
-            },
-        ],
-    },
-    {
-        title: "Platform Guides",
-        items: [
-            {
                 title: "Hướng dẫn Nền tảng",
                 href: "/docs/platforms",
             },
@@ -284,7 +267,7 @@ const sidebarNavVi = [
 
 export const docsConfig = {
     mainNav,
-    sidebarNav: sidebarNavVi, // Default to VI
+    sidebarNav: sidebarNavEn,
 };
 
 export function getDocsConfig(locale: string): DocsConfig {
