@@ -2,7 +2,7 @@
 
 > Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.1.7-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
 [![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
@@ -792,6 +792,24 @@ Task #4: Add protected route middleware
 ---
 
 ## Changelog
+
+### [0.2.2] - 2026-02-25
+
+#### Changed
+- Added `scope_lock` contract to spec initialization metadata (`source`, `in_scope`, `out_of_scope`, `expansion_policy`)
+- Updated `/spec-requirements`, `/spec-design`, `/spec-validate`, and `/spec-tasks` to enforce scope lock across the full spec lifecycle
+- Reduced default expansion in `/spec-design`: uncertain cases now default to light discovery and only escalate to full on explicit triggers
+- Clarified steering usage in requirements phase: steering is constraints-only and must not introduce new capability domains
+- Added task-generation guardrail: every task must map to valid in-scope numeric requirement IDs
+- Added installer sync for specs template files in Claude mode to reduce stale runtime copy drift
+
+#### Regression Guard (installer CLI upgrade mode)
+Use this checklist after running `npx @haposoft/cafekit-spec --upgrade`:
+- Run `/spec-init` with an installer-CLI-scoped feature description and verify `spec.json.scope_lock` is populated
+- Run `/spec-requirements`, `/spec-design`, `/spec-validate`, `/spec-tasks` in order
+- Verify requirements/design/tasks do **not** introduce API/mobile/DynamoDB domains unless explicitly approved
+- Verify task entries reference valid in-scope numeric requirement IDs only
+- If scope expansion is explicitly approved during validation, verify `scope_lock` updates are reflected in `spec.json`
 
 ### [0.1.7] - 2026-02-24
 

@@ -422,6 +422,50 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       }
     }
 
+    // Keep templates in sync for claude command runtime copies under .claude/skills/specs
+    if (platformKey === 'claude') {
+      const specTemplates = [
+        'init.json',
+        'requirements-init.md',
+        'requirements.md',
+        'design.md',
+        'research.md',
+        'tasks.md'
+      ];
+
+      specTemplates.forEach((fileName) => {
+        const source = path.join(specSkillSource, 'templates', fileName);
+        const dest = path.join(platform.skillsDir, 'specs', 'templates', fileName);
+
+        if (!fs.existsSync(source)) {
+          console.log(`  ⚠ Missing dependency template: ${path.join(platform.skillsDir, 'specs', 'templates', fileName)}`);
+          results.missingDependencies++;
+          results.dependencyChecks++;
+          return;
+        }
+
+        const destinationExists = fs.existsSync(dest);
+
+        if (destinationExists && !shouldOverwriteManagedFiles) {
+          console.log(`  → Dependency exists: ${path.join(platform.skillsDir, 'specs', 'templates', fileName)}`);
+          results.dependencyChecks++;
+          return;
+        }
+
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(source, dest);
+        results.dependencyChecks++;
+        results.installedDependencies++;
+
+        if (destinationExists && shouldOverwriteManagedFiles) {
+          console.log(`  ↻ Dependency updated: ${path.join(platform.skillsDir, 'specs', 'templates', fileName)}`);
+          results.updated++;
+        } else {
+          console.log(`  ✓ Dependency installed: ${path.join(platform.skillsDir, 'specs', 'templates', fileName)}`);
+        }
+      });
+    }
+
     if (platformKey === 'claude') {
       const requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
 

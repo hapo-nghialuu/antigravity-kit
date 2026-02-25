@@ -12,7 +12,9 @@
       "spec-status.md",
       "code.md",
       "test.md",
-      "review.md"
+      "review.md",
+      "review/codebase.md",
+      "review/codebase/parallel.md"
     ]
   },
   "skills": {
