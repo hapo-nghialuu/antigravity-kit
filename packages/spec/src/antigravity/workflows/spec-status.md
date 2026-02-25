@@ -25,6 +25,11 @@ Hiển thị trạng thái hiện tại của một spec hoặc liệt kê tất
    - Feature name
    - Current phase
    - Approval status
+   - Discovery mode (if available)
+   - Validation status and last validated time (if available)
+   - **Backward compatibility fallback (older specs):**
+     - If `design_context` is missing, show Discovery mode as `n/a`
+     - If `validation` is missing, show Validation as `not-run` and Last validated as `n/a`
    - Created/Updated timestamps
    - Summary of files
 
@@ -45,6 +50,9 @@ Hiển thị trạng thái hiện tại của một spec hoặc liệt kê tất
 | Property | Value |
 |----------|-------|
 | **Phase** | `<phase>` |
+| **Discovery Mode** | `<minimal/light/full or n/a>` |
+| **Validation** | `<completed/pending/n/a>` |
+| **Last Validated** | `<timestamp or n/a>` |
 | **Created** | `<timestamp>` |
 | **Updated** | `<timestamp>` |
 

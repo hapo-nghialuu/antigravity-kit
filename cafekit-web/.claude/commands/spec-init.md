@@ -1,4 +1,5 @@
 ---
+name: spec-init
 description: Initialize a new specification with detailed project description
 allowed-tools: Read, Write, Glob, AskUserQuestion
 argument-hint: <project-description>
@@ -22,10 +23,42 @@ Before any execution, validate $ARGUMENTS:
    - Has fewer than 5 words
    - Contains only generic terms like "better", "improve", "fix", "update" without specific context
    - Lacks clear nouns describing what to build
-3. **Ambiguity Fallback**: When triggered:
+3. **Ambiguity Fallback**: When triggered, use AskUserQuestion tool:
    - Do NOT proceed with initialization
-   - Propose 2-3 specific feature name options based on common patterns
-   - Ask user: "Could you clarify what you'd like to build, or select one of these options?"
+   - Invoke AskUserQuestion with 2-3 specific feature options based on common patterns
+
+   **Example:**
+   ```json
+   {
+     "questions": [
+       {
+         "question": "Your description is too vague. What type of feature are you building?",
+         "header": "Feature Type",
+         "options": [
+           {
+             "label": "User Management",
+             "description": "Authentication, profiles, user CRUD operations"
+           },
+           {
+             "label": "Data Dashboard",
+             "description": "Analytics, charts, reporting interface"
+           },
+           {
+             "label": "Mobile App",
+             "description": "Cross-platform mobile application"
+           },
+           {
+             "label": "API Service",
+             "description": "Backend API endpoints and business logic"
+           }
+         ],
+         "multiSelect": false
+       }
+     ]
+   }
+   ```
+
+   **After user selects:** Re-run spec-init with the selected feature description
 4. **Only proceed** to Core Task if input clearly describes a feature/project
 
 ## Core Task
@@ -35,8 +68,8 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
 1. **Check Uniqueness**: Verify `.specs/` for naming conflicts (append number suffix if needed)
 2. **Create Directory**: `.specs/[feature-name]/`
 3. **Initialize Files Using Templates**:
-   - Read `{{SKILLS_DIR}}/specs/templates/init.json`
-   - Read `{{SKILLS_DIR}}/specs/templates/requirements-init.md`
+   - Read `.claude/skills/specs/templates/init.json`
+   - Read `.claude/skills/specs/templates/requirements-init.md`
    - Replace placeholders:
      - `{{FEATURE_NAME}}` → generated feature name
      - `{{TIMESTAMP}}` → current ISO 8601 timestamp
@@ -73,6 +106,6 @@ Provide output in the language specified in `spec.json` with the following struc
 
 ## Safety & Fallback
 - **Ambiguous Feature Name**: If feature name generation is unclear, propose 2-3 options and ask user to select
-- **Template Missing**: If template files don't exist in `{{SKILLS_DIR}}/specs/templates/`, report error with specific missing file path and suggest checking repository setup
+- **Template Missing**: If template files don't exist in `.claude/skills/specs/templates/`, report error with specific missing file path and suggest checking repository setup
 - **Directory Conflict**: If feature name already exists, append numeric suffix (e.g., `feature-name-2`) and notify user of automatic conflict resolution
 - **Write Failure**: Report error with specific path and suggest checking permissions or disk space

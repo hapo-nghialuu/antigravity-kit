@@ -1,4 +1,5 @@
 ---
+name: spec-requirements
 description: Generate comprehensive requirements for a specification
 allowed-tools: Glob, Grep, Read, Write, Edit, WebSearch, WebFetch
 argument-hint: <feature-name>
@@ -35,8 +36,8 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
      - This provides complete project memory and context
 
 2. **Read Guidelines**:
-   - Read `{{SKILLS_DIR}}/specs/rules/ears-format.md` for EARS syntax rules
-   - Read `{{SKILLS_DIR}}/specs/templates/requirements.md` for document structure
+   - Read `.claude/skills/specs/rules/ears-format.md` for EARS syntax rules
+   - Read `.claude/skills/specs/templates/requirements.md` for document structure
    - **Load project docs context (Plan-style quality gate)** when available:
      - `docs/codebase-summary.md`
      - `docs/code-standards.md`
@@ -48,7 +49,7 @@ Generate complete requirements for feature **$ARGUMENTS** based on the project d
    - Search for related files: `**/*.{tsx,jsx,ts,js,vue,py}`
    - Read existing components/modules related to the feature
    - Identify what's already implemented vs what needs to be added
-   
+
    **CRITICAL: DO NOT STOP OR ASK USER.** Instead:
    - Note findings and CONTINUE to Step 4
    - If existing implementation found:

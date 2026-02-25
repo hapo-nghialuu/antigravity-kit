@@ -56,9 +56,9 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 ### Step 2: Generate Implementation Tasks
 
 **Load generation rules and template**:
-- Read `{{SKILLS_DIR}}/specs/rules/tasks-generation.md` for principles
-- If `sequential` is **false**: Read `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md` for parallel judgement criteria
-- Read `{{SKILLS_DIR}}/specs/templates/tasks.md` for format (supports `(P)` markers)
+- Read `.claude/skills/specs/rules/tasks-generation.md` for principles
+- If `sequential` is **false**: Read `.claude/skills/specs/rules/tasks-parallel-analysis.md` for parallel judgement criteria
+- Read `.claude/skills/specs/templates/tasks.md` for format (supports `(P)` markers)
 
 **Generate task list following all rules**:
 - Use language specified in spec.json
@@ -131,7 +131,7 @@ Provide brief summary in the language specified in spec.json:
 - **User Action Required**: Confirm intentional gaps or regenerate tasks
 
 **Template/Rules Missing**:
-- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/specs/`"
+- **User Message**: "Template or rules files missing in `.claude/skills/specs/`"
 - **Fallback**: Use inline basic structure with warning
 - **Suggested Action**: "Check repository setup or restore template files"
 
