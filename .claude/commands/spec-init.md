@@ -1,7 +1,7 @@
 ---
 name: spec-init
 description: Initialize a new specification with detailed project description
-allowed-tools: Read, Write, Glob
+allowed-tools: Read, Write, Glob, AskUserQuestion
 argument-hint: <project-description>
 ---
 
@@ -60,6 +60,7 @@ Before any execution, validate $ARGUMENTS:
 
    **After user selects:** Re-run spec-init with the selected feature description
 4. **Only proceed** to Core Task if input clearly describes a feature/project
+5. **Scope Baseline Clarification**: If description is broad enough to imply multiple domains, ask 1 focused question to confirm initial in-scope vs out-of-scope boundaries before writing spec files
 
 ## Core Task
 Generate a unique feature name from the project description ($ARGUMENTS) and initialize the specification structure.
@@ -74,6 +75,11 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
      - `{{FEATURE_NAME}}` → generated feature name
      - `{{TIMESTAMP}}` → current ISO 8601 timestamp
      - `{{PROJECT_DESCRIPTION}}` → $ARGUMENTS
+   - Set `scope_lock` in `spec.json` as initialization contract:
+     - `scope_lock.source` = original project description
+     - `scope_lock.in_scope` = concise bullets derived from explicit user intent
+     - `scope_lock.out_of_scope` = nearby domains/capabilities explicitly excluded for this iteration
+     - `scope_lock.expansion_policy` = `requires-user-approval`
    - Write `spec.json` and `requirements.md` to spec directory
 
 ## Important Constraints
@@ -81,6 +87,7 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
 - Follow stage-by-stage development principles
 - Maintain strict phase separation
 - Only initialization is performed in this phase
+- Scope lock is mandatory: initialize `scope_lock` and treat it as authoritative baseline for later phases
 </instructions>
 
 ## Tool Guidance

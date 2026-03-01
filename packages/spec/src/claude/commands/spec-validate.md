@@ -34,7 +34,13 @@ Read:
 - `.specs/$ARGUMENTS/design.md`
 - `.specs/$ARGUMENTS/research.md` (if exists)
 
-Extract decision points around:
+Resolve scope lock first:
+- `scope_lock.source`
+- `scope_lock.in_scope[]`
+- `scope_lock.out_of_scope[]`
+- `scope_lock.expansion_policy`
+
+Extract decision points around in-scope trade-offs only:
 - architecture and boundaries
 - assumptions and defaults
 - integration risks
@@ -44,8 +50,9 @@ Extract decision points around:
 ### Step 2: Determine Question Budget
 Use injected session validation settings when available (`Validation: mode=X, questions=MIN-MAX`).
 - If unavailable, use 3-6 questions
-- Ask only meaningful questions that can change implementation
+- Ask only meaningful questions that can change in-scope implementation
 - Each question must have 2-4 concrete options
+- Prefer in-scope confirmation questions first; scope-expansion questions are optional and only if needed
 
 ### Step 3: Interview User
 Use `AskUserQuestion` in batches (max 4 questions per call).
@@ -53,6 +60,8 @@ Rules:
 - Include one recommended option when a safe default exists
 - Keep options mutually exclusive
 - Do not ask redundant questions
+- Keep questions inside current scope by default
+- Open-scope expansion questions are allowed only when scope pressure is detected and must require explicit user approval
 
 ### Step 4: Persist Validation Log
 Append to `.specs/$ARGUMENTS/research.md` under `## Validation Log`.
@@ -85,12 +94,14 @@ Update `.specs/$ARGUMENTS/spec.json`:
 - `validation.questions_asked: <number>`
 - `validation.status: "completed"`
 - increment `validation.session_count` (initialize to 1 if absent)
+- if explicit expansion approved by user, update `scope_lock.in_scope` / `scope_lock.out_of_scope` accordingly
 - update `updated_at`
 
 ## Constraints
 - Keep input/output contract of existing `spec-*` commands unchanged
 - Validation must be traceable and append-only (never overwrite old sessions)
 - Ask fewer questions when artifact is simple; quality over quantity
+- Do not introduce new capability domains during validation unless user explicitly approves scope expansion
 </instructions>
 
 ## Output Description

@@ -18,6 +18,12 @@
       "approved": false
     }
   },
+  "scope_lock": {
+    "source": "{{PROJECT_DESCRIPTION}}",
+    "in_scope": [],
+    "out_of_scope": [],
+    "expansion_policy": "requires-user-approval"
+  },
   "design_context": {
     "discovery_mode": null,
     "discovery_reason": null,

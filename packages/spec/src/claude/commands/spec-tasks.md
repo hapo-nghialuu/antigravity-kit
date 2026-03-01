@@ -35,6 +35,7 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md`
 - `.specs/$ARGUMENTS/tasks.md` (if exists, for merge mode)
 - `.specs/$ARGUMENTS/research.md` (if exists, includes validation log)
+- Resolve scope baseline from `spec.json.scope_lock` (fallback to derived baseline when missing)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
 - **Load project docs context (Plan-style quality gate)** when available:
   - `docs/codebase-summary.md`
@@ -63,8 +64,11 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 **Generate task list following all rules**:
 - Use language specified in spec.json
 - Map all requirements to tasks
+- Only use valid in-scope requirement IDs from requirements.md
+- Every task MUST reference at least one valid in-scope requirement ID
+- Reject or defer task candidates that map only to out-of-scope capabilities
 - When documenting requirement coverage, list numeric requirement IDs only (comma-separated) without descriptive suffixes, parentheses, translations, or free-form labels
-- Ensure all design components included
+- Ensure all in-scope design components included
 - Verify task progression is logical and incremental
 - Collapse single-subtask structures by promoting them to major tasks and avoid duplicating details on container-only major tasks (use template patterns accordingly)
 - Apply `(P)` markers to tasks that satisfy parallel criteria (omit markers in sequential mode)
@@ -85,7 +89,9 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 ## Critical Constraints
 - **Follow rules strictly**: All principles in tasks-generation.md are mandatory
 - **Natural Language**: Describe what to do, not code structure details
-- **Complete Coverage**: ALL requirements must map to tasks
+- **Complete Coverage**: ALL in-scope requirements must map to tasks
+- **Scope Lock**: Do not generate out-of-scope tasks; classify them as deferred when needed
+- **Requirement Mapping Integrity**: Each task must map to valid numeric in-scope requirement IDs
 - **Maximum 2 Levels**: Major tasks and sub-tasks only (no deeper nesting)
 - **Sequential Numbering**: Major tasks increment (1, 2, 3...), never repeat
 - **Task Integration**: Every task must connect to the system (no orphaned work)
@@ -105,10 +111,13 @@ Provide brief summary in the language specified in spec.json:
    - All Z requirements covered
    - Average task size: 1-3 hours per sub-task
 3. **Quality Validation**:
-   - ✅ All requirements mapped to tasks
+   - ✅ All in-scope requirements mapped to tasks
    - ✅ Task dependencies verified
    - ✅ Testing tasks included
-4. **Next Action**: Review tasks and proceed when ready
+4. **Scope Guard**:
+   - ✅ Every task maps to valid in-scope requirement IDs
+   - ✅ Out-of-scope tasks deferred/blocked
+5. **Next Action**: Review tasks and proceed when ready
 
 **Format**: Concise (under 200 words)
 
@@ -127,8 +136,12 @@ Provide brief summary in the language specified in spec.json:
 - **Suggested Action**: "Complete requirements and design phases first"
 
 **Incomplete Requirements Coverage**:
-- **Warning**: "Not all requirements mapped to tasks. Review coverage."
+- **Warning**: "Not all in-scope requirements mapped to tasks. Review coverage."
 - **User Action Required**: Confirm intentional gaps or regenerate tasks
+
+**Out-of-Scope Tasks Detected**:
+- **Block/Defer**: Do not include out-of-scope tasks in primary task plan
+- **User Guidance**: Request explicit scope expansion approval if user wants those tasks promoted
 
 **Template/Rules Missing**:
 - **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/specs/`"
@@ -137,6 +150,9 @@ Provide brief summary in the language specified in spec.json:
 
 **Missing Numeric Requirement IDs**:
 - **Stop Execution**: All requirements in requirements.md MUST have numeric IDs. If any requirement lacks a numeric ID, stop and request that requirements.md be fixed before generating tasks.
+
+**Invalid Requirement Mapping in Tasks**:
+- **Stop Execution**: If a generated task cannot map to valid in-scope numeric requirement IDs, remove/defer it and regenerate task mapping
 
 ### Next Phase: Implementation
 
