@@ -27,11 +27,6 @@ export function LanguageSwitcher() {
         }
     }, []);
 
-    // Only show on docs pages
-    if (!pathname?.startsWith('/docs')) {
-        return null;
-    }
-
     // Prevent hydration mismatch by not rendering until mounted
     if (!mounted) {
         return (
@@ -49,6 +44,7 @@ export function LanguageSwitcher() {
         // Set cookie
         document.cookie = `NEXT_LOCALE=${target}; path=/; max-age=31536000`; // 1 year
         setLocale(target);
+        window.dispatchEvent(new Event('locale-changed'));
         router.refresh();
     };
 

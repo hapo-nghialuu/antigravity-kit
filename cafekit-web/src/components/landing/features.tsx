@@ -1,42 +1,28 @@
-import { Target, FileText, Rocket, BookOpen } from "lucide-react";
+"use client";
 
-const features = [
-  {
-    icon: Target,
-    title: "6-Phase Workflow",
-    description: "From requirements gathering to implementation tracking. A structured process that ensures nothing is missed.",
-  },
-  {
-    icon: FileText,
-    title: "Living Documentation",
-    description: "Every spec creates documentation that stays with your project. Perfect for team collaboration and maintenance.",
-  },
-  {
-    icon: BookOpen,
-    title: "Documentation Automation",
-    description: "Auto-generate project documentation with /docs init and keep it updated with /docs update. Create AGENTS.md, CLAUDE.md, and 7+ project docs.",
-  },
-  {
-    icon: Rocket,
-    title: "AI-Guided Implementation",
-    description: "Works with Claude Code and Antigravity to guide you through each phase with intelligent suggestions and verification at every step.",
-  },
-];
+import { Target, FileText, Rocket, BookOpen } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
+import { getLandingTranslations } from "@/lib/landing-translations";
+
+const icons = [Target, FileText, BookOpen, Rocket];
 
 export function Features() {
+  const locale = useLocale();
+  const t = getLandingTranslations(locale).features;
+
   return (
     <section className="bg-white py-20 dark:bg-zinc-900">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="mb-4 text-center text-3xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-4xl">
-          Build features with confidence
+          {t.heading}
         </h2>
         <p className="mx-auto mb-16 max-w-2xl text-center text-lg text-zinc-600 dark:text-zinc-400">
-          CafeKit Spec provides a complete workflow for spec-driven development with Claude Code & Antigravity
+          {t.subheading}
         </p>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => {
-            const Icon = feature.icon;
+          {t.items.map((feature, i) => {
+            const Icon = icons[i];
             return (
               <div
                 key={feature.title}
