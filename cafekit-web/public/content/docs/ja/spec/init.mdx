@@ -1,0 +1,69 @@
+---
+title: /spec-init
+description: 機能の概要を入力として、新しい仕様機能（spec）のワークスペースを初期化します
+---
+
+# /spec-init
+
+`.specs/` ディレクトリ内に新しい仕様（spec）のワークスペースを初期化します。
+
+## 使い方
+
+**Claude Code:**
+```bash
+/spec-init "user authentication with email and password"
+```
+
+**Antigravity:**
+```bash
+/spec-init "user authentication with email and password"
+# または
+@spec-init "user authentication with email and password"
+```
+
+## 説明
+
+`/spec-init` は、CafeKit Specのワークフローにおける、一番最初のステップです。
+
+`.specs/[feature-name]/` という専用のフォルダを作成し、以下のファイルを初期化します：
+- `spec.json` (フェーズ + 承認メタデータ)
+- `requirements.md` (作りたい機能の概要を書き込むためのプレースホルダー)
+
+## 裏側で行われること
+
+1. 入力された説明から、英語の機能名（feature-name）を生成します
+2. `.specs/[feature-name]/` フォルダを作成します
+3. 初期状態の `spec.json` を作成します
+4. 入力された機能の概要が含まれた `requirements.md` のひな形を作成します
+
+## 期待される出力結果
+
+```text
+> /spec-init "user authentication with email and password"
+
+✅ Created: .specs/user-authentication/
+✅ Created: .specs/user-authentication/spec.json
+✅ Created: .specs/user-authentication/requirements.md
+```
+
+この時点での `requirements.md` の中身は以下のようになります：
+
+```markdown
+# Requirements Document
+
+## Project Description (Input)
+User authentication with email and password
+
+## Requirements
+<!-- Will be generated in /spec-requirements phase -->
+```
+
+## メモ
+
+- フォルダ名となる機能名は `kebab-case`（ハイフン繋ぎ）で自動生成されます
+- このフェーズでは、フォルダ構造の用意とメタデータの作成のみを行います
+- 要件（requirements）/設計（design）/タスク（tasks）は後のフェーズで生成されます
+
+## 次のステップ
+
+- [`/spec-requirements`](/docs/spec/requirements) - 入力された機能の概要をもとに、詳細な要件定義を生成します

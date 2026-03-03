@@ -1,0 +1,214 @@
+---
+title: Documentation
+description: CafeKit Specを使って、AIコーディングアシスタント（Claude Code、Antigravity）に仕様駆動（spec-driven）開発を取り入れ、よりスピーディに機能を構築する方法を学びましょう。
+---
+
+# CafeKit Spec ドキュメント
+
+CafeKit Specへようこそ。CafeKit Specは、AIコーディングアシスタント（[Claude Code](https://claude.ai/code)、[Antigravity](https://antigravity.google/)）向けの、構造化された仕様駆動（spec-driven）開発ワークフローを提供するツールキットです。
+
+## CafeKit Specとは
+
+CafeKit Specは、8つのワークフローコマンドでAIコーディングアシスタントを拡張し、複雑な機能の開発やプロジェクトのドキュメント管理をガイドします。
+行き当たりばったりのプロンプトを書く代わりに、CafeKit Specは「アイデアをプロダクト品質のコードへと確実に変えるための、再現性のあるプロセス」を提供します。
+
+## 目的のコマンドを探す
+
+<DecisionTree locale="ja" />
+
+## 複数のプラットフォームに対応
+
+CafeKit Specは、以下の代表的なAIアシスタントプラットフォームの両方に対応しています：
+
+<Cards columns={2}>
+  <Card href="/docs/platforms/claude">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-8 h-8 rounded-lg bg-[#d97757]/10 flex items-center justify-center">
+        <img src="/icons/claude.svg" alt="Claude Code" className="w-5 h-5" />
+      </div>
+      <div>
+        <h3 className="font-semibold">Claude Code</h3>
+        <span className="text-sm text-gray-500">Anthropic提供</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>コマンド: <code>/spec-init</code></li>
+      <li>ファイル: <code>.claude/ROUTING.md</code></li>
+      <li>単一のAIエージェント</li>
+    </ul>
+  </Card>
+  <Card href="/docs/platforms/antigravity">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/10 via-green-500/10 to-yellow-500/10 flex items-center justify-center">
+        <img src="/icons/antigravity.svg" alt="Antigravity" className="w-5 h-5" />
+      </div>
+      <div>
+        <h3 className="font-semibold">Antigravity</h3>
+        <span className="text-sm text-gray-500">Google提供</span>
+      </div>
+    </div>
+    <ul className="text-sm text-gray-600 space-y-1">
+      <li>コマンド: <code>/spec-init</code></li>
+      <li>ファイル: <code>.agent/rules/GEMINI.md</code></li>
+      <li>マルチエージェントシステム</li>
+    </ul>
+  </Card>
+</Cards>
+
+## クイックリンク
+
+まずは以下の基本ガイドから始めましょう：
+
+- [Installation](/docs/getting-started/installation) - 1分以内にCafeKit Specのセットアップを完了させます
+- [Quickstart](/docs/getting-started/quickstart) - はじめての仕様（spec）を作成します
+- [Documentation Workflows](/docs/docs-workflow) - プロジェクトのドキュメントを管理する方法を学びます
+- [Spec Workflows](/docs/spec) - 仕様作成から実装までの一連のコマンド操作を習得します
+
+## なぜ仕様駆動開発（Spec-Driven Development）なのか？
+
+従来のAI任せのコーディングでは、次のような問題がよく起こります：
+- 要件が曖昧なことによる手戻りの発生
+- 後半になって気付くエッジケースの考慮漏れ
+- チャットのセッションをまたぐと文脈（コンテキスト）が失われる
+- 場当たり的な実装による不整合
+
+**CafeKit Specは、構造化されたワークフローを導入することでこれらの問題を解決します。**
+
+**得られる成果:** 開発スピードの向上、バグの削減、そして質の高いドキュメントの維持。
+
+## はじめに
+
+### 1. CafeKit Specのインストール
+
+```bash
+npx @haposoft/cafekit-spec
+```
+
+インストール時のメニューから、お使いのプラットフォーム（Claude Code または Antigravity）を選択してください。
+
+### 2. 最初のSpecを作成する
+
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
+
+```bash
+/spec-init
+/spec-requirements
+```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/spec-init
+/spec-requirements
+```
+
+  </TabsPanel>
+</Tabs>
+
+これでAIが、要件定義からアーキテクチャ設計、タスクの細分化までをステップバイステップでサポートしてくれます。
+
+### 3. AIのガイダンスで実装する
+
+<Tabs>
+  <TabsList>
+    <TabsTrigger value="claude">Claude Code</TabsTrigger>
+    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
+  </TabsList>
+  <TabsPanel value="claude">
+
+```bash
+/code
+/test
+/review
+```
+
+  </TabsPanel>
+  <TabsPanel value="antigravity">
+
+```bash
+/code
+/test
+/review
+```
+
+  </TabsPanel>
+</Tabs>
+
+AIが作成された仕様（spec）を読み込み、タスクごとに「実装・テスト・レビュー（検証）」のサイクルを回しながら開発を進めます。
+
+[詳細な Quickstart ガイドを読む](/docs/getting-started/quickstart)
+
+## 主要なコンセプト
+
+### Specs
+
+**spec** はひとつの機能開発ごとに作られる、構造化された作業スペースです。以下が含まれます：
+
+- `spec.json` - フェーズおよび承認ステータス
+- `requirements.md` - EARSフォーマットの要件
+- `design.md` - 技術設計
+- `tasks.md` - タスクの細分化
+
+Specsは `.specs/` に配置され、チーム開発において情報共有できるよう、Gitにコミットして管理します。
+
+### ドキュメント（Documentation）
+
+ドキュメント管理機能により、以下のファイルが自動的に生成・更新されます：
+
+- `codebase-summary.md` - コードベースの概要
+- `project-overview-pdr.md` - プロダクト要件
+- `code-standards.md` - コーディング規約
+- `system-architecture.md` - システムアーキテクチャ
+- `design-guidelines.md` - UI/UXガイドライン
+- `deployment-guide.md` - デプロイメントガイド
+- `project-roadmap.md` - プロジェクトロードマップ
+
+ドキュメントは `docs/` に配置され、AIアシスタントがプロジェクトの全体像を正確に把握するための知識ベースとして機能します。
+
+## ユースケース
+
+### こんなケースにおすすめです：
+
+- **複雑な機能** - 認証、支払い、管理ダッシュボードの開発
+- **新しいプロジェクト** - アーキテクチャの選定理由などをドキュメントに残したい場合
+- **チームでのコラボレーション** - 仕様（Specs）がチーム全体の共通認識となる場合
+- **長時間の作業** - AIとのチャットセッションを何回もまたぐような、長期にわたる開発作業
+
+### 逆に、こういうケースなら不要です（普通にAIを使ってください）：
+
+- 簡単なバグ修正 (`30分未満`)
+- 文言の変更やタイポの修正
+- ちょっとしたCSSの微調整
+- ごく簡単なコードのリファクタリング
+
+## 学習パス
+
+CafeKit Specを使いこなすには、以下の順番で学ぶのがおすすめです：
+
+1. **[Installation](/docs/getting-started/installation)** (2分) - 環境をセットアップします
+2. **[Quickstart](/docs/getting-started/quickstart)** (10分) - はじめての仕様（spec）を作成し、実践的に学びます
+3. **[Documentation Workflows](/docs/docs-workflow)** (10分) - プロジェクトのドキュメントを管理する方法を学びます
+4. **[Spec Workflows](/docs/spec)** (20分) - より高度なコマンド群の使い方をマスターします
+
+基本的な使い方を習得するまでの目安時間: **約45分**
+
+## ヘルプを得る
+
+- **[FAQ](/docs/faq)** - よくある質問とその回答
+- **[GitHub Issues](https://github.com/hapo-nghialuu/hapo-cafekit/issues)** - バグの報告や機能改善のリクエストはこちら
+
+## 次のステップ
+
+準備はできましたか？お使いのプラットフォームを選んで始めましょう：
+
+- [CafeKit Spec をインストールする](/docs/getting-started/installation)
+- [Claude Code ガイド](/docs/platforms/claude)
+- [Antigravity ガイド](/docs/platforms/antigravity)
+
+**CafeKit Specでのコーディングを楽しんでください！**

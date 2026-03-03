@@ -11,7 +11,7 @@ interface Command {
 }
 
 interface DecisionTreeProps {
-  locale?: 'en' | 'vi';
+  locale?: 'en' | 'vi' | 'ja';
 }
 
 const commands: Command[] = [
@@ -67,6 +67,23 @@ const translations = {
     col1Label: 'Claude Code / Antigravity',
     col2Label: 'Claude Code / Antigravity',
     col3Label: 'Full Spec Workflow (tuần tự)',
+    col4Label: 'Claude Code / Antigravity',
+  },
+  ja: {
+    title: 'コマンドを選択',
+    description: 'コマンドをクリックして説明を確認するか、以下のディシジョンツリーに従ってタスクに適したコマンドを見つけてください。',
+    startNode: '何をしますか？',
+    col1Condition1: 'AI docs',
+    col1Condition2: 'の作成？',
+    col2Condition1: 'AI docs',
+    col2Condition2: 'の更新？',
+    col3Condition1: '新しい',
+    col3Condition2: '機能？',
+    col4Condition1: '進捗の',
+    col4Condition2: '確認？',
+    col1Label: 'Claude Code / Antigravity',
+    col2Label: 'Claude Code / Antigravity',
+    col3Label: 'Full Spec Workflow（順次実行）',
     col4Label: 'Claude Code / Antigravity',
   },
 };

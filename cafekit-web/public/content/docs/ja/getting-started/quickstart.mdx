@@ -1,0 +1,282 @@
+---
+title: Quickstart Guide
+description: CafeKitのステップバイステップのワークフローを使って、わずか5分で最初の機能仕様（spec）を作成しましょう。
+---
+
+## 今回の目標
+
+このクイックスタートでは、CafeKitのワークフロー全体を通して、「**ユーザーログイン機能**」の仕様（spec）を作成する流れを体験します。
+
+**所要時間:** 5〜10分
+
+## 準備：ドキュメント機能のセットアップ（任意）
+
+AIのパフォーマンスを最大限に引き出すため、最初にプロジェクトドキュメントをセットアップすることをお勧めします。これにより、AIが仕様（spec）を作り始める前に、プロジェクトの構造やコーディングルールを深く理解できるようになります。
+
+```bash
+/docs init
+```
+
+このコマンドによりコードベースが分析され、以下が作成されます：
+- コーディング規約、アーキテクチャ、ガイドラインなどをまとめた `docs/` フォルダ
+
+（後から `/docs update` コマンドを実行して、ドキュメントを最新状態に更新することも可能です）
+
+## ステップ 1: 仕様（spec）の初期化
+
+まずは新しい機能開発のためのワークスペースを作成します：
+
+```bash
+/spec-init login-feature
+```
+
+**裏側で行われること:**
+- `.specs/login-feature/` ディレクトリの作成
+- 初期フォルダ構造の生成
+- 進捗管理・追跡用ファイルのセットアップ
+
+**期待される出力結果:**
+```
+✅ Spec initialized: login-feature
+📁 Created .specs/login-feature/
+📄 Next step: Run /spec-requirements
+```
+
+## ステップ 2: 要件（Requirements）の洗い出し
+
+この機能が「何をするものか」を定義します：
+
+```bash
+/spec-requirements login-feature
+```
+
+AIアシスタントが以下のような質問をします：
+
+- **この機能の主な目的は何ですか？**
+  - 「ユーザーがメールアドレスとパスワードでログインできるようにする」
+
+- **この機能を使用するのは誰ですか？**
+  - 「アプリケーションのエンドユーザー」
+
+- **絶対に外せない必須機能（Must-have）は何ですか？**
+  - メールアドレス/パスワードの検証
+  - セッション管理
+  - 無効な認証情報に対するエラーハンドリング
+
+- **開発上の制約事項や、決まっている技術要件はありますか？**
+  - モバイルおよびデスクトップで機能すること
+  - 認証にJWTを使用すること
+  - パスワード要件：最低8文字、大文字1つ、数字1つ
+
+**裏側で行われること:**
+- AIが対話形式で質問しながら、要件を深掘りしていきます
+- 機能要件および非機能要件をすべて洗い出します
+- `.specs/login-feature/` 内に `requirements.md` を作成します
+
+**期待される出力結果:**
+```
+✅ Requirements captured
+📄 Saved to .specs/login-feature/requirements.md
+📋 Next step: Run /spec-design
+```
+
+## ステップ 3: 設計（Design）ドキュメントの作成
+
+洗い出した要件から、具体的な技術設計を生成します：
+
+```bash
+/spec-design login-feature
+```
+
+**裏側で行われること:**
+- AIが要件のドキュメントを読み込みます
+- アーキテクチャ図を作成します
+- API エンドポイント、DB スキーマ、UI コンポーネントなどを定義します
+- 考慮すべきエッジケースやエラーシナリオを特定します
+- `design.md` を生成します
+
+**設計出力の例:**
+
+```markdown
+# Login Feature - Design Document
+
+## Architecture
+- Frontend: React login form component
+- Backend: POST /api/auth/login endpoint
+- Database: users table with hashed passwords
+
+## API Design
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123"
+}
+
+## Database Schema
+users table:
+- id (UUID, primary key)
+- email (string, unique)
+- password_hash (string)
+- created_at (timestamp)
+
+## UI Components
+- LoginForm.tsx
+- PasswordInput.tsx (with visibility toggle)
+- ErrorMessage.tsx
+
+## Security Measures
+- bcrypt password hashing
+- Rate limiting (5 attempts per minute)
+- JWT token expiry (24 hours)
+```
+
+**期待される出力結果:**
+```
+✅ Design document created
+📄 Saved to .specs/login-feature/design.md
+🎯 Next step: Run /spec-tasks
+```
+
+## ステップ 4: 実装タスクの細分化
+
+設計を、実際に手を動かせるレベルの実装タスクに細かく分割します：
+
+```bash
+/spec-tasks login-feature
+```
+
+**裏側で行われること:**
+- AIが設計ドキュメントを分析します
+- 優先順位が付けられたタスクリストを作成します
+- 各タスクにかかる想定時間（見積もり）を計算します
+- タスク同士の依存関係（どちらを先にやるべきか）を定義します
+- 実行計画（スプリントプラン）として `tasks.md` を生成します
+
+**タスク出力の例:**
+
+```markdown
+# Login Feature - Sprint Plan
+
+## TASK 1: Setup Database Schema (30 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** None
+
+- Create users table migration
+- Add email uniqueness constraint
+- Test migration rollback
+
+## TASK 2: Implement Password Hashing (45 min)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1
+
+- Install bcrypt
+- Create hashPassword() utility
+- Create verifyPassword() utility
+- Write unit tests
+
+## TASK 3: Create Login API Endpoint (1 hour)
+**Priority:** P0 (Blocker)
+**Dependencies:** TASK 1, TASK 2
+
+- POST /api/auth/login route
+- Validate email/password
+- Generate JWT token
+- Handle errors (invalid credentials, rate limiting)
+
+## TASK 4: Build Login Form UI (1 hour)
+**Priority:** P1 (High)
+**Dependencies:** TASK 3
+
+- Create LoginForm component
+- Form validation (email format, password requirements)
+- Loading states
+- Error message display
+```
+
+**期待される出力結果:**
+```
+✅ Task breakdown created
+📄 Saved to .specs/login-feature/tasks.md
+🚀 Next step: Run /code login-feature
+```
+
+## ステップ 5: タスクの実装（コーディング）
+
+生成されたスプリントプランに基づき、いよいよ実装を開始します：
+
+```bash
+/code login-feature
+```
+
+**裏側で行われること:**
+- AIがタスクの一覧を読み込みます
+- 未着手となっている次のタスクを選択します
+- そのタスクを実装します
+- 終わったら、テスト（ `/test` ）やレビュー（ `/review` ）にタスクを引き継ぎます
+
+**やり取りの例:**
+
+```
+AI: Reading tasks.md for login-feature...
+AI: Next pending task is TASK 1: Setup Database Schema
+✅ Created migration file: migrations/001_create_users_table.sql
+✅ Added email uniqueness constraint
+✅ TASK 1 complete
+➡️ Next: run /test login-feature
+➡️ Then: run /review login-feature
+```
+
+## ステップ 6: 進捗状況の確認
+
+現在の実装ステータスを確認します：
+
+```bash
+/spec-status login-feature
+```
+
+**裏側で行われること:**
+- AIが完了済みのタスクを読み込みます
+- 進捗状況をダッシュボード形式でサマリー表示します
+- 作業のブロッカー（障害となっているもの）や、保留中のタスクを特定して知らせてくれます
+
+**ステータス出力の例:**
+
+```
+# Login Feature - Status Report
+
+## Progress: 75% (3/4 tasks complete)
+
+✅ TASK 1: Setup Database Schema (DONE)
+✅ TASK 2: Implement Password Hashing (DONE)
+✅ TASK 3: Create Login API Endpoint (DONE)
+⏳ TASK 4: Build Login Form UI (IN PROGRESS)
+
+## Blockers: None
+
+## Next Steps:
+- Complete TASK 4 (LoginForm UI)
+- Run end-to-end tests
+- Deploy to staging
+```
+
+## お疲れ様でした！
+
+これで CafeKit Spec のワークフローを一通り完走しました。あなたはもう以下のステップを身につけています：
+
+- ✅ `/spec-init` でのspecの初期化
+- ✅ `/spec-requirements` での要件収集
+- ✅ `/spec-design` でのアーキテクチャ設計
+- ✅ `/spec-tasks` でのタスク細分化
+- ✅ `/code` での実装
+- ✅ `/test` および `/review` での検証とレビュー
+- ✅ `/spec-status` での進捗トラッキング
+
+## 次のステップ
+
+- **[Documentation Workflows](/docs/docs-workflow)** - プロジェクトドキュメントの生成と保守方法について学びます
+- **[Spec Workflow ガイド](/docs/guides/spec-workflow)** - 各フェーズの深掘り
+- **[Examples（実例一覧）](/docs/examples)** - 現実世界のspecを参照します
+
+---
+
+**質問がありますか？** [FAQ](/docs/faq) を確認するか、[GitHub](https://github.com/hapo-nghialuu/hapo-cafekit/issues)でissueをオープンしてください。

@@ -1,0 +1,63 @@
+---
+title: /spec-requirements
+description: EARSフォーマットを用いて、曖昧さのないテスト可能な要件定義を生成します
+---
+
+# /spec-requirements
+
+初期化された仕様（spec）の「Project Description」を元に、詳細な要件を生成します。
+
+## 使い方
+
+**Claude Code:**
+```bash
+/spec-requirements user-authentication
+```
+
+**Antigravity:**
+```bash
+/spec-requirements user-authentication
+# または
+@spec-requirements user-authentication
+```
+
+## 説明
+
+このコマンドを実行すると、AIは以下のファイルを読み込みます：
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md` (機能の概要 - インプット)
+
+その後、AIが「ソクラテス式問答法」であなたにいくつか質問をし、最終的にEARSスタイルの受け入れ条件（Acceptance Criteria）を用いた詳細な要件定義を `requirements.md` に書き出します。
+
+## EARSパターンの例
+
+- `[イベント]の時、[システム]は[対応]する。 (When [event], the [system] shall [response])`
+- `もし[条件]ならば、[システム]は[対応]する。 (If [condition], the [system] shall [response])`
+- `[状態]の間、[システム]は[対応]する。 (While [state], the [system] shall [response])`
+- `[機能フラグ]が有効な場合、[システム]は[対応]する。 (Where [feature flag], the [system] shall [response])`
+- `[システム]は[対応]する。 (The [system] shall [response])`
+
+## 期待される出力フォーマット
+
+```markdown
+# Requirements Document
+
+## Requirements
+
+### Requirement 1: User Sign-in
+**Objective:** As an end user, I want to sign in securely, so that I can access my account.
+
+#### Acceptance Criteria
+1. When a user submits valid credentials, the authentication service shall return a valid session token.
+2. If a user submits invalid credentials, the authentication service shall return an authentication error.
+```
+
+## メモ
+
+- 具体的な実装「方法（How）」ではなく、「何を作るか（What）」に焦点を当てて記述されます
+- 生成される要件は、明確かつテストで検証可能な粒度になります
+- 要件定義が完了すると、 `spec.json` のステータスが更新されます
+
+## 次のステップ
+
+- [`/spec-design`](/docs/spec/design) - 確定した要件をもとに、具体的な技術設計（アーキテクチャ）を生成します
