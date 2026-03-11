@@ -10,7 +10,9 @@ npx @haposoft/cafekit-spec
 
 ## What is CafeKit Spec?
 
-CafeKit Spec is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 6 slash commands that guide you through building complex features:
+CafeKit Spec is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 10 powerful slash commands that guide you through building complex features and managing documentation:
+
+### Spec Workflows
 
 | Command | Purpose |
 |---------|---------|
@@ -18,8 +20,17 @@ CafeKit Spec is a structured spec-driven development workflow for AI coding assi
 | `/spec-requirements` | Generate EARS-format requirements |
 | `/spec-design` | Create technical design |
 | `/spec-tasks` | Break down into implementable tasks |
-| `/spec-impl` | Implement specific tasks |
+| `/code` | Implement from approved task list |
+| `/test` | Validate, run tests and analyze failures |
+| `/review` | Review correctness, security, and regressions |
 | `/spec-status` | Check progress |
+
+### Documentation Workflows
+
+| Platform | Init Command | Update Command |
+|----------|--------------|----------------|
+| **Claude Code** | `/docs init` | `/docs update` |
+| **Antigravity** | `/docs-init` | `/docs-update` |
 
 ## Why Spec-Driven Development?
 
@@ -28,10 +39,10 @@ Traditional AI coding often leads to:
 - Missing edge cases discovered late
 - Lost context between sessions
 
-**CafeKit Spec solves this** with a structured 6-phase workflow:
+**CafeKit Spec solves this** with a structured spec-driven workflow:
 
 ```
-Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /spec-impl → /spec-status
+Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /code → /test → /review
 ```
 
 ## Platform Compatibility
@@ -59,8 +70,10 @@ npx @haposoft/cafekit-spec
 # 5. Generate tasks
 /spec-tasks user-authentication
 
-# 6. Implement
-/spec-impl user-authentication
+# 6. Implement, Test, and Review
+/code
+/test
+/review
 ```
 
 ## Documentation
