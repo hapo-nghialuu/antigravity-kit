@@ -2,7 +2,7 @@
 
 > Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
 [![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
@@ -100,7 +100,7 @@ Next steps:
    1. Run /spec-init <feature-name>
    2. Follow the spec workflow: requirements - design - tasks - code - test - review
 
-Documentation: https://github.com/hapo-nghialuu/hapo-cafekit
+Documentation: https://github.com/haposoft/cafekit
 ```
 
 ## Workflows
@@ -778,16 +778,16 @@ Task #4: Add protected route middleware
 
 ## Contributing
 
-- **Report issues:** https://github.com/hapo-nghialuu/hapo-cafekit/issues
+- **Report issues:** https://github.com/haposoft/cafekit/issues
 - **Suggest improvements:** Open a GitHub Discussion
 
 ---
 
 ## Support
 
-- **GitHub:** https://github.com/hapo-nghialuu/hapo-cafekit
-- **Issues:** https://github.com/hapo-nghialuu/hapo-cafekit/issues
-- **Discussions:** https://github.com/hapo-nghialuu/hapo-cafekit/discussions
+- **GitHub:** https://github.com/haposoft/cafekit
+- **Issues:** https://github.com/haposoft/cafekit/issues
+- **Discussions:** https://github.com/haposoft/cafekit/discussions
 
 ---
 

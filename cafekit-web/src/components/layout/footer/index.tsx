@@ -48,12 +48,12 @@ export default function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     GitHub
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/releases" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit/releases" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Changelog
                                 </a>
                             </li>
@@ -65,17 +65,17 @@ export default function Footer() {
                         <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Community</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     GitHub
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/issues" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit/issues" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Issues
                                 </a>
                             </li>
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/discussions" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit/discussions" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Discussions
                                 </a>
                             </li>
@@ -92,7 +92,7 @@ export default function Footer() {
                         <h3 className="font-semibold text-foreground mb-4 text-sm tracking-tight">Legal</h3>
                         <ul className="space-y-3 text-sm">
                             <li>
-                                <a href="https://github.com/hapo-nghialuu/hapo-cafekit/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                <a href="https://github.com/haposoft/cafekit/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                     License
                                 </a>
                             </li>
@@ -127,7 +127,7 @@ export default function Footer() {
                     {/* Social Links */}
                     <div className="flex items-center gap-4">
                         <a
-                            href="https://github.com/hapo-nghialuu/hapo-cafekit"
+                            href="https://github.com/haposoft/cafekit"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-muted-foreground hover:text-foreground transition-colors"

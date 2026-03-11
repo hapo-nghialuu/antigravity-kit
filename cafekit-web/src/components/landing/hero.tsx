@@ -92,7 +92,7 @@ export function Hero() {
           </Link>
 
           <a
-            href="https://github.com/hapo-nghialuu/hapo-cafekit"
+            href="https://github.com/haposoft/cafekit"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-12 items-center gap-2 rounded-full border-2 border-amber-900/20 bg-white/50 px-8 font-medium text-zinc-900 backdrop-blur-sm transition-all hover:border-amber-900/40 hover:bg-white/80 dark:border-amber-100/20 dark:bg-zinc-800/50 dark:text-zinc-100 dark:hover:border-amber-100/40 dark:hover:bg-zinc-800/80"

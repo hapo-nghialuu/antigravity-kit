@@ -757,7 +757,7 @@ async function main() {
       console.log('  3. To refresh managed templates later, run installer with --upgrade');
     }
     console.log();
-    console.log('Documentation: https://github.com/hapo-nghialuu/hapo-cafekit');
+    console.log('Documentation: https://github.com/haposoft/cafekit');
     if (results.missingDependencies > 0) {
       console.log('Note: some dependency templates could not be installed. Please check command/agent directories.');
     }

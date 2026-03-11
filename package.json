@@ -11,11 +11,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hapo-nghialuu/hapo-cafekit.git"
+    "url": "git+https://github.com/haposoft/cafekit.git"
   },
-  "homepage": "https://github.com/hapo-nghialuu/hapo-cafekit#readme",
+  "homepage": "https://github.com/haposoft/cafekit#readme",
   "bugs": {
-    "url": "https://github.com/hapo-nghialuu/hapo-cafekit/issues"
+    "url": "https://github.com/haposoft/cafekit/issues"
   },
   "keywords": [
     "cafekit",
@@ -25,7 +25,7 @@
     "skills",
     "templates"
   ],
-  "author": "vudovn",
+  "author": "nghialuu",
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
