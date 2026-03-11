@@ -1,144 +1,47 @@
 ---
 title: /docs update
-description: Cập nhật tài liệu sau khi code thay đổi
+description: Cập nhật documentation theo thay đổi mới nhất của codebase
 ---
 
 # /docs update
 
-Cập nhật documentation để phản ánh những thay đổi trong codebase.
+Làm mới tài liệu dự án sau các thay đổi code quan trọng.
 
 ## Sử dụng
 
 **Claude Code:**
-```
+```bash
 /docs update
 ```
 
 **Antigravity:**
-```
+```bash
 /docs-update
 ```
 
 ## Mô tả
 
-Lệnh này quét codebase hiện tại, so sánh với documentation cũ, và cập nhật những phần đã thay đổi.
+`/docs update` phân tích lại codebase hiện tại và cập nhật các phần docs đã thay đổi.
 
-## Khác biệt với `/docs init`
+Luồng thường gặp:
+1. Xác minh `docs/` tồn tại
+2. Tạo backup/snapshot
+3. Quét lại ngữ cảnh codebase (bao gồm repomix output)
+4. Cập nhật file docs để khớp implementation hiện tại
 
-| | `/docs init` | `/docs update` |
-|---|---|---|
-| **Mục đích** | Tạo docs từ đầu | Cập nhật docs hiện có |
-| **Ghi đè** | Toàn bộ file | Chỉ phần đã thay đổi |
-| **Backup** | Có | Có |
-| **Thờì gian** | Lâu hơn | Nhanh hơn |
+## Các file thường được cập nhật
 
-## Quy trình
+- `docs/codebase-summary.md`
+- `docs/project-overview-pdr.md`
+- `docs/code-standards.md`
+- `docs/system-architecture.md`
+- `docs/design-guidelines.md`
+- `docs/deployment-guide.md`
+- `docs/project-roadmap.md`
+- File ngữ cảnh nền tảng (`CLAUDE.md` hoặc `.agent/rules/AGENTS.md`)
 
-```
-1. Scan codebase hiện tại
-   └── Đọc tất cả files
+## Best practices
 
-2. So sánh với docs cũ
-   └── Diff để tìm thay đổi
-
-3. Update changed sections
-   └── Chỉ sửa phần cần thiết
-
-4. Backup old docs
-   └── Lưu bản sao trước khi update
-
-5. Merge và save
-   └── Giữ nguyên edits thủ công
-```
-
-## Backup
-
-Trước khi update, hệ thống tạo backup:
-
-```
-docs/
-├── codebase-summary.md
-├── .backups/
-│   └── 2024-01-15_143052/    # Timestamp backup
-│       ├── codebase-summary.md
-│       ├── project-overview-pdr.md
-│       └── ...
-```
-
-## Scenarios
-
-### Scenario 1: Thêm tính năng mới
-```
-# Trước: Codebase có feature A
-# Sau: Thêm feature B
-
-> /docs update
-
-Update:
-- codebase-summary.md (thêm feature B)
-- system-architecture.md (diagram mới)
-- project-roadmap.md (đánh dấu done)
-```
-
-### Scenario 2: Refactor architecture
-```
-# Trước: Monolith
-# Sau: Microservices
-
-> /docs update
-
-Update:
-- system-architecture.md (rewrite hoàn toàn)
-- codebase-summary.md (cập nhật structure)
-- deployment-guide.md (update deploy process)
-```
-
-### Scenario 3: Thay đổi tech stack
-```
-# Trước: Express + MongoDB
-# Sau: Fastify + PostgreSQL
-
-> /docs update
-
-Update:
-- codebase-summary.md (tech stack mới)
-- system-architecture.md (data layer mới)
-```
-
-## Preserve Manual Edits
-
-`/docs update` cố gắng giữ nguyên các edits thủ công:
-
-```markdown
-# Trong docs/code-standards.md
-
-## Naming Conventions
-
-# [AUTO-GENERATED - Will be updated]
-- Functions: camelCase
-- Classes: PascalCase
-
-# [MANUAL - Preserve on update]
-## Special Cases
-- API routes: always use kebab-case
-- Database tables: always plural
-```
-
-## Best Practices
-
-### Khi nào nên update
-- ✅ Sau khi merge PR lớn
-- ✅ Sau khi refactor
-- ✅ Cuối tuần/đầu tuần
-- ✅ Trước khi handover
-
-### Khi nào KHÔNG nên update
-- ❌ Giữa chừng feature đang làm
-- ❌ Khi đang debug
-- ❌ Khi có nhiều uncommitted changes
-
-## Lưu ý
-
-- Luôn commit code trước khi `/docs update`
-- Review changes sau khi update
-- Restore từ backup nếu cần
+- Commit code trước khi chạy update
+- Review diff docs sau khi update
+- Chạy lại khi có thay đổi lớn về kiến trúc hoặc deployment

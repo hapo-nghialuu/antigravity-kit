@@ -5,7 +5,7 @@ description: Hướng dẫn sử dụng CafeKit Spec với Antigravity
 
 # Antigravity
 
-Hướng dẫn đầy đủ cho việc sử dụng CafeKit Spec với Antigravity - AI assistant framework từ Google.
+Hướng dẫn đầy đủ để sử dụng CafeKit Spec với Antigravity.
 
 ## Cài đặt
 
@@ -15,188 +15,96 @@ npx @haposoft/cafekit-spec
 
 Chọn **Antigravity** trong menu cài đặt.
 
-## Cấu trúc File
+## Cấu trúc file
 
-Sau khi cài đặt, các file được tạo trong thư mục `.agent/`:
+Sau khi cài đặt, CafeKit Spec thêm các workflow vào `.agent/`:
 
 ```
 .agent/
-├── AGENTS.md                 # AI quick reference
-├── GEMINI.md                 # Gemini-specific context
-├── ARCHITECTURE.md           # Architecture docs
-├── CONVENTIONS.md            # Platform conventions
+├── workflows/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   ├── docs-init.md
+│   └── docs-update.md
 ├── agents/
-│   ├── spec-init.json        # spec-init agent
-│   ├── spec-requirements.json
-│   ├── spec-design.json
-│   ├── spec-tasks.json
-│   ├── spec-impl.json
-│   ├── spec-status.json
-│   ├── docs-init.json
-│   └── docs-update.json
+│   ├── frontend-specialist.md
+│   ├── test-engineer.md
+│   └── code-archaeologist.md
 ├── skills/
-│   └── ...                   # 40+ reusable skills
-└── workflows/
-    ├── spec-init.yaml
-    ├── spec-requirements.yaml
-    ├── spec-design.yaml
-    ├── spec-tasks.yaml
-    ├── spec-impl.yaml
-    ├── spec-status.yaml
-    ├── docs-init.yaml
-    └── docs-update.yaml
+│   └── specs/
+└── rules/
+    └── GEMINI.md
 ```
 
-## Command Syntax
+## Bộ lệnh
 
-Tất cả commands trong Antigravity sử dụng **dấu gạch dưới** (underscores):
+Antigravity hỗ trợ cả cú pháp `/command` và `@command`.
 
-### Spec Workflows
+### Quy trình spec
 | Command | Mô tả |
 |---------|-------|
 | `/spec-init` | Khởi tạo spec mới |
-| `/spec-requirements` | Phân tích yêu cầu |
-| `/spec-design` | Thiết kế kỹ thuật |
-| `/spec-tasks` | Chia nhỏ task |
-| `/spec-impl` | Triển khai code |
-| `/spec-status` | Kiểm tra tiến độ |
+| `/spec-requirements` | Thu thập và sinh requirements |
+| `/spec-design` | Sinh thiết kế kỹ thuật |
+| `/spec-tasks` | Sinh danh sách task triển khai |
+| `/code` | Triển khai task đã duyệt tiếp theo |
+| `/test` | Chạy test và tóm tắt lỗi |
+| `/review` | Review correctness và security |
+| `/spec-status` | Xem trạng thái hiện tại của spec |
 
-### Documentation Workflows
+### Quy trình documentation
 | Command | Mô tả |
 |---------|-------|
-| `/docs-init` | Khởi tạo documentation |
-| `/docs-update` | Cập nhật documentation |
-
-## Files Đặc biệt
-
-### AGENTS.md
-File reference nhanh cho AI:
-
-```markdown
-# Project Context
-
-## Agents
-- spec-init - Initialize feature spec
-- spec-impl - Implement tasks
-...
-
-## Skills
-- file_read, file_write, file_edit
-- task_create, task_update
-...
-```
-
-### GEMINI.md
-Context đặc biệt cho Gemini model:
-
-```markdown
-# Gemini Configuration
-
-## Model Settings
-- Temperature: 0.2
-- Max tokens: 8000
-
-## Context Window
-- Priority: AGENTS.md > GEMINI.md > codebase
-```
-
-### ARCHITECTURE.md
-Mô tả kiến trúc framework:
-
-```markdown
-# Antigravity Architecture
-
-## Agent System
-- Specialized agents per workflow
-- Skills-based composition
-
-## Workflow Engine
-- YAML-defined workflows
-- State management
-```
+| `/docs-init` | Khởi tạo docs dự án |
+| `/docs-update` | Cập nhật docs sau thay đổi |
 
 ## Ví dụ sử dụng
 
-### Khởi tạo feature mới
+### Bắt đầu feature
 
 ```
-> /spec-init
-
-Feature name: payment-gateway
-Description: Tích hợp cổng thanh toán Stripe
-...
+> /spec-init payment-gateway
+# hoặc
+> @spec-init payment-gateway
 ```
 
-### Triển khai từng task
+### Triển khai từ tasks
 
 ```
-> /spec-impl
-
-Implement task: 3
-Feature: payment-gateway
-...
+> /code payment-gateway
+> /test
+> /review
 ```
 
 ### Cập nhật documentation
 
 ```
 > /docs-update
-
-Cập nhật docs sau khi thêm Stripe integration
 ```
 
-## Khác biệt với Claude Code
+## Khác biệt so với Claude Code
 
 | | Antigravity | Claude Code |
 |---|---|---|
-| **Syntax** | Underscores (`/spec-init`) | Hyphens (`/spec-init`) |
-| **Directory** | `.agent/` | `.claude/` |
-| **Config file** | `AGENTS.md` | `CLAUDE.md` |
-| **Extra files** | `GEMINI.md`, `ARCHITECTURE.md` | `ROUTING.md` |
-| **Agent system** | Multiple specialized agents | Single Claude instance |
-| **Skills** | 40+ reusable skills | Built-in capabilities |
+| Thư mục workflow | `.agent/workflows/` | `.claude/commands/` |
+| Thư mục agent | `.agent/agents/` | `.claude/agents/` |
+| File định tuyến | `.agent/rules/GEMINI.md` | `.claude/ROUTING.md` |
+| Cách gọi lệnh | `/...` hoặc `@...` | `/...` |
 
-## Multi-Agent System
+## Khắc phục sự cố
 
-Antigravity sử dụng nhiều specialized agents:
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  spec-init  │────▶│ spec-design │────▶│  spec-impl  │
-│    agent    │     │    agent    │     │    agent    │
-└─────────────┘     └─────────────┘     └─────────────┘
-      │                                       │
-      ▼                                       ▼
-┌─────────────┐                         ┌─────────────┐
-│  Codebase   │◀────────────────────────│   skills    │
-│   Context   │                         │  (40+ tools)│
-└─────────────┘                         └─────────────┘
-```
-
-Mỗi agent có:
-- Prompt template riêng
-- Skill set phù hợp
-- Context window optimized
-
-## Tips
-
-1. **Dùng skills**: Antigravity có 40+ reusable skills
-2. **Agent routing**: Hệ thống tự động chọn agent phù hợp
-3. **GEMINI.md**: Customize cho Gemini model
-4. **Workflow YAML**: Có thể edit workflows trực tiếp
-
-## Troubleshooting
-
-### Commands không hiển thị
+### Không thấy command
 ```bash
-# Kiểm tra cài đặt
 ls -la .agent/workflows/
 ```
 
-### AGENTS.md không được đọc
-- Đảm bảo file ở root: `./AGENTS.md`
-- Kiểm tra Antigravity configuration
-
-### Lỗi khi chạy command
-- Kiểm tra agent definitions
-- Chạy lại installer: `npx @haposoft/cafekit-spec`
+### Lỗi chạy command
+- Khởi động lại Antigravity
+- Kiểm tra file workflow là `.md` và có frontmatter hợp lệ
+- Chạy lại bộ cài đặt: `npx @haposoft/cafekit-spec`

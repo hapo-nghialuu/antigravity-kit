@@ -5,40 +5,25 @@ description: Automate project documentation creation and updates
 
 # Documentation Workflows
 
-Documentation Workflows provide 2 commands to automate the creation and updating of project documentation—helping AI assistants better understand the codebase.
+Documentation Workflows provide commands to automate project documentation so AI assistants can understand the codebase faster.
 
-## 2 Docs Workflow Commands
+## Command Mapping by Platform
 
-<Cards columns={2}>
-  <Card href="/docs/docs-workflow/init">
-    <div className="font-mono text-sm text-purple-600 mb-2">/docs init</div>
-    <h4>Initialize Documentation</h4>
-    <p className="text-sm text-gray-600">Create 7 doc files + AGENTS.md/CLAUDE.md</p>
-  </Card>
-  <Card href="/docs/docs-workflow/update">
-    <div className="font-mono text-sm text-purple-600 mb-2">/docs update</div>
-    <h4>Update Documentation</h4>
-    <p className="text-sm text-gray-600">Update docs after code changes</p>
-  </Card>
-</Cards>
-
-## Syntactic Differences
-
-| Platform | Syntax |
-|----------|--------|
+| Platform | Command Style |
+|----------|---------------|
 | **Claude Code** | `/docs init`, `/docs update` |
 | **Antigravity** | `/docs-init`, `/docs-update` |
 
 ## Why Documentation Workflows?
 
 ### The Problem
-When working with AI assistants, each new session:
-- AI remembers nothing about the project
-- Time is wasted for AI to read and understand the codebase
-- Context window is wasted on "catching up"
+When working with AI assistants, each new session often starts with limited context:
+- AI has to re-learn project structure
+- Time is spent re-explaining architecture and conventions
+- Context window is consumed by catch-up
 
 ### The Solution
-CafeKit Spec creates 7 standardized documentation files:
+CafeKit Spec standardizes docs generation for core project context:
 1. **codebase-summary.md** - Codebase overview
 2. **project-overview-pdr.md** - Product requirements
 3. **code-standards.md** - Coding conventions
@@ -47,11 +32,14 @@ CafeKit Spec creates 7 standardized documentation files:
 6. **deployment-guide.md** - Deployment guide
 7. **project-roadmap.md** - Project roadmap
 
-Plus **AGENTS.md** (Antigravity) or **CLAUDE.md** (Claude Code) - Quick reference file for AI.
+Plus:
+- **repomix-output.xml** for compact AI-readable codebase context
+- **CLAUDE.md** (root, Claude projects)
+- **.agent/rules/AGENTS.md** (Antigravity projects)
 
 ## Generated Files
 
-```
+```text
 docs/
 ├── codebase-summary.md
 ├── project-overview-pdr.md
@@ -59,53 +47,39 @@ docs/
 ├── system-architecture.md
 ├── design-guidelines.md
 ├── deployment-guide.md
-├── project-roadmap.md
-└── repomix-output.xml      # AI context file
+└── project-roadmap.md
 
-.agent/ or .claude/
-├── AGENTS.md or CLAUDE.md  # AI quick reference
-└── ...
+repomix-output.xml
+
+CLAUDE.md (Claude Code projects)
+.agent/rules/AGENTS.md (Antigravity projects)
 ```
 
-## Usage Workflow
+## Typical Usage
 
-### First-time project setup
+### First-time setup
+```bash
+/docs init
+# Antigravity: /docs-init
 ```
-> /docs init
 
-Create all documentation files
-```
-
-### After major code changes
-```
-> /docs update
-
-Update documentation to reflect new code
+### After major changes
+```bash
+/docs update
+# Antigravity: /docs-update
 ```
 
 ## Best Practices
 
-### When to run `/docs init`
-- New project setup
-- First AI assistant onboarding
-- After major structure refactoring
+### Run init when:
+- New project onboarding
+- First time preparing AI context
+- Documentation baseline is missing
 
-### When to run `/docs update`
-- After adding new features
-- After architecture changes
-- Before handing over to another AI
-
-## File Details
-
-| File | Purpose | When to update |
-|------|---------|----------------|
-| codebase-summary.md | Tech stack, structure overview | Framework/library changes |
-| project-overview-pdr.md | Requirements, goals | Requirements changes |
-| code-standards.md | Coding conventions | Conventions changes |
-| system-architecture.md | Architecture diagrams | Architecture refactoring |
-| design-guidelines.md | UI/UX standards | Design system changes |
-| deployment-guide.md | Deploy process | Infrastructure changes |
-| project-roadmap.md | Timeline, milestones | New planning |
+### Run update when:
+- Major features merged
+- Architecture/deployment changed
+- Before handoff to another contributor or AI session
 
 ## See Also
 

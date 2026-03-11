@@ -8,18 +8,18 @@
 
 | Domain | Keywords | Agent File |
 |--------|----------|------------|
-| **Frontend** | ui, component, react, css, layout | `.claude/agents/frontend-specialist.md` |
-| **Backend** | api, route, server, endpoint | `.claude/agents/backend-specialist.md` |
-| **Database** | schema, migration, query, table | `.claude/agents/database-architect.md` |
-| **Security** | auth, login, jwt, password | `.claude/agents/security-auditor.md` |
-| **Mobile** | react native, flutter, ios, android | `.claude/agents/mobile-developer.md` |
+| **Frontend** | ui, component, react, css, layout | `.claude/agents/ui-ux-designer.md` |
+| **Backend** | api, route, server, endpoint | `.claude/agents/fullstack-developer.md` |
+| **Database** | schema, migration, query, table | `.claude/agents/fullstack-developer.md` |
+| **Security** | auth, login, jwt, password | `.claude/agents/code-reviewer.md` |
+| **Mobile** | react native, flutter, ios, android | `.claude/agents/fullstack-developer.md` |
 | **Debug** | error, bug, crash, not working | `.claude/agents/debugger.md` |
-| **Testing** | test, coverage, unit, e2e | `.claude/agents/test-engineer.md` |
-| **DevOps** | deploy, docker, ci/cd | `.claude/agents/devops-engineer.md` |
-| **Performance** | slow, optimize, cache | `.claude/agents/performance-optimizer.md` |
-| **Docs** | documentation, readme | `.claude/agents/documentation-writer.md` |
+| **Testing** | test, coverage, unit, e2e | `.claude/agents/tester.md` |
+| **DevOps** | deploy, docker, ci/cd | `.claude/agents/fullstack-developer.md` |
+| **Performance** | slow, optimize, cache | `.claude/agents/code-reviewer.md` |
+| **Docs** | documentation, readme | `.claude/agents/docs-manager.md` |
 
-**Multi-domain:** Use `orchestrator` for requests matching 2+ domains.
+**Multi-domain:** Use `fullstack-developer` and coordinate with `tester` + `code-reviewer`.
 
 ---
 
@@ -70,7 +70,9 @@
 | `/spec-requirements` | Requirements | `<feature>` |
 | `/spec-design` | Design doc | `<feature> [-y]` |
 | `/spec-tasks` | Task list | `<feature> [-y]` |
-| `/spec-impl` | Implement | `<feature> [task-id]` |
+| `/code` | Implement | `<feature> [task-id]` |
+| `/test` | Validate implementation | `[scope]` |
+| `/review` | Review code quality | `[scope]` |
 | `/spec-status` | View status | `[feature]` |
 
 ---
@@ -79,10 +81,9 @@
 
 | Skill | Use When | Location |
 |-------|----------|----------|
-| **spec-driven-development** | New features, specs | `.claude/skills/spec-driven-development/` |
-| **claude-code** | Claude CLI help | `.claude/skills/claude-code/` |
+| **specs** | New features, specs | `{{SKILLS_DIR}}/specs/` |
 
-**All skills:** `.claude/skills/` or `.agent/skills/`
+**All skills:** `{{SKILLS_DIR}}/`
 
 ---
 
@@ -97,4 +98,4 @@
 
 ---
 
-**Last Updated:** 2025-02-09
+**Last Updated:** 2026-02-24

@@ -21,24 +21,43 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 
 ## Execution Steps
 
+### Step 0: Validate Phase State (Plan-Style Gate)
+
+- Read `.specs/$ARGUMENTS/spec.json` first
+- If feature directory or `spec.json` is missing: stop and instruct user to run `/spec-init <project-description>`, `/spec-requirements <feature-name>`, and `/spec-design <feature-name>` first
+- If design has not been generated yet (phase before design): stop and instruct user to run `/spec-design $ARGUMENTS`
+- If `phase` is already `tasks-generated`: explain tasks phase already exists and only continue for explicit regeneration/merge intent
+
 ### Step 1: Load Context
 
 **Read all necessary context**:
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md`
 - `.specs/$ARGUMENTS/tasks.md` (if exists, for merge mode)
+- `.specs/$ARGUMENTS/research.md` (if exists, includes validation log)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
+- **Load project docs context (Plan-style quality gate)** when available:
+  - `docs/codebase-summary.md`
+  - `docs/code-standards.md`
+  - `docs/system-architecture.md`
+  - `docs/project-overview-pdr.md`
+- If any docs file is missing, continue and mention missing context in execution output (do not block generation)
 
 **Validate approvals**:
 - If `-y` flag provided: Auto-approve requirements and design in spec.json
 - Otherwise: Verify both approved (stop if not, see Safety & Fallback)
+- **Backward compatibility fallback (older specs):**
+  - If `validation` object is missing, treat validation status as `not-run`
+  - If `design_context` object is missing, treat `validation_recommended` as `false`
+- If `spec.json.validation.status == "completed"`, treat validation as satisfied
+- If validation is missing and `design_context.validation_recommended == true`, warn user to run `/spec-validate $ARGUMENTS` before continuing (do not hard-block)
 - Determine sequential mode based on presence of `--sequential`
 
 ### Step 2: Generate Implementation Tasks
 
 **Load generation rules and template**:
-- Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-generation.md` for principles
-- If `sequential` is **false**: Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-parallel-analysis.md` for parallel judgement criteria
-- Read `{{SKILLS_DIR}}/spec-driven-development/templates/tasks.md` for format (supports `(P)` markers)
+- Read `{{SKILLS_DIR}}/specs/rules/tasks-generation.md` for principles
+- If `sequential` is **false**: Read `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md` for parallel judgement criteria
+- Read `{{SKILLS_DIR}}/specs/templates/tasks.md` for format (supports `(P)` markers)
 
 **Generate task list following all rules**:
 - Use language specified in spec.json
@@ -111,7 +130,7 @@ Provide brief summary in the language specified in spec.json:
 - **User Action Required**: Confirm intentional gaps or regenerate tasks
 
 **Template/Rules Missing**:
-- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/spec-driven-development/`"
+- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/specs/`"
 - **Fallback**: Use inline basic structure with warning
 - **Suggested Action**: "Check repository setup or restore template files"
 
@@ -121,17 +140,17 @@ Provide brief summary in the language specified in spec.json:
 ### Next Phase: Implementation
 
 **Before Starting Implementation**:
-- **IMPORTANT**: Clear conversation history and free up context before running `/spec-impl`
+- **IMPORTANT**: Clear conversation history and free up context before running `/code`
 - This applies when starting first task OR switching between tasks
 - Fresh context ensures clean state and proper task focus
 
 **If Tasks Approved**:
-- Execute specific task: `/spec-impl $ARGUMENTS 1.1` (recommended: clear context between each task)
-- Execute multiple tasks: `/spec-impl $ARGUMENTS 1.1,1.2` (use cautiously, clear context between tasks)
-- Without arguments: `/spec-impl $ARGUMENTS` (executes all pending tasks - NOT recommended due to context bloat)
+- Execute coding pass from approved spec tasks: `/code $ARGUMENTS`
+- After coding, run `/test` then `/review`
+- Repeat in small passes and clear context between iterations when needed
 
 **If Modifications Needed**:
 - Provide feedback and re-run `/spec-tasks $ARGUMENTS`
 - Existing tasks used as reference (merge mode)
 
-**Note**: The implementation phase will guide you through executing tasks with appropriate context and validation.
+**Note**: Continue with `/test` then `/review` after `/code` to complete the workflow.

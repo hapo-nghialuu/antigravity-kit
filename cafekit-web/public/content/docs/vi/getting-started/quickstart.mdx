@@ -5,7 +5,7 @@ description: Tạo spec tính năng đầu tiên của bạn trong 5 phút với
 
 ## Bạn sẽ xây dựng gì
 
-Trong hướng dẫn này, bạn sẽ tạo một spec cho **tính năng đăng nhập người dùng** sử dụng tất cả 6 giai đoạn của quy trình CafeKit.
+Trong hướng dẫn này, bạn sẽ tạo một spec cho **tính năng đăng nhập người dùng** sử dụng tất cả toàn bộ workflow của quy trình CafeKit.
 
 **Thời gian hoàn thành:** 5-10 phút
 
@@ -18,7 +18,7 @@ Trong hướng dẫn này, bạn sẽ tạo một spec cho **tính năng đăng 
 ```
 
 Lệnh này sẽ phân tích codebase và tạo:
-- `CLAUDE.md` - Tổng quan dự án cho AI
+- Thư mục `docs/` với tiêu chuẩn dự án và ngữ cảnh kiến trúc cho AI
 - Thư mục `docs/` với các tiêu chuẩn coding, kiến trúc và hướng dẫn
 
 Bạn cũng có thể cập nhật docs sau bằng `/docs update`.
@@ -197,8 +197,8 @@ Chia nhỏ thiết kế thành các task có thể thực hiện được:
 **Kết quả mong đợi:**
 ```
 ✅ Task breakdown created
-📄 Saved to .specs/login-feature/tasks/sprint-1.md
-🚀 Next step: Run /spec-impl
+📄 Saved to .specs/login-feature/tasks.md
+🚀 Next step: Run /code login-feature
 ```
 
 ## Bước 5: Thực hiện Task (Implement)
@@ -206,31 +206,25 @@ Chia nhỏ thiết kế thành các task có thể thực hiện được:
 Bắt đầu code dựa trên kế hoạch sprint của bạn:
 
 ```bash
-/spec-impl login-feature
+/code login-feature
 ```
 
 **Chuyện gì xảy ra:**
 - AI đọc danh sách task
-- Yêu cầu bạn chọn task nào để thực hiện
-- Hướng dẫn bạn qua quá trình code
-- Viết code, chạy test, xác nhận hoàn thành
+- Chọn task pending tiếp theo
+- Triển khai task đó
+- Chuyển sang `/test` và `/review`
 
 **Mẫu tương tác:**
 
 ```
-AI: Which task would you like to implement?
-1. TASK 1: Setup Database Schema
-2. TASK 2: Implement Password Hashing
-3. TASK 3: Create Login API Endpoint
-4. TASK 4: Build Login Form UI
-
-You: 1
-
-AI: Starting TASK 1: Setup Database Schema
+AI: Reading tasks.md for login-feature...
+AI: Next pending task is TASK 1: Setup Database Schema
 ✅ Created migration file: migrations/001_create_users_table.sql
 ✅ Added email uniqueness constraint
-✅ Tested migration: Up + Down successful
-📋 TASK 1 complete. Next: TASK 2?
+✅ TASK 1 complete
+➡️ Next: run /test login-feature
+➡️ Then: run /review login-feature
 ```
 
 ## Bước 6: Theo dõi tiến độ
@@ -274,7 +268,8 @@ Bạn đã hoàn thành quy trình CafeKit spec đầu tiên. Bạn đã học c
 - ✅ Thu thập yêu cầu với `/spec-requirements`
 - ✅ Thiết kế kiến trúc với `/spec-design`
 - ✅ Chia nhỏ task với `/spec-tasks`
-- ✅ Code với sự hướng dẫn của AI bằng `/spec-impl`
+- ✅ Triển khai bằng `/code`
+- ✅ Kiểm thử và review bằng `/test` và `/review`
 - ✅ Theo dõi tiến độ với `/spec-status`
 
 ## Bước tiếp theo

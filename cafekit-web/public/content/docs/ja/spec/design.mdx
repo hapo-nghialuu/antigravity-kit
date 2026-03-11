@@ -1,0 +1,59 @@
+---
+title: /spec-design
+description: 確定した要件をもとに、具体的な技術設計を生成します
+---
+
+# /spec-design
+
+対象機能のアーキテクチャやシステム構造を定義した技術設計書を生成します。
+
+## 使い方
+
+**Claude Code:**
+```bash
+/spec-design user-authentication
+```
+
+**Antigravity:**
+```bash
+/spec-design user-authentication
+# または
+@spec-design user-authentication
+```
+
+## 説明
+
+このコマンドを実行すると、AIは以下のファイルを読み込みます：
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md`
+
+読み込んだ情報を元に、以下のドキュメントを生成します：
+- `.specs/[feature-name]/design.md`
+- `.specs/[feature-name]/research.md` (調査やリサーチが必要な場合のみ作られます)
+
+## 設計ドキュメントに記載される内容
+
+- アーキテクチャとシステム境界
+- 各コンポーネントの役割とインターフェース
+- データモデルとAPIなどの規約（コントラクト）
+- システムフロー（必要に応じてMermaid図で可視化）
+- エラーハンドリングの方針
+- テスト方針
+- セキュリティおよびパフォーマンス要件（該当する場合のみ）
+
+## 出力例
+
+```text
+✅ Updated: .specs/user-authentication/design.md
+✅ Updated: .specs/user-authentication/research.md
+```
+
+## メモ
+
+- 「何を作るか（What）」という要件を、「どう作るか（How）」という具体的な設計に落とし込みます
+- AIが次のタスク生成に進む前に、人間がこの設計内容をレビューし、必要なら修正を入れることをおすすめします
+- 設計が承認されると、 `spec.json` のステータスが更新されます
+
+## 次のステップ
+
+- [`/spec-tasks`](/docs/spec/tasks) - 設計をもとに、実際に開発可能な粒度のタスクリストを生成します

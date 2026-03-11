@@ -5,7 +5,7 @@ description: Hướng dẫn sử dụng CafeKit Spec với Claude Code
 
 # Claude Code
 
-Hướng dẫn đầy đủ cho việc sử dụng CafeKit Spec với Claude Code - AI assistant từ Anthropic.
+Hướng dẫn đầy đủ để sử dụng CafeKit Spec với Claude Code.
 
 ## Cài đặt
 
@@ -15,139 +15,92 @@ npx @haposoft/cafekit-spec
 
 Chọn **Claude Code** trong menu cài đặt.
 
-## Cấu trúc File
+## Cấu trúc file
 
-Sau khi cài đặt, các file được tạo trong thư mục `.claude/`:
+Sau khi cài đặt, CafeKit Spec thêm các workflow vào `.claude/`:
 
 ```
 .claude/
-├── CLAUDE.md                 # AI quick reference
-├── ROUTING.md                # Agent routing rules
-└── commands/
-    ├── spec-init.ts          # /spec-init
-    ├── spec-requirements.ts  # /spec-requirements
-    ├── spec-design.ts        # /spec-design
-    ├── spec-tasks.ts         # /spec-tasks
-    ├── spec-impl.ts          # /spec-impl
-    ├── spec-status.ts        # /spec-status
-    ├── docs-init.ts          # /docs init
-    └── docs-update.ts        # /docs update
+├── commands/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   └── docs.md
+├── agents/
+│   ├── tester.md
+│   ├── code-reviewer.md
+│   ├── fullstack-developer.md
+│   └── debugger.md
+├── skills/
+│   └── specs/
+└── ROUTING.md
 ```
 
-## Command Syntax
+## Bộ lệnh
 
-Tất cả commands trong Claude Code sử dụng **dấu gạch ngang** (hyphens):
-
-### Spec Workflows
+### Quy trình spec
 | Command | Mô tả |
 |---------|-------|
 | `/spec-init` | Khởi tạo spec mới |
-| `/spec-requirements` | Phân tích yêu cầu |
-| `/spec-design` | Thiết kế kỹ thuật |
-| `/spec-tasks` | Chia nhỏ task |
-| `/spec-impl` | Triển khai code |
-| `/spec-status` | Kiểm tra tiến độ |
+| `/spec-requirements` | Thu thập và sinh requirements |
+| `/spec-design` | Sinh thiết kế kỹ thuật |
+| `/spec-tasks` | Sinh danh sách task triển khai |
+| `/code` | Triển khai task đã duyệt tiếp theo |
+| `/test` | Chạy test và tóm tắt lỗi |
+| `/review` | Review correctness và security |
+| `/spec-status` | Xem trạng thái hiện tại của spec |
 
-### Documentation Workflows
+### Quy trình documentation
 | Command | Mô tả |
 |---------|-------|
-| `/docs init` | Khởi tạo documentation |
-| `/docs update` | Cập nhật documentation |
-
-## Files Đặc biệt
-
-### CLAUDE.md
-File reference nhanh cho AI:
-
-```markdown
-# Project Context
-
-## Commands
-- /spec-init - Initialize feature spec
-- /spec-requirements - Create requirements
-...
-
-## Project Structure
-...
-
-## Conventions
-...
-```
-
-### ROUTING.md
-Định nghĩa rules cho agent routing:
-
-```markdown
-# Agent Routing
-
-## spec-init
-- Trigger: /spec-init
-- Prompt: "Initialize feature spec..."
-
-## spec-impl
-- Trigger: /spec-impl
-- Prompt: "Implement task from spec..."
-```
+| `/docs init` | Khởi tạo docs dự án |
+| `/docs update` | Cập nhật docs sau thay đổi |
 
 ## Ví dụ sử dụng
 
-### Khởi tạo feature mới
+### Bắt đầu feature
 
 ```
-> /spec-init
-
-Feature name: payment-gateway
-Description: Tích hợp cổng thanh toán Stripe
-...
+> /spec-init payment-gateway
 ```
 
-### Triển khai từng task
+### Triển khai từ tasks
 
 ```
-> /spec-impl
-
-Implement task: 3
-Feature: payment-gateway
-...
+> /code payment-gateway
+> /test
+> /review
 ```
 
-### Cập nhật documentation
+### Quản lý documentation
 
 ```
+> /docs init
 > /docs update
-
-Cập nhật docs sau khi thêm Stripe integration
 ```
 
-## Khác biệt với Antigravity
+## Khác biệt so với Antigravity
 
 | | Claude Code | Antigravity |
 |---|---|---|
-| **Syntax** | Hyphens (`/spec-init`) | Underscores (`/spec-init`) |
-| **Directory** | `.claude/` | `.agent/` |
-| **Config file** | `CLAUDE.md` | `AGENTS.md` |
-| **Extra file** | `ROUTING.md` | `GEMINI.md` |
-| **Agent system** | Single Claude instance | Multiple specialized agents |
+| Thư mục workflow | `.claude/commands/` | `.agent/workflows/` |
+| Thư mục agent | `.claude/agents/` | `.agent/agents/` |
+| File định tuyến | `.claude/ROUTING.md` | `.agent/rules/GEMINI.md` |
+| Cách gọi lệnh | `/...` | `/...` hoặc `@...` |
 
-## Tips
+## Khắc phục sự cố
 
-1. **Dùng TAB completion**: Claude Code hỗ trợ autocomplete commands
-2. **Kiểm tra status thường xuyên**: `/spec-status` để theo dõi tiến độ
-3. **Commit thường xuyên**: Sau mỗi `/spec-impl` thành công
-4. **Custom ROUTING.md**: Thêm rules riêng cho dự án
-
-## Troubleshooting
-
-### Commands không hiển thị
+### Không thấy command
 ```bash
-# Kiểm tra cài đặt
 ls -la .claude/commands/
 ```
 
-### CLAUDE.md không được đọc
-- Đảm bảo file ở root: `./CLAUDE.md`
+### Lỗi chạy command
 - Khởi động lại Claude Code
-
-### Lỗi khi chạy command
-- Kiểm tra quyền file
-- Chạy lại installer: `npx @haposoft/cafekit-spec`
+- Kiểm tra file command là `.md` và có frontmatter hợp lệ
+- Chạy lại bộ cài đặt: `npx @haposoft/cafekit-spec`

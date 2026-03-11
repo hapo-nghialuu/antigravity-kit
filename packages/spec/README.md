@@ -2,30 +2,31 @@
 
 > Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/hapo-nghialuu/hapo-cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
 [![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
 
 ## Overview
 
-CafeKit Spec is a **multi-platform** CLI tool that installs a structured 6-step specification workflow for AI coding assistants. It helps teams move from idea to implementation systematically using natural language commands.
+CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflow for AI coding assistants. It helps teams move from idea to implementation systematically using natural language commands.
 
 **Supported Platforms:**
 | Platform | Status | Installation Path |
 |----------|--------|-------------------|
 | [Claude Code](https://claude.ai/code) | ✅ Supported | `.claude/commands/` |
-| [Antigravity](https://antigravity.google/) | ✅ Supported | `.agent/commands/` |
+| [Antigravity](https://antigravity.google/) | ✅ Supported | `.agent/workflows/` |
 | Cursor | 🔮 Planned | `.cursor/commands/` |
 | GitHub Copilot | 🔮 Planned | TBD |
 | Windsurf | 🔮 Planned | TBD |
 
 **What it does:**
-- Installs 6 workflow commands into your AI editor's commands folder
+- Installs workflow commands into your AI editor command/workflow folder
 - Enables spec-driven development with clear phase separation
 - Creates living documentation for every feature
 - Works with zero configuration
-- **Idempotent** - Safe to re-run, won't overwrite existing files
+- **Idempotent by default** - Safe to re-run, skips existing files
+- **Upgrade mode available** - Use `--upgrade` (or `--force`) to refresh managed templates
 
 **What it doesn't do:**
 - Generate code (commands guide AI to help you write code)
@@ -35,7 +36,7 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured 6-step 
 ## Features
 
 - **🎯 Multi-platform** - Works with Claude Code, Antigravity, and future AI editors
-- **📋 6-step spec workflow** - From init to implementation tracking
+- **📋 Spec-first workflow** - `spec-init - spec-requirements - spec-design - spec-tasks` + `code - test - review`
 - **📝 Documentation workflow** - `/docs init` and `/docs update` for project documentation
 - **⚡ Zero-config** - Works out of the box with sensible defaults
 - **🔄 Idempotent** - Safe to re-run, skips existing files
@@ -62,6 +63,12 @@ The installer will:
 2. **Prompt** you to select platform if not detected
 3. **Copy** workflow commands to the appropriate directory
 4. **Install** shared skills for spec-driven development
+5. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
+
+Installer modes:
+- **Default install mode**: `npx @haposoft/cafekit-spec` (skip existing files)
+- **Upgrade mode**: `npx @haposoft/cafekit-spec --upgrade` (overwrite managed templates)
+- **Alias**: `--force` / `-f` behaves the same as `--upgrade`
 
 **Example output (Claude Code):**
 ```
@@ -77,18 +84,21 @@ Installing for: .claude/
 [.claude/commands] Copied: spec-requirements.md
 [.claude/commands] Copied: spec-design.md
 [.claude/commands] Copied: spec-tasks.md
-[.claude/commands] Copied: spec-impl.md
+[.claude/commands] Copied: code.md
 [.claude/commands] Copied: spec-status.md
 
 Installation complete!
-   Copied Commands: 6
-   Skipped Commands: 0
+   Copied Files: 7
+   Skipped Files: 0
    Installed Skills: Yes
+   Dependency Checks: 6
+   Installed Deps: 6
+   Missing Deps: 0
    Targets: .claude/commands
 
 Next steps:
    1. Run /spec-init <feature-name>
-   2. Follow the spec workflow: requirements → design → tasks → impl
+   2. Follow the spec workflow: requirements - design - tasks - code - test - review
 
 Documentation: https://github.com/hapo-nghialuu/hapo-cafekit
 ```
@@ -107,9 +117,12 @@ CafeKit Spec provides two workflow categories:
 | `/spec-init` | Initialize new feature spec | 1 |
 | `/spec-requirements` | Generate EARS requirements | 2 |
 | `/spec-design` | Create technical design | 3 |
-| `/spec-tasks` | Break down into tasks | 4 |
-| `/spec-impl` | Implement specific tasks | 5 |
-| `/spec-status` | Check progress | 6 |
+| `/spec-validate` | Validate design decisions via interview | 4 |
+| `/spec-tasks` | Break down into tasks | 5 |
+| `/code` | Implement tasks from spec artifacts | 6 |
+| `/test` | Run tests for implemented changes | 7 |
+| `/review` | Review code quality and risks | 8 |
+| `/spec-status` | Check progress | 9 |
 
 **Antigravity Workflows:**
 | Workflow | Purpose | Phase |
@@ -117,9 +130,12 @@ CafeKit Spec provides two workflow categories:
 | `/spec-init` | Initialize new feature spec | 1 |
 | `/spec-requirements` | Generate EARS requirements | 2 |
 | `/spec-design` | Create technical design | 3 |
-| `/spec-tasks` | Break down into tasks | 4 |
-| `/spec-impl` | Implement specific tasks | 5 |
-| `/spec-status` | Check progress | 6 |
+| `/spec-validate` | Validate design decisions via interview | 4 |
+| `/spec-tasks` | Break down into tasks | 5 |
+| `/code` | Implement tasks from spec artifacts | 6 |
+| `/test` | Run tests for implemented changes | 7 |
+| `/review` | Review code quality and risks | 8 |
+| `/spec-status` | Check progress | 9 |
 
 **Generated Files:**
 ```
@@ -193,7 +209,15 @@ docs/
 # - Database schema
 # - Component structure
 
-# Step 4: Break down tasks
+# Step 4: Validate design decisions (recommended for medium/high-risk features)
+/spec-validate user-authentication
+
+# AI confirms:
+# - Critical trade-offs and assumptions
+# - Risk-sensitive defaults
+# - Follow-up actions before task generation
+
+# Step 5: Break down tasks
 /spec-tasks user-authentication
 
 # AI creates:
@@ -201,19 +225,16 @@ docs/
 # - Dependencies
 # - Estimated complexity
 
-# Step 5: Implement (iterative)
-/spec-impl user-authentication 1
+# Step 6: Code
+/code user-authentication
 
-# AI implements task #1:
-# - Generates code
-# - Runs tests
-# - Updates task status
+# Step 7: Test
+/test
 
-# Repeat for remaining tasks
-/spec-impl user-authentication 2
-/spec-impl user-authentication 3
+# Step 8: Review
+/review
 
-# Step 6: Check status
+# Step 9: Check status
 /spec-status user-authentication
 
 # AI reports:
@@ -227,7 +248,7 @@ docs/
 ### Workflow Diagram
 
 ```
-Idea -> /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /spec-impl -> /spec-status
+Idea - /spec-init - /spec-requirements - /spec-design - /spec-validate - /spec-tasks - /code - /test - /review - /spec-status
        |<----------------------------------------------|-----------------------------|
                                                       |
                                                    iterate
@@ -346,7 +367,26 @@ User clicks -> dispatch action -> update context -> localStorage -> re-render
 
 ---
 
-### 4. /spec-tasks
+### 4. /spec-validate
+
+**Purpose:** Validate design assumptions, trade-offs, and risk-sensitive decisions before task generation.
+
+**When to use:** After `/spec-design`, especially for medium/high-risk features or external integrations.
+
+**What it does:**
+- Interviews critical decision points using structured questions
+- Appends validation log to `research.md`
+- Updates validation metadata in `spec.json`
+- Recommends follow-up actions before task breakdown
+
+**Example:**
+```bash
+/spec-validate dark-mode-toggle
+```
+
+---
+
+### 5. /spec-tasks
 
 **Purpose:** Break design into implementable tasks.
 
@@ -383,44 +423,65 @@ User clicks -> dispatch action -> update context -> localStorage -> re-render
 
 ---
 
-### 5. /spec-impl
+### 5. /code
 
 **Purpose:** Implement a specific task from the task list.
 
-**When to use:** Iteratively, for each task in order of priority.
+**When to use:** After `/spec-tasks`, to implement approved tasks from spec artifacts.
 
 **What it does:**
-- Reads task definition from `tasks.md`
-- Generates code based on design specification
-- Runs tests (if test files exist)
-- Updates task status to "completed"
-- Reports any blockers
+- Reads spec artifacts (`tasks.md`, `design.md`, `requirements.md`)
+- Implements approved work with minimal scope
+- Hands off to `/test` and `/review`
+- Reports blockers and next actions
 
 **Example:**
 ```bash
-# Implement first task
-/spec-impl dark-mode-toggle 1
+# Implement from approved spec tasks
+/code dark-mode-toggle
 
-# AI generates:
-# - src/context/ThemeContext.tsx
-# - Updates tasks.md: Task #1 status -> completed
-
-# Continue with next task
-/spec-impl dark-mode-toggle 2
+# Then run quality gates
+/test
+/review
 ```
 
 **Iteration pattern:**
 ```bash
-# Sequential implementation
-for task in 1 2 3 4 5; do
-  /spec-impl dark-mode-toggle $task
-  # Review, test, commit before next task
-done
+# Repeat the quality loop after each coding pass
+/code dark-mode-toggle
+/test
+/review
 ```
 
 ---
 
-### 6. /spec-status
+### 6. /test
+
+**Purpose:** Run tests after `/code`.
+
+**When to use:** Immediately after each coding pass.
+
+**Example:**
+```bash
+/test
+```
+
+---
+
+### 7. /review
+
+**Purpose:** Review recent changes for quality and risk.
+
+**When to use:** After `/test` passes.
+
+**Example:**
+```bash
+/review
+```
+
+---
+
+### 8. /spec-status
 
 **Purpose:** Check progress and next steps.
 
@@ -498,7 +559,9 @@ done
 │   ├── spec-requirements.md
 │   ├── spec-design.md
 │   ├── spec-tasks.md
-│   ├── spec-impl.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
 │   ├── spec-status.md
 │   └── docs.md               # Docs workflows
 └── skills/
@@ -508,12 +571,14 @@ done
 **Antigravity** (`.agent/`):
 ```
 .agent/
-├── workflows/                   # Antigravity workflows (underscore naming)
+├── workflows/                   # Antigravity workflows (hyphen naming)
 │   ├── spec-init.md
 │   ├── spec-requirements.md
 │   ├── spec-design.md
 │   ├── spec-tasks.md
-│   ├── spec-impl.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
 │   ├── spec-status.md
 │   ├── docs-init.md            # Docs workflows
 │   └── docs-update.md
@@ -525,7 +590,7 @@ done
 
 **Command Naming:**
 - **Claude Code:** Uses hyphens (`/spec-init`, `/docs init`)
-- **Antigravity:** Uses underscores (`/spec-init`, `/docs-init`)
+- **Antigravity:** Uses hyphens (`/spec-init`, `/docs-init`)
 
 ### Generated Specs Directory
 
@@ -553,7 +618,7 @@ Specs are created in `.specs/` (shared across all platforms):
 
 A: Currently supports:
 - ✅ **Claude Code** - `.claude/commands/`
-- ✅ **Antigravity** - `.agent/commands/`
+- ✅ **Antigravity** - `.agent/workflows/`
 
 Planned for future:
 - 🔮 **Cursor** - `.cursor/commands/`
@@ -576,7 +641,17 @@ A: Yes. Edit the `.md` files in `.claude/commands/` (Claude Code) or `.agent/wor
 
 ### Q: Is it safe to re-run `npx @haposoft/cafekit-spec`?
 
-A: Yes. It's idempotent (skips existing files).
+A: Yes. Default mode is idempotent and skips existing files.
+
+### Q: How do I update existing installed templates to the latest version?
+
+A: Run installer in upgrade mode:
+```bash
+npx @haposoft/cafekit-spec --upgrade
+# or
+npx @haposoft/cafekit-spec --force
+```
+This overwrites files managed by the installer (commands/workflows, managed dependencies, and routing/rules templates).
 
 ### Q: What language is the spec generated in?
 
@@ -590,7 +665,7 @@ A: Yes. Each spec has its own directory in `.specs/`. Work on multiple in parall
 
 A: Each platform has different conventions:
 - **Claude Code** uses hyphens: `/spec-init`, `/docs update`
-- **Antigravity** uses underscores: `/spec-init`, `/docs-init`
+- **Antigravity** uses hyphens: `/spec-init`, `/docs-init`
 
 The functionality is identical, only the naming convention differs.
 
@@ -608,7 +683,7 @@ The functionality is identical, only the naming convention differs.
 mkdir -p .claude/commands
 
 # Option 2: Create Antigravity folder
-mkdir -p .agent/commands
+mkdir -p .agent/workflows
 
 # Option 3: Run installer and it will prompt you to select platform
 npx @haposoft/cafekit-spec
@@ -718,6 +793,32 @@ Task #4: Add protected route middleware
 
 ## Changelog
 
+### [0.2.2] - 2026-02-25
+
+#### Changed
+- Added `scope_lock` contract to spec initialization metadata (`source`, `in_scope`, `out_of_scope`, `expansion_policy`)
+- Updated `/spec-requirements`, `/spec-design`, `/spec-validate`, and `/spec-tasks` to enforce scope lock across the full spec lifecycle
+- Reduced default expansion in `/spec-design`: uncertain cases now default to light discovery and only escalate to full on explicit triggers
+- Clarified steering usage in requirements phase: steering is constraints-only and must not introduce new capability domains
+- Added task-generation guardrail: every task must map to valid in-scope numeric requirement IDs
+- Added installer sync for specs template files in Claude mode to reduce stale runtime copy drift
+
+#### Regression Guard (installer CLI upgrade mode)
+Use this checklist after running `npx @haposoft/cafekit-spec --upgrade`:
+- Run `/spec-init` with an installer-CLI-scoped feature description and verify `spec.json.scope_lock` is populated
+- Run `/spec-requirements`, `/spec-design`, `/spec-validate`, `/spec-tasks` in order
+- Verify requirements/design/tasks do **not** introduce API/mobile/DynamoDB domains unless explicitly approved
+- Verify task entries reference valid in-scope numeric requirement IDs only
+- If scope expansion is explicitly approved during validation, verify `scope_lock` updates are reflected in `spec.json`
+
+### [0.1.7] - 2026-02-24
+
+#### Changed
+- Unified workflow naming around hyphens for Antigravity workflows
+- Replaced `spec-impl` in primary flow with `code - test - review`
+- Installer now ensures dependency templates for `code/test/review` commands and required agents
+- Updated docs workflow naming to `/docs-init` and `/docs-update` for Antigravity
+
 ### [0.1.5] - 2026-02-11
 
 #### Added
@@ -745,7 +846,7 @@ Task #4: Add protected route middleware
 
 #### Added
 - Initial release of CafeKit Spec workflow
-- 6 workflow commands (init, requirements, design, tasks, impl, status)
+- Initial spec workflow foundation
 - Zero-config installation via npx
 - Idempotent file copying (safe to re-run)
 - Comprehensive documentation

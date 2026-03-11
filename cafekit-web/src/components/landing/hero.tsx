@@ -1,17 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee, Sparkles } from "lucide-react";
+import { Coffee, Sparkles, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useLocale } from "@/hooks/use-locale";
+import { getLandingTranslations } from "@/lib/landing-translations";
 
 export function Hero() {
+  const locale = useLocale();
+  const t = getLandingTranslations(locale).hero;
   const [copied, setCopied] = useState(false);
   const installCommand = "npx @haposoft/cafekit-spec";
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(installCommand);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(installCommand);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for non-secure contexts or older browsers
+      const el = document.createElement('textarea');
+      el.value = installCommand;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -21,7 +37,7 @@ export function Hero() {
       <div className="relative z-10 mx-auto max-w-5xl px-6 py-20 text-center">
         <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-amber-900/10 px-4 py-2 text-sm font-medium text-amber-900 dark:bg-amber-100/10 dark:text-amber-100">
           <Coffee className="h-4 w-4" />
-          <span>Spec-Driven Development for AI Coding Assistants</span>
+          <span>{t.badge}</span>
         </div>
 
         <h1 className="mb-6 text-6xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-7xl md:text-8xl">
@@ -32,7 +48,7 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-xl">
-          A structured 6-phase workflow for building features with Claude Code & Antigravity. From requirements to implementation, with clear documentation every step of the way.
+          {t.subtitle}
         </p>
 
         <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
@@ -58,9 +74,10 @@ export function Hero() {
             </code>
             <button
               onClick={handleCopy}
+              aria-label="Copy install command"
               className="rounded-md bg-amber-900/10 px-3 py-1.5 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-900/20 dark:bg-amber-100/10 dark:text-amber-100 dark:hover:bg-amber-100/20"
             >
-              {copied ? "Copied!" : "Copy"}
+              {copied ? t.copied : t.copy}
             </button>
           </div>
         </div>
@@ -70,20 +87,8 @@ export function Hero() {
             href="/docs"
             className="group inline-flex h-12 items-center gap-2 rounded-full bg-amber-900 px-8 font-medium text-white shadow-lg transition-all hover:bg-amber-800 hover:shadow-xl dark:bg-amber-700 dark:hover:bg-amber-600"
           >
-            Read Documentation
-            <svg
-              className="h-4 w-4 transition-transform group-hover:translate-x-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            {t.readDocs}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
 
           <a

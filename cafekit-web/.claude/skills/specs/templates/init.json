@@ -1,0 +1,41 @@
+{
+  "feature_name": "{{FEATURE_NAME}}",
+  "created_at": "{{TIMESTAMP}}",
+  "updated_at": "{{TIMESTAMP}}",
+  "language": "en",
+  "phase": "initialized",
+  "approvals": {
+    "requirements": {
+      "generated": false,
+      "approved": false
+    },
+    "design": {
+      "generated": false,
+      "approved": false
+    },
+    "tasks": {
+      "generated": false,
+      "approved": false
+    }
+  },
+  "scope_lock": {
+    "source": "{{PROJECT_DESCRIPTION}}",
+    "in_scope": [],
+    "out_of_scope": [],
+    "expansion_policy": "requires-user-approval"
+  },
+  "design_context": {
+    "discovery_mode": null,
+    "discovery_reason": null,
+    "validation_recommended": false
+  },
+  "validation": {
+    "status": "not-run",
+    "session_count": 0,
+    "questions_asked": 0,
+    "last_validated_at": null
+  },
+  "ready_for_implementation": false
+}
+
+

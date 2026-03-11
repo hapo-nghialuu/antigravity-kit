@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Get started with CafeKit Spec in under a minute. Install the 6 spec workflow commands for structured feature development.
+description: Get started with CafeKit Spec in under a minute. Install the spec workflow command chain for structured feature development.
 ---
 
 # Installation
@@ -51,7 +51,7 @@ The installer will prompt you to select your platform:
 
 This command will:
 - Detect your project structure
-- Install 6 spec workflow commands to your platform's commands folder
+- Install the core command set (`/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-status`, `/code`, `/test`, `/review`)
 - Configure your workspace for spec-driven development
 
 ## What Gets Installed
@@ -62,31 +62,47 @@ After running the install command, you'll have the CafeKit framework installed i
 ```
 .claude/
 ├── commands/
-│   ├── spec-init.md           # Initialize new spec
-│   ├── spec-requirements.md   # Gather requirements
-│   ├── spec-design.md         # Create design doc
-│   ├── spec-tasks.md          # Generate task breakdown
-│   ├── spec-impl.md           # Implementation guide
-│   ├── spec-status.md         # Track progress
-│   └── docs.md                # Documentation management
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   └── docs.md
+├── agents/
+│   ├── tester.md
+│   ├── code-reviewer.md
+│   ├── fullstack-developer.md
+│   └── debugger.md
 ├── skills/
-│   └── spec-driven-development/  # SDD skill
-└── ROUTING.md                 # Agent routing rules
+│   └── specs/
+└── ROUTING.md
 ```
 
 ### Antigravity
 ```
 .agent/
-├── commands/
-│   ├── spec-init.md           # Initialize new spec
-│   ├── spec-requirements.md   # Gather requirements
-│   ├── spec-design.md         # Create design doc
-│   ├── spec-tasks.md          # Generate task breakdown
-│   ├── spec-impl.md           # Implementation guide
-│   ├── spec-status.md         # Track progress
-│   └── docs.md                # Documentation management
-└── skills/
-    └── spec-driven-development/  # SDD skill
+├── workflows/
+│   ├── spec-init.md
+│   ├── spec-requirements.md
+│   ├── spec-design.md
+│   ├── spec-tasks.md
+│   ├── spec-status.md
+│   ├── code.md
+│   ├── test.md
+│   ├── review.md
+│   ├── docs-init.md
+│   └── docs-update.md
+├── agents/
+│   ├── frontend-specialist.md
+│   ├── test-engineer.md
+│   └── code-archaeologist.md
+├── skills/
+│   └── specs/
+└── rules/
+    └── GEMINI.md
 ```
 
 ### Documentation Setup (Claude Code only)
@@ -99,7 +115,7 @@ npm install -g repomix
 After installation, use the `/docs` command to generate project documentation:
 
 ```bash
-# Initialize docs folder and CLAUDE.md
+# Initialize project docs baseline
 /docs init
 
 # Or update existing docs
@@ -109,7 +125,7 @@ After installation, use the `/docs` command to generate project documentation:
 **What repomix does:** It compacts your codebase into `repomix-output.xml` so AI can analyze your project structure and generate accurate documentation.
 
 This will create:
-- `CLAUDE.md` - Project overview for AI context
+- Platform context file (`CLAUDE.md` or `.agent/rules/AGENTS.md`)
 - `docs/` folder with:
   - `codebase-summary.md`
   - `project-overview-pdr.md`
@@ -119,7 +135,7 @@ This will create:
   - `deployment-guide.md`
   - `project-roadmap.md`
 
-**Note:** The `/docs` command requires `ROUTING.md` and `scripts/` which are only installed on Claude Code. On Antigravity, the command file is provided but may have limited functionality.
+**Note:** `/docs` is exposed as `/docs init` and `/docs update` commands. These rely on your AI environment capabilities and project context files.
 
 ## Verify Installation
 
@@ -147,7 +163,7 @@ If the spec commands don't work:
 
 1. **Check file locations** - Ensure files are in the correct folder:
    - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
+   - Antigravity: `.agent/workflows/`
 2. **Restart your AI assistant** - Some tools require a restart to detect new commands
 3. **Verify file format** - Commands must be `.md` files with proper frontmatter
 4. **Check platform selection** - Re-run installer and verify correct platform was selected
@@ -160,8 +176,8 @@ If CafeKit installs to the wrong directory, you can manually move files:
 # For Claude Code - ensure .claude/commands/ exists
 mkdir -p .claude/commands/
 
-# For Antigravity - ensure .agent/commands/ exists
-mkdir -p .agent/commands/
+# For Antigravity - ensure .agent/workflows/ exists
+mkdir -p .agent/workflows/
 
 # Re-run installer
 npx @haposoft/cafekit-spec
@@ -172,7 +188,7 @@ npx @haposoft/cafekit-spec
 Now that CafeKit Spec is installed:
 
 - **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
-- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full 6-phase process
+- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full spec command chain
 
 ---
 

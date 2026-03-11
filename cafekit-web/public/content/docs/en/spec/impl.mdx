@@ -1,110 +1,52 @@
 ---
-title: /spec-impl
-description: Implement code according to tasks
+title: /code
+description: Implement approved work from spec tasks and hand off to test and review
 ---
 
-# /spec-impl
+# /code
 
-Implement code for one or more tasks from tasks.md.
+Implement code for the next pending task in `.specs/[feature-name]/tasks.md`.
 
 ## Usage
 
 **Claude Code:**
-```
-/spec-impl
+```bash
+/code user-authentication
 ```
 
 **Antigravity:**
-```
-/spec-impl
+```bash
+/code user-authentication
 ```
 
 ## Description
 
-This command guides AI to implement code for incomplete tasks in `tasks.md`. After implementation, updates `implementation.md` with status.
+`/code` is the implementation phase after `/spec-tasks`. It focuses on one pending task at a time to keep changes small, testable, and reviewable.
 
 ## Process
 
-1. AI reads `tasks.md` to see incomplete tasks
-2. User selects task to implement (or AI suggests)
-3. AI implements code according to specification
-4. Updates `implementation.md` with:
-   - Completed tasks
-   - Files created/modified
-   - Implementation notes
+1. Read `.specs/[feature-name]/tasks.md`
+2. Identify the next pending task
+3. Implement only that task in code
+4. Run `/test [feature-name]`
+5. Run `/review [feature-name]`
 
-## Usage Methods
-
-### Implement specific task
-
-```
-> /spec-impl
-
-Implement task: 3
-Feature: user-authentication
-...
-```
-
-### Implement multiple tasks
-
-```
-> /spec-impl
-
-Implement tasks: 1, 2, 3
-Feature: user-authentication
-...
-```
-
-### AI selects next task
-
-```
-> /spec-impl
-
-Feature: user-authentication
-Auto-select next task: yes
-...
-```
 
 ## Output
 
-File `specs/[feature-name]/implementation.md` is created/updated:
-
-```markdown
-# Implementation Progress: [Feature Name]
-
-## Completed Tasks
-
-### Task 1: Create database migration ✅
-**Completed**: 2024-01-15
-**Files Changed**:
-- `migrations/001_create_auth_tables.sql` (created)
-- `src/lib/db.ts` (modified)
-
-**Notes**:
-- Using UUID for user id
-- Added index for email field
-
-### Task 2: Setup JWT utilities ✅
-**Completed**: 2024-01-15
-**Files Changed**:
-- `src/lib/jwt.ts` (created)
-- `.env.example` (modified)
-
-## Current Status
-- Total tasks: 8
-- Completed: 2
-- Remaining: 6
-
-## Next Task
-Task 3: Implement login endpoint
-```
+Typical outcomes after `/code`:
+- Task code changes completed
+- Related tests executed via `/test`
+- Quality/security checks performed via `/review`
 
 ## Tips
 
-- Should implement 1-2 tasks at a time for easier review
-- Always run tests after implementation
-- Commit code frequently
+- Implement one task per run for clean diffs
+- Keep task order from `tasks.md`
+- Always pair `/code` with `/test` and `/review`
 
 ## Next Steps
 
+- [`/test`](/docs/spec/test) - Validate implementation
+- [`/review`](/docs/spec/review) - Review quality and regressions
 - [`/spec-status`](/docs/spec/status) - Check overall progress

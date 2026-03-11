@@ -1,13 +1,13 @@
 ---
 title: Spec Workflows
-description: Tổng quan về 6 lệnh Spec-Driven Development trong CafeKit Spec
+description: Tổng quan chuỗi lệnh spec-driven trong CafeKit Spec
 ---
 
 # Spec Workflows
 
-CafeKit Spec cung cấp 6 lệnh workflow để thực hiện **Spec-Driven Development (SDD)** - phương pháp phát triển phần mềm dựa trên đặc tả rõ ràng trước khi viết code.
+CafeKit Spec sử dụng chuỗi lệnh spec-driven rõ ràng để lập kế hoạch, triển khai, kiểm thử và review.
 
-## 6 Lệnh Spec Workflow
+## Chuỗi lệnh
 
 <Cards columns={3}>
   <Card href="/docs/spec/init">
@@ -30,15 +30,25 @@ CafeKit Spec cung cấp 6 lệnh workflow để thực hiện **Spec-Driven Deve
     <h4>Chia nhỏ task</h4>
     <p className="text-sm text-gray-600">Phân rõ thành các task implementable</p>
   </Card>
-  <Card href="/docs/spec/impl">
-    <div className="font-mono text-sm text-blue-600 mb-2">/spec-impl</div>
+  <Card href="/docs/spec/code">
+    <div className="font-mono text-sm text-blue-600 mb-2">/code</div>
     <h4>Triển khai</h4>
-    <p className="text-sm text-gray-600">Thực hiện code theo task đã chia</p>
+    <p className="text-sm text-gray-600">Triển khai từ task đã duyệt</p>
+  </Card>
+  <Card href="/docs/spec/test">
+    <div className="font-mono text-sm text-blue-600 mb-2">/test</div>
+    <h4>Kiểm thử</h4>
+    <p className="text-sm text-gray-600">Chạy test và phân tích lỗi</p>
+  </Card>
+  <Card href="/docs/spec/review">
+    <div className="font-mono text-sm text-blue-600 mb-2">/review</div>
+    <h4>Review</h4>
+    <p className="text-sm text-gray-600">Review correctness, security và regressions</p>
   </Card>
   <Card href="/docs/spec/status">
     <div className="font-mono text-sm text-blue-600 mb-2">/spec-status</div>
-    <h4>Kiểm tra tiến độ</h4>
-    <p className="text-sm text-gray-600">Theo dõi trạng thái implementation</p>
+    <h4>Xem trạng thái</h4>
+    <p className="text-sm text-gray-600">Xem phase hiện tại và trạng thái phê duyệt</p>
   </Card>
 </Cards>
 
@@ -46,31 +56,15 @@ CafeKit Spec cung cấp 6 lệnh workflow để thực hiện **Spec-Driven Deve
 
 | Platform | Syntax |
 |----------|--------|
-| **Claude Code** | `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status` |
-| **Antigravity** | `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status` |
+| **Claude Code** | `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status` |
+| **Antigravity** | `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status` |
 
 ## Quy trình SDD
 
 ```text
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  spec-init  │───▶│ requirements│───▶│   design    │
-│  (Khởi tạo) │    │  (Yêu cầu)  │    │ (Thiết kế)  │
-└─────────────┘    └─────────────┘    └─────────────┘
-                                              │
-                       ┌─────────────┐       │
-                       │  spec-impl  │◀──────┘
-                       │(Triển khai) │◀────┐
-                       └─────────────┘     │
-                              │             │
-                       ┌─────────────┐      │
-                       │ spec-status │──────┘
-                       │(Kiểm tra)   │
-                       └─────────────┘
-                              │
-                              ▼
-                       ┌─────────────┐
-                       │   Done!     │
-                       └─────────────┘
+/spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /review
+                                            |
+                                            +--> /spec-status (xem phase hiện tại bất kỳ lúc nào)
 ```
 
 ## Khi nào dùng Spec Workflows?
@@ -88,16 +82,16 @@ CafeKit Spec cung cấp 6 lệnh workflow để thực hiện **Spec-Driven Deve
 
 ## Files Được Tạo
 
-Khi chạy đầy đủ 6 lệnh, hệ thống sẽ tạo:
+Các file cốt lõi được tạo bởi các phase spec:
 
 ```
-specs/
+.specs/
 └── [feature-name]/
-    ├── spec.md              # Spec chính (từ spec-init)
-    ├── requirements.md      # Requirements EARS (từ spec-requirements)
+    ├── spec.json            # Metadata phase + trạng thái phê duyệt
+    ├── requirements.md      # Đầu vào/đầu ra requirements
+    ├── research.md          # Ghi chú discovery (nếu cần)
     ├── design.md            # Technical design (từ spec-design)
-    ├── tasks.md             # Task breakdown (từ spec-tasks)
-    └── implementation.md    # Progress tracking (từ spec-impl, cập nhật bởi spec-status)
+    └── tasks.md             # Task breakdown (từ spec-tasks)
 ```
 
 ## Ví dụ thực tế

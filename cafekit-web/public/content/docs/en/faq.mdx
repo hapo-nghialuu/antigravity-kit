@@ -5,11 +5,11 @@ description: Frequently asked questions about CafeKit Spec and spec-driven devel
 
 ### What is CafeKit Spec?
 
-CafeKit Spec is a spec-driven development workflow for AI coding assistants. It provides 6 commands that guide you through building features with clear documentation and structure.
+CafeKit Spec is a spec-driven development workflow for AI coding assistants.
 
-**Command formats by platform:**
-- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-impl`, `/spec-status`
-- **[Antigravity](https://antigravity.google/)**: `/spec-init` (or `@spec-init`), `/spec-requirements`, ...
+**Command chain by platform:**
+- **[Claude Code](https://claude.ai/code)**: `/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status`
+- **[Antigravity](https://antigravity.google/)**: `/spec-init` (or `@spec-init`), `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/code`, `/test`, `/review`, `/spec-status`
 
 ### What is spec-driven development?
 
@@ -56,7 +56,7 @@ Use CafeKit Spec for:
 npx @haposoft/cafekit-spec
 ```
 
-This installs 6 spec workflow commands to `.claude/commands/`.
+This installs the spec workflow command set to your selected platform.
 
 ### What are the prerequisites?
 
@@ -82,11 +82,10 @@ Specs are stored in `.specs/` directory in your project root:
 ```
 .specs/
 └── feature-name/
+    ├── spec.json
     ├── requirements.md
     ├── design.md
-    ├── tasks/
-    │   └── sprint-1.md
-    └── status.md
+    └── tasks.md
 ```
 
 ---
@@ -116,8 +115,10 @@ This creates a `.specs/my-feature-name/` directory with initial structure.
 | **Requirements** | `/spec-requirements` | `/spec-requirements` or `@` | AI asks questions to gather requirements |
 | **Design** | `/spec-design` | `/spec-design` or `@` | Generates technical architecture document |
 | **Tasks** | `/spec-tasks` | `/spec-tasks` or `@` | Breaks design into actionable tasks |
-| **Implement** | `/spec-impl` | `/spec-impl` or `@` | Implements tasks with AI guidance |
-| **Status** | `/spec-status` | `/spec-status` or `@` | Shows progress and next steps |
+| **Implement** | `/code` | `/code` or `@` | Implements the next pending task |
+| **Test** | `/test` | `/test` or `@` | Runs tests and reports failures |
+| **Review** | `/review` | `/review` or `@` | Reviews correctness, security, and regressions |
+| **Status** | `/spec-status` | `/spec-status` or `@` | Shows current phase and approvals |
 
 ### Can I skip phases?
 
@@ -132,7 +133,7 @@ While possible, it's **not recommended**. Each phase builds on the previous:
 - **Medium feature** (auth, API): 3-5 hours
 - **Complex feature** (payments, real-time): 6+ hours
 
-Time includes all 6 phases and implementation.
+Time includes requirements, design, tasks, implementation, test, and review.
 
 ### Can I work on multiple specs at once?
 
@@ -154,7 +155,7 @@ Yes. Each spec is independent in its own `.specs/feature-name/` directory. Switc
 **Solutions:**
 1. Check files exist in the correct folder:
    - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/commands/`
+   - Antigravity: `.agent/workflows/`
 2. Restart your AI coding assistant
 3. Re-run installer: `npx @haposoft/cafekit-spec`
 4. Verify you selected the correct platform during installation
@@ -183,7 +184,7 @@ Yes. Each spec is independent in its own `.specs/feature-name/` directory. Switc
 **Problem:** Task breakdown doesn't fit your workflow
 
 **Solution:**
-- Edit `tasks/sprint-1.md` manually
+- Edit `.specs/[feature-name]/tasks.md` manually
 - Re-run `/spec-tasks` with different instructions
 - Split or combine tasks as needed
 
@@ -251,7 +252,7 @@ Yes. After installation, edit the `.md` files in your platform's commands folder
 
 **Antigravity:**
 ```bash
-.agent/commands/
+.agent/workflows/
 ├── spec-init.md          # Customize init process
 ├── spec-requirements.md  # Change question style
 └── ...
@@ -286,7 +287,7 @@ All new specs will reference these files.
 
 1. Run `/spec-status` to see current state
 2. Review `design.md` for guidance
-3. Check `tasks/sprint-1.md` for current task details
+3. Check `.specs/[feature-name]/tasks.md` for current task details
 4. Ask Claude Code specific questions about the task
 
 ---

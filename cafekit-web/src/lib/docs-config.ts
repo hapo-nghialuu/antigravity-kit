@@ -82,8 +82,16 @@ const sidebarNavEn = [
                 href: "/docs/spec/tasks",
             },
             {
-                title: "/spec-impl",
-                href: "/docs/spec/impl",
+                title: "/code",
+                href: "/docs/spec/code",
+            },
+            {
+                title: "/test",
+                href: "/docs/spec/test",
+            },
+            {
+                title: "/review",
+                href: "/docs/spec/review",
             },
             {
                 title: "/spec-status",
@@ -203,29 +211,20 @@ const sidebarNavVi = [
                 href: "/docs/spec/tasks",
             },
             {
-                title: "/spec-impl",
-                href: "/docs/spec/impl",
+                title: "/code",
+                href: "/docs/spec/code",
+            },
+            {
+                title: "/test",
+                href: "/docs/spec/test",
+            },
+            {
+                title: "/review",
+                href: "/docs/spec/review",
             },
             {
                 title: "/spec-status",
                 href: "/docs/spec/status",
-            },
-        ],
-    },
-    {
-        title: "Platform Guides",
-        items: [
-            {
-                title: "Tổng quan",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
             },
         ],
     },
@@ -282,14 +281,148 @@ const sidebarNavVi = [
     },
 ];
 
+const sidebarNavJa = [
+    {
+        title: "はじめに",
+        items: [
+            {
+                title: "はじめに",
+                href: "/docs",
+            },
+            {
+                title: "インストール",
+                href: "/docs/getting-started/installation",
+            },
+            {
+                title: "クイックスタート",
+                href: "/docs/getting-started/quickstart",
+            },
+        ],
+    },
+    {
+        title: "Documentation Workflows",
+        items: [
+            {
+                title: "概要",
+                href: "/docs/docs-workflow",
+            },
+            {
+                title: "/docs init",
+                href: "/docs/docs-workflow/init",
+            },
+            {
+                title: "/docs update",
+                href: "/docs/docs-workflow/update",
+            },
+        ],
+    },
+    {
+        title: "Spec Workflows",
+        items: [
+            {
+                title: "概要",
+                href: "/docs/spec",
+            },
+            {
+                title: "/spec-init",
+                href: "/docs/spec/init",
+            },
+            {
+                title: "/spec-requirements",
+                href: "/docs/spec/requirements",
+            },
+            {
+                title: "/spec-design",
+                href: "/docs/spec/design",
+            },
+            {
+                title: "/spec-tasks",
+                href: "/docs/spec/tasks",
+            },
+            {
+                title: "/code",
+                href: "/docs/spec/code",
+            },
+            {
+                title: "/test",
+                href: "/docs/spec/test",
+            },
+            {
+                title: "/review",
+                href: "/docs/spec/review",
+            },
+            {
+                title: "/spec-status",
+                href: "/docs/spec/status",
+            },
+        ],
+    },
+    {
+        title: "Platform Guides",
+        items: [
+            {
+                title: "プラットフォームガイド",
+                href: "/docs/platforms",
+            },
+            {
+                title: "Claude Code",
+                href: "/docs/platforms/claude",
+            },
+            {
+                title: "Antigravity",
+                href: "/docs/platforms/antigravity",
+            },
+        ],
+    },
+    {
+        title: "実例",
+        items: [
+            {
+                title: "概要",
+                href: "/docs/examples",
+            },
+            {
+                title: "ユーザー認証",
+                href: "/docs/examples/user-authentication",
+            },
+            {
+                title: "Todo App API",
+                href: "/docs/examples/todo-app",
+            },
+        ],
+    },
+    {
+        title: "リファレンス",
+        items: [
+            {
+                title: "リファレンス",
+                href: "/docs/reference",
+            },
+            {
+                title: "ファイル構成",
+                href: "/docs/reference/file-structure",
+            },
+            {
+                title: "FAQ",
+                href: "/docs/faq",
+            },
+        ],
+    },
+];
+
 export const docsConfig = {
     mainNav,
-    sidebarNav: sidebarNavVi, // Default to VI
+    sidebarNav: sidebarNavEn,
 };
 
 export function getDocsConfig(locale: string): DocsConfig {
+    const sidebarMap: Record<string, typeof sidebarNavEn> = {
+        en: sidebarNavEn,
+        vi: sidebarNavVi,
+        ja: sidebarNavJa,
+    };
     return {
         mainNav,
-        sidebarNav: locale === 'vi' ? sidebarNavVi : sidebarNavEn,
+        sidebarNav: sidebarMap[locale] ?? sidebarNavEn,
     };
 }

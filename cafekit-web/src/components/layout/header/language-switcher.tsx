@@ -27,11 +27,6 @@ export function LanguageSwitcher() {
         }
     }, []);
 
-    // Only show on docs pages
-    if (!pathname?.startsWith('/docs')) {
-        return null;
-    }
-
     // Prevent hydration mismatch by not rendering until mounted
     if (!mounted) {
         return (
@@ -45,10 +40,11 @@ export function LanguageSwitcher() {
         );
     }
 
-    const switchLanguage = (target: 'en' | 'vi') => {
+    const switchLanguage = (target: 'en' | 'vi' | 'ja') => {
         // Set cookie
         document.cookie = `NEXT_LOCALE=${target}; path=/; max-age=31536000`; // 1 year
         setLocale(target);
+        window.dispatchEvent(new Event('locale-changed'));
         router.refresh();
     };
 
@@ -57,7 +53,7 @@ export function LanguageSwitcher() {
             <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2 px-2")}>
                 <Languages className="h-4 w-4" />
                 <span className="hidden sm:inline-block">
-                    {locale === 'vi' ? 'Tiếng Việt' : 'English'}
+                    {locale === 'vi' ? 'Tiếng Việt' : locale === 'ja' ? '日本語' : 'English'}
                 </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -66,6 +62,9 @@ export function LanguageSwitcher() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => switchLanguage('vi')} className={locale === 'vi' ? 'bg-accent' : ''}>
                     Tiếng Việt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => switchLanguage('ja')} className={locale === 'ja' ? 'bg-accent' : ''}>
+                    日本語
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

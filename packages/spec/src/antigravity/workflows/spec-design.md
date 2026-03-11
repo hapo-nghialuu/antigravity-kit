@@ -21,14 +21,27 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 
 ## Execution Steps
 
+### Step 0: Validate Phase State (Plan-Style Gate)
+
+- Read `.specs/$ARGUMENTS/spec.json` first
+- If feature directory or `spec.json` is missing: stop and instruct user to run `/spec-init <project-description>` and `/spec-requirements <feature-name>` first
+- If requirements have not been generated yet (phase before requirements): stop and instruct user to run `/spec-requirements $ARGUMENTS`
+- If `phase` is `tasks-generated`: stop and explain design phase is already completed; only re-run for explicit regeneration/update intent
+
 ### Step 1: Load Context
 
 **Read all necessary context**:
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md` (if exists)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
-- `{{SKILLS_DIR}}/spec-driven-development/templates/design.md` for document structure
-- `{{SKILLS_DIR}}/spec-driven-development/rules/design-principles.md` for design principles
-- `{{SKILLS_DIR}}/spec-driven-development/templates/research.md` for discovery log structure
+- `{{SKILLS_DIR}}/specs/templates/design.md` for document structure
+- `{{SKILLS_DIR}}/specs/rules/design-principles.md` for design principles
+- `{{SKILLS_DIR}}/specs/templates/research.md` for discovery log structure
+- **Load project docs context (Plan-style quality gate)** when available:
+  - `docs/codebase-summary.md`
+  - `docs/code-standards.md`
+  - `docs/system-architecture.md`
+  - `docs/project-overview-pdr.md`
+- If any docs file is missing, continue and mention missing context in execution output (do not block generation)
 
 **Validate requirements approval**:
 - If `-y` flag provided: Auto-approve requirements in spec.json
@@ -37,6 +50,17 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 ### Step 2: Discovery & Analysis
 
 **Critical: This phase ensures design is based on complete, accurate information.**
+
+### Step 2A: Discovery Mode Router (Plan-Style)
+
+Before discovery, select a deterministic mode and record the reason:
+- **minimal**: UI/CRUD-only change, no new external dependency/API, no schema change, <=2 integration points
+- **light**: extension of existing feature with known patterns and limited integration risk
+- **full**: new subsystem, external integration, auth/security/performance impact, unclear constraints, or architecture trade-offs
+- **Default rule**: when uncertain, choose **full** (safer than missing context)
+- **Research budget**: keep discovery scoped; use at most 2 major external investigations unless findings reveal a blocker
+
+Use the selected mode to drive Step 2 execution and persist it in spec metadata during Step 3 finalize.
 
 1. **Classify Feature Type**:
    - **New Feature** (greenfield) → Full discovery required
@@ -47,7 +71,7 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 2. **Execute Appropriate Discovery Process**:
    
    **For Complex/New Features**:
-   - Read and execute `{{SKILLS_DIR}}/spec-driven-development/rules/design-discovery-full.md`
+   - Read and execute `{{SKILLS_DIR}}/specs/rules/design-discovery-full.md`
    - Conduct thorough research using WebSearch/WebFetch:
      - Latest architectural patterns and best practices
      - External dependency verification (APIs, libraries, versions, compatibility)
@@ -55,7 +79,7 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
      - Performance benchmarks and security considerations
    
    **For Extensions**:
-   - Read and execute `{{SKILLS_DIR}}/spec-driven-development/rules/design-discovery-light.md`
+   - Read and execute `{{SKILLS_DIR}}/specs/rules/design-discovery-light.md`
    - Focus on integration points, existing patterns, compatibility
    - Use Grep to analyze existing codebase patterns
    
@@ -81,8 +105,8 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
 ### Step 3: Generate Design Document
 
 1. **Load Design Template and Rules**:
-   - Read `{{SKILLS_DIR}}/spec-driven-development/templates/design.md` for structure
-   - Read `{{SKILLS_DIR}}/spec-driven-development/rules/design-principles.md` for principles
+   - Read `{{SKILLS_DIR}}/specs/templates/design.md` for structure
+   - Read `{{SKILLS_DIR}}/specs/rules/design-principles.md` for principles
 
 2. **Generate Design Document**:
    - **Follow template structure strictly**
@@ -114,6 +138,9 @@ Generate technical design document for feature **$ARGUMENTS** based on approved 
    - Set `phase: "design-generated"`
    - Set `approvals.design.generated: true, approved: false`
    - Set `approvals.requirements.approved: true`
+   - Set `design_context.discovery_mode: "minimal" | "light" | "full"` (based on Step 2A)
+   - Set `design_context.discovery_reason: "<short reason>"`
+   - Set `design_context.validation_recommended: true` when discovery mode is `full` or risk level is medium/high
    - Update `updated_at` timestamp
 
 ## Critical Constraints
@@ -142,9 +169,10 @@ Provide brief summary in the language specified in spec.json:
 
 1. **Status**: Confirm design document generated at `.specs/$ARGUMENTS/design.md`
 2. **Discovery Type**: Which discovery process was executed (full/light/minimal)
-3. **Key Findings**: 2-3 critical insights from `research.md` that shaped the design
-4. **Next Action**: Approval workflow guidance
-5. **Research Log**: Confirm `research.md` updated with latest decisions
+3. **Discovery Rationale**: One-line reason why this mode was selected
+4. **Key Findings**: 2-3 critical insights from `research.md` that shaped the design
+5. **Next Action**: Approval workflow guidance (include whether `/spec-validate $ARGUMENTS` is recommended before `/spec-tasks`)
+6. **Research Log**: Confirm `research.md` updated with latest decisions
 
 **Format**: Concise Markdown (under 200 words)
 
@@ -182,6 +210,7 @@ Provide brief summary in the language specified in spec.json:
 
 **If Design Approved**:
 - Review generated design at `.specs/$ARGUMENTS/design.md`
+- **Recommended for medium/high-risk designs**: Run `/spec-validate $ARGUMENTS` to confirm assumptions and trade-offs
 - Then `/spec-tasks $ARGUMENTS -y` to generate implementation tasks
 
 **If Modifications Needed**:

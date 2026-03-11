@@ -22,30 +22,53 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 
 ## Execution Steps
 
+### Step 0: Validate Phase State (Plan-Style Gate)
+
+- Read `.specs/$ARGUMENTS/spec.json` first
+- If feature directory or `spec.json` is missing: stop and instruct user to run `/spec-init <project-description>`, `/spec-requirements <feature-name>`, and `/spec-design <feature-name>` first
+- If design has not been generated yet (phase before design): stop and instruct user to run `/spec-design $ARGUMENTS`
+- If `phase` is already `tasks-generated`: explain tasks phase already exists and only continue for explicit regeneration/merge intent
+
 ### Step 1: Load Context
 
 **Read all necessary context**:
 - `.specs/$ARGUMENTS/spec.json`, `requirements.md`, `design.md`
 - `.specs/$ARGUMENTS/tasks.md` (if exists, for merge mode)
+- `.specs/$ARGUMENTS/research.md` (if exists, includes validation log)
+- Resolve scope baseline from `spec.json.scope_lock` (fallback to derived baseline when missing)
 - **Entire `.specs/steering/` directory** for complete project memory (if exists)
+- **Load project docs context (Plan-style quality gate)** when available:
+  - `docs/codebase-summary.md`
+  - `docs/code-standards.md`
+  - `docs/system-architecture.md`
+  - `docs/project-overview-pdr.md`
+- If any docs file is missing, continue and mention missing context in execution output (do not block generation)
 
 **Validate approvals**:
 - If `-y` flag provided: Auto-approve requirements and design in spec.json
 - Otherwise: Verify both approved (stop if not, see Safety & Fallback)
+- **Backward compatibility fallback (older specs):**
+  - If `validation` object is missing, treat validation status as `not-run`
+  - If `design_context` object is missing, treat `validation_recommended` as `false`
+- If `spec.json.validation.status == "completed"`, treat validation as satisfied
+- If validation is missing and `design_context.validation_recommended == true`, warn user to run `/spec-validate $ARGUMENTS` before continuing (do not hard-block)
 - Determine sequential mode based on presence of `--sequential`
 
 ### Step 2: Generate Implementation Tasks
 
 **Load generation rules and template**:
-- Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-generation.md` for principles
-- If `sequential` is **false**: Read `{{SKILLS_DIR}}/spec-driven-development/rules/tasks-parallel-analysis.md` for parallel judgement criteria
-- Read `{{SKILLS_DIR}}/spec-driven-development/templates/tasks.md` for format (supports `(P)` markers)
+- Read `{{SKILLS_DIR}}/specs/rules/tasks-generation.md` for principles
+- If `sequential` is **false**: Read `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md` for parallel judgement criteria
+- Read `{{SKILLS_DIR}}/specs/templates/tasks.md` for format (supports `(P)` markers)
 
 **Generate task list following all rules**:
 - Use language specified in spec.json
 - Map all requirements to tasks
+- Only use valid in-scope requirement IDs from requirements.md
+- Every task MUST reference at least one valid in-scope requirement ID
+- Reject or defer task candidates that map only to out-of-scope capabilities
 - When documenting requirement coverage, list numeric requirement IDs only (comma-separated) without descriptive suffixes, parentheses, translations, or free-form labels
-- Ensure all design components included
+- Ensure all in-scope design components included
 - Verify task progression is logical and incremental
 - Collapse single-subtask structures by promoting them to major tasks and avoid duplicating details on container-only major tasks (use template patterns accordingly)
 - Apply `(P)` markers to tasks that satisfy parallel criteria (omit markers in sequential mode)
@@ -66,7 +89,9 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 ## Critical Constraints
 - **Follow rules strictly**: All principles in tasks-generation.md are mandatory
 - **Natural Language**: Describe what to do, not code structure details
-- **Complete Coverage**: ALL requirements must map to tasks
+- **Complete Coverage**: ALL in-scope requirements must map to tasks
+- **Scope Lock**: Do not generate out-of-scope tasks; classify them as deferred when needed
+- **Requirement Mapping Integrity**: Each task must map to valid numeric in-scope requirement IDs
 - **Maximum 2 Levels**: Major tasks and sub-tasks only (no deeper nesting)
 - **Sequential Numbering**: Major tasks increment (1, 2, 3...), never repeat
 - **Task Integration**: Every task must connect to the system (no orphaned work)
@@ -81,15 +106,18 @@ Generate implementation tasks for feature **$ARGUMENTS** based on approved requi
 Provide brief summary in the language specified in spec.json:
 
 1. **Status**: Confirm tasks generated at `.specs/$ARGUMENTS/tasks.md`
-2. **Task Summary**: 
+2. **Task Summary**:
    - Total: X major tasks, Y sub-tasks
    - All Z requirements covered
    - Average task size: 1-3 hours per sub-task
 3. **Quality Validation**:
-   - ✅ All requirements mapped to tasks
+   - ✅ All in-scope requirements mapped to tasks
    - ✅ Task dependencies verified
    - ✅ Testing tasks included
-4. **Next Action**: Review tasks and proceed when ready
+4. **Scope Guard**:
+   - ✅ Every task maps to valid in-scope requirement IDs
+   - ✅ Out-of-scope tasks deferred/blocked
+5. **Next Action**: Review tasks and proceed when ready
 
 **Format**: Concise (under 200 words)
 
@@ -108,31 +136,38 @@ Provide brief summary in the language specified in spec.json:
 - **Suggested Action**: "Complete requirements and design phases first"
 
 **Incomplete Requirements Coverage**:
-- **Warning**: "Not all requirements mapped to tasks. Review coverage."
+- **Warning**: "Not all in-scope requirements mapped to tasks. Review coverage."
 - **User Action Required**: Confirm intentional gaps or regenerate tasks
 
+**Out-of-Scope Tasks Detected**:
+- **Block/Defer**: Do not include out-of-scope tasks in primary task plan
+- **User Guidance**: Request explicit scope expansion approval if user wants those tasks promoted
+
 **Template/Rules Missing**:
-- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/spec-driven-development/`"
+- **User Message**: "Template or rules files missing in `{{SKILLS_DIR}}/specs/`"
 - **Fallback**: Use inline basic structure with warning
 - **Suggested Action**: "Check repository setup or restore template files"
 
 **Missing Numeric Requirement IDs**:
 - **Stop Execution**: All requirements in requirements.md MUST have numeric IDs. If any requirement lacks a numeric ID, stop and request that requirements.md be fixed before generating tasks.
 
+**Invalid Requirement Mapping in Tasks**:
+- **Stop Execution**: If a generated task cannot map to valid in-scope numeric requirement IDs, remove/defer it and regenerate task mapping
+
 ### Next Phase: Implementation
 
 **Before Starting Implementation**:
-- **IMPORTANT**: Clear conversation history and free up context before running `/spec-impl`
+- **IMPORTANT**: Clear conversation history and free up context before running `/code`
 - This applies when starting first task OR switching between tasks
 - Fresh context ensures clean state and proper task focus
 
 **If Tasks Approved**:
-- Execute specific task: `/spec-impl $ARGUMENTS 1.1` (recommended: clear context between each task)
-- Execute multiple tasks: `/spec-impl $ARGUMENTS 1.1,1.2` (use cautiously, clear context between tasks)
-- Without arguments: `/spec-impl $ARGUMENTS` (executes all pending tasks - NOT recommended due to context bloat)
+- Execute coding pass from approved spec tasks: `/code $ARGUMENTS`
+- After coding, run `/test` then `/review`
+- Repeat in small passes and clear context between iterations when needed
 
 **If Modifications Needed**:
 - Provide feedback and re-run `/spec-tasks $ARGUMENTS`
 - Existing tasks used as reference (merge mode)
 
-**Note**: The implementation phase will guide you through executing tasks with appropriate context and validation.
+**Note**: Continue with `/test` then `/review` after `/code` to complete the workflow.

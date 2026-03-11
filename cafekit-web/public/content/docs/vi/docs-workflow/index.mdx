@@ -5,40 +5,25 @@ description: Tự động hóa việc tạo và cập nhật tài liệu dự á
 
 # Documentation Workflows
 
-Documentation Workflows cung cấp 2 lệnh để tự động hóa việc tạo và cập nhật tài liệu dự án - giúp AI assistant hiểu rõ hơn về codebase.
+Documentation Workflows cung cấp các lệnh để tự động hóa tài liệu dự án, giúp AI assistant hiểu codebase nhanh hơn.
 
-## 2 Lệnh Docs Workflow
+## Ánh xạ lệnh theo nền tảng
 
-<Cards columns={2}>
-  <Card href="/docs/docs-workflow/init">
-    <div className="font-mono text-sm text-purple-600 mb-2">/docs init</div>
-    <h4>Khởi tạo Documentation</h4>
-    <p className="text-sm text-gray-600">Tạo 7 file tài liệu + AGENTS.md/CLAUDE.md</p>
-  </Card>
-  <Card href="/docs/docs-workflow/update">
-    <div className="font-mono text-sm text-purple-600 mb-2">/docs update</div>
-    <h4>Cập nhật Documentation</h4>
-    <p className="text-sm text-gray-600">Cập nhật docs sau khi code thay đổi</p>
-  </Card>
-</Cards>
-
-## Syntactic Differences
-
-| Platform | Syntax |
-|----------|--------|
+| Platform | Cú pháp lệnh |
+|----------|--------------|
 | **Claude Code** | `/docs init`, `/docs update` |
 | **Antigravity** | `/docs-init`, `/docs-update` |
 
-## Tại sao cần Documentation Workflows?
+## Vì sao cần Documentation Workflows?
 
 ### Vấn đề
-Khi làm việc với AI assistant, mỗi lần bắt đầu session mới:
-- AI không nhớ gì về dự án
-- Phải mất thờì gian để AI đọc và hiểu codebase
-- Context window bị hao tốn cho việc "catch up"
+Khi làm việc với AI assistant, mỗi session mới thường thiếu ngữ cảnh:
+- AI phải đọc lại cấu trúc dự án
+- Mất thời gian giải thích lại kiến trúc và quy ước
+- Context window bị tiêu tốn cho việc catch-up
 
 ### Giải pháp
-CafeKit Spec tạo 7 file documentation chuẩn hóa:
+CafeKit Spec chuẩn hóa việc tạo docs cho ngữ cảnh cốt lõi của dự án:
 1. **codebase-summary.md** - Tổng quan codebase
 2. **project-overview-pdr.md** - Yêu cầu sản phẩm
 3. **code-standards.md** - Quy ước coding
@@ -47,11 +32,14 @@ CafeKit Spec tạo 7 file documentation chuẩn hóa:
 6. **deployment-guide.md** - Hướng dẫn triển khai
 7. **project-roadmap.md** - Lộ trình dự án
 
-Plus **AGENTS.md** (Antigravity) hoặc **CLAUDE.md** (Claude Code) - File reference nhanh cho AI.
+Kèm theo:
+- **repomix-output.xml** để AI đọc ngữ cảnh codebase dạng nén
+- **CLAUDE.md** (root, cho dự án Claude)
+- **.agent/rules/AGENTS.md** (cho dự án Antigravity)
 
-## Files Được Tạo
+## File được tạo
 
-```
+```text
 docs/
 ├── codebase-summary.md
 ├── project-overview-pdr.md
@@ -59,53 +47,39 @@ docs/
 ├── system-architecture.md
 ├── design-guidelines.md
 ├── deployment-guide.md
-├── project-roadmap.md
-└── repomix-output.xml      # AI context file
+└── project-roadmap.md
 
-.agent/ hoặc .claude/
-├── AGENTS.md hoặc CLAUDE.md  # AI quick reference
-└── ...
+repomix-output.xml
+
+CLAUDE.md (dự án Claude Code)
+.agent/rules/AGENTS.md (dự án Antigravity)
 ```
 
-## Quy trình sử dụng
+## Cách dùng phổ biến
 
-### Lần đầu setup dự án
-```
-> /docs init
-
-Tạo tất cả documentation files
-```
-
-### Sau khi code thay đổi lớn
-```
-> /docs update
-
-Cập nhật documentation để phản ánh code mới
+### Thiết lập lần đầu
+```bash
+/docs init
+# Antigravity: /docs-init
 ```
 
-## Best Practices
+### Sau thay đổi lớn
+```bash
+/docs update
+# Antigravity: /docs-update
+```
 
-### Thờì điểm chạy `/docs init`
-- Setup dự án mới
-- Onboard AI assistant lần đầu
-- Sau khi refactor cấu trúc lớn
+## Best practices
 
-### Thờì điểm chạy `/docs update`
-- Sau khi thêm tính năng mới
-- Sau khi thay đổi architecture
-- Trước khi handover cho AI khác
+### Chạy init khi:
+- Onboarding dự án mới
+- Lần đầu chuẩn bị AI context
+- Chưa có baseline documentation
 
-## Chi tiết từng file
-
-| File | Mục đích | Khi nào cập nhật |
-|------|----------|------------------|
-| codebase-summary.md | Tổng quan tech stack, structure | Thay đổi framework/library |
-| project-overview-pdr.md | Requirements, goals | Thay đổi requirements |
-| code-standards.md | Coding conventions | Thay đổi conventions |
-| system-architecture.md | Architecture diagrams | Refactor architecture |
-| design-guidelines.md | UI/UX standards | Thay đổi design system |
-| deployment-guide.md | Deploy process | Thay đổi infrastructure |
-| project-roadmap.md | Timeline, milestones | Planning mới |
+### Chạy update khi:
+- Merge tính năng lớn
+- Có thay đổi kiến trúc/deployment
+- Trước khi handoff cho người khác hoặc session AI khác
 
 ## Xem thêm
 

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "scope": "claude-only",
+  "commands": {
+    "core": [
+      "docs.md",
+      "spec-init.md",
+      "spec-requirements.md",
+      "spec-design.md",
+      "spec-validate.md",
+      "spec-tasks.md",
+      "spec-status.md",
+      "code.md",
+      "test.md",
+      "review.md",
+      "review/codebase.md",
+      "review/codebase/parallel.md"
+    ]
+  },
+  "skills": {
+    "required": [
+      "specs"
+    ]
+  },
+  "agents": {
+    "required": [
+      "tester.md",
+      "code-reviewer.md",
+      "fullstack-developer.md",
+      "debugger.md"
+    ]
+  },
+  "scripts": {
+    "required": []
+  },
+  "hooks": {
+    "assumed": []
+  }
+}

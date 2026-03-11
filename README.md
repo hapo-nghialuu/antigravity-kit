@@ -75,4 +75,4 @@ CafeKit Spec is inspired by and built upon ideas from [Antigravity Kit](https://
 
 ## License
 
-MIT © Haposof
+MIT © Haposoft

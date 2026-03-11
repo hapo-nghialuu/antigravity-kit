@@ -1,0 +1,43 @@
+---
+title: /test
+description: Chạy test cho phần implementation mới và tóm tắt lỗi
+---
+
+# /test
+
+Xác minh các thay đổi implementation mới nhất.
+
+## Sử dụng
+
+**Claude Code:**
+```bash
+/test
+/test user-authentication
+```
+
+**Antigravity:**
+```bash
+/test
+/test user-authentication
+# hoặc
+@test
+```
+
+## Mô tả
+
+`/test` chạy test của dự án và báo cáo ngắn gọn:
+- tổng quan pass/fail
+- tên test bị fail
+- gợi ý nguyên nhân gốc
+- hành động sửa tiếp theo
+
+## Lưu ý
+
+- Chạy sau mỗi lần `/code`
+- Giữ phản hồi ngắn gọn, có thể hành động ngay
+- Chạy lại đến khi hết lỗi trước khi review
+
+## Bước tiếp theo
+
+- Nếu test fail: sửa lỗi và chạy lại `/test`
+- Nếu test pass: chạy [`/review`](/docs/spec/review)

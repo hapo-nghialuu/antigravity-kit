@@ -1,0 +1,46 @@
+---
+title: /review
+description: Review recent code changes for correctness, security, and regressions
+---
+
+# /review
+
+Review recent implementation changes before finalizing.
+
+## Usage
+
+**Claude Code:**
+```bash
+/review
+/review user-authentication
+```
+
+**Antigravity:**
+```bash
+/review
+/review user-authentication
+# or
+@review
+```
+
+## Description
+
+`/review` inspects recent changes with focus on:
+- correctness
+- security issues
+- regression risks
+- maintainability
+
+Findings should be prioritized by severity with concrete remediation guidance.
+
+## Notes
+
+- Run after `/test` passes
+- Keep findings specific to changed scope
+- Resolve high-severity findings before closing the task
+
+## Next Steps
+
+- Apply required fixes (if any)
+- Re-run `/test` and `/review` as needed
+- Check final progress with [`/spec-status`](/docs/spec/status)

@@ -1,102 +1,64 @@
 ---
 title: /spec-tasks
-description: Break down design into implementable tasks
+description: Generate actionable implementation tasks from design
 ---
 
 # /spec-tasks
 
-Decompose technical design into small, implementable tasks.
+Generate implementation-ready tasks from your approved design.
 
 ## Usage
 
 **Claude Code:**
-```
-/spec-tasks
+```bash
+/spec-tasks user-authentication
+/spec-tasks user-authentication -y
 ```
 
 **Antigravity:**
-```
-/spec-tasks
+```bash
+/spec-tasks user-authentication
+/spec-tasks user-authentication -y
+# or
+@spec-tasks user-authentication
 ```
 
 ## Description
 
-This command reads `design.md` and creates `tasks.md` with a list of specific tasks. Each task is designed to be implemented in a single work session.
+`/spec-tasks` reads:
+- `.specs/[feature-name]/spec.json`
+- `.specs/[feature-name]/requirements.md`
+- `.specs/[feature-name]/design.md`
 
-## Task Structure
+Then it writes:
+- `.specs/[feature-name]/tasks.md`
 
-Each task includes:
+Tasks are ordered, requirement-mapped, and ready for `/code` execution.
 
-```markdown
-### Task [N]: [Title]
+## Task Format
 
-**Objective**: Task objective
-
-**Files to Modify**:
-- `path/to/file1.ts` - Description of changes
-- `path/to/file2.ts` - Description of changes
-
-**Implementation Details**:
-- Specific implementation details
-- Points to note
-
-**Verification**:
-- [ ] Criteria 1
-- [ ] Criteria 2
-
-**Dependencies**: Dependent tasks (if any)
-```
-
-## Task Sizing
-
-- **Small task**: 30 minutes - 1 hour
-- **Medium task**: 1-2 hours
-- **Large task**: 2-4 hours (should be broken down further)
-
-## Output
-
-File `specs/[feature-name]/tasks.md`:
+Typical format in `tasks.md`:
 
 ```markdown
-# Implementation Tasks: [Feature Name]
+- [ ] 1. Set up authentication module
+- [ ] 1.1 Create auth service interface
+  - Define login/logout/session methods
+  - _Requirements: 1, 2_
 
-## Phase 1: Setup
-
-### Task 1: Create database migration
-**Objective**: Create users and sessions tables
-**Files to Modify**:
-- `migrations/001_create_auth_tables.sql`
-**Verification**:
-- [ ] Migration runs successfully
-- [ ] Tables created with correct schema
-
-### Task 2: Setup JWT utilities
-**Objective**: Create helper functions for JWT
-**Files to Modify**:
-- `src/lib/jwt.ts`
-**Verification**:
-- [ ] Can sign and verify token
-- [ ] Expiration handled correctly
-
-## Phase 2: API Implementation
-
-### Task 3: Implement login endpoint
-**Objective**: Create POST /api/auth/login
-**Files to Modify**:
-- `src/app/api/auth/login/route.ts`
-- `src/lib/auth.ts`
-**Dependencies**: Task 1, Task 2
-...
+- [ ] 2. Add login endpoint
+- [ ] 2.1 Implement POST /api/auth/login
+  - Validate input and return token/session
+  - _Requirements: 1, 3_
 ```
 
-## Usage Workflow
+## Notes
 
-1. Create tasks.md from design
-2. Review and adjust task list
-3. Arrange order (dependencies)
-4. Start implementing each task
+- Tasks should be small, clear, and sequential
+- Every requirement should be covered by at least one task
+- `-y` can auto-approve prerequisites before generation
 
 ## Next Steps
 
-- [`/spec-impl`](/docs/spec/impl) - Implement each task
-- [`/spec-status`](/docs/spec/status) - Track progress
+- [`/code`](/docs/spec/code) - Implement the next pending task
+- [`/test`](/docs/spec/test) - Validate implementation
+- [`/review`](/docs/spec/review) - Review quality and regressions
