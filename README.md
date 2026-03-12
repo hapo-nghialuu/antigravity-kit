@@ -78,9 +78,9 @@ npx @haposoft/cafekit-spec
 
 ## Documentation
 
-- **[Installation](https://cafekit.vercel.app/docs/getting-started/installation)** - Get set up
-- **[Quickstart](https://cafekit.vercel.app/docs/getting-started/quickstart)** - Build your first spec
-- **[Spec Workflow](https://cafekit.vercel.app/docs/guides/spec-workflow)** - Complete guide
+- **[Installation](https://cafekit.haposoft.com/docs/getting-started/installation)** - Get set up
+- **[Quickstart](https://cafekit.haposoft.com/docs/getting-started/quickstart)** - Build your first spec
+- **[Spec Workflow](https://cafekit.haposoft.com/docs/guides/spec-workflow)** - Complete guide
 
 ## Acknowledgments
 
