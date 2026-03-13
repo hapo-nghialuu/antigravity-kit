@@ -4,8 +4,8 @@ import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 
 export const metadata: Metadata = {
-    title: "Documentation | CafeKit Spec",
-    description: "Complete documentation for CafeKit Spec - Spec-driven development workflow for Claude Code.",
+    title: "Documentation | CafeKit",
+    description: "Complete documentation for CafeKit - Spec-driven development workflow for Claude Code.",
 };
 
 import { cookies } from 'next/headers';

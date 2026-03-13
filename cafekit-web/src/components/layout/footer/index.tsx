@@ -114,7 +114,7 @@ export default function Footer() {
                 <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                     {/* Copyright */}
                     <p className="text-sm text-muted-foreground">
-                        © {new Date().getFullYear()} CafeKit Spec by{" "}
+                        © {new Date().getFullYear()} CafeKit by{" "}
                         <a
                             href="https://github.com/haposoft"
                             target="_blank"

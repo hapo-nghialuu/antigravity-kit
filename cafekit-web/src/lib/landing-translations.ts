@@ -37,7 +37,7 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         features: {
             heading: 'Build features with confidence',
-            subheading: 'CafeKit Spec provides a complete workflow for spec-driven development with Claude Code & Antigravity',
+            subheading: 'CafeKit provides a complete workflow for spec-driven development with Claude Code & Antigravity',
             items: [
                 {
                     title: '6-Phase Workflow',
@@ -59,12 +59,12 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         quickStart: {
             heading: 'Get Started in Seconds',
-            subheading: 'Install CafeKit Spec and run your first spec-driven workflow with Claude Code or Antigravity',
+            subheading: 'Install CafeKit and run your first spec-driven workflow with Claude Code or Antigravity',
             viewGuide: 'View full quickstart guide',
             copied: 'Copied!',
             copy: 'Copy',
             comments: [
-                '# 1. Install CafeKit Spec',
+                '# 1. Install CafeKit',
                 '# 2. Initialize project docs (optional but recommended)',
                 '# 3. Start building features with spec workflow',
                 '# 4. Update docs when project changes',
@@ -81,7 +81,7 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         features: {
             heading: 'Phát triển tính năng với sự tự tin tuyệt đối',
-            subheading: 'CafeKit Spec cung cấp một quy trình trọn vẹn để bạn ứng dụng Spec-Driven Development cùng Claude Code và Antigravity.',
+            subheading: 'CafeKit cung cấp một quy trình trọn vẹn để bạn ứng dụng Spec-Driven Development cùng Claude Code và Antigravity.',
             items: [
                 {
                     title: 'Quy trình 6 bước chuẩn mực',
@@ -103,12 +103,12 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         quickStart: {
             heading: 'Sẵn sàng chỉ sau vài giây',
-            subheading: 'Cài đặt CafeKit Spec và trải nghiệm ngay quy trình spec-driven đầu tiên của bạn',
+            subheading: 'Cài đặt CafeKit và trải nghiệm ngay quy trình spec-driven đầu tiên của bạn',
             viewGuide: 'Xem hướng dẫn bắt đầu nhanh đầy đủ',
             copied: 'Đã copy!',
             copy: 'Copy',
             comments: [
-                '# 1. Cài đặt CafeKit Spec',
+                '# 1. Cài đặt CafeKit',
                 '# 2. Khởi tạo tài liệu dự án (tuỳ chọn nhưng rất khuyến khích)',
                 '# 3. Bắt đầu xây dựng tính năng thông qua spec workflow',
                 '# 4. Cập nhật lại tài liệu khi dự án có sự thay đổi',
@@ -125,7 +125,7 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         features: {
             heading: '確信を持って機能を開発する',
-            subheading: 'CafeKit Specは、Claude CodeとAntigravityを用いた仕様駆動開発（Spec-Driven Development）の完全なワークフローを提供します。',
+            subheading: 'CafeKitは、Claude CodeとAntigravityを用いた仕様駆動開発（Spec-Driven Development）の完全なワークフローを提供します。',
             items: [
                 {
                     title: '6ステップの構造化プロセス',
@@ -147,12 +147,12 @@ const translations: Record<Locale, LandingTranslations> = {
         },
         quickStart: {
             heading: 'たった数秒でセットアップ完了',
-            subheading: 'CafeKit Specをインストールして、AIアシスタントと共に最初の仕様駆動ワークフローを体験しましょう',
+            subheading: 'CafeKitをインストールして、AIアシスタントと共に最初の仕様駆動ワークフローを体験しましょう',
             viewGuide: 'クイックスタートガイドを詳しく見る',
             copied: 'コピーしました！',
             copy: 'コピー',
             comments: [
-                '# 1. CafeKit Spec をインストール',
+                '# 1. CafeKit をインストール',
                 '# 2. プロジェクトドキュメントを初期化（任意ですが強く推奨します）',
                 '# 3. specワークフローを使って機能開発をスタート',
                 '# 4. プロジェクトに変更があったらドキュメントを最新化',

@@ -19,7 +19,7 @@ export default function Header() {
                         {/* Logo - Responsive */}
                         <div className="relative z-10 flex items-center">
                             <Link href="/" className="flex items-center gap-2 shrink-0 min-w-0 font-bold text-lg tracking-tight">
-                                <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">CafeKit Spec</span>
+                                <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">CafeKit</span>
                             </Link>
                         </div>
 
