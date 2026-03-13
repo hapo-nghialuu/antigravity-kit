@@ -44,7 +44,6 @@ export function Hero() {
           <span className="bg-gradient-to-br from-amber-700 via-orange-600 to-amber-800 bg-clip-text text-transparent dark:from-amber-400 dark:via-orange-400 dark:to-amber-500">
             CafeKit
           </span>
-          <span className="block text-4xl sm:text-5xl md:text-6xl">Spec</span>
         </h1>
 
         <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-xl">
