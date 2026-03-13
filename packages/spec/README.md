@@ -2,7 +2,7 @@
 
 > Spec-Driven Development workflow for AI coding assistants
 
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Supported-orange.svg)](https://claude.ai/code)
 [![Antigravity](https://img.shields.io/badge/Antigravity-Supported-purple.svg)](https://github.com/google/antigravity)
@@ -792,6 +792,13 @@ Task #4: Add protected route middleware
 ---
 
 ## Changelog
+
+### [0.3.0] - 2026-03-13
+
+#### Changed
+- **Renamed package** from `@haposoft/cafekit-spec` to `@haposoft/cafekit`
+- Deprecated the old `@haposoft/cafekit-spec` package
+- Updated repository and homepage URLs to point to the official `haposoft` organization
 
 ### [0.2.2] - 2026-02-25
 
