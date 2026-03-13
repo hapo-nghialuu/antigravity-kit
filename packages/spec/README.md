@@ -9,7 +9,7 @@
 
 ## Overview
 
-CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflow for AI coding assistants. It helps teams move from idea to implementation systematically using natural language commands.
+CafeKit is a **multi-platform** CLI tool that installs a structured workflow for AI coding assistants. It helps teams move from idea to implementation systematically using natural language commands.
 
 **Supported Platforms:**
 | Platform | Status | Installation Path |
@@ -50,7 +50,7 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflo
 - Node.js 18+
 - An AI coding assistant (Claude Code or Antigravity)
 
-### Install Spec Workflow
+### Install Workflow
 
 Run in your project root:
 
@@ -105,7 +105,7 @@ Documentation: https://github.com/haposoft/cafekit
 
 ## Workflows
 
-CafeKit Spec provides two workflow categories:
+CafeKit provides two workflow categories:
 
 ### 1. Spec-Driven Development Workflows (`spec-*`)
 
@@ -627,7 +627,7 @@ Planned for future:
 
 ### Q: Can I use multiple AI editors on the same project?
 
-A: Yes! You can install CafeKit Spec for multiple platforms:
+A: Yes! You can install CafeKit for multiple platforms:
 ```bash
 npx @haposoft/cafekit
 # Select "Both" when prompted
@@ -845,7 +845,7 @@ Use this checklist after running `npx @haposoft/cafekit --upgrade`:
 ### [0.1.0] - 2026-02-02
 
 #### Added
-- Initial release of CafeKit Spec workflow
+- Initial release of CafeKit workflow
 - Initial spec workflow foundation
 - Zero-config installation via npx
 - Idempotent file copying (safe to re-run)
@@ -862,5 +862,5 @@ MIT License - See [LICENSE](LICENSE) for details
 **Made with care by the CafeKit Team**
 
 <p align="center">
-  <sub>Multi-platform Spec-Driven Development for AI Coding Assistants</sub>
+  <sub>Multi-platform Workflow for AI Coding Assistants</sub>
 </p>
