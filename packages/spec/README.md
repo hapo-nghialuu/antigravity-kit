@@ -16,7 +16,7 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflo
 |----------|--------|-------------------|
 | [Claude Code](https://claude.ai/code) | ✅ Supported | `.claude/commands/` |
 | [Antigravity](https://antigravity.google/) | ✅ Supported | `.agent/workflows/` |
-| Cursor | 🔮 Planned | `.cursor/commands/` |
+| Cursor | 🔮 Planned | 🔮 Planned |
 | GitHub Copilot | 🔮 Planned | TBD |
 | Windsurf | 🔮 Planned | TBD |
 
