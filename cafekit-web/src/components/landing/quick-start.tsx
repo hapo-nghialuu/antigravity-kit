@@ -17,10 +17,11 @@ export function QuickStart() {
     '/spec-init user-authentication',
     '/spec-requirements user-authentication',
     '/spec-design user-authentication',
+    '/spec-validate user-authentication',
     '/spec-tasks user-authentication',
-    '/code user-authentication',
-    '/test user-authentication',
-    '/review user-authentication',
+    '/code',
+    '/test',
+    '/review',
     '/docs update',
   ];
 
@@ -32,10 +33,10 @@ export function QuickStart() {
     commands[1],
     '',
     t.comments[2],
-    ...commands.slice(2, 9),
+    ...commands.slice(2, 10),
     '',
     t.comments[3],
-    commands[9],
+    commands[10],
   ];
 
   const codeExample = codeLines.join('\n');
