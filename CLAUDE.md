@@ -48,7 +48,7 @@ The project supports both **Claude Code** (Anthropic) and **Antigravity** (Googl
 │   ├── content/docs/           # MDX documentation (en, vi)
 │   └── package.json
 ├── packages/
-│   └── spec/                   # NPM package @haposoft/cafekit-spec
+│   └── spec/                   # NPM package @haposoft/cafekit
 ├── docs/                       # Project documentation
 │   ├── codebase-summary.md
 │   ├── project-overview-pdr.md
@@ -69,7 +69,7 @@ The project supports both **Claude Code** (Anthropic) and **Antigravity** (Googl
 | `.claude/` | Claude Code commands and skills |
 | `.agent/` | Antigravity agents, skills, workflows |
 | `cafekit-web/` | Next.js documentation website |
-| `packages/spec/` | NPM package @haposoft/cafekit-spec |
+| `packages/spec/` | NPM package @haposoft/cafekit |
 | `docs/` | Project documentation |
 
 ---

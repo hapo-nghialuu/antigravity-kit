@@ -12,7 +12,7 @@ export function QuickStart() {
   const [copied, setCopied] = useState(false);
 
   const commands = [
-    'npx @haposoft/cafekit-spec',
+    'npx @haposoft/cafekit',
     '/docs init',
     '/spec-init user-authentication',
     '/spec-requirements user-authentication',

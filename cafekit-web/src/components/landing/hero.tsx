@@ -10,7 +10,7 @@ export function Hero() {
   const locale = useLocale();
   const t = getLandingTranslations(locale).hero;
   const [copied, setCopied] = useState(false);
-  const installCommand = "npx @haposoft/cafekit-spec";
+  const installCommand = "npx @haposoft/cafekit";
 
   const handleCopy = async () => {
     try {
