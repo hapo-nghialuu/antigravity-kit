@@ -866,7 +866,7 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-**Made with care by the CafeKit Team**
+**Made with care by the Haposoft Team**
 
 <p align="center">
   <sub>Multi-platform Workflow for AI Coding Assistants</sub>

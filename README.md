@@ -1,4 +1,4 @@
-# CafeKit Spec
+# CafeKit
 
 > Spec-Driven Development workflow for AI coding assistants
 
@@ -8,9 +8,9 @@
 npx @haposoft/cafekit
 ```
 
-## What is CafeKit Spec?
+## What is CafeKit?
 
-CafeKit Spec is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 10 powerful slash commands that guide you through building complex features and managing documentation:
+CafeKit is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 10 powerful slash commands that guide you through building complex features and managing documentation:
 
 ### Spec Workflows
 
@@ -39,7 +39,7 @@ Traditional AI coding often leads to:
 - Missing edge cases discovered late
 - Lost context between sessions
 
-**CafeKit Spec solves this** with a structured spec-driven workflow:
+**CafeKit solves this** with a structured spec-driven workflow:
 
 ```
 Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /code → /test → /review
@@ -84,7 +84,7 @@ npx @haposoft/cafekit
 
 ## Acknowledgments
 
-CafeKit Spec is inspired by and built upon ideas from [Antigravity Kit](https://github.com/vudovn/antigravity-kit) by [@vudovn](https://github.com/vudovn).
+CafeKit is inspired by and built upon ideas from [Antigravity Kit](https://github.com/vudovn/antigravity-kit) by [@vudovn](https://github.com/vudovn).
 
 ## License
 
