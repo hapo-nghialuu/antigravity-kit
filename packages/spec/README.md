@@ -1,4 +1,4 @@
-# @haposoft/cafekit-spec
+# @haposoft/cafekit
 
 > Spec-Driven Development workflow for AI coding assistants
 
@@ -55,7 +55,7 @@ CafeKit Spec is a **multi-platform** CLI tool that installs a structured workflo
 Run in your project root:
 
 ```bash
-npx @haposoft/cafekit-spec
+npx @haposoft/cafekit
 ```
 
 The installer will:
@@ -66,8 +66,8 @@ The installer will:
 5. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
 
 Installer modes:
-- **Default install mode**: `npx @haposoft/cafekit-spec` (skip existing files)
-- **Upgrade mode**: `npx @haposoft/cafekit-spec --upgrade` (overwrite managed templates)
+- **Default install mode**: `npx @haposoft/cafekit` (skip existing files)
+- **Upgrade mode**: `npx @haposoft/cafekit --upgrade` (overwrite managed templates)
 - **Alias**: `--force` / `-f` behaves the same as `--upgrade`
 
 **Example output (Claude Code):**
@@ -629,7 +629,7 @@ Planned for future:
 
 A: Yes! You can install CafeKit Spec for multiple platforms:
 ```bash
-npx @haposoft/cafekit-spec
+npx @haposoft/cafekit
 # Select "Both" when prompted
 ```
 
@@ -639,7 +639,7 @@ This installs commands to both `.claude/` and `.agent/`. The `.specs/` directory
 
 A: Yes. Edit the `.md` files in `.claude/commands/` (Claude Code) or `.agent/workflows/` (Antigravity) after installation.
 
-### Q: Is it safe to re-run `npx @haposoft/cafekit-spec`?
+### Q: Is it safe to re-run `npx @haposoft/cafekit`?
 
 A: Yes. Default mode is idempotent and skips existing files.
 
@@ -647,9 +647,9 @@ A: Yes. Default mode is idempotent and skips existing files.
 
 A: Run installer in upgrade mode:
 ```bash
-npx @haposoft/cafekit-spec --upgrade
+npx @haposoft/cafekit --upgrade
 # or
-npx @haposoft/cafekit-spec --force
+npx @haposoft/cafekit --force
 ```
 This overwrites files managed by the installer (commands/workflows, managed dependencies, and routing/rules templates).
 
@@ -686,7 +686,7 @@ mkdir -p .claude/commands
 mkdir -p .agent/workflows
 
 # Option 3: Run installer and it will prompt you to select platform
-npx @haposoft/cafekit-spec
+npx @haposoft/cafekit
 ```
 
 ### "Command not found" after installation
@@ -804,7 +804,7 @@ Task #4: Add protected route middleware
 - Added installer sync for specs template files in Claude mode to reduce stale runtime copy drift
 
 #### Regression Guard (installer CLI upgrade mode)
-Use this checklist after running `npx @haposoft/cafekit-spec --upgrade`:
+Use this checklist after running `npx @haposoft/cafekit --upgrade`:
 - Run `/spec-init` with an installer-CLI-scoped feature description and verify `spec.json.scope_lock` is populated
 - Run `/spec-requirements`, `/spec-design`, `/spec-validate`, `/spec-tasks` in order
 - Verify requirements/design/tasks do **not** introduce API/mobile/DynamoDB domains unless explicitly approved

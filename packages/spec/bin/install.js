@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * CafeKit Spec Installer
+ * CafeKit Installer
  * Multi-platform installer for AI coding assistants
  *
  * Supported platforms:
@@ -216,7 +216,7 @@ async function promptPlatformSelection() {
   const maxChoice = Object.keys(PLATFORMS).length + 1;
 
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║      CafeKit Spec - Platform Selection                 ║');
+  console.log('║      CafeKit - Platform Selection                      ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log();
   console.log('No existing AI editor configuration detected.\n');
@@ -652,7 +652,7 @@ async function main() {
 
   console.log();
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log(`║         CafeKit Spec Installer v${String(packageJson.version).padEnd(5, ' ')}               ║`);
+  console.log(`║         CafeKit Installer v${String(packageJson.version).padEnd(5, ' ')}                    ║`);
   console.log('║         Multi-platform SDD Workflow                    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log();

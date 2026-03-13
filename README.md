@@ -5,7 +5,7 @@
 ## Quick Install
 
 ```bash
-npx @haposoft/cafekit-spec
+npx @haposoft/cafekit
 ```
 
 ## What is CafeKit Spec?
@@ -49,14 +49,14 @@ Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → 
 
 | Platform | Status | Directory | Installation |
 |----------|--------|-----------|--------------|
-| **Claude Code** (Anthropic) | ✅ Fully supported | `.claude/` | `npx @haposoft/cafekit-spec` |
-| **Antigravity** (Google) | ✅ Fully supported | `.agent/` | `npx @haposoft/cafekit-spec` |
+| **Claude Code** (Anthropic) | ✅ Fully supported | `.claude/` | `npx @haposoft/cafekit` |
+| **Antigravity** (Google) | ✅ Fully supported | `.agent/` | `npx @haposoft/cafekit` |
 
 ## Quick Start
 
 ```bash
 # 1. Install (auto-detects your platform)
-npx @haposoft/cafekit-spec
+npx @haposoft/cafekit
 
 # 2. Initialize a spec
 /spec-init user-authentication
