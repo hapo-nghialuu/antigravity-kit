@@ -205,6 +205,7 @@ function copyPlatformFiles(platformKey, results) {
     'spec-tasks.md',
     'spec-impl.md',
     'spec-status.md',
+    'impact-analysis.md',
     'docs_init.md',
     'docs_update.md'
   ];

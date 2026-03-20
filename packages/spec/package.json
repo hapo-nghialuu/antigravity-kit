@@ -1,12 +1,12 @@
 {
-  "name": "@haposoft/cafekit-spec",
-  "version": "0.1.6",
-  "description": "Spec-Driven Development workflow for AI coding assistants. Supports both Claude Code and Antigravity with /docs init, /docs update commands.",
+  "name": "@haposoft/cafekit",
+  "version": "0.3.5",
+  "description": "Spec-Driven Development workflow for AI coding assistants. Supports Claude Code and Antigravity with spec-first and code-test-review workflows.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
   "private": false,
   "bin": {
-    "cafekit-spec": "./bin/install.js"
+    "cafekit": "./bin/install.js"
   },
   "files": [
     "bin",
