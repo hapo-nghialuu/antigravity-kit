@@ -1,6 +1,6 @@
 # Project Detection - Auto-Adapt Impact Analysis
 
-Hệ thống tự động detect và adapt Impact Analysis cho nhiều loại projects.
+System to automatically detect and adapt Impact Analysis for different project types.
 
 ## Project Type Detection
 

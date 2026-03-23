@@ -1,10 +1,10 @@
 # Industry Techniques - Code Change Impact Analysis
 
-Tổng hợp các kỹ thuật và công cụ phân tích tác động code changes từ industry và research.
+Compilation of techniques and tools for analyzing code change impacts from industry and research.
 
-## 📚 Nguồn Tham Khảo
+## 📚 References
 
-Dựa trên research và industry best practices từ:
+Based on research and industry best practices from:
 - Academic papers (ACM, ResearchGate, arXiv)
 - Static analysis tools (NDepend, CppDepend, SonarQube)
 - Software engineering practices
@@ -12,22 +12,22 @@ Dựa trên research và industry best practices từ:
 
 ---
 
-## 🎯 Các Phương Pháp Chính
+## 🎯 Main Methods
 
 ### 1. Traceability-Based Impact Analysis
 
-**Khái niệm:**
-Sử dụng links giữa requirements, specifications, design elements, và tests để xác định phạm vi thay đổi.
+**Concept:**
+Use links between requirements, specifications, design elements, and tests to determine scope of changes.
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Requirement → Design → Code → Tests
      ↓           ↓        ↓       ↓
   Change    → Impact → Affected → Test Cases
 ```
 
-**Ứng dụng trong Impact Analysis:**
-- Map code changes về requirements
+**Application in Impact Analysis:**
+- Map code changes to requirements
 - Identify affected user stories
 - Generate test scenarios từ requirements
 
@@ -53,10 +53,10 @@ Requirement → Design → Code → Tests
 
 ### 2. Dependency-Based Impact Analysis
 
-**Khái niệm:**
-Phân tích dependencies (imports, function calls, class usage) để tìm affected files.
+**Concept:**
+Analyze dependencies (imports, function calls, class usage) to find affected files.
 
-**Cách hoạt động:**
+**How it works:**
 
 #### A. Call Graph Analysis
 ```
@@ -92,7 +92,7 @@ Module B imports Module C
 - **Madge** (JavaScript): Circular dependency detection
 - **jdeps** (Java): Package dependencies
 
-**Ứng dụng:**
+**Application:**
 ```bash
 # Find all files importing authService
 grep -r "from.*authService" src/
@@ -108,10 +108,10 @@ madge --image graph.png src/
 
 ### 3. AST-Based Impact Analysis
 
-**Khái niệm:**
-Sử dụng Abstract Syntax Tree để phân tích code structure và detect changes ở semantic level.
+**Concept:**
+Use Abstract Syntax Tree to analyze code structure and detect changes at semantic level.
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Source Code → Parser → AST → Analysis → Impact Report
 ```
@@ -147,9 +147,9 @@ function login(email, password, rememberMe) {
 - **Python ast module**: Python AST analysis
 - **Roslyn** (.NET): C# AST analysis
 
-**Ứng dụng:**
+**Application:**
 ```javascript
-// Detect function signature changes
+# Detect function signature changes
 const ast = parse(sourceCode);
 ast.body.forEach(node => {
   if (node.type === 'FunctionDeclaration') {
@@ -163,8 +163,8 @@ ast.body.forEach(node => {
 
 ### 4. Static Analysis-Based Impact
 
-**Khái niệm:**
-Analyze code without executing để detect issues, dependencies, và potential impacts.
+**Concept:**
+Analyze code without executing to detect issues, dependencies, and potential impacts.
 
 **Techniques:**
 
@@ -244,10 +244,10 @@ interface User {
 
 ### 5. Model-Based Impact Analysis
 
-**Khái niệm:**
-Sử dụng models (UML, architecture diagrams) để predict impact trước khi code.
+**Concept:**
+Use models (UML, architecture diagrams) to predict impact before coding.
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Architecture Model → Component Dependencies → Impact Prediction
 ```
@@ -272,10 +272,10 @@ Architecture Model → Component Dependencies → Impact Prediction
 
 ### 6. Test-Based Impact Analysis
 
-**Khái niệm:**
-Sử dụng test coverage để identify affected tests và features.
+**Concept:**
+Use test coverage to identify affected tests and features.
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Code Change → Test Coverage Map → Affected Tests → Affected Features
 ```
@@ -299,7 +299,7 @@ Code Change → Test Coverage Map → Affected Tests → Affected Features
 - **JaCoCo**: Java code coverage
 - **Istanbul**: JavaScript coverage
 
-**Ứng dụng:**
+**Application:**
 ```bash
 # Run tests with coverage
 npm test -- --coverage
@@ -315,10 +315,10 @@ jest --coverage --coverageReporters=html
 
 ### 7. Behavior-Driven Impact Analysis
 
-**Khái niệm:**
-Map code changes về user behaviors và scenarios (BDD approach).
+**Concept:**
+Map code changes to user behaviors and scenarios (BDD approach).
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Code Change → Feature Mapping → User Scenarios → Test Scenarios
 ```
@@ -367,8 +367,8 @@ describe('Biometric Login', () => {
 
 ### 8. Feature Mapping Techniques
 
-**Khái niệm:**
-Map code files về features và user actions.
+**Concept:**
+Map code files to features and user actions.
 
 **Techniques:**
 
@@ -423,10 +423,10 @@ export function login(email: string, password: string) {
 
 ### 9. Machine Learning-Based Impact Analysis
 
-**Khái niệm:**
-Sử dụng ML models để predict impact dựa trên historical data.
+**Concept:**
+Use ML models to predict impact based on historical data.
 
-**Cách hoạt động:**
+**How it works:**
 ```
 Historical Changes + Outcomes → ML Model → Predict Impact
 ```
@@ -547,7 +547,7 @@ Code Change → Feature Impact → User Action Impact → Test Scenarios
 
 ### 4. Prioritize by Risk
 
-Sử dụng risk scoring:
+Use risk scoring:
 
 ```javascript
 const riskScore = 

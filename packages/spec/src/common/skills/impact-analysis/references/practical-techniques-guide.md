@@ -14,8 +14,8 @@ Document này cung cấp:
 
 ## 🎯 Technique #1: Dependency Analysis (MUST HAVE)
 
-### Mục Đích
-Tìm tất cả files bị ảnh hưởng bởi code changes.
+### Purpose
+Find all files affected by code changes.
 
 ### Tools & Commands
 
@@ -23,7 +23,7 @@ Tìm tất cả files bị ảnh hưởng bởi code changes.
 
 **1. Find Direct Imports**
 ```bash
-# Tìm files import module đã sửa
+# Find files importing modified module
 grep -r "from.*authService" src/ --include="*.ts" --include="*.tsx"
 grep -r "import.*authService" src/ --include="*.ts" --include="*.tsx"
 
@@ -33,7 +33,7 @@ rg "from.*authService" src/ -t ts -t tsx
 
 **2. Find Function Calls**
 ```bash
-# Tìm files gọi function đã sửa
+# Find files calling modified function
 grep -r "login\(" src/ --include="*.ts" --include="*.tsx"
 
 # Exclude test files
@@ -57,7 +57,7 @@ madge src/services/authService.ts
 
 **4. Find API Consumers**
 ```bash
-# Tìm frontend components gọi API
+# Find frontend components calling API
 grep -r "fetch.*\/api\/auth" src/
 grep -r "axios.*\/api\/auth" src/
 grep -r "\/api\/auth" src/ --include="*.ts" --include="*.tsx"
@@ -67,7 +67,7 @@ grep -r "\/api\/auth" src/ --include="*.ts" --include="*.tsx"
 
 **Find Component Usage**
 ```bash
-# Tìm components sử dụng component đã sửa
+# Find components using modified component
 grep -r "<LoginButton" src/ --include="*.tsx"
 grep -r "LoginButton" src/ --include="*.tsx" | grep "import"
 ```
@@ -111,8 +111,8 @@ grep -r "login(" . --include="*.py"
 
 ## 🎯 Technique #2: AST-Based Analysis (NICE TO HAVE)
 
-### Mục Đích
-Phát hiện semantic changes (function signature, type changes, breaking changes).
+### Purpose
+Detect semantic changes (function signature, type changes, breaking changes).
 
 ### Tools & Setup
 
@@ -222,8 +222,8 @@ diff /tmp/before.json /tmp/after.json
 
 ## 🎯 Technique #3: Static Analysis (NICE TO HAVE)
 
-### Mục Đích
-Phát hiện code quality issues, security issues, và potential bugs.
+### Purpose
+Detect code quality issues, security issues, and potential bugs.
 
 ### Tools
 
@@ -284,8 +284,8 @@ sonar-scanner \
 
 ## 🎯 Technique #4: Test Coverage Analysis (SHOULD HAVE)
 
-### Mục Đích
-Tìm tests bị ảnh hưởng và identify untested code.
+### Purpose
+Find affected tests and identify untested code.
 
 ### Tools & Commands
 
@@ -370,8 +370,8 @@ pytest --collect-only | grep auth_service
 
 ## 🎯 Technique #5: Feature Mapping (MUST HAVE)
 
-### Mục Đích
-Map code changes về features và user actions.
+### Purpose
+Map code changes to features and user actions.
 
 ### Implementation
 
@@ -478,8 +478,8 @@ function mapFeatures(changedFiles) {
 
 ## 🎯 Technique #6: Risk Scoring (SHOULD HAVE)
 
-### Mục Đích
-Đánh giá mức độ risk của changes.
+### Purpose
+Assess risk level of changes.
 
 ### Algorithm
 

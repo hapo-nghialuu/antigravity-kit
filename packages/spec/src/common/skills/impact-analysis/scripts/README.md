@@ -1,15 +1,15 @@
 # Impact Analysis Scripts
 
-Helper scripts để thực hiện advanced impact analysis techniques.
+Helper scripts for performing advanced impact analysis techniques.
 
 ## 📋 Overview
 
-Các scripts này implement industry techniques từ `references/industry-techniques.md`:
+These scripts implement industry techniques from `references/industry-techniques.md`:
 
 1. **ast-analyze.js** - AST-based analysis (Technique #3)
 2. **find-dependencies.sh** - Dependency analysis (Technique #2)
 3. **calculate-risk.js** - Risk scoring (Technique #6)
-4. **run-analysis.sh** - Master script chạy tất cả
+4. **run-analysis.sh** - Master script that runs all
 
 ## 🚀 Quick Start
 
