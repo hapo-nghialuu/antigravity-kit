@@ -1,44 +1,44 @@
 ---
 name: impact-analysis
-description: "Phân tích tác động code changes và tạo test scenarios. Sử dụng sau khi sửa code, trước commit, hoặc khi cần kiểm tra regression. Tự động phát hiện affected files, dependencies, edge cases."
+description: "Analyze code change impacts and generate test scenarios. Use after code changes, before commit, or when checking for regressions. Automatically detects affected files, dependencies, and edge cases."
 argument-hint: "[files] OR auto"
 version: 1.0.0
 ---
 
-# Impact Analysis - Phân Tích Tác Động & Test Guidance
+# Impact Analysis - Impact Analysis & Test Guidance
 
-Phân tích tác động của code changes và đưa ra hướng dẫn test chi tiết để tránh regression bugs.
+Analyze the impact of code changes and provide detailed test guidance to prevent regression bugs.
 
 ## Arguments
 
-- **Default (no args)**: Phân tích git diff gần nhất
-- **`auto`**: Tự động phát hiện changes và phân tích
-- **`{files}`**: Phân tích files cụ thể (comma-separated)
+- **Default (no args)**: Analyze most recent git diff
+- **`auto`**: Automatically detect changes and analyze
+- **`{files}`**: Analyze specific files (comma-separated)
 
-## Khi Nào Sử Dụng
+## When to Use
 
-✅ **Nên dùng:**
-- Sau khi sửa code, trước khi commit
-- Trước khi tạo Pull Request
-- Sau khi fix bug (đảm bảo không tạo bug mới)
-- Khi refactor code (verify không phá functionality)
-- Khi thêm feature mới (tìm integration points)
+✅ **Should use:**
+- After code changes, before commit
+- Before creating Pull Request
+- After fixing bugs (ensure no new bugs introduced)
+- When refactoring code (verify functionality not broken)
+- When adding new features (find integration points)
 
-❌ **Không cần:**
-- Chỉ sửa documentation
-- Chỉ sửa comments
-- Thay đổi config không ảnh hưởng logic
+❌ **Not needed:**
+- Only documentation changes
+- Only comment changes
+- Config changes that don't affect logic
 
 ## Quick Start
 
 ```bash
-# Phân tích changes gần nhất
+# Analyze most recent changes
 /impact-analysis
 
-# Tự động detect và phân tích
+# Auto-detect and analyze
 /impact-analysis auto
 
-# Phân tích files cụ thể
+# Analyze specific files
 /impact-analysis src/api/auth.ts,src/components/Login.tsx
 ```
 
@@ -46,59 +46,59 @@ Phân tích tác động của code changes và đưa ra hướng dẫn test chi
 
 ### 0. Auto-Detect Project Type (NEW)
 
-Load `references/project-detection.md` để:
-- Tự động detect project type (React Native, Next.js, Node.js API, etc.)
-- Load appropriate profile với patterns và edge cases
+Load `references/project-detection.md` to:
+- Automatically detect project type (React Native, Next.js, Node.js API, etc.)
+- Load appropriate profile with patterns and edge cases
 - Check for custom config file (`impact-analysis.config.js`)
-- Merge custom config với default profile
+- Merge custom config with default profile
 
 ### 1. Detect Changes
 
-Load `references/change-detection.md` để:
-- Phát hiện files đã thay đổi (git diff)
-- Phân loại thay đổi (backend/frontend/database)
-- Đánh giá mức độ risk
+Load `references/change-detection.md` to:
+- Detect changed files (git diff)
+- Classify changes (backend/frontend/database)
+- Assess risk level
 
 ### 2. Scout Dependencies
 
-Load `references/dependency-scouting.md` để:
-- Tìm files import/sử dụng code đã sửa
-- Phát hiện reverse dependencies
-- Xác định integration points
+Load `references/dependency-scouting.md` to:
+- Find files that import/use modified code
+- Detect reverse dependencies
+- Identify integration points
 
-**Advanced**: Load `references/industry-techniques.md` để:
-- Sử dụng Call Graph Analysis (Technique #2)
-- Sử dụng Dependency Graph tools
-- Áp dụng AST-based analysis (Technique #3) cho semantic changes
+**Advanced**: Load `references/industry-techniques.md` to:
+- Use Call Graph Analysis (Technique #2)
+- Use Dependency Graph tools
+- Apply AST-based analysis (Technique #3) for semantic changes
 
 ### 3. Identify Edge Cases
 
-Load `references/edge-case-identification.md` để:
-- Phân tích data flow
-- Tìm boundary conditions
-- Xác định error scenarios
-- Phát hiện race conditions
+Load `references/edge-case-identification.md` to:
+- Analyze data flow
+- Find boundary conditions
+- Identify error scenarios
+- Detect race conditions
 
-**Advanced**: Load `references/industry-techniques.md` để:
-- Sử dụng Static Analysis (Technique #4) cho data/control flow
-- Sử dụng Type Analysis cho type compatibility
-- Áp dụng Test-Based Analysis (Technique #6) cho coverage mapping
+**Advanced**: Load `references/industry-techniques.md` to:
+- Use Static Analysis (Technique #4) for data/control flow
+- Use Type Analysis for type compatibility
+- Apply Test-Based Analysis (Technique #6) for coverage mapping
 
 ### 4. Generate Test Scenarios
 
-Load `references/test-scenario-generation.md` để:
-- Tạo happy path scenarios
-- Tạo error handling scenarios
-- Tạo integration test scenarios
-- Tạo regression test checklist
+Load `references/test-scenario-generation.md` to:
+- Create happy path scenarios
+- Create error handling scenarios
+- Create integration test scenarios
+- Create regression test checklist
 
 ### 5. Create Report
 
-Load `references/report-template.md` để:
-- Tổng hợp findings
-- Đánh giá risk
-- Đưa ra recommendations
-- Tạo actionable checklist
+Load `references/report-template.md` to:
+- Consolidate findings
+- Assess risk
+- Provide recommendations
+- Create actionable checklist
 
 ## Output
 
@@ -158,7 +158,7 @@ Load `references/report-template.md` để:
 - `references/report-template.md` - Output format
 
 ### Advanced References
-- `references/industry-techniques.md` - 9 techniques từ industry & research
+- `references/industry-techniques.md` - 9 techniques from industry & research
 - `references/practical-techniques-guide.md` - Detailed implementation guide
 - `references/react-native-customization.md` - React Native specific guide
 
@@ -171,7 +171,7 @@ Load `references/report-template.md` để:
 
 ## Advanced Techniques
 
-Skill này hỗ trợ advanced analysis techniques từ industry:
+This skill supports advanced analysis techniques from industry:
 
 ### Available Scripts
 
@@ -214,12 +214,12 @@ See `scripts/README.md` for detailed documentation.
 
 ## Best Practices
 
-1. **Run early** - Phân tích ngay sau khi code, không đợi đến commit
-2. **Focus on risk** - Ưu tiên high-risk changes
-3. **Automate** - Integrate vào workflow tự động (pre-commit, CI/CD)
-4. **Document** - Lưu findings để reference sau
-5. **Verify** - Luôn chạy tests sau khi có scenarios
-6. **Use scripts** - Leverage advanced techniques cho deep analysis
+1. **Run early** - Analyze immediately after coding, don't wait until commit
+2. **Focus on risk** - Prioritize high-risk changes
+3. **Automate** - Integrate into automated workflow (pre-commit, CI/CD)
+4. **Document** - Save findings for future reference
+5. **Verify** - Always run tests after generating scenarios
+6. **Use scripts** - Leverage advanced techniques for deep analysis
 
 ## Examples
 
@@ -261,11 +261,11 @@ See `scripts/README.md` for detailed documentation.
 
 ## Troubleshooting
 
-**Q: Không detect được changes?**
-A: Check git status, đảm bảo có staged/committed changes
+**Q: Cannot detect changes?**
+A: Check git status, ensure there are staged/committed changes
 
-**Q: Quá nhiều affected files?**
-A: Sử dụng `--scope` để giới hạn phạm vi
+**Q: Too many affected files?**
+A: Use `--scope` to limit scope
 
-**Q: Test scenarios không đủ?**
-A: Load `edge-case-identification.md` và review manual
+**Q: Test scenarios not sufficient?**
+A: Load `edge-case-identification.md` and review manually
