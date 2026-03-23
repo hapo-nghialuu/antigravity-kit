@@ -467,32 +467,37 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       });
     }
 
+    // Copy additional required skills based on platform
+    let requiredSkills = [];
     if (platformKey === 'claude') {
-      const requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
-
-      requiredSkills
-        .filter((skillName) => skillName !== 'specs')
-        .forEach((skillName) => {
-          const skillSource = path.join(skillsSourceDir, skillName);
-          const skillDest = path.join(platform.skillsDir, skillName);
-
-          if (fs.existsSync(skillSource)) {
-            const skillExisted = fs.existsSync(skillDest);
-            copyRecursive(skillSource, skillDest, options);
-            results.installedSkills++;
-
-            if (shouldOverwriteManagedFiles && skillExisted) {
-              console.log(`  ↻ Skill updated: ${skillName}`);
-              results.updated++;
-            } else {
-              console.log(`  ✓ Skill installed: ${skillName}`);
-            }
-          } else {
-            results.missingDependencies++;
-            console.log(`  ⚠ Missing dependency template: ${path.join(platform.skillsDir, skillName)}`);
-          }
-        });
+      requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
+    } else if (platformKey === 'antigravity') {
+      // Antigravity also needs impact-analysis skill
+      requiredSkills = ['impact-analysis'];
     }
+
+    requiredSkills
+      .filter((skillName) => skillName !== 'specs')
+      .forEach((skillName) => {
+        const skillSource = path.join(skillsSourceDir, skillName);
+        const skillDest = path.join(platform.skillsDir, skillName);
+
+        if (fs.existsSync(skillSource)) {
+          const skillExisted = fs.existsSync(skillDest);
+          copyRecursive(skillSource, skillDest, options);
+          results.installedSkills++;
+
+          if (shouldOverwriteManagedFiles && skillExisted) {
+            console.log(`  ↻ Skill updated: ${skillName}`);
+            results.updated++;
+          } else {
+            console.log(`  ✓ Skill installed: ${skillName}`);
+          }
+        } else {
+          results.missingDependencies++;
+          console.log(`  ⚠ Missing dependency template: ${path.join(platform.skillsDir, skillName)}`);
+        }
+      });
   }
 
   // Copy agents
