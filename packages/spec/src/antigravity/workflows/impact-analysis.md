@@ -1,12 +1,12 @@
 ---
-description: Phân tích tác động của code changes lên tính năng và hành động người dùng
+description: Analyze code change impacts on features and user actions
 allowed-tools: Read, Glob, Grep, Bash, WebSearch
 argument-hint: <feature-name> [--from <branch>]
 ---
 
-# /impact-analysis - Phân Tích Tác Động Tính Năng
+# /impact-analysis - Feature Impact Analysis
 
-Sử dụng workflow này sau khi hoàn thành feature (sau `/code`) hoặc trước khi commit.
+Use this workflow after completing a feature (after `/code`) or before committing.
 
 <background_information>
 - **Mission**: Comprehensive impact analysis for completed features to prevent regression bugs
