@@ -1,4 +1,42 @@
-trợ sinh trắc học. Đăng nhập email/password vẫn hoạt động nhưng cách lưu token đã thay đổi, có thể làm mất phiên hiện tại. User có thể phải đăng nhập lại sau khi update.
+# Ví Dụ Output: Phân Tích Impact - Thêm Xác Thực Sinh Trắc Học
+
+> Đây là ví dụ output mẫu từ workflow Impact Analysis cho một thay đổi code thực tế.
+> 
+> **Thay đổi**: Thêm tính năng xác thực sinh trắc học (Face ID/Touch ID) vào app React Native
+> 
+> **Files thay đổi**: 5 files (auth service, login screen, biometric helper, profile settings, token storage)
+
+---
+
+## 📋 Tóm Tắt Nhanh
+
+**Mức độ rủi ro**: CAO ⚠️⚠️⚠️
+
+**Tác động chính**:
+- 🆕 Tính năng mới: Đăng nhập bằng Face ID/Touch ID
+- ⚠️ Breaking change: Format lưu token đã thay đổi
+- 🔄 Migration cần thiết: User hiện tại có thể phải đăng nhập lại
+
+**Thời gian ước tính**:
+- Sửa bugs: ~2 giờ
+- Testing: ~45 phút
+- Production-ready: 3-4 giờ
+
+**Vấn đề nghiêm trọng**: 3 bugs cần sửa trước khi deploy
+
+---
+
+## 🎯 Tính Năng Bị Ảnh Hưởng
+
+### 1. Đăng Nhập (NGHIÊM TRỌNG) ⚠️⚠️⚠️
+
+**Hành động người dùng:**
+- ✓ Đăng nhập email/password (vẫn hoạt động)
+- 🆕 Đăng nhập bằng Face ID/Touch ID (tính năng mới)
+- ⚠️ Phiên hiện tại có thể bị mất (breaking change)
+
+**Tác động:**
+Thêm option đăng nhập bằng sinh trắc học. Đăng nhập email/password vẫn hoạt động nhưng cách lưu token đã thay đổi, có thể làm mất phiên hiện tại. User có thể phải đăng nhập lại sau khi update.
 
 **Người dùng sẽ thấy:**
 - Nút "Đăng nhập bằng Face ID" mới trên màn hình login
