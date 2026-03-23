@@ -16,8 +16,8 @@ Use this workflow after completing a feature (after `/code`) or before committin
   - Test scenarios generated for all critical paths
   - Regression risks assessed with mitigation recommendations
   - Cross-referenced with spec artifacts when available
-- **Timing**: After implementing all tasks for a feature, before running `/test`
-- **Helper Scripts**: Optionally use advanced analysis scripts from `.claude/skills/impact-analysis/scripts/` for automated dependency analysis, AST-based semantic analysis, and risk scoring
+- **Timing**: After implementing all tasks for a feature, before running tests
+- **Helper Scripts**: Optionally use advanced analysis scripts from `.agent/skills/impact-analysis/scripts/` (Antigravity) or `.claude/skills/impact-analysis/scripts/` (Claude) for automated dependency analysis, AST-based semantic analysis, and risk scoring
 </background_information>
 
 <instructions>
@@ -26,10 +26,19 @@ Analyze the impact of code changes for feature **$ARGUMENTS** to identify affect
 
 ## Helper Scripts (Optional Enhancement)
 
-If available in `.claude/skills/impact-analysis/scripts/`, these scripts provide advanced automated analysis:
+**Platform Detection**: Automatically detect which platform is being used:
+- Check for `.agent/` directory → Antigravity
+- Check for `.claude/` directory → Claude
+- Use appropriate script paths based on detection
+
+If available in `.agent/skills/impact-analysis/scripts/` (Antigravity) or `.claude/skills/impact-analysis/scripts/` (Claude), these scripts provide advanced automated analysis:
 
 **1. Dependency Analysis**:
 ```bash
+# Antigravity
+.agent/skills/impact-analysis/scripts/find-dependencies.sh <file>
+
+# Claude
 .claude/skills/impact-analysis/scripts/find-dependencies.sh <file>
 ```
 - Finds all files importing/using the changed file
@@ -38,6 +47,10 @@ If available in `.claude/skills/impact-analysis/scripts/`, these scripts provide
 
 **2. AST-Based Analysis** (for TypeScript/JavaScript):
 ```bash
+# Antigravity
+node .agent/skills/impact-analysis/scripts/ast-analyze.js <file>
+
+# Claude
 node .claude/skills/impact-analysis/scripts/ast-analyze.js <file>
 ```
 - Detects function signature changes
@@ -46,6 +59,10 @@ node .claude/skills/impact-analysis/scripts/ast-analyze.js <file>
 
 **3. Risk Calculation**:
 ```bash
+# Antigravity
+node .agent/skills/impact-analysis/scripts/calculate-risk.js
+
+# Claude
 node .claude/skills/impact-analysis/scripts/calculate-risk.js
 ```
 - Calculates risk score (0-25)
@@ -54,12 +71,17 @@ node .claude/skills/impact-analysis/scripts/calculate-risk.js
 
 **4. Complete Analysis**:
 ```bash
+# Antigravity
+.agent/skills/impact-analysis/scripts/run-analysis.sh
+
+# Claude
 .claude/skills/impact-analysis/scripts/run-analysis.sh
 ```
 - Runs all techniques
 - Generates comprehensive markdown report
 
 **Usage Strategy**:
+- Detect platform first (check for `.agent/` or `.claude/` directory)
 - Try to use helper scripts first for automated analysis
 - Fall back to manual grep/analysis if scripts not available
 - Combine automated results with manual insights for best coverage
@@ -160,7 +182,11 @@ Scan file contents for keywords to detect additional features:
 
 If helper script available, run comprehensive analysis:
 ```bash
-# Run dependency analysis script for each changed file
+# Detect platform and run appropriate script
+# For Antigravity:
+.agent/skills/impact-analysis/scripts/find-dependencies.sh <file>
+
+# For Claude:
 .claude/skills/impact-analysis/scripts/find-dependencies.sh <file>
 ```
 
@@ -200,10 +226,13 @@ For each changed file, find:
 
 **Option 1: Use Helper Scripts** (if available):
 ```bash
-# Run AST analysis for TypeScript/JavaScript files
-node .claude/skills/impact-analysis/scripts/ast-analyze.js <file>
+# Detect platform and run appropriate scripts
+# For Antigravity:
+node .agent/skills/impact-analysis/scripts/ast-analyze.js <file>
+node .agent/skills/impact-analysis/scripts/calculate-risk.js
 
-# Run risk calculation
+# For Claude:
+node .claude/skills/impact-analysis/scripts/ast-analyze.js <file>
 node .claude/skills/impact-analysis/scripts/calculate-risk.js
 ```
 
@@ -328,7 +357,11 @@ For each affected feature and user action, generate:
 **Automated Risk Assessment** (if helper script available):
 
 ```bash
-# Run comprehensive risk calculation
+# Detect platform and run appropriate script
+# For Antigravity:
+node .agent/skills/impact-analysis/scripts/calculate-risk.js
+
+# For Claude:
 node .claude/skills/impact-analysis/scripts/calculate-risk.js
 
 # Output includes:
