@@ -368,6 +368,7 @@ function getPlatformSpecFiles(platformKey) {
       'spec-validate.md',
       'spec-tasks.md',
       'spec-status.md',
+      'impact-analysis.md',
       'docs-init.md',
       'docs-update.md'
     ];

@@ -19,7 +19,8 @@
   },
   "skills": {
     "required": [
-      "specs"
+      "specs",
+      "impact-analysis"
     ]
   },
   "agents": {
