@@ -1,54 +1,54 @@
-# Change Detection - Phát Hiện Thay Đổi
+# Change Detection - Detecting Changes
 
-Phương pháp phát hiện và phân loại code changes để phân tích tác động.
+Methods for detecting and classifying code changes for impact analysis.
 
 ## Git Commands
 
 ### 1. Detect Recent Changes
 
 ```bash
-# Changes chưa commit
+# Uncommitted changes
 git diff --name-only
 
-# Changes đã staged
+# Staged changes
 git diff --cached --name-only
 
-# Changes trong commit gần nhất
+# Changes in last commit
 git diff --name-only HEAD~1
 
-# Changes so với branch khác
+# Changes compared to another branch
 git diff --name-only main...HEAD
 
-# Xem chi tiết thay đổi
+# View detailed changes
 git diff HEAD~1
 
-# Xem thống kê
+# View statistics
 git diff --stat HEAD~1
 ```
 
 ### 2. Get Change Details
 
 ```bash
-# Số dòng thay đổi
+# Lines changed
 git diff --numstat HEAD~1
 
-# Files và số lượng changes
+# Files and change count
 git diff --shortstat HEAD~1
 
-# Chỉ xem added/deleted files
+# Only view added/deleted files
 git diff --diff-filter=AD --name-only HEAD~1
 ```
 
 ### 3. Historical Analysis
 
 ```bash
-# Xem lịch sử file
+# View file history
 git log --oneline -10 {file}
 
-# Xem ai sửa dòng nào
+# See who modified which line
 git blame {file}
 
-# Xem changes của commit cụ thể
+# View changes in specific commit
 git show {commit-hash}
 ```
 
@@ -57,7 +57,7 @@ git show {commit-hash}
 ### Backend Changes
 
 **Indicators:**
-- Files: `*.ts`, `*.js`, `*.py`, `*.go` trong `src/api/`, `src/services/`, `src/controllers/`
+- Files: `*.ts`, `*.js`, `*.py`, `*.go` in `src/api/`, `src/services/`, `src/controllers/`
 - Patterns: API routes, database queries, business logic
 
 **Risk Level:**
@@ -79,7 +79,7 @@ grep -r "SELECT\|INSERT\|UPDATE\|DELETE" {changed-files}
 ### Frontend Changes
 
 **Indicators:**
-- Files: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte` trong `src/components/`, `src/pages/`
+- Files: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte` in `src/components/`, `src/pages/`
 - Patterns: Components, hooks, state management
 
 **Risk Level:**

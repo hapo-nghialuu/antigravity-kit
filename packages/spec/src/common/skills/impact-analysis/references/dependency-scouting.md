@@ -1,12 +1,12 @@
-# Dependency Scouting - Tìm Files Bị Ảnh Hưởng
+# Dependency Scouting - Finding Affected Files
 
-Phương pháp tìm kiếm và phân tích dependencies để xác định phạm vi tác động.
+Methods for finding and analyzing dependencies to determine impact scope.
 
 ## Scouting Strategies
 
 ### 1. Import Analysis (Direct Dependencies)
 
-Tìm files import code đã sửa:
+Find files that import the modified code:
 
 ```bash
 # JavaScript/TypeScript
@@ -35,7 +35,7 @@ grep -r "from.*utils/auth" src/
 
 ### 2. Function/Class Usage (Reverse Dependencies)
 
-Tìm nơi sử dụng functions/classes:
+Find where functions/classes are used:
 
 ```bash
 # Function calls
@@ -60,7 +60,7 @@ grep -r "validateEmail(" src/
 
 ### 3. API Endpoint Consumers
 
-Nếu sửa backend API, tìm frontend calls:
+If backend API is modified, find frontend calls:
 
 ```bash
 # Fetch/Axios calls
@@ -84,7 +84,7 @@ grep -r "api/users" src/
 
 ### 4. Database Dependencies
 
-Nếu sửa database schema:
+If database schema is modified:
 
 ```bash
 # Table usage
@@ -109,7 +109,7 @@ grep -r "prisma.user.findMany" src/
 
 ### 5. Type/Interface Dependencies
 
-Tìm nơi sử dụng types:
+Find where types are used:
 
 ```bash
 # TypeScript interfaces
@@ -134,7 +134,7 @@ grep -r "as User" src/
 
 ## Using /ck:scout for Parallel Scouting
 
-Khi có nhiều files thay đổi, sử dụng `/ck:scout` để parallel search:
+When multiple files change, use `/ck:scout` for parallel search:
 
 ```
 /ck:scout Scout dependencies for changes.

@@ -1,6 +1,6 @@
-# Edge Case Identification - Xác Định Edge Cases
+# Edge Case Identification - Identifying Edge Cases
 
-Phương pháp phát hiện và phân tích edge cases để tránh bugs tiềm ẩn.
+Methods for detecting and analyzing edge cases to avoid potential bugs.
 
 ## Edge Case Categories
 
@@ -23,10 +23,10 @@ function getUser(id: string) {
 ```
 
 **Check:**
-- [ ] Có check null/undefined trước khi access?
-- [ ] Optional chaining (`?.`) được sử dụng?
-- [ ] Nullish coalescing (`??`) cho default values?
-- [ ] Type guards cho union types?
+- [ ] Check null/undefined before access?
+- [ ] Optional chaining (`?.`) used?
+- [ ] Nullish coalescing (`??`) for default values?
+- [ ] Type guards for union types?
 
 #### Empty Collections
 
@@ -39,9 +39,9 @@ const firstUser = users.length > 0 ? users[0].name : null;
 ```
 
 **Check:**
-- [ ] Array.length check trước khi access index?
-- [ ] Empty array handling trong map/filter/reduce?
-- [ ] Object.keys() check trước khi iterate?
+- [ ] Array.length check before accessing index?
+- [ ] Empty array handling in map/filter/reduce?
+- [ ] Object.keys() check before iterating?
 
 #### Type Coercion
 
@@ -54,8 +54,8 @@ if (value !== null && value !== undefined) { }
 ```
 
 **Check:**
-- [ ] Strict equality (`===`) thay vì loose (`==`)?
-- [ ] Explicit type checks cho boolean logic?
+- [ ] Strict equality (`===`) instead of loose (`==`)?
+- [ ] Explicit type checks for boolean logic?
 - [ ] Number validation (isNaN, isFinite)?
 
 ### 2. Boundary Conditions

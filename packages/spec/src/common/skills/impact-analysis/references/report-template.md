@@ -1,6 +1,6 @@
-# Report Template - Mẫu Báo Cáo Impact Analysis
+# Report Template - Impact Analysis Report Template
 
-Template chuẩn cho báo cáo phân tích tác động và hướng dẫn test.
+Standard template for impact analysis reports and test guidance.
 
 ## Full Report Template
 
