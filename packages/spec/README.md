@@ -43,6 +43,44 @@ CafeKit is a **multi-platform** CLI tool that installs a structured workflow for
 - **📦 No global install** - Use directly with `npx`
 - **🚀 Future-proof** - Easy to add support for new AI editors
 
+## Claude Code Statusline (Claude Code Only)
+
+CafeKit automatically installs an enhanced statusline for Claude Code that provides real-time session context.
+
+**What it shows:**
+- **Context usage** - Percentage and token count (e.g., `23% 45K/200K`)
+- **Session timer** - Elapsed time since session start
+- **Git status** - Current branch and dirty state indicator
+- **Active agents** - Count of running subagents
+- **Todo items** - Count of pending tasks
+
+**Installation:**
+- Automatically installed when running `npx @haposoft/cafekit` in a Claude Code project
+- Merges with existing `settings.json` configuration without overwriting user settings
+- Safe to re-run - preserves non-CafeKit statusline configurations
+- Upgrade mode (`--upgrade`) refreshes managed runtime files
+
+**Configuration:**
+The statusline is configured via `.claude/settings.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$CLAUDE_PROJECT_DIR/.claude/status.cjs\"",
+    "padding": 0
+  }
+}
+```
+
+**Runtime files installed:**
+- `.claude/status.cjs` - Main statusline script
+- `.claude/hooks/session.cjs` - Session initialization hook
+- `.claude/hooks/agent.cjs` - Subagent context injection hook
+- `.claude/hooks/usage.cjs` - Usage tracking hook
+- `.claude/hooks/lib/*.cjs` - Shared utilities (color, parser, git, config, etc.)
+
+**Note:** This feature is Claude Code exclusive and not available for Antigravity.
+
 ## Installation
 
 ### Prerequisites
