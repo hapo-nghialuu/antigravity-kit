@@ -756,6 +756,9 @@ async function main() {
       const platform = PLATFORMS[platformKey];
       console.log(`\n  For ${platform.name}:`);
       console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
+      if (platformKey === 'claude') {
+        console.log('     Or use skill: /hapo:spec-init <feature-description>');
+      }
     }
 
     console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - review');
