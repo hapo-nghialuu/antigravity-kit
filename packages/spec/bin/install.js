@@ -649,6 +649,131 @@ function copyGeminiFile(platformKey, results, options = {}) {
   }
 }
 
+// Copy Claude runtime files (statusline bundle)
+function copyClaudeRuntimeFiles(platformKey, results, options = {}) {
+  const platform = PLATFORMS[platformKey];
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+  const runtimeFiles = CLAUDE_MIGRATION_MANIFEST?.runtime?.files || [];
+
+  if (runtimeFiles.length === 0) {
+    return;
+  }
+
+  runtimeFiles.forEach(file => {
+    const source = path.join(__dirname, `../src/${platform.sourceDir}/${file}`);
+    const dest = path.join(platform.folder, file);
+
+    if (!fs.existsSync(source)) {
+      console.log(`  ⚠ Missing runtime file: ${file}`);
+      results.missingDependencies++;
+      return;
+    }
+
+    const destinationExists = fs.existsSync(dest);
+
+    if (destinationExists && !shouldOverwriteManagedFiles) {
+      console.log(`  → Runtime exists: ${file}`);
+      results.skipped++;
+      return;
+    }
+
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(source, dest);
+
+    if (destinationExists && shouldOverwriteManagedFiles) {
+      console.log(`  ↻ Runtime updated: ${file}`);
+      results.updated++;
+    } else {
+      console.log(`  ✓ Runtime installed: ${file}`);
+      results.copied++;
+    }
+  });
+}
+
+// Merge Claude settings.json
+function mergeClaudeSettings(platformKey, results, options = {}) {
+  const platform = PLATFORMS[platformKey];
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+  const settingsTemplatePath = CLAUDE_MIGRATION_MANIFEST?.settings?.template;
+
+  if (!settingsTemplatePath) {
+    return;
+  }
+
+  const templateSource = path.join(__dirname, `../src/${platform.sourceDir}/${settingsTemplatePath}`);
+  const settingsDest = path.join(platform.folder, 'settings.json');
+
+  if (!fs.existsSync(templateSource)) {
+    console.log(`  ⚠ Missing settings template: ${settingsTemplatePath}`);
+    return;
+  }
+
+  const managedSettings = JSON.parse(fs.readFileSync(templateSource, 'utf8'));
+  let existingSettings = {};
+  let settingsExisted = false;
+
+  if (fs.existsSync(settingsDest)) {
+    settingsExisted = true;
+    try {
+      existingSettings = JSON.parse(fs.readFileSync(settingsDest, 'utf8'));
+    } catch (error) {
+      console.log(`  ⚠ Could not parse existing settings.json: ${error.message}`);
+      existingSettings = {};
+    }
+  }
+
+  // Merge statusLine
+  const hasExistingStatusLine = existingSettings.statusLine && existingSettings.statusLine.command;
+  const isCafeKitStatusLine = hasExistingStatusLine &&
+    existingSettings.statusLine.command.includes('statusline.cjs');
+
+  if (!hasExistingStatusLine || (shouldOverwriteManagedFiles && isCafeKitStatusLine)) {
+    existingSettings.statusLine = managedSettings.statusLine;
+    console.log(`  ✓ Settings: statusLine ${hasExistingStatusLine ? 'updated' : 'added'}`);
+  } else if (hasExistingStatusLine && !isCafeKitStatusLine) {
+    console.log(`  → Settings: preserving existing non-CafeKit statusLine`);
+  }
+
+  // Merge hooks
+  if (!existingSettings.hooks) {
+    existingSettings.hooks = {};
+  }
+
+  Object.keys(managedSettings.hooks || {}).forEach(eventName => {
+    if (!existingSettings.hooks[eventName]) {
+      existingSettings.hooks[eventName] = [];
+    }
+
+    const managedHooks = managedSettings.hooks[eventName];
+    managedHooks.forEach(managedEntry => {
+      const managedCommands = managedEntry.hooks.map(h => h.command);
+
+      // Check if any managed command already exists
+      const alreadyExists = existingSettings.hooks[eventName].some(existingEntry => {
+        return existingEntry.hooks && existingEntry.hooks.some(h =>
+          managedCommands.includes(h.command)
+        );
+      });
+
+      if (!alreadyExists) {
+        existingSettings.hooks[eventName].push(managedEntry);
+        console.log(`  ✓ Settings: hook ${eventName} added`);
+      }
+    });
+  });
+
+  // Write back
+  fs.writeFileSync(settingsDest, JSON.stringify(existingSettings, null, 2) + '\n', 'utf8');
+
+  if (!settingsExisted) {
+    console.log(`  ✓ Settings: created .claude/settings.json`);
+    results.copied++;
+  } else {
+    console.log(`  ✓ Settings: merged .claude/settings.json`);
+    results.updated++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════
@@ -718,6 +843,8 @@ async function main() {
       // Copy ROUTING.md for Claude Code platform
       if (platformKey === 'claude') {
         copyRoutingFile(platformKey, results, installerOptions);
+        copyClaudeRuntimeFiles(platformKey, results, installerOptions);
+        mergeClaudeSettings(platformKey, results, installerOptions);
       }
 
       // Copy GEMINI.md for Antigravity platform

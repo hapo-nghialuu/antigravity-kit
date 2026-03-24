@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "scope": "claude-only",
   "commands": {
     "core": [
@@ -36,5 +36,23 @@
   },
   "hooks": {
     "assumed": []
+  },
+  "runtime": {
+    "files": [
+      "statusline.cjs",
+      "hooks/usage-context-awareness.cjs",
+      "hooks/session-init.cjs",
+      "hooks/subagent-init.cjs",
+      "hooks/lib/colors.cjs",
+      "hooks/lib/config-counter.cjs",
+      "hooks/lib/ck-config-utils.cjs",
+      "hooks/lib/context-builder.cjs",
+      "hooks/lib/git-info-cache.cjs",
+      "hooks/lib/project-detector.cjs",
+      "hooks/lib/transcript-parser.cjs"
+    ]
+  },
+  "settings": {
+    "template": "settings/claude-statusline.settings.json"
   }
 }

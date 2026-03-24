@@ -38,6 +38,7 @@ CafeKit is a **multi-platform** CLI tool that installs a structured workflow for
 - **🎯 Multi-platform** - Works with Claude Code, Antigravity, and future AI editors
 - **📋 Spec-first workflow** - `spec-init - spec-requirements - spec-design - spec-tasks` + `code - test - review`
 - **📝 Documentation workflow** - `/docs init` and `/docs update` for project documentation
+- **📊 Claude statusline** - Auto-installs managed statusline bundle for Claude Code (context usage, git status, session timer)
 - **⚡ Zero-config** - Works out of the box with sensible defaults
 - **🔄 Idempotent** - Safe to re-run, skips existing files
 - **📦 No global install** - Use directly with `npx`
@@ -64,6 +65,7 @@ The installer will:
 3. **Copy** workflow commands to the appropriate directory
 4. **Install** shared skills for spec-driven development
 5. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
+6. **[Claude Code only]** Install statusline runtime bundle and merge `.claude/settings.json` automatically
 
 Installer modes:
 - **Default install mode**: `npx @haposoft/cafekit` (skip existing files)
@@ -176,6 +178,39 @@ docs/
 ├── deployment-guide.md
 └── project-roadmap.md
 ```
+
+---
+
+### 3. Claude Code Statusline (Claude-only)
+
+**Purpose:** Real-time session context and progress tracking in Claude Code CLI
+
+**What it provides:**
+- **Context usage** - Visual progress bar showing token usage vs compaction threshold
+- **Session timer** - Time remaining until rate limit reset with utilization percentage
+- **Git status** - Current branch, staged/unstaged changes, ahead/behind tracking
+- **Active agents** - Running subagents and task progress
+- **Cost tracking** - API costs and lines changed (when `CLAUDE_BILLING_MODE=api`)
+
+**Installation:**
+The installer automatically:
+1. Copies managed statusline runtime files to `.claude/`
+2. Merges required settings into `.claude/settings.json`
+3. Configures hooks for session context and usage tracking
+
+**Behavior:**
+- **Install mode** (`npx @haposoft/cafekit`): Adds statusline if not present, preserves existing non-CafeKit statusline
+- **Upgrade mode** (`npx @haposoft/cafekit --upgrade`): Refreshes managed runtime files and settings
+
+**Display modes:**
+Configure via `.claude/.ck.json`:
+```json
+{
+  "statusline": "full"  // Options: "full", "compact", "minimal", "none"
+}
+```
+
+**Note:** This feature is Claude Code-only and does not affect Antigravity installations.
 
 ---
 
