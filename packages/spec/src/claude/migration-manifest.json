@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "scope": "claude-only",
   "commands": {
     "core": [
@@ -20,7 +20,14 @@
   "skills": {
     "required": [
       "specs",
-      "impact-analysis"
+      "impact-analysis",
+      "spec-init",
+      "spec-requirements",
+      "spec-design",
+      "spec-tasks",
+      "code",
+      "test",
+      "review"
     ]
   },
   "agents": {
@@ -36,5 +43,23 @@
   },
   "hooks": {
     "assumed": []
+  },
+  "runtime": {
+    "files": [
+      "status.cjs",
+      "hooks/session.cjs",
+      "hooks/agent.cjs",
+      "hooks/usage.cjs",
+      "hooks/lib/color.cjs",
+      "hooks/lib/parser.cjs",
+      "hooks/lib/counter.cjs",
+      "hooks/lib/git.cjs",
+      "hooks/lib/config.cjs",
+      "hooks/lib/context.cjs",
+      "hooks/lib/detect.cjs"
+    ]
+  },
+  "settings": {
+    "template": "settings/status.settings.json"
   }
 }

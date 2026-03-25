@@ -43,6 +43,44 @@ CafeKit is a **multi-platform** CLI tool that installs a structured workflow for
 - **📦 No global install** - Use directly with `npx`
 - **🚀 Future-proof** - Easy to add support for new AI editors
 
+## Claude Code Statusline (Claude Code Only)
+
+CafeKit automatically installs an enhanced statusline for Claude Code that provides real-time session context.
+
+**What it shows:**
+- **Context usage** - Percentage and token count (e.g., `23% 45K/200K`)
+- **Session timer** - Elapsed time since session start
+- **Git status** - Current branch and dirty state indicator
+- **Active agents** - Count of running subagents
+- **Todo items** - Count of pending tasks
+
+**Installation:**
+- Automatically installed when running `npx @haposoft/cafekit` in a Claude Code project
+- Merges with existing `settings.json` configuration without overwriting user settings
+- Safe to re-run - preserves non-CafeKit statusline configurations
+- Upgrade mode (`--upgrade`) refreshes managed runtime files
+
+**Configuration:**
+The statusline is configured via `.claude/settings.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$CLAUDE_PROJECT_DIR/.claude/status.cjs\"",
+    "padding": 0
+  }
+}
+```
+
+**Runtime files installed:**
+- `.claude/status.cjs` - Main statusline script
+- `.claude/hooks/session.cjs` - Session initialization hook
+- `.claude/hooks/agent.cjs` - Subagent context injection hook
+- `.claude/hooks/usage.cjs` - Usage tracking hook
+- `.claude/hooks/lib/*.cjs` - Shared utilities (color, parser, git, config, etc.)
+
+**Note:** This feature is Claude Code exclusive and not available for Antigravity.
+
 ## Installation
 
 ### Prerequisites
@@ -63,7 +101,8 @@ The installer will:
 2. **Prompt** you to select platform if not detected
 3. **Copy** workflow commands to the appropriate directory
 4. **Install** shared skills for spec-driven development
-5. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
+5. **[Claude Code only]** Install unprefixed skill directories (`spec-init`, `spec-requirements`, `spec-design`, `spec-tasks`, `code`, `test`, `review`) that expose `hapo:`-prefixed skill names
+6. **Ensure dependencies** for `code - test - review` by installing missing command/agent templates
 
 Installer modes:
 - **Default install mode**: `npx @haposoft/cafekit` (skip existing files)
@@ -72,33 +111,40 @@ Installer modes:
 
 **Example output (Claude Code):**
 ```
-CafeKit Spec Installer
-===============================
+CafeKit Installer v0.3.12
+========================================
 
-✓ Detected platforms: claude
+Installing for: Claude Code
+Mode: install (skip existing files)
 
-Installing for: .claude/
-------------------------
-[.claude/skills] Installed skill: spec-driven-development
-[.claude/commands] Copied: spec-init.md
-[.claude/commands] Copied: spec-requirements.md
-[.claude/commands] Copied: spec-design.md
-[.claude/commands] Copied: spec-tasks.md
-[.claude/commands] Copied: code.md
-[.claude/commands] Copied: spec-status.md
+Claude Code (.claude/)
+----------------------------------------
+✓ Skill installed: specs
+✓ Skill installed: spec-init
+✓ Skill installed: spec-requirements
+✓ Skill installed: spec-design
+✓ Skill installed: spec-tasks
+✓ Skill installed: code
+✓ Skill installed: test
+✓ Skill installed: review
+✓ Copied: spec-init.md
+✓ Copied: spec-requirements.md
+...
 
-Installation complete!
-   Copied Files: 7
-   Skipped Files: 0
-   Installed Skills: Yes
-   Dependency Checks: 6
-   Installed Deps: 6
-   Missing Deps: 0
-   Targets: .claude/commands
+╔════════════════════════════════════════════════════════╗
+║         Installation Complete!                         ║
+╚════════════════════════════════════════════════════════╝
+
+  Installed Skills:   Yes ✓
 
 Next steps:
-   1. Run /spec-init <feature-name>
-   2. Follow the spec workflow: requirements - design - tasks - code - test - review
+  1. Start your AI editor
+
+  For Claude Code:
+     Run: /spec-init <feature-name>
+     Or use skill: /hapo:spec-init <feature-description>
+
+  2. Follow the workflow: requirements - design - tasks - code - test - review
 
 Documentation: https://github.com/haposoft/cafekit
 ```
@@ -565,7 +611,15 @@ User clicks -> dispatch action -> update context -> localStorage -> re-render
 │   ├── spec-status.md
 │   └── docs.md               # Docs workflows
 └── skills/
-    └── spec-driven-development/
+    ├── specs/
+    ├── impact-analysis/
+    ├── spec-init/
+    ├── spec-requirements/
+    ├── spec-design/
+    ├── spec-tasks/
+    ├── code/
+    ├── test/
+    └── review/
 ```
 
 **Antigravity** (`.agent/`):
@@ -583,7 +637,8 @@ User clicks -> dispatch action -> update context -> localStorage -> re-render
 │   ├── docs-init.md            # Docs workflows
 │   └── docs-update.md
 ├── skills/
-│   └── spec-driven-development/
+│   ├── specs/
+│   └── impact-analysis/
 └── rules/
     └── GEMINI.md               # System rules (always_on)
 ```

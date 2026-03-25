@@ -19,6 +19,13 @@ const path = require('path');
 const readline = require('readline');
 const packageJson = require('../package.json');
 
+function validateManifestV2(manifest) {
+  if (!manifest || manifest.version !== 2) return false;
+  if (!manifest.runtime?.files || !Array.isArray(manifest.runtime.files)) return false;
+  if (!manifest.settings?.template) return false;
+  return true;
+}
+
 function loadClaudeMigrationManifest() {
   const manifestPath = path.join(__dirname, '../src/claude/migration-manifest.json');
 
@@ -27,7 +34,15 @@ function loadClaudeMigrationManifest() {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+    if (!validateManifestV2(manifest)) {
+      console.error('✗ Invalid manifest v2 schema - missing required fields');
+      console.error('  Expected: version=2, runtime.files[], settings.template');
+      process.exit(1);
+    }
+
+    return manifest;
   } catch (error) {
     console.warn(`⚠ Failed to parse Claude migration manifest: ${error.message}`);
     return null;
@@ -649,6 +664,110 @@ function copyGeminiFile(platformKey, results, options = {}) {
   }
 }
 
+// Copy Claude runtime files (statusline bundle)
+function copyClaudeRuntimeFiles(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const manifest = CLAUDE_MIGRATION_MANIFEST;
+  if (!manifest?.runtime?.files) return;
+
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+  const srcBase = path.join(__dirname, '../src/claude');
+  const targetBase = path.join(PLATFORMS.claude.folder);
+
+  manifest.runtime.files.forEach(relPath => {
+    const srcPath = path.join(srcBase, relPath);
+    const targetPath = path.join(targetBase, relPath);
+
+    if (!fs.existsSync(srcPath)) {
+      console.log(`  ⚠ Runtime file not found: ${relPath}`);
+      results.missingDependencies++;
+      return;
+    }
+
+    const targetExists = fs.existsSync(targetPath);
+    const shouldCopy = shouldOverwriteManagedFiles || !targetExists;
+
+    if (shouldCopy) {
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(srcPath, targetPath);
+
+      if (targetExists) {
+        console.log(`  ↻ Runtime updated: ${relPath}`);
+        results.updated++;
+      } else {
+        console.log(`  ✓ Runtime installed: ${relPath}`);
+        results.copied++;
+      }
+    } else {
+      results.skipped++;
+    }
+  });
+}
+
+// Merge Claude settings.json
+function mergeClaudeSettings(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const manifest = CLAUDE_MIGRATION_MANIFEST;
+  if (!manifest?.settings?.template) return;
+
+  const templatePath = path.join(__dirname, '../src/claude', manifest.settings.template);
+  const targetPath = path.join(PLATFORMS.claude.folder, 'settings.json');
+
+  if (!fs.existsSync(templatePath)) {
+    console.log(`  ⚠ Settings template not found: ${manifest.settings.template}`);
+    return;
+  }
+
+  const managedSettings = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
+  let existingSettings = {};
+
+  if (fs.existsSync(targetPath)) {
+    existingSettings = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+  }
+
+  const mergedSettings = { ...existingSettings };
+
+  // Merge statusLine
+  if (managedSettings.statusLine) {
+    const existingCommand = existingSettings.statusLine?.command || '';
+    const isCafeKitOwned = existingCommand.includes('status.cjs') || existingCommand.includes('statusline.cjs');
+
+    if (options.upgrade || !existingSettings.statusLine || isCafeKitOwned) {
+      mergedSettings.statusLine = managedSettings.statusLine;
+      console.log(`  ✓ Settings: statusLine merged`);
+    }
+  }
+
+  // Merge hooks
+  if (managedSettings.hooks) {
+    mergedSettings.hooks = mergedSettings.hooks || {};
+
+    Object.keys(managedSettings.hooks).forEach(eventName => {
+      const managedHooks = managedSettings.hooks[eventName];
+      const existingHooks = mergedSettings.hooks[eventName] || [];
+      const mergedHooks = [...existingHooks];
+
+      managedHooks.forEach(managedHook => {
+        const managedCommand = managedHook.hooks?.[0]?.command || '';
+        const isDuplicate = mergedHooks.some(existingHook => {
+          return existingHook.hooks?.some(h => h.command === managedCommand);
+        });
+
+        if (!isDuplicate) {
+          mergedHooks.push(managedHook);
+          console.log(`  ✓ Settings: hook ${eventName} merged`);
+        }
+      });
+
+      mergedSettings.hooks[eventName] = mergedHooks;
+    });
+  }
+
+  fs.writeFileSync(targetPath, JSON.stringify(mergedSettings, null, 2), 'utf8');
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════
@@ -718,6 +837,8 @@ async function main() {
       // Copy ROUTING.md for Claude Code platform
       if (platformKey === 'claude') {
         copyRoutingFile(platformKey, results, installerOptions);
+        copyClaudeRuntimeFiles(platformKey, results, installerOptions);
+        mergeClaudeSettings(platformKey, results, installerOptions);
       }
 
       // Copy GEMINI.md for Antigravity platform
@@ -756,6 +877,9 @@ async function main() {
       const platform = PLATFORMS[platformKey];
       console.log(`\n  For ${platform.name}:`);
       console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
+      if (platformKey === 'claude') {
+        console.log('     Or use skill: /hapo:spec-init <feature-description>');
+      }
     }
 
     console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - review');
