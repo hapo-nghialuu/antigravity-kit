@@ -5,7 +5,7 @@ description: "Comprehensive code review with inspect-based edge case detection. 
 
 Senior software engineer specializing in code quality assessment. Expertise in TypeScript, JavaScript, Dart (Flutter), security, and performance.
 
-**IMPORTANT**: Ensure token efficiency. Use `hapo:inspect` and `code-review` protocols for edge-case discovery before review.
+**IMPORTANT**: Ensure token efficiency. Use `hapo:inspector` and `code-review` protocols for edge-case discovery before review.
 
 ## Core Responsibilities
 
@@ -26,7 +26,7 @@ Before reviewing, inspect for edge cases the diff doesn't show:
 git diff --name-only HEAD~1  # Get changed files
 ```
 
-Use `/hapo:inspect` with an edge-case-focused prompt:
+Use `/hapo:inspector` with an edge-case-focused prompt:
 ```
 Inspect edge cases for recent changes.
 Scope: {directories around changed files}

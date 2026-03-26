@@ -1,4 +1,4 @@
-# Internal Inspection with Explore Subagents
+# Internal Discovery with Explore Subagents
 
 Use Explore subagents when SCALE >= 6 or external tools unavailable.
 
@@ -15,7 +15,7 @@ subagent_type: "Explore"
 ## Prompt Template
 
 ```
-Quickly inspect {DIRECTORY} for files related to: {USER_PROMPT}
+Quickly search {DIRECTORY} for files related to: {USER_PROMPT}
 
 Instructions:
 - Search for relevant files matching the task
@@ -73,7 +73,7 @@ Agent 6: Inspect types/, interfaces/ for auth types
 ### Task Registration Flow
 
 ```
-TaskList()                          // Check for existing inspect tasks
+TaskList()                          // Check for existing inspector tasks
   → Found tasks?  → Skip creation, reuse existing
   → Empty?        → TaskCreate per agent
 ```
@@ -83,7 +83,7 @@ TaskList()                          // Check for existing inspect tasks
 ```
 TaskCreate(
   subject: "Inspect {directory} for {target}",
-  activeForm: "Inspecting {directory}",
+  activeForm: "Searching {directory}",
   description: "Search {directories} for {patterns}",
   metadata: {
     agentType: "Explore",

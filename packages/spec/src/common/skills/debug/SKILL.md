@@ -92,7 +92,7 @@ Issue getting large      -> investigation-scaling.md
 
 ## Related Skills
 
-- `hapo:inspect` - useful when available and you need to discover relevant files and boundaries fast
+- `hapo:inspector` - useful when available and you need to discover relevant files and boundaries fast
 - `impact-analysis` - reason about downstream consequences after a likely cause is identified
 - `specs` - useful only when the investigation touches generated spec artifacts or templates
 

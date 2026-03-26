@@ -132,12 +132,12 @@ grep -r "as User" src/
 # src/components/UserCard.tsx:  props: { user: User }
 ```
 
-## Using /hapo:inspect for Dependency Inspection
+## Using /hapo:inspector for Dependency Inspection
 
-When multiple files change, use `/hapo:inspect` for scoped discovery first:
+When multiple files change, use `/hapo:inspector` for scoped discovery first:
 
 ```
-/hapo:inspect Inspect dependencies for these changes.
+/hapo:inspector Inspect dependencies for these changes.
 
 Scope:
 - src/api/
