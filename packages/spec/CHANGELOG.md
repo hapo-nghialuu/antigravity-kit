@@ -16,9 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 3-minute timeout per agent with skip-on-timeout
   - Task registration for ≥3 agents
   - 500-line file chunking strategy
-- **hapo:debug skill** - Structured incident investigation methodology
-  - 10 reference documents for systematic debugging
-  - Proof gate, cause chain analysis, containment strategies
 - **Gemini CLI auto-install** - Interactive setup during cafekit installation
   - Prompts user to install gemini-cli
   - API key configuration during setup
@@ -29,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extensible for future external tools
 
 ### Changed
-- **BREAKING:** Renamed `hapo:inspect` to `hapo:inspector` for clarity
+- **BREAKING:** Buid `hapo:inspector` for hapo-cafekit
 - Updated all downstream references in agents, commands, and skills
 
 ### Fixed
