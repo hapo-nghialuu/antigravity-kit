@@ -5,6 +5,19 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-03-26
+
+### Added
+- **hapo:inspector 2-phase approach** - Intelligent scope handling for broad requests
+  - Phase 1: Structure Scout discovers actual project layout before division
+  - Phase 2: Parallel Explore agents based on scout findings
+  - Auto-merge small scopes (<10 files), auto-split large scopes (>100 files)
+  - AskUserQuestion fallback for ambiguous structures
+  - Enhanced report format with Patterns section and Suggested Next Steps
+
+### Changed
+- hapo:inspector no longer rejects broad scopes - auto-divides intelligently instead
+
 ## [0.5.5] - 2026-03-26
 
 ### Fixed
