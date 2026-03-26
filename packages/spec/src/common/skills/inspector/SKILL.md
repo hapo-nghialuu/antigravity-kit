@@ -25,24 +25,42 @@ Fast, token-efficient codebase discovery using parallel agents to find files nee
 ## Preflight Scope Gate (MANDATORY - All Modes)
 
 Before scanning with ANY mode (internal or external):
-1. Reject repo-root or root-wide scans such as `.`, `/`, `./`, `**/*`, `**/*.ts`, or similar broad patterns without a scoped directory.
-2. Require at least one concrete scope root such as `src/auth/`, `packages/spec/src/claude/`, or `tests/`.
+1. Detect repo-root or root-wide scans such as `.`, `/`, `./`, `**/*`, `**/*.ts`, or similar broad patterns without a scoped directory.
+2. Apply the built-in no-scan lists below.
 3. Prefer file-type or glob hints whenever possible.
-4. Apply the built-in no-scan lists below.
-5. If the request is still too broad, use `AskUserQuestion` to present 2-4 narrower scope suggestions.
 
-**When scope is rejected:**
-- Use `AskUserQuestion` tool with:
-  - `question`: "Scope too broad. Choose a narrower scope to scan?"
-  - `header`: "Scope"
-  - `multiSelect`: false
-  - `options`: 2-4 concrete scope suggestions (each with `label` + `description`)
-- After user selects, automatically re-invoke inspector with the chosen scope
-- Example suggestions:
-  - `{project}/src/` — "Identify main app/service"
-  - `{project}/package.json + README` — "Project overview"
-  - `{project}/apps/*` — "If monorepo"
-  - `{project}/backend/` or `{project}/frontend/` — "Analyze specific layer"
+**When scope is too broad:**
+
+Instead of rejecting, **auto-divide** the scope into logical sub-scopes and spawn parallel Explore agents:
+
+1. **Analyze project structure** - Use `Glob` to discover top-level directories (src/, apps/, backend/, frontend/, packages/, etc.)
+2. **Auto-divide into sub-scopes** - Create 3-6 logical divisions based on:
+   - Top-level directories (src/, apps/, backend/)
+   - Key files (README.md, package.json, tsconfig.json)
+   - Monorepo structure (packages/*, apps/*)
+3. **Spawn parallel Explore agents** - One agent per sub-scope (SCALE 3-6 recommended)
+4. **Aggregate findings** - Collect results from all agents into unified report
+5. **Suggest next steps** - Based on findings, ask if user wants deeper investigation of specific areas
+
+**Example auto-division:**
+```
+User: "scan entire ~/Desktop/goclaw project"
+
+Auto-divide into:
+- Agent 1: ~/Desktop/goclaw/README.md + package.json (overview)
+- Agent 2: ~/Desktop/goclaw/src/ (main source)
+- Agent 3: ~/Desktop/goclaw/apps/* (applications)
+- Agent 4: ~/Desktop/goclaw/backend/ (backend services)
+- Agent 5: ~/Desktop/goclaw/frontend/ (frontend code)
+
+Result: "This is a monorepo with 3 apps, NestJS backend, React frontend..."
+Follow-up: "Want to investigate deeper? Choose: backend API | frontend components | specific app"
+```
+
+**Fallback to AskUserQuestion:**
+- If auto-division is unclear (flat structure, no obvious divisions)
+- Use `AskUserQuestion` with 2-4 concrete scope suggestions
+- After user selects, re-invoke inspector with chosen scope
 
 ## Built-in No-Scan Guidance
 
