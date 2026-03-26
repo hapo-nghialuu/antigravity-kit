@@ -1,4 +1,4 @@
-# External Inspection with Gemini
+# External Discovery with Gemini
 
 Use external Gemini CLI for faster searches with large context windows (1M+ tokens) when SCALE ≤ 5.
 
@@ -6,7 +6,7 @@ Use external Gemini CLI for faster searches with large context windows (1M+ toke
 
 ```
 SCALE ≤ 5   → gemini CLI
-SCALE ≥ 6   → Use internal inspection instead
+SCALE ≥ 6   → Use internal discovery instead
 ```
 
 ## Configuration
@@ -37,7 +37,7 @@ External Gemini inspection requires:
 4. The request is not a repo-root or root-wide scan
 5. The built-in no-scan guidance has been applied
 
-If any condition fails, use internal inspection instead.
+If any condition fails, use internal discovery instead.
 
 ## Gemini CLI
 
@@ -60,7 +60,7 @@ which gemini
 
 If not installed, ask user:
 1. **Yes** - Provide installation instructions (may need manual auth steps)
-2. **No** - Fall back to internal inspection (`internal-inspection.md`)
+2. **No** - Fall back to internal discovery (`internal-inspection.md`)
 
 ## Spawning Parallel Bash Agents
 
@@ -152,13 +152,13 @@ File > 1500 lines    → Split into ceil(lines/500) chunks
 - Set 3-minute timeout per bash call
 - Skip timed-out agents
 - Don't restart failed agents
-- On persistent failures, fall back to internal inspection
+- On persistent failures, fall back to internal discovery
 
 ## Fallback Behavior
 
 If Gemini is unavailable, misconfigured, or errors out:
 1. Stop external mode
-2. Continue with internal inspection
+2. Continue with internal discovery
 3. Note the fallback in the final report
 
 ## Expected Outcome

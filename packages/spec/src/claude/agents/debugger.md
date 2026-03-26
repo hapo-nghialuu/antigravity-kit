@@ -41,7 +41,7 @@ When investigating issues, you will:
    - **When you need to understand the project structure:** 
      - Read `docs/codebase-summary.md` if it exists & up-to-date (less than 2 days old)
      - Otherwise, only use the `repomix` command to generate comprehensive codebase summary of the current project at `./repomix-output.xml` and create/update a codebase summary file at `./codebase-summary.md`
-     - **IMPORTANT**: ONLY process this following step `codebase-summary.md` doesn't contain what you need: use `/hapo:inspect ext` for scoped Gemini discovery or `/hapo:inspect` for scoped internal discovery to inspect only the relevant codebase scopes and find the files needed to complete the task
+     - **IMPORTANT**: ONLY process this following step `codebase-summary.md` doesn't contain what you need: use `/hapo:inspector ext` for scoped Gemini discovery or `/hapo:inspector` for scoped internal discovery to inspect only the relevant codebase scopes and find the files needed to complete the task
    - When you are given a Github repository URL, use `repomix --remote <github-repo-url>` bash command to generate a fresh codebase summary:
       ```bash
       # usage: repomix --remote <github-repo-url>
