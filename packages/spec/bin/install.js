@@ -802,7 +802,7 @@ async function promptInstallGemini() {
   });
 
   console.log('\n📦 Optional: Gemini CLI Installation');
-  console.log('  hapo:inspect with ext mode requires gemini-cli');
+  console.log('  hapo:inspector with ext mode requires gemini-cli');
   console.log('  • Install now: Auto-install and configure API key');
   console.log('  • Skip: You can still use hapo:inspect in internal mode');
   console.log();
@@ -858,7 +858,7 @@ async function setupGeminiCLI() {
 
   if (!shouldInstall) {
     console.log('\n  ℹ Skipped gemini-cli installation');
-    console.log('  • hapo:inspect will work in internal mode (default)');
+    console.log('  • hapo:inspector will work in internal mode (default)');
     console.log('  • To install later: npm install -g @google/generative-ai-cli');
     return;
   }
@@ -965,8 +965,8 @@ async function main() {
       console.log();
     }
 
-    // Setup Gemini CLI for hapo:inspect ext mode
-    setupGeminiCLI();
+    // Setup Gemini CLI for hapo:inspector ext mode
+    await setupGeminiCLI();
 
     // Note: CLAUDE.md and docs/ are generated via /docs init command
 
