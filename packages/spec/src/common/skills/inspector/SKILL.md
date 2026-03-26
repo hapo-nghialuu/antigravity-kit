@@ -29,7 +29,20 @@ Before scanning with ANY mode (internal or external):
 2. Require at least one concrete scope root such as `src/auth/`, `packages/spec/src/claude/`, or `tests/`.
 3. Prefer file-type or glob hints whenever possible.
 4. Apply the built-in no-scan lists below.
-5. If the request is still too broad, stop and return 2-4 narrower suggestions.
+5. If the request is still too broad, use `AskUserQuestion` to present 2-4 narrower scope suggestions.
+
+**When scope is rejected:**
+- Use `AskUserQuestion` tool with:
+  - `question`: "Scope too broad. Choose a narrower scope to scan?"
+  - `header`: "Scope"
+  - `multiSelect`: false
+  - `options`: 2-4 concrete scope suggestions (each with `label` + `description`)
+- After user selects, automatically re-invoke inspector with the chosen scope
+- Example suggestions:
+  - `{project}/src/` — "Identify main app/service"
+  - `{project}/package.json + README` — "Project overview"
+  - `{project}/apps/*` — "If monorepo"
+  - `{project}/backend/` or `{project}/frontend/` — "Analyze specific layer"
 
 ## Built-in No-Scan Guidance
 
