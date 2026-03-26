@@ -44,14 +44,14 @@ Instead of rejecting, **auto-divide** the scope into logical sub-scopes and spaw
 
 **Example auto-division:**
 ```
-User: "scan entire ~/Desktop/goclaw project"
+User: "scan entire ~/Desktop/project project"
 
 Auto-divide into:
-- Agent 1: ~/Desktop/goclaw/README.md + package.json (overview)
-- Agent 2: ~/Desktop/goclaw/src/ (main source)
-- Agent 3: ~/Desktop/goclaw/apps/* (applications)
-- Agent 4: ~/Desktop/goclaw/backend/ (backend services)
-- Agent 5: ~/Desktop/goclaw/frontend/ (frontend code)
+- Agent 1: ~/Desktop/project/README.md + package.json (overview)
+- Agent 2: ~/Desktop/project/src/ (main source)
+- Agent 3: ~/Desktop/project/apps/* (applications)
+- Agent 4: ~/Desktop/project/backend/ (backend services)
+- Agent 5: ~/Desktop/project/frontend/ (frontend code)
 
 Result: "This is a monorepo with 3 apps, NestJS backend, React frontend..."
 Follow-up: "Want to investigate deeper? Choose: backend API | frontend components | specific app"
