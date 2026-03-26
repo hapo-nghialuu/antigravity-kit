@@ -816,13 +816,45 @@ async function promptInstallGemini() {
   });
 }
 
-function showGeminiKeyInstructions() {
-  console.log('\n📝 Gemini API Key Setup');
-  console.log('  1. Get your API key: https://aistudio.google.com/apikey');
-  console.log('  2. Set environment variable:');
-  console.log('     export GEMINI_API_KEY="your-api-key-here"');
-  console.log('  3. Add to your shell profile (~/.zshrc or ~/.bashrc) to persist');
+async function promptGeminiAPIKey() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('\n📝 Gemini API Key Configuration');
+  console.log('  Get your API key: https://aistudio.google.com/apikey');
   console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Enter your Gemini API key (or press Enter to skip): ', (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+function configureGeminiKey(apiKey) {
+  try {
+    const geminiDir = path.join(os.homedir(), '.gemini');
+    const envFile = path.join(geminiDir, '.env');
+
+    // Ensure .gemini directory exists
+    if (!fs.existsSync(geminiDir)) {
+      fs.mkdirSync(geminiDir, { recursive: true });
+    }
+
+    // Write API key to .env file
+    fs.writeFileSync(envFile, `GEMINI_API_KEY=${apiKey}\n`, { mode: 0o600 });
+    console.log('  ✓ Gemini API key configured successfully');
+    console.log('  ✓ Saved to ~/.gemini/.env');
+    return true;
+  } catch (error) {
+    console.log('  ✗ Failed to configure Gemini API key');
+    console.log(`  Error: ${error.message}`);
+    console.log('  You can manually set: export GEMINI_API_KEY="your-key"');
+    return false;
+  }
 }
 
 async function setupGeminiCLI() {
@@ -845,11 +877,19 @@ async function setupGeminiCLI() {
   const installed = installGeminiCLI();
 
   if (installed) {
-    showGeminiKeyInstructions();
+    const apiKey = await promptGeminiAPIKey();
+
+    if (apiKey) {
+      configureGeminiKey(apiKey);
+    } else {
+      console.log('\n  ℹ Skipped API key configuration');
+      console.log('  Set later: export GEMINI_API_KEY="your-key"');
+    }
   } else {
     console.log('\n📝 Manual installation steps:');
     console.log('  1. npm install -g @google/gemini-cli');
-    showGeminiKeyInstructions();
+    console.log('  2. Get API key: https://aistudio.google.com/apikey');
+    console.log('  3. export GEMINI_API_KEY="your-key"');
   }
 }
 

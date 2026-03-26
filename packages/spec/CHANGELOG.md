@@ -7,12 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.3] - 2026-03-26
 
-### Changed
-- Simplified Gemini API key setup to use environment variable instead of interactive prompt
-- Show clear instructions for manual key configuration after installation
-
 ### Fixed
-- Removed automatic key configuration that was launching Gemini CLI in interactive mode
+- Gemini API key prompt now writes directly to `~/.gemini/.env` file
+- Prevents launching Gemini CLI in interactive mode during installation
 
 ## [0.5.2] - 2026-03-26
 
