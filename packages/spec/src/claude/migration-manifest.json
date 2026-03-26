@@ -21,6 +21,7 @@
     "required": [
       "specs",
       "impact-analysis",
+      "inspector",
       "spec-init",
       "spec-requirements",
       "spec-design",
@@ -46,6 +47,7 @@
   },
   "runtime": {
     "files": [
+      "runtime.json",
       "status.cjs",
       "hooks/session.cjs",
       "hooks/agent.cjs",

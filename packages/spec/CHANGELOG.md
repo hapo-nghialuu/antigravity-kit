@@ -5,6 +5,73 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-03-26
+
+### Added
+- **hapo:inspector 2-phase approach** - Intelligent scope handling for broad requests
+  - Phase 1: Structure Scout discovers actual project layout before division
+  - Phase 2: Parallel Explore agents based on scout findings
+  - Auto-merge small scopes (<10 files), auto-split large scopes (>100 files)
+  - AskUserQuestion fallback for ambiguous structures
+  - Enhanced report format with Patterns section and Suggested Next Steps
+
+### Changed
+- hapo:inspector no longer rejects broad scopes - auto-divides intelligently instead
+
+## [0.5.5] - 2026-03-26
+
+### Fixed
+- Added missing `os` module import for API key configuration
+
+## [0.5.4] - 2026-03-26
+
+### Fixed
+- Gemini API key prompt now writes directly to `~/.gemini/.env` file
+- Prevents launching Gemini CLI in interactive mode during installation
+
+## [0.5.3] - 2026-03-26
+
+### Changed
+- Published version (skipped due to local testing)
+
+## [0.5.2] - 2026-03-26
+
+### Fixed
+- Corrected Gemini CLI package name from `@google/generative-ai-cli` to `@google/gemini-cli`
+
+## [0.5.1] - 2026-03-26
+
+### Fixed
+- Gemini CLI installation prompt now waits for user input (missing `await`)
+- Updated references from `hapo:inspect` to `hapo:inspector` in installer messages
+
+## [0.5.0] - 2026-03-26
+
+### Added
+- **hapo:inspector skill** - Fast codebase discovery using parallel agents
+  - Dual-mode support: internal (Explore agents) and external (Gemini CLI)
+  - SCALE-based routing (1-10 agents based on file count)
+  - Preflight scope gate to prevent broad scans
+  - Built-in no-scan lists for security
+  - 3-minute timeout per agent with skip-on-timeout
+  - Task registration for ≥3 agents
+  - 500-line file chunking strategy
+- **Gemini CLI auto-install** - Interactive setup during cafekit installation
+  - Prompts user to install gemini-cli
+  - API key configuration during setup
+  - Fallback to internal mode if skipped
+- **runtime.json configuration** - Centralized config for external tools
+  - Auto-installed to `.claude/runtime.json`
+  - Gemini model configuration
+  - Extensible for future external tools
+
+### Changed
+- **BREAKING:** Buid `hapo:inspector` for hapo-cafekit
+- Updated all downstream references in agents, commands, and skills
+
+### Fixed
+- Config path now uses `.claude/runtime.json` instead of project root
+
 ## [0.4.0] - 2026-03-25
 
 ### Added
