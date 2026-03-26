@@ -1,8 +1,8 @@
-# Dependency Scouting - Finding Affected Files
+# Dependency Inspection - Finding Affected Files
 
 Methods for finding and analyzing dependencies to determine impact scope.
 
-## Scouting Strategies
+## Inspection Strategies
 
 ### 1. Import Analysis (Direct Dependencies)
 
@@ -132,12 +132,17 @@ grep -r "as User" src/
 # src/components/UserCard.tsx:  props: { user: User }
 ```
 
-## Using /ck:scout for Parallel Scouting
+## Using /hapo:inspect for Dependency Inspection
 
-When multiple files change, use `/ck:scout` for parallel search:
+When multiple files change, use `/hapo:inspect` for scoped discovery first:
 
 ```
-/ck:scout Scout dependencies for changes.
+/hapo:inspect Inspect dependencies for these changes.
+
+Scope:
+- src/api/
+- src/utils/
+- prisma/
 
 Changed files:
 - src/api/auth.ts (authentication logic)
@@ -152,11 +157,7 @@ Find:
 5. Frontend components calling changed APIs
 6. Test files covering changed code
 
-Focus on:
-- Direct imports (import/require statements)
-- Function calls (grep for function names)
-- Type usage (TypeScript interfaces)
-- Integration points (API calls, DB queries)
+Keep scope narrow. Do not scan repo root.
 ```
 
 ## Dependency Graph
@@ -236,15 +237,15 @@ grep -r "useContext.*{Context}" src/
 grep -r "use{Store}" src/
 ```
 
-## Automated Scouting Script
+## Automated Inspection Script
 
 ```bash
 #!/bin/bash
-# scout-dependencies.sh
+# inspect-dependencies.sh
 
 CHANGED_FILE=$1
 
-echo "=== Scouting Dependencies for: $CHANGED_FILE ==="
+echo "=== Dependency inspection for: $CHANGED_FILE ==="
 echo ""
 
 # Extract module name
@@ -325,13 +326,13 @@ done
 ## Best Practices
 
 1. **Start with direct imports** - Easiest to find
-2. **Use parallel scouting** - For multiple files
+2. **Use parallel inspection** - For multiple files
 3. **Check integration points** - APIs, events, state
 4. **Verify test coverage** - Find test files
 5. **Document findings** - For test scenario generation
 
 ## Next Steps
 
-After scouting, proceed to:
+After inspection, proceed to:
 1. **Edge Case Identification** - Analyze risks in affected files
 2. **Test Scenario Generation** - Create tests for affected components
