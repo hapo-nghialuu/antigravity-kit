@@ -57,7 +57,7 @@ Before scanning with ANY mode (internal or external):
 
 ## Configuration
 
-Read from project root `config.json`:
+Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {
@@ -67,6 +67,8 @@ Read from project root `config.json`:
 ```
 
 Default model: `gemini-3-flash-preview`
+
+**Note:** This file is automatically installed when you run `npx @haposoft/cafekit`.
 
 ## Workflow
 

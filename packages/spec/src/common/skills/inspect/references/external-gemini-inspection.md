@@ -11,7 +11,7 @@ SCALE ≥ 6   → Use internal inspection instead
 
 ## Configuration
 
-Read from project root `config.json`:
+Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {
@@ -21,6 +21,8 @@ Read from project root `config.json`:
 ```
 
 Default model: `gemini-3-flash-preview`
+
+**Note:** This file is automatically installed when you run `npx @haposoft/cafekit`.
 
 ## When External Mode is Allowed
 
