@@ -31,35 +31,60 @@ Before scanning with ANY mode (internal or external):
 
 **When scope is too broad:**
 
-Instead of rejecting, **auto-divide** the scope into logical sub-scopes and spawn parallel Explore agents:
+Instead of rejecting, use a **2-phase approach**: first run a lightweight Structure Scout to understand the real layout, then divide work among parallel agents based on actual findings.
 
-1. **Analyze project structure** - Use `Glob` to discover top-level directories (src/, apps/, backend/, frontend/, packages/, etc.)
-2. **Auto-divide into sub-scopes** - Create 3-6 logical divisions based on:
-   - Top-level directories (src/, apps/, backend/)
-   - Key files (README.md, package.json, tsconfig.json)
-   - Monorepo structure (packages/*, apps/*)
-3. **Spawn parallel Explore agents** - One agent per sub-scope (SCALE 3-6 recommended)
-4. **Aggregate findings** - Collect results from all agents into unified report
-5. **Suggest next steps** - Based on findings, ask if user wants deeper investigation of specific areas
+### Phase 1 — Structure Scout (Single Agent, Run First)
 
-**Example auto-division:**
+Spawn **one dedicated scout agent** to map the top-level structure before any work is divided:
+
+1. **Discover top-level layout** - Use `Glob` / `LS` to list immediate children of the scope root:
+   - Top-level directories (src/, apps/, backend/, frontend/, packages/, etc.)
+   - Key config files (README.md, package.json, tsconfig.json, pyproject.toml, go.mod, etc.)
+   - Monorepo markers (packages/*, apps/*, lerna.json, pnpm-workspace.yaml, turbo.json)
+2. **Estimate sub-scope sizes** - For each discovered directory, do a rough file count (no deep read needed)
+3. **Return a division plan** - Scout outputs a structured list of logical sub-scopes (1-6), each with:
+   - Path or glob pattern
+   - Estimated file count
+   - Suggested focus area description
+
+> Wait for Scout to complete before proceeding to Phase 2.
+
+### Phase 2 — Parallel Explore Agents (Based on Scout Results)
+
+Use the Scout's division plan to spawn parallel agents — one per sub-scope:
+
+1. **Auto-divide into sub-scopes** - Follow Scout's plan, adjusted for:
+   - Merging sub-scopes that are too small (< 10 files)
+   - Splitting sub-scopes that are too large (> 100 files)
+2. **Spawn parallel Explore agents** - One agent per sub-scope (SCALE 3-6 recommended)
+3. **Aggregate findings** - Collect results from all agents into unified report
+4. **Suggest next steps** - Based on findings, ask if user wants deeper investigation of specific areas
+
+**Example flow:**
 ```
-User: "scan entire ~/Desktop/project project"
+User: "scan entire ~/Desktop/project"
 
-Auto-divide into:
-- Agent 1: ~/Desktop/project/README.md + package.json (overview)
-- Agent 2: ~/Desktop/project/src/ (main source)
-- Agent 3: ~/Desktop/project/apps/* (applications)
-- Agent 4: ~/Desktop/project/backend/ (backend services)
-- Agent 5: ~/Desktop/project/frontend/ (frontend code)
+Phase 1 — Scout discovers:
+  - README.md, package.json, turbo.json  → monorepo root
+  - packages/  → 3 sub-packages (~40 files each)
+  - apps/web/  → React frontend (~120 files)
+  - apps/api/  → NestJS backend (~80 files)
 
-Result: "This is a monorepo with 3 apps, NestJS backend, React frontend..."
-Follow-up: "Want to investigate deeper? Choose: backend API | frontend components | specific app"
+Scout outputs division plan:
+  - Scope A: root config files (README.md, package.json, turbo.json)
+  - Scope B: packages/* (shared libs)
+  - Scope C: apps/web/ (frontend)
+  - Scope D: apps/api/ (backend)
+
+Phase 2 — 4 agents run in parallel on Scope A–D
+
+Result: "This is a monorepo with 2 apps, NestJS backend, React frontend, 3 shared packages..."
+Follow-up: "Want to investigate deeper? Choose: backend API | frontend components | shared packages"
 ```
 
 **Fallback to AskUserQuestion:**
-- If auto-division is unclear (flat structure, no obvious divisions)
-- Use `AskUserQuestion` with 2-4 concrete scope suggestions
+- If Scout result is ambiguous (flat structure, no obvious divisions, < 3 distinguishable areas)
+- Use `AskUserQuestion` with 2-4 concrete scope suggestions derived from Scout findings
 - After user selects, re-invoke inspector with chosen scope
 
 ## Built-in No-Scan Guidance
