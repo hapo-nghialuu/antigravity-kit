@@ -13,7 +13,7 @@ argument-hint: [scope-or-prompt]
 
 Main agent deeply analyzes the scope to LIST all potential edge cases FIRST:
 - Read `codebase-summary.md` for context
-- Use `/scout:ext` to find relevant files
+- Use `/hapo:inspect ext` for scoped Gemini discovery; if external mode is unavailable or not appropriate, fall back to `/hapo:inspect` for scoped internal discovery
 - **Think exhaustively** about what could go wrong:
   - Null/undefined scenarios
   - Boundary conditions (off-by-one, empty, max values)

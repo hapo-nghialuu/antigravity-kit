@@ -59,7 +59,7 @@ Load `references/change-detection.md` to:
 - Classify changes (backend/frontend/database)
 - Assess risk level
 
-### 2. Scout Dependencies
+### 2. Inspect Dependencies
 
 Load `references/dependency-scouting.md` to:
 - Find files that import/use modified code

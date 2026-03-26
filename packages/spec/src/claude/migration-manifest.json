@@ -21,6 +21,7 @@
     "required": [
       "specs",
       "impact-analysis",
+      "inspect",
       "spec-init",
       "spec-requirements",
       "spec-design",
