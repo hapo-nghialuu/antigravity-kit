@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { execSync } = require('child_process');
 const packageJson = require('../package.json');
 
 function validateManifestV2(manifest) {
@@ -487,8 +488,8 @@ function copyPlatformFiles(platformKey, results, options = {}) {
     if (platformKey === 'claude') {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
-      // Antigravity also needs impact-analysis skill
-      requiredSkills = ['impact-analysis'];
+      // Antigravity also needs shared investigation and impact-analysis skills
+      requiredSkills = ['impact-analysis', 'debug'];
     }
 
     requiredSkills
@@ -769,6 +770,120 @@ function mergeClaudeSettings(platformKey, results, options = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// GEMINI CLI SETUP
+// ═══════════════════════════════════════════════════════════
+
+function checkGeminiCLI() {
+  try {
+    execSync('which gemini', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function installGeminiCLI() {
+  console.log('\n⚙ Installing gemini-cli...');
+  try {
+    execSync('npm install -g @google/generative-ai-cli', { stdio: 'inherit' });
+    console.log('  ✓ gemini-cli installed successfully');
+    return true;
+  } catch (error) {
+    console.log('  ✗ Failed to install gemini-cli automatically');
+    console.log('  Please run manually: npm install -g @google/generative-ai-cli');
+    return false;
+  }
+}
+
+async function promptInstallGemini() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('\n📦 Optional: Gemini CLI Installation');
+  console.log('  hapo:inspect with ext mode requires gemini-cli');
+  console.log('  • Install now: Auto-install and configure API key');
+  console.log('  • Skip: You can still use hapo:inspect in internal mode');
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Install gemini-cli? (Y/n): ', (answer) => {
+      rl.close();
+      const response = answer.trim().toLowerCase();
+      resolve(response === '' || response === 'y' || response === 'yes');
+    });
+  });
+}
+
+async function promptGeminiAPIKey() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('\n📝 Gemini API Key Configuration');
+  console.log('  Get your API key: https://aistudio.google.com/apikey');
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Enter your Gemini API key (or press Enter to skip): ', (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+function configureGeminiKey(apiKey) {
+  try {
+    execSync(`gemini config set-key ${apiKey}`, { stdio: 'inherit' });
+    console.log('  ✓ Gemini API key configured successfully');
+    return true;
+  } catch (error) {
+    console.log('  ✗ Failed to configure Gemini API key');
+    console.log('  Please run manually: gemini config set-key YOUR_API_KEY');
+    return false;
+  }
+}
+
+async function setupGeminiCLI() {
+  const hasGemini = checkGeminiCLI();
+
+  if (hasGemini) {
+    console.log('  ✓ gemini-cli already installed');
+    return;
+  }
+
+  const shouldInstall = await promptInstallGemini();
+
+  if (!shouldInstall) {
+    console.log('\n  ℹ Skipped gemini-cli installation');
+    console.log('  • hapo:inspect will work in internal mode (default)');
+    console.log('  • To install later: npm install -g @google/generative-ai-cli');
+    return;
+  }
+
+  console.log('\n⚙ Installing gemini-cli...');
+  const installed = installGeminiCLI();
+
+  if (installed) {
+    const apiKey = await promptGeminiAPIKey();
+
+    if (apiKey) {
+      configureGeminiKey(apiKey);
+    } else {
+      console.log('\n📝 Skipped API key configuration');
+      console.log('  Configure later with: gemini config set-key YOUR_API_KEY');
+    }
+  } else {
+    console.log('\n📝 Manual installation steps:');
+    console.log('  1. npm install -g @google/generative-ai-cli');
+    console.log('  2. Get API key: https://aistudio.google.com/apikey');
+    console.log('  3. gemini config set-key YOUR_API_KEY');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════
 
@@ -849,6 +964,9 @@ async function main() {
       results.targets.push(platform.commandsDir);
       console.log();
     }
+
+    // Setup Gemini CLI for hapo:inspect ext mode
+    setupGeminiCLI();
 
     // Note: CLAUDE.md and docs/ are generated via /docs init command
 
