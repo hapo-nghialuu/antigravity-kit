@@ -5,6 +5,36 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-26
+
+### Added
+- **hapo:inspector skill** - Fast codebase discovery using parallel agents
+  - Dual-mode support: internal (Explore agents) and external (Gemini CLI)
+  - SCALE-based routing (1-10 agents based on file count)
+  - Preflight scope gate to prevent broad scans
+  - Built-in no-scan lists for security
+  - 3-minute timeout per agent with skip-on-timeout
+  - Task registration for ≥3 agents
+  - 500-line file chunking strategy
+- **hapo:debug skill** - Structured incident investigation methodology
+  - 10 reference documents for systematic debugging
+  - Proof gate, cause chain analysis, containment strategies
+- **Gemini CLI auto-install** - Interactive setup during cafekit installation
+  - Prompts user to install gemini-cli
+  - API key configuration during setup
+  - Fallback to internal mode if skipped
+- **runtime.json configuration** - Centralized config for external tools
+  - Auto-installed to `.claude/runtime.json`
+  - Gemini model configuration
+  - Extensible for future external tools
+
+### Changed
+- **BREAKING:** Renamed `hapo:inspect` to `hapo:inspector` for clarity
+- Updated all downstream references in agents, commands, and skills
+
+### Fixed
+- Config path now uses `.claude/runtime.json` instead of project root
+
 ## [0.4.0] - 2026-03-25
 
 ### Added
