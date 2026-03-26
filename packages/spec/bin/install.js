@@ -816,34 +816,13 @@ async function promptInstallGemini() {
   });
 }
 
-async function promptGeminiAPIKey() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  console.log('\n📝 Gemini API Key Configuration');
-  console.log('  Get your API key: https://aistudio.google.com/apikey');
+function showGeminiKeyInstructions() {
+  console.log('\n📝 Gemini API Key Setup');
+  console.log('  1. Get your API key: https://aistudio.google.com/apikey');
+  console.log('  2. Set environment variable:');
+  console.log('     export GEMINI_API_KEY="your-api-key-here"');
+  console.log('  3. Add to your shell profile (~/.zshrc or ~/.bashrc) to persist');
   console.log();
-
-  return new Promise((resolve) => {
-    rl.question('Enter your Gemini API key (or press Enter to skip): ', (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-function configureGeminiKey(apiKey) {
-  try {
-    execSync(`gemini config set-key ${apiKey}`, { stdio: 'inherit' });
-    console.log('  ✓ Gemini API key configured successfully');
-    return true;
-  } catch (error) {
-    console.log('  ✗ Failed to configure Gemini API key');
-    console.log('  Please run manually: gemini config set-key YOUR_API_KEY');
-    return false;
-  }
 }
 
 async function setupGeminiCLI() {
@@ -863,23 +842,14 @@ async function setupGeminiCLI() {
     return;
   }
 
-  console.log('\n⚙ Installing gemini-cli...');
   const installed = installGeminiCLI();
 
   if (installed) {
-    const apiKey = await promptGeminiAPIKey();
-
-    if (apiKey) {
-      configureGeminiKey(apiKey);
-    } else {
-      console.log('\n📝 Skipped API key configuration');
-      console.log('  Configure later with: gemini config set-key YOUR_API_KEY');
-    }
+    showGeminiKeyInstructions();
   } else {
     console.log('\n📝 Manual installation steps:');
     console.log('  1. npm install -g @google/gemini-cli');
-    console.log('  2. Get API key: https://aistudio.google.com/apikey');
-    console.log('  3. gemini config set-key YOUR_API_KEY');
+    showGeminiKeyInstructions();
   }
 }
 

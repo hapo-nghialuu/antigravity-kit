@@ -5,6 +5,15 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-03-26
+
+### Changed
+- Simplified Gemini API key setup to use environment variable instead of interactive prompt
+- Show clear instructions for manual key configuration after installation
+
+### Fixed
+- Removed automatic key configuration that was launching Gemini CLI in interactive mode
+
 ## [0.5.2] - 2026-03-26
 
 ### Fixed
