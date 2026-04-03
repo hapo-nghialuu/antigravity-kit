@@ -1,53 +1,53 @@
-# Quy tắc và Tiêu chuẩn Lập trình (Development Rules)
+# Quy tắc Phát triển Code (Development Rules)
 
-**QUAN TRỌNG:** Tiến hành phân tích kho dữ liệu kỹ năng (skills catalog) để khởi kích các skill cần dùng tương ứng hỗ trợ quá trình công tác logic thực thi tasks. 
-**QUAN TRỌNG:** KHẮC CỐT ghi tâm thiết luật tối cao vạn năng nhen :  **YAGNI (Quăng chi xa! You Aren't Gonna Need It) - KISS (Triệt tiêu rườm rà hổng đáng! Keep It Simple, Stupid) - DRY (Bài trừ cóp nhặt lặp khuôn! Don't Repeat Yourself)**.
+**QUAN TRỌNG:** Phân tích danh mục kỹ năng (skills catalog) và chỉ kích hoạt các kỹ năng cần thiết cho tác vụ trong quá trình thực hiện.
+**QUAN TRỌNG:** Bạn LUÔN tuân thủ các nguyên tắc sau: **YAGNI (Bạn sẽ không cần đến nó) - KISS (Giữ cho nó đơn giản) - DRY (Không lặp lại chính mình)**
 
-## Đặc Khảo Hệ Luật Tổng Lĩnh (General)
-- **Quy Nhỡn Đặt danh Xưng Tên files:** Gõ phom rập khuôn kebab-case đặt danh cho Files. Tên gì sao cũng được miễn nó nêu lên nổi bật vai vế File để làm cái Cọng việc nhiệm vụ khỉ mốc gì - Dài sọc cũng hổng có ai khóc nha, chỉ cốt yếu lúc lũ LLMs chạy rẽ tool nhát gừng rà files Grep Tools nó dòm xéo qua tên cái nó biết rạch lõi cái File vứt cái Logic rứa ra trò cọng gì khỏi móc coi lõi content ruột file tốn sức. 
-- **Cách Canh Ngạch Mã Files Size Dài Lắn (File Size Management):** Gạn gom đè mức chỉ 200 dòng đong code mỗi cọng files gánh trọn vẹn context khéo gở mượt rẽ nhất : 
-  - Vác lưỡi búa xắn chẻ xẻ banh nhỏ vụn module Components to vĩ đại ra chia làm ốc phần nhỏ bé tập trung (focused).
-  - Tranh lấy cơ chế dâng composition vượt hẳn qua cản lấn cội gác xé thừa kế inheritance quật đổ ngạch complex widget.
-  - Đẩy ly rút rẽ ruột các mã chức năng xài chung tiện vặt (Utility functions) ra 1 con chi nhánh Modules đứng đơn độc riểng biệt.
-  - Vén đường đắp ngạch riêng cấu gánh các mô tả class chuyên Service class bao sọc làm lô cốt riêng ngự mảng business logic. 
-- Tìm ngóng mỏi mắt rập coi Doc tài liệu hã , Xài gọi "docs-seeker skill" (Ngòi lôi context7 reference móc vô lục mớ lôi docs sừng sổ nhất mới nhứt cho)
-- Triển skill "gh" tạt bash command vào nhịp đè thiết trị nhánh github chiêu trỏ nghen (Hỗ trợ kéo chọt pull github functions nhen).
-- Áp nẹp vồ móc db gõ móc "psql" bash luồng chọc móc sới dữ Database postgres check xéo debug nếu kẹt dính.
-- Moi móc chọt skill quẹo mang áo "ai-multimodal" lúc tịt miêu tả xài dòm nhận mớ ảnh/hình/Clip, mảng giấy ngợp trời.. . 
-- Quăng skill cọng dây "ai-multimodal" trói lấn "imagemagick" skill sinh xài đẻ hình clip đồ/Edit tài liệu đồ mướt nếu mắc vô nhen.
-- Quậy tung vấp ngã Sequential Thinking chỏ nách gép ngẫu skill trỏ ngòi rà gãy debug mảng mổ não tư duy, rọi quét system code coi lõi lật rác luồn gõ rối nha.
-- **[Q.TRỌNG]** Nương gót tuân sập chuẩn quy chiếu Base Cấu trúc/ Code tiêu chuẩn trong thư đồ/docs/ hằng chạy xây đắp nha tía ui.
-- **[Q.TRỌNG]** Hổng bao rớ thiết kế nhái dỏm đập khuôn mockup chạy đở simulate xạo xạo chi hết trơn ! Khẩy xắn tay Code rẽ là phải đánh lệnh CODE REAL mộc chạy THIỆT! Đi! 
+## Quy định chung (General)
+- **Đặt tên file (File Naming)**: Sử dụng kebab-case cho tên file với một tên có ý nghĩa mô tả mục đích của file. Tên file dài cũng không sao, chỉ cần đảm bảo khi các công cụ ngôn ngữ lớn (LLMs) đọc tên file bằng Grep hoặc các công cụ khác, chúng có thể hiểu ngay mục đích của file mà không cần phải đọc nội dung.
+- **Quản lý kích thước file (File Size Management)**: Giữ các file code riêng lẻ dưới 200 dòng để tối ưu hóa việc quản lý ngữ cảnh.
+  - Chia nhỏ các file lớn thành các thành phần (components) / modules nhỏ hơn, tập trung hơn.
+  - Ưu tiên mô hình lắp ghép đối tượng (composition) thay vì kế thừa (inheritance) đối với các widget phức tạp.
+  - Trích xuất các hàm tiện ích (utility functions) vào các module riêng biệt.
+  - Tạo các class Service chuyên dụng cho phần logic nghiệp vụ (business logic).
+- Khi tìm kiếm tài liệu, kích hoạt kỹ năng `docs-seeker` (tham chiếu `context7`) để khám phá các tài liệu mới nhất.
+- Sử dụng lệnh bash `gh` để tương tác với các tính năng của Github nếu cần.
+- Sử dụng lệnh bash `psql` để truy vấn cơ sở dữ liệu Postgres phục vụ xử lý lỗi (debugging) nếu cần.
+- Sử dụng kỹ năng `ai-multimodal` để mô tả chi tiết hình ảnh, video, tài liệu, v.v. nếu cần.
+- Sử dụng kỹ năng `ai-multimodal` và `imagemagick` để tạo và chỉnh sửa hình ảnh, video, tài liệu, v.v. nếu cần.
+- Sử dụng kỹ năng `sequential-thinking` và `debug` để tư duy tuần tự, phân tích code, gỡ lỗi, v.v. nếu cần.
+- **[QUAN TRỌNG]** Tuân thủ cấu trúc của codebase và các tiêu chuẩn code nằm trong `./docs` trong thời gian triển khai.
+- **[QUAN TRỌNG]** Không chỉ mô phỏng (simulate) mã hoặc làm giả dữ liệu (mocking), hãy luôn triển khai dòng code vận hành chân thực.
 
-## Mã Đo Đếm Lối Rèn Code Xịn Mịn - Code Quality Guidelines
-- Dòm lòi con mắt theo ngó form Cấu mã base thư mục + tiêu cự Code base tiêu chuẩn gót dấu nằm tại mớ directory './docs' .
-- Code bạ nhây dư dỏm đừng hở tí hằn hộc cào xé lượn Lint code quá lồng lộn dọa nạt bắt bẻ tẻ té. (Lấy độ mượt đắp nhao). **CHỈ RẠCH RA DUY 1 NGUYÊN TẮC TUÂN THEO ĐÁNH RỚT RÁC MẠ QUY BUỘC NGHẼN BỞI THÚI LỖI CÚ PHÁP (NO SYNTAX ERRORS) MỚI TẠC HỢP BUILD - COMPILE NHÁ !** 
-- Nhượng ưu tiên quyền chức tính ứng biến mượt xài ngon rầm rầm Functionality & Readability đứng đầu đội rác khuôn khổ cùm kẹp bó rào lề luật bó style enforcement ngặt cứng..
-- Ươm cấy mấy chuẩn hệ trích code dội mảng developer productivity đặng tạt gót ép dev mượt code dợ nhen.
-- Rải mã bắt thóp móc mảng bắt bắt "try catch / error handling" đi cọng ngạch bảo tiêu chốt vây kẹp rào security standards cho tía.
-- Ngóc đẩu trịch kêu agent - "code-reviewer" luồn rà test check diệt cỏ hậu mẻ đi chiu cắm Code build implementation gồ dội xong .
+## Hướng dẫn về Chất lượng Code (Code Quality Guidelines)
+- Đọc và làm theo cấu trúc codebase cũng như các chuẩn mã nguồn trong `./docs`.
+- Đừng quá khắt khe đối với việc rà soát định dạng code (code linting), nhưng **phải đảm bảo không có lỗi cú pháp (syntax errors) và code có thể được biên dịch (compilable)**.
+- Ưu tiên tính năng và tính dễ đọc hơn là áp dụng quy tắc phong cách và tùy chỉnh định dạng code nghiêm ngặt.
+- Áp dụng các tiêu chuẩn chất lượng code hợp lý nhằm đảm bảo nâng cao năng suất của nhà phát triển.
+- Sử dụng try catch để xử lý lỗi & bao phủ các tiêu chuẩn bảo mật cơ bản.
+- Sử dụng agent `reviewer` để đánh giá (review) code sau mọi lần tiến hành triển khai.
 
-## Lập Cố Luồng Tróc Vấn Giới Luật Commit Rà Đẩy code - Pre-commit/Push Rules
-- Thét rào múc chạy gút check dọng rách cặn quy luồn kiểm tra mã "linting " rồi mí móc rọt đẩy ệp commit Code lề lướt. 
-- Lặn đẩu dện xài chọc check chẻ run tests màng lót văng đi kịch Push. ( CẤM DẤM DÚI VIỆC NHÚNG TAY CHO RẤP RÚT NHAI ĐẠI LỜ ĐI BỌN LỖI CODE FAILED TEST CHO MẶC RÀO PHẮNG QUA CHUẨN BUILD/ CI GITHUB ACTIONS NGEN! DÍNH GHIM NGAY ĐÓ).
-- Gói cục thông điệp ghi danh commit chẽ tinh chỉnh rặt đập trung đúng thiết luồng actual changes thực thôi .
-- Cựt đục tuyệt tiệt cấm : Mang dấu xài lén dấm dỏi khoắng tạt mật tín nhạy cảm (Dotenvs tẹp bí mật file cấu rào API Key lõi / Mốc dậu User data Database / ..vv) ném cho đục vô rào cở ngỏ kho múc Remote git repoo ! 
-- Lấy búa ghi khắc lời dẫn commit bao chuyên gọt rữa sạch AI ref. Sử dạng Cấu nề chuẩn gạch conventional commit form lôi ghi gọn trịch . 
+## Các quy tắc trước khi Commit/Push (Pre-commit/Push Rules)
+- Chạy hệ thống linting trước khi đưa thành phần vào commit.
+- Chạy quá trình kiểm thử trước khi thực hiện push (KHÔNG ĐƯỢC lờ đi các bài test thất bại chỉ nhằm vượt ải build hoặc github actions).
+- Giữ các lượt commit thật sự tập trung vào những thay đổi code của riêng bản thân nó.
+- **KHÔNG ĐƯỢC** tiến hành commit và push các thông tin mang tính bảo mật (như file dotenv, API keys, thông tin cơ sở dữ liệu, v.v.) vào repository git!
+- Tạo commit messages một cách chuyên nghiệp, sạch sẽ mà không chứa chi tiết AI referrence trong đó. Hãy sử dụng định dạng commit quy ước chung (conventional commit format).
 
-##  Điều Lệnh Múc Mã Viết Implementation 
-- Đập Code Xịn rạng mượt Read/maintain đặng lọt đọc/ Gỡ rác bốc ngon dễ . 
--  Quy xụp kiến thiết theo quy xướng bộ pattern gốc trịch (architectural pattern). 
--  Viết móc feature phải quất nảy tiêu mã yêu cầu specs . 
--  Xử đẹp lán mịn mí ca kẹt hẻm ngạch (edge / rớt bung / / lỗi vỡ error scenarios). 
--  **DỨT TUYỆT KIẾN** không chẻ nẻ lén sinh dậu rào mọc file dỏm nâng cao, Ạp đè code cũ update trực chỏ thẳng giáp existing code files nhe.
+## Triển khai Code (Code Implementation)
+- Viết code thật sạch, dễ dàng đọc đọc và dễ duy trì.
+- Tuân theo các mô hình kiến trúc có sẵn.
+- Triển khai các tính năng đảm bảo đúng với đặc tả yêu cầu.
+- Xử lý các trường hợp cận biên (edge cases) và các trường hợp lỗi sẽ xảy ra.
+- **KHÔNG ĐƯỢC** phát sinh thêm các file nâng cấp, hãy áp dụng cập nhật vào các file nguồn hiện có.
 
-##  Cột Pháo Ném Trợ Ngắm Mảng Ảnh (Visual Aids) 
-- Kéo nãy `/ck:preview --explain` giải xéo những chùm code mớ quẩy không rõ nề rối nếp complex tịt logic. 
-- Xực xả chiêu `/ck:preview --diagram` sinh ra ập lên rào bản vác design System architectures / đường thông luồng cắn dính dắt vạch (DataFlow) 
-- Rớ chấu `/ck:preview --slides` chích rào móc giăng thuyết giảng dệt mảng móc lật lùi step by steps ( presentations slides views) 
-- Ặc ực thả`/ck:preview --ascii ` dòm lén mâm trăng thiết thiết biểu đồ trên text ASCII qua dòng chữ ở màn bash Terminal lỏm (KHÔNG ĐỀ NGHỊ QUA BROWSER SỚ LỚ). 
-- Xi nhang múc phụ da : cọc dính tham biến --html dzô mọi chiêu gen visual / thả dính bay file chạy đâm vọt Browser html code (trơn offline / ko xài vướng bận đòi web app Servers kẹp ngạch nhen )
-- Mảng Dây Nối Thiết Kịch Bàn (Plan ConText): Tàng thư đẻ mác Plan context xọc định danh móc ## Plan ConText. Luồng dệt Visual save lưu thẳng ổ `{plan_dir}/visuals/'. 
-- Hỏng móp ra con trạch cắm kế hoạch Kịch plan: Rẻ quay lưng nhét đỡ bộn vào lổ thủng 'plans/visuals/'
-- Chơi dóc đồ hoạ Mermaid ? xực cục lôi tool /mermaidjs-v11 chiêu móc skill ập v11 dệt rào syntax chuẫn xịn lặn gỡ Mermaid v11 đanh chấu nha. 
-- Qua dòng bộ primary-workflow.md xem gắp cái dăm chọc dòng Rule 6 nhen .
+## Hỗ trợ Trực quan Visual Aids
+- Cần sử dụng `/ck:preview --explain` khi giải thích các dòng lập trình không thân thuộc hoặc hệ logic chằng chéo phức tạp.
+- Sử dụng công cụ `/ck:preview --diagram` thay cho biểu đồ kiến trúc và dựng luồng đồ hình hóa.
+- Dùng lệnh `/ck:preview --slides` cho các slide thuyết trình giới thiệu từ đầu tới cuối.
+- Dùng hệ lệnh `/ck:preview --ascii` đối với biểu đồ hiển thị qua terminal (để không cần phần mềm trình duyệt).
+- Đưa thêm flag phụ `--html` vào mọi chiêu sinh visual để kết xuất cấu hình nội html mở thông qua trình duyệt (bên ngoài không cần truy nguồn tự máy chủ).
+- **Ngữ cảnh bản vẽ Kế hoạch:** Mạch kết hoạch phát sinh tự dội biến cắm mốc `## Plan Context` vào injection; thông tin hình lưu trữ cho biến sẽ nhét tại `<thư-mục-kế-hoạch>/visuals/` (`{plan_dir}/visuals/`).
+- Nếu đang trống lịch kế hoạch, quay lại lưu về `plans/visuals/`.
+- Đối với định dạng sơ đồ công cụ Mermaid, hãy dồn sử dụng thêm rào công cụ `/mermaidjs-v11` thay the cho rules ver cũ để xài v11.
+- Truy vấn file `primary-workflow.md` → Ở nhánh Bước 6 xem nội dung bổ sung.
