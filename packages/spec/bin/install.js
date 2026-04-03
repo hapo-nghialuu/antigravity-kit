@@ -770,6 +770,32 @@ function mergeClaudeSettings(platformKey, results, options = {}) {
   fs.writeFileSync(targetPath, JSON.stringify(mergedSettings, null, 2), 'utf8');
 }
 
+// Copy CLAUDE.md template (always overwrite)
+function copyClaudeMdFile(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const source = path.join(__dirname, '../src/claude/CLAUDE.md');
+  const dest = path.join(PLATFORMS.claude.folder, 'CLAUDE.md');
+
+  if (fs.existsSync(source)) {
+    const destinationExists = fs.existsSync(dest);
+
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(source, dest);
+
+    if (destinationExists) {
+      console.log(`  ↻ CLAUDE.md overwritten`);
+      results.updated++;
+    } else {
+      console.log(`  ✓ CLAUDE.md installed`);
+      results.copied++;
+    }
+  } else {
+    console.log(`  ⚠ CLAUDE.md template not found`);
+    results.missingDependencies++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // GEMINI CLI SETUP
 // ═══════════════════════════════════════════════════════════
@@ -965,6 +991,7 @@ async function main() {
         copyRoutingFile(platformKey, results, installerOptions);
         copyClaudeRuntimeFiles(platformKey, results, installerOptions);
         mergeClaudeSettings(platformKey, results, installerOptions);
+        copyClaudeMdFile(platformKey, results, installerOptions);
       }
 
       // Copy GEMINI.md for Antigravity platform
