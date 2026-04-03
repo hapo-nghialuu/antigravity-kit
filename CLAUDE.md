@@ -1,126 +1,93 @@
-# CafeKit
+# CLAUDE.md
 
-> AI Agent templates - Skills, Agents, and Workflows for enhanced coding assistance. See `.claude/ROUTING.md` for agent routing rules.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Role & Responsibilities
 
-## Project Overview
+Your role is to analyze user requirements, delegate tasks to appropriate sub-agents, and ensure cohesive delivery of features that meet specifications and architectural standards.
 
-CafeKit is a comprehensive AI coding assistant toolkit that provides structured workflows, skills, and templates for enhanced software development. It implements Spec-Driven Development (SDD) - a methodology that bridges the gap between natural language requirements and implementation through structured specifications.
+## Workflows
 
-The project supports both **Claude Code** (Anthropic) and **Antigravity** (Google) platforms.
+- Primary workflow: `./.claude/rules/primary-workflow.md`
+- Development rules: `./.claude/rules/development-rules.md`
+- Orchestration protocols: `./.claude/rules/orchestration-protocol.md`
+- Documentation management: `./.claude/rules/documentation-management.md`
+- And other workflows: `./.claude/rules/*`
 
----
+**IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
+**IMPORTANT:** DO NOT modify skills in `~/.claude/skills` directory directly. **MUST** modify skills in this current working directory. Unless you are asked to do so.
+**IMPORTANT:** You must follow strictly the development rules in `./.claude/rules/development-rules.md` file.
+**IMPORTANT:** Before you plan or proceed any implementation, always read the `./README.md` file first to get context.
+**IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
+**IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 
-## Tech Stack
+## Git
 
-| Layer | Technology |
-|-------|------------|
-| Web Framework | Next.js 16.1.3 |
-| UI Library | React 19.2.3 |
-| Styling | Tailwind CSS v4 |
-| Language | TypeScript 5.7.2 |
-| Package Manager | pnpm |
-| UI Components | @base-ui/react, lucide-react |
-| Content | MDX, next-mdx-remote, gray-matter |
-| Themes | next-themes |
+**DO NOT** use `chore` and `docs` in commit messages of file changes in `.claude` directory.
 
----
+## Hook Response Protocol
 
-## Project Structure
+### Privacy Block Hook (`@@PRIVACY_PROMPT@@`)
 
-```
-.
-├── .claude/                    # Claude Code configuration
-│   ├── commands/               # Slash commands (spec-init, spec-design, etc.)
-│   ├── skills/                 # Claude skills
-│   ├── scripts/                # Utility scripts
-│   └── ROUTING.md              # Agent routing rules
-├── .agent/                     # Antigravity configuration
-│   ├── agents/                 # Agent definitions
-│   ├── skills/                 # 40+ reusable skills
-│   ├── workflows/              # Workflow definitions
-│   ├── ARCHITECTURE.md         # Architecture docs
-│   └── CONVENTIONS.md          # Platform conventions
-├── cafekit-web/                # Documentation website (Next.js 16)
-│   ├── app/                    # Next.js app router
-│   ├── components/             # React components
-│   ├── content/docs/           # MDX documentation (en, vi)
-│   └── package.json
-├── packages/
-│   └── spec/                   # NPM package @haposoft/cafekit
-├── docs/                       # Project documentation
-│   ├── codebase-summary.md
-│   ├── project-overview-pdr.md
-│   ├── code-standards.md
-│   ├── system-architecture.md
-│   ├── design-guidelines.md
-│   ├── deployment-guide.md
-│   └── project-roadmap.md
-└── repomix-output.xml          # AI context file
+When a tool call is blocked by the privacy-block hook, the output contains a JSON marker between `@@PRIVACY_PROMPT_START@@` and `@@PRIVACY_PROMPT_END@@`. **You MUST use the `AskUserQuestion` tool** to get proper user approval.
+
+**Required Flow:**
+
+1. Parse the JSON from the hook output
+2. Use `AskUserQuestion` with the question data from the JSON
+3. Based on user's selection:
+   - **"Yes, approve access"** → Use `bash cat "filepath"` to read the file (bash is auto-approved)
+   - **"No, skip this file"** → Continue without accessing the file
+
+**Example AskUserQuestion call:**
+```json
+{
+  "questions": [{
+    "question": "I need to read \".env\" which may contain sensitive data. Do you approve?",
+    "header": "File Access",
+    "options": [
+      { "label": "Yes, approve access", "description": "Allow reading .env this time" },
+      { "label": "No, skip this file", "description": "Continue without accessing this file" }
+    ],
+    "multiSelect": false
+  }]
+}
 ```
 
----
+**IMPORTANT:** Always ask the user via `AskUserQuestion` first. Never try to work around the privacy block without explicit user approval.
 
-## Key Directories
+## Python Scripts (Skills)
 
-| Directory | Purpose |
-|-----------|---------|
-| `.claude/` | Claude Code commands and skills |
-| `.agent/` | Antigravity agents, skills, workflows |
-| `cafekit-web/` | Next.js documentation website |
-| `packages/spec/` | NPM package @haposoft/cafekit |
-| `docs/` | Project documentation |
+When running Python scripts from `.claude/skills/`, use the venv Python interpreter:
+- **Linux/macOS:** `.claude/skills/.venv/bin/python3 scripts/xxx.py`
+- **Windows:** `.claude\skills\.venv\Scripts\python.exe scripts\xxx.py`
 
----
+This ensures packages installed by `install.sh` (google-genai, pypdf, etc.) are available.
 
-## Quick Commands
+**IMPORTANT:** When scripts of skills failed, don't stop, try to fix them directly.
 
-| Task | Command |
-|------|---------|
-| Install dependencies | `pnpm install` |
-| Dev server (root) | `pnpm dev` |
-| Dev server (web) | `pnpm --filter cafekit-web dev` |
-| Build all | `pnpm build` |
-| Build web | `pnpm --filter cafekit-web build` |
-| Lint | `pnpm --filter cafekit-web lint` |
-| Publish package | `cd packages/spec && npm publish` |
+## [IMPORTANT] Consider Modularization
+- If a code file exceeds 200 lines of code, consider modularizing it
+- Check existing modules before creating new
+- Analyze logical separation boundaries (functions, classes, concerns)
+- Use kebab-case naming with long descriptive names, it's fine if the file name is long because this ensures file names are self-documenting for LLM tools (Grep, Glob, Search)
+- Write descriptive code comments
+- After modularization, continue with main task
+- When not to modularize: Markdown files, plain text files, bash scripts, configuration files, environment variables files, etc.
 
----
+## Documentation Management
 
-## Project Docs (On-demand)
+We keep all important docs in `./docs` folder and keep updating them, structure like below:
 
-| Doc | Purpose | Load when |
-|-----|---------|-----------|
-| `docs/codebase-summary.md` | Project overview | "summary", "overview" |
-| `docs/project-overview-pdr.md` | Product requirements | "requirements", "pdr" |
-| `docs/code-standards.md` | Coding conventions | "standards", "conventions" |
-| `docs/system-architecture.md` | Architecture | "architecture", "design" |
-| `docs/design-guidelines.md` | UI/UX standards | "design", "ui", "ux" |
-| `docs/deployment-guide.md` | Deployment | "deploy", "production" |
-| `docs/project-roadmap.md` | Roadmap | "roadmap", "future" |
+```
+./docs
+├── project-overview-pdr.md
+├── code-standards.md
+├── codebase-summary.md
+├── design-guidelines.md
+├── deployment-guide.md
+├── system-architecture.md
+└── project-roadmap.md
+```
 
----
-
-## Spec-Driven Development Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/spec-init` | Initialize feature specification |
-| `/spec-requirements` | Generate EARS-format requirements |
-| `/spec-design` | Create technical design |
-| `/spec-tasks` | Break down into implementable tasks |
-| `/code` | Implement approved tasks |
-| `/test` | Validate implementation |
-| `/review` | Review code quality |
-| `/spec-status` | Check spec progress |
-
----
-
-## Framework Reference
-
-See `.claude/ROUTING.md` for agent routing and framework rules.
-
----
-
-**Last Updated:** 2026-02-10
+**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./CLAUDE.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
