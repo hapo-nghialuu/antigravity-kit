@@ -796,6 +796,23 @@ function copyClaudeMdFile(platformKey, results, options = {}) {
   }
 }
 
+// Copy rules directory (always overwrite)
+function copyRulesDirectory(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const source = path.join(__dirname, '../src/claude/rules');
+  const dest = path.join(PLATFORMS.claude.folder, 'rules');
+
+  if (fs.existsSync(source)) {
+    copyRecursive(source, dest, { upgrade: true });
+    console.log(`  ↻ rules/ directory overwritten`);
+    results.updated++;
+  } else {
+    console.log(`  ⚠ rules/ directory not found`);
+    results.missingDependencies++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // GEMINI CLI SETUP
 // ═══════════════════════════════════════════════════════════
@@ -992,6 +1009,7 @@ async function main() {
         copyClaudeRuntimeFiles(platformKey, results, installerOptions);
         mergeClaudeSettings(platformKey, results, installerOptions);
         copyClaudeMdFile(platformKey, results, installerOptions);
+        copyRulesDirectory(platformKey, results, installerOptions);
       }
 
       // Copy GEMINI.md for Antigravity platform
