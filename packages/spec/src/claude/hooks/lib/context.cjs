@@ -524,7 +524,7 @@ function buildReminderContext({ sessionId, config, staticEnv, configDirName = '.
   const cfg = config || loadConfig({ includeProject: false, includeAssertions: false });
 
   // Resolve paths
-  const devRulesPath = resolveRulesPath('development-rules.md', configDirName);
+  const devRulesPath = resolveRulesPath('ai-dev-rules.md', configDirName);
   const catalogScript = resolveScriptPath('generate_catalogs.py', configDirName);
   const skillsVenv = resolveSkillsVenv(configDirName);
 

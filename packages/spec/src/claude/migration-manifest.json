@@ -52,6 +52,10 @@
       "hooks/session.cjs",
       "hooks/agent.cjs",
       "hooks/usage.cjs",
+      "hooks/privacy-block.cjs",
+      "hooks/inspector-block.cjs",
+      "hooks/rules.cjs",
+      "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",
       "hooks/lib/counter.cjs",
@@ -62,6 +66,6 @@
     ]
   },
   "settings": {
-    "template": "settings/status.settings.json"
+    "template": "settings/settings.json"
   }
 }

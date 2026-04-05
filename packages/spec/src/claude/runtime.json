@@ -1,5 +1,32 @@
 {
+  "privacyBlock": true,
+  "inspector": {
+    "enabled": true
+  },
   "gemini": {
     "model": "gemini-3-flash-preview"
-  }
+  },
+  "statusline": "full",
+  "statuslineColors": true,
+  "docs": {
+    "maxLoc": 800
+  },
+  "paths": {
+    "docs": "docs",
+    "plans": "plans"
+  },
+  "locale": {
+    "thinkingLanguage": null,
+    "responseLanguage": null
+  },
+  "skills": {
+    "research": {
+      "useGemini": true
+    }
+  },
+  "usage": {
+    "enabled": true
+  },
+  "hooks": {},
+  "assertions": []
 }

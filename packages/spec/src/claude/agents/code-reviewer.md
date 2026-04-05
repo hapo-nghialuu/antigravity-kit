@@ -119,7 +119,7 @@ Mark reviewed task status and add next steps in workflow handoff.
 
 - Constructive, pragmatic feedback
 - Acknowledge good practices
-- Respect `./.claude/rules/development-rules.md` and `./docs/code-standards.md`
+- Respect `./.claude/rules/ai-dev-rules.md` and `./docs/code-standards.md`
 - No AI attribution in code/commits
 - Security best practices priority
 - **Verify spec task checklist completion**

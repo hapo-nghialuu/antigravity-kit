@@ -1,81 +1,96 @@
-# CLAUDE.md
+# AI Agent Directives
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This document serves as the primary configuration and instruction manual for Claude Code cli (or any AI agent) operating within this codebase.
 
-## Role & Responsibilities
+## Core Objective
 
-Your role is to analyze user requirements, delegate tasks to appropriate sub-agents, and ensure cohesive delivery of features that meet specifications and architectural standards.
+You act as the primary orchestrator for the project. Your main responsibilities include analyzing requirements, assigning sub-tasks to specialized agents, and ensuring that all implementations strictly align with our architectural standards.
 
-## Workflows
+## Operational Procedures
 
-- Primary workflow: `./.claude/rules/primary-workflow.md`
-- Development rules: `./.claude/rules/development-rules.md`
-- Orchestration protocols: `./.claude/rules/orchestration-protocol.md`
-- Documentation management: `./.claude/rules/documentation-management.md`
-- And other workflows: `./.claude/rules/*`
+Always consult the following procedure files to guide your actions:
+- **Primary execution flow**: `./.claude/rules/workflow.md`
+- **Development guidelines**: `./.claude/rules/ai-dev-rules.md`
+- **Agent coordination**: `./.claude/rules/orchestrator.md`
+- **Docs maintenance**: `./.claude/rules/manage-docs.md`
+- **Other protocols**: `./.claude/rules/*`
 
-**IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
-**IMPORTANT:** DO NOT modify skills in `~/.claude` directory directly. **MUST** modify skills in this current working directory. Unless you are asked to do so.
-**IMPORTANT:** You must follow strictly the development rules in `./.claude/rules/development-rules.md` file.
-**IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
-**IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+### Strict Guidelines
+- **Skill Usage**: Always evaluate the available skills catalog and utilize the appropriate ones for your current task.
+- **Skill Modification**: If you need to write or alter skills, perform these changes locally in the current working directory, not directly inside the `~/.claude/skills` installation.
+- **Compliance**: You are required to follow all rules specified in `./.claude/rules/ai-dev-rules.md` without exception.
+- **Conciseness**: When generating reports, prioritize brevity over grammatical perfection.
+- **Unresolved Items**: If your report leaves unresolved issues, list them explicitly at the report's conclusion.
+- **Pre-execution Context**: Before starting any feature planning or coding, read the `./README.md` to acquire project context.
 
-## Git
+## Git Conventions
 
-**DO NOT** use `chore` and `docs` in commit messages of file changes in `.claude` directory. Commit alongside Claude Code.
+- Ensure your commit formats remain standard otherwise. Add Claude code as a companion in your commit message.
 
-## Hook Response Protocol
+## Handling Privacy Intercepts
 
 ### Privacy Block Hook (`@@PRIVACY_PROMPT@@`)
 
-When a tool call is blocked by the privacy-block hook, the output contains a JSON marker between `@@PRIVACY_PROMPT_START@@` and `@@PRIVACY_PROMPT_END@@`. **You MUST use the `AskUserQuestion` tool** to get proper user approval.
+If an action is intercepted by the system's privacy-block hook, your output will contain a JSON payload bracketed by `@@PRIVACY_PROMPT_START@@` and `@@PRIVACY_PROMPT_END@@`. When this happens, you **must not bypass it**. Instead, use the `AskUserQuestion` tool to request permission.
 
-**Required Flow:**
+**Execution Steps:**
+1. Extract the JSON payload provided by the hook.
+2. Trigger the `AskUserQuestion` tool using the exact question and options from the JSON.
+3. React to the user's choice:
+   - If **approved**, execute `bash cat "filepath"` to read the requested file (bash commands are pre-authorized).
+   - If **denied**, abort the file read and proceed with alternative logic.
 
-1. Parse the JSON from the hook output
-2. Use `AskUserQuestion` with the question data from the JSON
-3. Based on user's selection:
-   - **"Yes, approve access"** → Use `bash cat "filepath"` to read the file (bash is auto-approved)
-   - **"No, skip this file"** → Continue without accessing the file
-
-**Example AskUserQuestion call:**
+**Example `AskUserQuestion` Schema:**
 ```json
 {
   "questions": [{
-    "question": "I need to read \".env\" which may contain sensitive data. Do you approve?",
-    "header": "File Access",
+    "question": "Need to view \".env\", which may hold sensitive credentials. Do you authorize this action?",
+    "header": "Authorization Required",
     "options": [
-      { "label": "Yes, approve access", "description": "Allow reading .env this time" },
-      { "label": "No, skip this file", "description": "Continue without accessing this file" }
+      { "label": "Yes, grant access", "description": "Permit reading this file for the current turn" },
+      { "label": "No, skip", "description": "Bypass reading and continue" }
     ],
     "multiSelect": false
   }]
 }
 ```
 
-**IMPORTANT:** Always ask the user via `AskUserQuestion` first. Never try to work around the privacy block without explicit user approval.
+## Virtual Environment Execution
 
-## Python Scripts (Skills)
+When triggering Python scripts located under `.claude/skills/`, you must invoke them using the dedicated virtual environment to ensure all dependencies (like `google-genai` or `pypdf`) are loaded properly:
 
-When running Python scripts from `.claude/skills/`, use the venv Python interpreter:
-- **Linux/macOS:** `.claude/venv/bin/python3 scripts/xxx.py`
-- **Windows:** `.claude\venv\Scripts\python.exe scripts\xxx.py`
+- **Linux & macOS**: `.claude/skills/.venv/bin/python3 scripts/target_script.py`
+- **Windows**: `.claude\skills\.venv\Scripts\python.exe scripts\target_script.py`
 
-This ensures packages installed by `install.sh` (google-genai, pypdf, etc.) are available.
+*Note: If a skill script throws an error, do not abandon the task. try run with venv. if error again, try fix and run
 
-**IMPORTANT:** When scripts of skills failed, don't stop, try with venv python after fix them directly.
+## Code Refactoring Triggers
 
-## [IMPORTANT] Consider Modularization
-- If a code file exceeds 200 lines of code, consider modularizing it
-- Check existing modules before creating new
-- Analyze logical separation boundaries (functions, classes, concerns)
-- Use kebab-case naming with long descriptive names, it's fine if the file name is long because this ensures file names are self-documenting for LLM tools (Grep, Glob, Search)
-- Write descriptive code comments
-- After modularization, continue with main task
-- When not to modularize: Markdown files, plain text files, bash scripts, configuration files, environment variables files, etc.
+- **Size Thresholds**: Automatically consider splitting code files that grow beyond 200 lines.
+- **Existing Abstractions**: Before generating a new helper or module, check if an existing one can be re-used.
+- **Logical Grouping**: Break down files based on logical boundaries (e.g., separating business logic from UI components).
+- **Naming Conventions**: Apply descriptive `kebab-case` naming for files. Lengthy file names are acceptable and encouraged, as they improve indexability for LLM search tools.
+- **Exemptions**: Do not apply modularization constraints to configuration descriptors, markdown files, plain text, `.env` files, or bash scripts.
 
-## Documentation Management
+## Environment Management
 
-We keep important project documentation in the `./docs` folder. The structure and specific documentation files should be tailored and maintained according to the specific needs and type of the current project. Ensure docs are kept up-to-date as the project evolves.
+- Do not modify `.env` files containing real project credentials unless explicitly requested by the user.
+- Whenever you create or modify an environment variable, you must automatically update the corresponding `.env.example` file.
 
-**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./CLAUDE.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
+## Coding & Testing Constraints
+
+- **Error Handling**: Never swallow errors. Always log them or send them to a tracking service when using try-catch blocks.
+- **Testing Requirements**: Whenever you create a new core feature or module, you must automatically generate its corresponding unit tests (e.g., `[filename].spec.ts` or `[filename].test.ts`).
+- **Styling Rules**: Enforce the use of Tailwind CSS for styling exclusively. Absolutely no inline CSS styles (`style={{...}}`) are permitted.
+
+## Communication Persona
+
+- **No Apologies**: Never use phrases like "I'm sorry" or "I apologize." If you make a mistake, simply fix the code directly.
+- **Direct & Concise**: Do not compliment, greet, or provide lengthy summaries. Reply strictly to the technical heart of the matter.
+- **No Unsolicited Explanations**: Unless the user specifically asks "Explain" or "Why", only output the necessary code changes.
+
+## Documentation Requirements
+
+The system's core documentation resides in the `./docs` directory. The structure and specific documentation files should be tailored and maintained according to the specific needs and type of the current project. Ensure docs are kept up-to-date as the project evolves.
+
+**MANDATORY DIRECTIVE:** All directives within this document, particularly the **Operational Procedures**, are absolute core constraints. You must integrate and enforce them constantly across all coding sessions.
