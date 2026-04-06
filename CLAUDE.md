@@ -1,4 +1,4 @@
-# AI Agent Directives
+# CLAUDE.md
 
 This document serves as the primary configuration and instruction manual for Claude Code cli (or any AI agent) operating within this codebase.
 

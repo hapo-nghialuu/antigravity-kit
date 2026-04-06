@@ -2,8 +2,11 @@
   "feature_name": "{{FEATURE_NAME}}",
   "created_at": "{{TIMESTAMP}}",
   "updated_at": "{{TIMESTAMP}}",
-  "language": "en",
+  "language": "vi",
   "phase": "initialized",
+  "priority": "P2",
+  "effort": null,
+  "tags": [],
   "approvals": {
     "requirements": {
       "generated": false,
@@ -24,6 +27,30 @@
     "out_of_scope": [],
     "expansion_policy": "requires-user-approval"
   },
+  "dependencies": {
+    "blockedBy": [],
+    "blocks": []
+  },
+  "progress": {
+    "init": "done",
+    "requirements": "pending",
+    "research": "pending",
+    "design": "pending",
+    "tasks": "pending",
+    "code": "pending",
+    "test": "pending",
+    "review": "pending"
+  },
+  "timestamps": {
+    "init": "{{TIMESTAMP}}",
+    "requirements_done": null,
+    "research_done": null,
+    "design_done": null,
+    "tasks_done": null,
+    "code_done": null,
+    "test_done": null,
+    "review_done": null
+  },
   "design_context": {
     "discovery_mode": null,
     "discovery_reason": null,
@@ -37,5 +64,3 @@
   },
   "ready_for_implementation": false
 }
-
-
