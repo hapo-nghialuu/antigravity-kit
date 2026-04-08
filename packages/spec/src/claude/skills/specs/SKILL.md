@@ -150,20 +150,16 @@ Load: `references/scope-inquiry.md`
   - `expansion_policy`: `requires-user-approval`
 - Do NOT generate requirements, design, or tasks at this step
 
-### Step 5: Requirements
+### Step 5: Requirements & Research
 - Read `spec.json` — stop if init hasn't completed
 - Stop if requirements already exist, unless user wants to regenerate
 - Respect `scope_lock` — keep new requirements within `in_scope`
 - Analyze existing codebase if this is an enhancement (not greenfield)
+- **MANDATORY Research:** Spawn `researcher` subagent to gather best practices, documentation, and technical foundation before detailing requirements. Use `Task(subagent_type="researcher", prompt="Research [feature]", description="Research")`.
 - Write requirements in **EARS** format (see `rules/ears-format.md`)
 - Each requirement gets a unique numeric ID
+- Record any findings in `research.md` from template `templates/research.md`
 - Update `spec.json` phase + timestamps
-
-**If deep research is needed:**
-Load: `references/research-strategy.md`
-- Spawn researcher agents (max 2, parallel)
-- Use scout to explore codebase
-- Record findings in `research.md` from template `templates/research.md`
 
 ### Step 6: Design
 - Read `spec.json` — stop if requirements aren't ready
