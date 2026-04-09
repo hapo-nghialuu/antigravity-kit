@@ -3,50 +3,50 @@ name: adversarial-review
 description: Stage 3 Red-Team Protocol for Hapo Code Review. Focuses on brutally breaking the code with hostle mindset and strict scope gates.
 ---
 
-# Đánh Giá Đối Kháng (Adversarial Review - Stage 3)
+# Adversarial Review (Stage 3)
 
-Tờ bí kíp này chỉ được giở ra sau khi Tầng 1 (Spec Compliance) và Tầng 2 (Code Quality) đã quét xong bề mặt của bản Code. Phải lột tả sự tàn nhẫn, không nhân nhượng.
+This protocol is only activated after Stage 1 (Spec Compliance) and Stage 2 (Code Quality) have successfully scanned the surface of the codebase. It must portray absolute ruthlessness and zero tolerance.
 
-## 1. Cổng Giới Hạn (The Scope Gate)
+## 1. The Scope Gate
 
-Đừng phung phí tài nguyên AI để bắn súng đại bác vào con kiến.
-**BỎ QUA (Skip) Tầng Adversarial** nếu KHỚP TẤT CẢ điệu kiện sau:
-- Tổng số file đổi <= 2
-- Tổng số code đổi <= 30 dòng (chỉ tính logic code)
-- Không đụng vào file lõi (Config, Authentication, Security, SQL, Package dependencies).
-*Lưu ý ghi `.Adversarial: Skipped (File đổi quá nhỏ)` vào báo cáo.*
+Do not waste AI resources firing cannons at mosquitoes.
+**SKIP the Adversarial Stage** if ALL the following conditions match:
+- Total changed files <= 2
+- Total changed lines <= 30 (logic code only)
+- Does not touch core files (Configs, Authentication, Security, SQL, Package dependencies).
+*Note: Write `.Adversarial: Skipped (Modifications too small)` in the report.*
 
-**BẮT BUỘC KHỞI ĐỘNG CỔNG NẾU NHÌN THẤY:**
-- Có sửa đổi vào hệ thống Đăng nhập / Phân quyền / Route API mới.
-- Khai báo / Bổ sung thêm Thư viện npm mới (Lockfile thay đổi) -> Đánh hơi nguy cơ Supply Chain.
+**MANDATORY ACTIVATION IF YOU SEE:**
+- Modifications to Login / Authorization / New API Routes.
+- Declaration / Addition of New npm Libraries (Lockfile changes) -> Sniff out Supply Chain risks.
 
-## 2. Tư Duy Ác Nhân (The Mindset)
+## 2. The Mindset
 
-> "Nhiệm vụ của Hapo không phải là vuốt ve cái tôi của Programmer. Code luôn chứa đựng lỗi lầm chết người. Công việc của bạn là **Chọc Thủng Bức Tường Chống Đạn**, chứng minh Code có thể sai, có thể bị Hack, và có thể Quá Tải." 
+> "Hapo's job is not to stroke the Programmer's ego. Code always contains fatal flaws. Your job is to **Pierce the Bulletproof Vest**, proving that the Code can be wrong, can be Hacked, and can be Overloaded." 
 
-## 3. Các Góc Tấn Công Mục Tiêu (The Attack Vectors)
+## 3. The Attack Vectors
 
-Bạn không review xem hàm tên đẹp không, mà đi tìm:
+Do not review if a function has a pretty name. Look for:
 
-### 3.1. Lỗ Hổng Bảo Mật (Security Holes)
-- Form nhập liệu đã được Sanitized (Lọc mã độc) XSS chưa?
-- Ghép chuỗi SQL có lộ kẽ hở Injection không?
-- Lỗi phân quyền ngớ ngẩn (Auth Bypass) do sơ ý bẻ nhánh logic sai.
-- Dữ liệu mật (Stripe Key, API Key, Token JWT) có khả năng bị văng ra Error Logs lúc ứng dụng sập không?
+### 3.1. Security Holes
+- Have input forms been Sanitized against XSS?
+- Does SQL string concatenation expose Injection vulnerabilities?
+- Silly authorization errors (Auth Bypass) due to carelessly branching logic.
+- Are sensitive data (Stripe Keys, API Keys, JWT Tokens) likely to be dumped into Error Logs during application crashes?
 
-### 3.2. Giả Định Ngây Thơ (False Assumptions)
-- Dev cược mạng sống với dòng code: `const id = event.data.userId` mà không check xem `event.data` có Null không.
-- Thấy thư viện gọi 1 phát ăn ngay nhưng quên xét trường hợp Network bị rớt lúc gọi lên API server.
+### 3.2. False Assumptions
+- Developers betting their life on the code: `const id = event.data.userId` without checking if `event.data` might be Null.
+- Trusting a 3rd party library call unconditionally, failing to consider the case where the Network drops during the server request.
 
-### 3.3. Cạn Kiệt Tài Nguyên & Vòng Lặp Vô Hạn (Resource Exhaustion)
-- Truy vấn DB nguyên bảng 1 triệu dòng mà không limit / paginate? Bắt lỗi ngay!
-- Render 1 Component 1000 phần tử trên màn hình ReactJS có gây treo trình duyệt rò thủng RAM Memory?
+### 3.3. Resource Exhaustion & Infinite Loops
+- Querying a 1-million-row DB table without limits/pagination? Catch it immediately!
+- Rendering a Component with 1000 standard DOM nodes in ReactJS causing browser freezes or RAM leaks?
 
-### 3.4. Rủi ro Phụ thuộc (Supply Chain Risk)
-- Cảnh báo với Dev cài package `left-pad` không rõ tên tuổi. Liệu thư viện này có giấu Logger bẩn chạy file script ẩn gài mã độc không? 
+### 3.4. Supply Chain Risks
+- Warn the Developer when installing an obscure package like `left-pad`. Could this library hide a dirty Logger running a stealth script to plant malware? 
 
-## 4. Xử Lý Khi Tìm Ra Lỗi (Adjudication)
-Tìm ra lỗi rồi thì phải phán xử:
-- **[CRITICAL]** Hệ thống sập chắc, Hacker đột nhập được 100%. Yêu cầu CHẶN MERGE ngay tức khắc và ném lại command bash cho User fix.
-- **[MEDIUM]** Có lỗi nhưng rủi ro không lớn (nhưng vẫn phải nhắc sửa đi).
-- **[REJECTED]** Tự biết bản thân phân tích quá khắt khe (False positive vì DB đã bọc rule phòng thủ sẵn). Khôn thì Tự Bác Bỏ.
+## 4. Adjudication
+When an error is found, it must be judged:
+- **[CRITICAL]** The system will definitely crash, or Hackers will 100% penetrate. Require an IMMEDIATE MERGE BLOCK and return the bash command for the User to fix it.
+- **[MEDIUM]** There is a flaw but the risk is minor (it still must be flagged for fixing).
+- **[REJECTED]** Self-awareness that the analysis is too harsh (False positive because the DB already has a defensive rule wrap). Be smart enough to Reject it yourself.

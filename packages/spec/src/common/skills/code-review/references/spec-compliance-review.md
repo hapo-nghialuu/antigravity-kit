@@ -3,33 +3,33 @@ name: spec-compliance-review
 description: Hapo native protocol for verifying core implementation requirements using multimodal visual validation via llm-moe.
 ---
 
-# Thẩm Định Đặc Tả (Spec Compliance)
+# Spec Compliance Review (Stage 1)
 
-Code chạy mượt, Clean Code, Performance cao... nhưng KHÔNG ĐÚNG YÊU CẦU thì mã nguồn đó vẫn là RÁC. Bước này đóng vai trò chốt chặn xem Dev có làm đúng thiết kế không trước khi soi xét chất lượng code.
+Code that runs smoothly, follows Clean Code principles, and has high performance is still USELESS if it does not meet the requirements. This stage acts as a gatekeeper to ensure the Developer has followed the design specifications before assessing code quality.
 
-## 1. Mục Tiêu (The Goal)
-- Chống "cầm đèn chạy trước ô tô": Dev tự ý bịa thêm tính năng không có trong tài liệu.
-- Chống "rớt não": Dev code rớt một yêu cầu logic nghiệp vụ cốt lõi.
-- Đảm bảo Giao diện Khớp hoàn hảo với Bản vẽ.
+## 1. Goal
+- Prevent "feature creep": Developers arbitrarily adding unrequested features.
+- Prevent "dropped requirements": Developers forgetting core business logic requirements.
+- Ensure the User Interface perfectly matches the Design mockups.
 
-## 2. Quy Trình Triệu Hồi (Multimodal Invocation Process)
+## 2. Multimodal Invocation Process
 
-Đừng review bằng mắt chữ thông thường nếu dự án có đính kèm Visual Specs (Hình ảnh, Layout, PDF).
+Do not attempt a standard text-based review if the project includes Visual Specs (Images, Layouts, PDFs).
 
-**Thuật toán Đánh Hơi Spec:**
-1. Tra cứu xem khu vực `.specs/`, lệnh của người dùng hoặc vé Jira có đính kèm file Ảnh (`.png`, `.jpg`, `.svg`) hay Tài liệu (`.pdf`) không.
-2. Nếu CÓ: LẬP TỨC dừng việc soi Code tĩnh. Gửi toàn bộ file Frontend vừa code / Logic vừa viết kèm với cái Ảnh/PDF đó sang **cổng phân tích của `hapo:llm-moe`**.
-   - *Lệnh yêu cầu:* `hapo:llm-moe` ơi, hãy nhìn bản thiết kế này, so sánh nó với logic/style mà Code đang miêu tả xem có sai lệch Layout/Logic gì không.
-3. Nếu KHÔNG (chỉ có Markdown Spec): Trực tiếp đọc Spec và rút trích các gạch đầu dòng Requirement ra soi từng file thay đổi.
+**Spec Detection Algorithm:**
+1. Check if the `.specs/` directory, user instructions, or Jira tickets contain attached Image files (`.png`, `.jpg`, `.svg`) or Documents (`.pdf`).
+2. If YES: IMMEDIATELY halt static code analysis. Delegate the generated Frontend code / Logic code along with the Image/PDF to the **`hapo:llm-moe` analysis gateway**.
+   - *Prompt:* "Hey `hapo:llm-moe`, please look at this design mockup/document and compare it with the layout/logic described in this Code. Are there any discrepancies?"
+3. If NO (Markdown Spec only): Read the Spec directly and extract the requirement bullets to verify against the changed files.
 
-## 3. Thang Phán Quyết (The Verdicts)
+## 3. Verdict Scale
 
-Mỗi Requirement trong Spec phải trả về 1 trong 3 trạng thái:
-- `[PASS]` Đã Implement đầy đủ. Đi tiếp sang Code Quality.
-- `[MISSING]` Bỏ quên tính năng. Ép DEV phải quay đầu bổ sung liền (BLOCK MERGE).
-- `[EXTRA]` Code phình to ra những tính năng tự phát không có trong thẻ Spec. Nếu không giải trình được tính hợp lý -> Đánh Trượt.
-- `[VISUAL_MISMATCH]` (Với UI Design): Báo cáo từ `llm-moe` chỉ ra màn hình này sẽ vỡ layout hoặc sai chuẩn Design System.
+Each Requirement in the Spec must return 1 of 3 states:
+- `[PASS]` Fully implemented. Proceed to Code Quality Review.
+- `[MISSING]` Forgotten feature. Force the Developer to add it immediately (BLOCK MERGE).
+- `[EXTRA]` The code has bloated with spontaneous features not in the spec card. If unjustified -> FAIL.
+- `[VISUAL_MISMATCH]` (For UI Design): The report from `llm-moe` indicates this screen will break layout or violate the Design System.
 
-## 4. Dấu Hiệu Vi Phạm (Red Flags)
-- Khen "Code sạch đẹp" mà không đo lường Requirement.
-- Nghĩ rằng Design Images chỉ để trưng bày mà không có giá trị kiểm duyệt.
+## 4. Red Flags
+- Praising "Clean Code" without measuring against Requirements.
+- Assuming Design Images are just for display and hold no validation value.
