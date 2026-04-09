@@ -159,7 +159,7 @@ Combine results from all agents:
 ## Scope Discipline
 
 - Start from concrete directories, not repo root
-- Prefer scope like `packages/spec/src/common/skills/**/*.md` over `**/*.md`
+- Prefer scope like `packages/spec/src/claude/skills/**/*.md` over `**/*.md`
 - Skip `NO_SCAN_PATHS` from SKILL.md
 - Avoid content matching `NO_SCAN_CONTENT_HINTS`
 - If request still broad, stop and narrow before continuing

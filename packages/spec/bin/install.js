@@ -389,7 +389,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
   // Source directories - support different subfolder names per platform
   const sourceSubdir = platform.sourceSubdir || 'commands';
   const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
-  const skillsSourceDir = path.join(__dirname, '../src/common/skills');
+  const skillsSourceDir = path.join(__dirname, '../src/claude/skills');
   const agentsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/agents`);
 
   // Create directories
