@@ -11,10 +11,7 @@
       "spec-tasks.md",
       "spec-status.md",
       "code.md",
-      "test.md",
-      "review.md",
-      "review/codebase.md",
-      "review/codebase/parallel.md"
+      "test.md"
     ]
   },
   "skills": {
@@ -28,7 +25,7 @@
       "spec-tasks",
       "code",
       "test",
-      "review",
+      "code-review",
       "llm-moe"
     ]
   },

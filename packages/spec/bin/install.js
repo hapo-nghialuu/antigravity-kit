@@ -58,21 +58,21 @@ const DEPENDENCY_TEMPLATES = {
     claude: {},
     antigravity: {
       'code.md': `---
-description: Implement approved work from specification tasks and then hand off to test and review.
+description: Implement approved work from specification tasks and then hand off to test and hapo:code-review.
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash
 argument-hint: <feature-name>
 ---
 
-# /code - Implement from spec tasks
+# /code
 
 Use this workflow after /spec-tasks.
 
 1. Read .specs/$ARGUMENTS/tasks.md and identify the next pending task.
 2. Implement only that task following project standards.
 3. Run /test.
-4. Run /review.
+4. Run /hapo:code-review.
 
-Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /review
+Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /hapo:code-review
 `,
       'test.md': `---
 description: Run project tests and report failures concisely.
@@ -88,22 +88,6 @@ Run the project's test command and report:
 - root cause hints
 - next fix action
 `,
-      'review.md': `---
-description: Review recent code changes for quality, security, and maintainability.
-allowed-tools: Bash, Read, Grep, Glob
-argument-hint: [scope]
----
-
-# /review
-
-Review recent code changes. Prioritize:
-- correctness
-- security
-- regressions
-- maintainability
-
-Output findings by severity and include concrete fixes.
-`
     }
   },
   agents: {
@@ -370,9 +354,6 @@ function getPlatformSpecFiles(platformKey) {
       'spec-status.md',
       'code.md',
       'test.md',
-      'review.md',
-      'review/codebase.md',
-      'review/codebase/parallel.md',
       'docs.md'
     ];
   }
@@ -1061,7 +1042,7 @@ async function main() {
       }
     }
 
-    console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - review');
+    console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - code-review');
     if (!installerOptions.upgrade) {
       console.log('  3. To refresh managed templates later, run installer with --upgrade');
     }

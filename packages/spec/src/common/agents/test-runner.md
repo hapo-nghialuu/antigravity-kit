@@ -115,7 +115,7 @@ Assign category 1–14. Never lump failures into "unknown".
 - Screenshots saved: [paths]
 
 ### Action
-→ [PASS] Proceed. Ready for hapo:review.
+→ [PASS] Proceed. Ready for hapo:code-review.
 → [FAIL] Return to god-developer: [list specific files/functions to fix]
 → [PARTIAL] Proceed. Coverage gaps flagged: [list]
 → [NO_TESTS] User must configure test runner first.

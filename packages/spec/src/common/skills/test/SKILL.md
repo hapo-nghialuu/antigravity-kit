@@ -8,7 +8,7 @@ version: 2.0.0
 # Hapo Test — Verify Implementation Quality
 
 Run the project's test suite, analyze results, and return a structured verdict.
-Designed to work **after `hapo:code`** and to run **in parallel with `hapo:review`** during the `hapo:develop` Quality Gate.
+Designed to work **after `hapo:code`** and to run **in parallel with `hapo:code-review`** during the `hapo:develop` Quality Gate.
 
 **Principles:** Fail-fast | Blast-radius scoping | Zero hidden failures | No mocking to pass
 
@@ -44,7 +44,7 @@ flowchart TD
     F --> H[Phase 3: Verdict]
     G --> H
     H --> I[Phase 4: Sync Memory]
-    I -->|PASS| J[Hand off to hapo:review]
+    I -->|PASS| J[Hand off to hapo:code-review]
     I -->|FAIL| K[Load failure-triage.md → classify → escalate]
 ```
 
@@ -110,7 +110,7 @@ Return a **structured verdict** (required format — not free-form prose):
 - Screenshots: [paths]
 
 ### Action
-- PASS → Proceed. Hand off to hapo:review.
+- PASS → Proceed. Hand off to hapo:code-review.
 - FAIL → [list specific fixes needed] → Return to god-developer.
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
@@ -132,7 +132,7 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 | Skill / Agent | Direction | Role |
 |---|---|---|
 | `hapo:code` | → calls hapo:test | Triggers test after implementation |
-| `hapo:review` | runs in parallel | Both run at Quality Gate Step 4 |
+| `hapo:code-review` | runs in parallel | Both run at Quality Gate Step 4 |
 | `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
 | `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
 | `god-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
@@ -147,5 +147,5 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 ## Related
 
 - Previous skill: `hapo:code`
-- Parallel skill: `hapo:review`
+- Parallel skill: `hapo:code-review`
 - Parent workflow: `hapo:develop` Step 4 Quality Gate

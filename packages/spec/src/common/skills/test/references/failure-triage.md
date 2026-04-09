@@ -106,11 +106,11 @@ Failure detected
 
 | Failure count | Verdict | Action |
 |---|---|---|
-| 0 failures | **PASS** | Proceed to hapo:review |
+| 0 failures | **PASS** | Proceed to hapo:code-review |
 | 1–2 failures | **FAIL** | Return to god-developer with targeted fix list |
 | 3–10 failures | **FAIL** | Return to god-developer, flag as "significant failures" |
 | > 10 failures OR 0 tests pass | **COLLAPSE** | Call `AskUserQuestion`: "Test suite critically broken. User intervention required." |
-| Only coverage gaps | **PARTIAL** | Proceed to hapo:review, attach coverage gap list |
+| Only coverage gaps | **PARTIAL** | Proceed to hapo:code-review, attach coverage gap list |
 | Environment errors only | **BLOCKED** | Escalate to user (not god-developer) |
 
 ---
