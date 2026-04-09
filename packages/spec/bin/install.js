@@ -490,7 +490,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
       // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug'];
+      requiredSkills = ['impact-analysis', 'debug', 'llm-moe'];
     }
 
     requiredSkills
@@ -878,20 +878,35 @@ async function promptGeminiAPIKey() {
   });
 }
 
-function configureGeminiKey(apiKey) {
+function configureGeminiKey(apiKey, platforms) {
   try {
     const geminiDir = path.join(os.homedir(), '.gemini');
-    const envFile = path.join(geminiDir, '.env');
+    const globalEnvFile = path.join(geminiDir, '.env');
 
-    // Ensure .gemini directory exists
+    // Ensure global .gemini directory exists
     if (!fs.existsSync(geminiDir)) {
       fs.mkdirSync(geminiDir, { recursive: true });
     }
 
-    // Write API key to .env file
-    fs.writeFileSync(envFile, `GEMINI_API_KEY=${apiKey}\n`, { mode: 0o600 });
-    console.log('  ✓ Gemini API key configured successfully');
-    console.log('  ✓ Saved to ~/.gemini/.env');
+    // Write API key to global .env file
+    fs.writeFileSync(globalEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+    console.log('  ✓ Gemini API key configured globally (~/.gemini/.env)');
+
+    // Pin API key into local .env for each activated platform folder
+    if (platforms && platforms.length > 0) {
+      platforms.forEach(platformKey => {
+        const platform = PLATFORMS[platformKey];
+        if (platform && platform.folder) {
+          const localEnvFile = path.join(platform.folder, '.env');
+          if (!fs.existsSync(platform.folder)) {
+            fs.mkdirSync(platform.folder, { recursive: true });
+          }
+          fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+          console.log(`  ✓ Saved API Key to local project (${platform.folder}/.env)`);
+        }
+      });
+    }
+
     return true;
   } catch (error) {
     console.log('  ✗ Failed to configure Gemini API key');
@@ -901,39 +916,29 @@ function configureGeminiKey(apiKey) {
   }
 }
 
-async function setupGeminiCLI() {
+async function setupGeminiCLI(platforms) {
   const hasGemini = checkGeminiCLI();
 
   if (hasGemini) {
     console.log('  ✓ gemini-cli already installed');
-    return;
-  }
-
-  const shouldInstall = await promptInstallGemini();
-
-  if (!shouldInstall) {
-    console.log('\n  ℹ Skipped gemini-cli installation');
-    console.log('  • hapo:inspector will work in internal mode (default)');
-    console.log('  • To install later: npm install -g @google/gemini-cli');
-    return;
-  }
-
-  const installed = installGeminiCLI();
-
-  if (installed) {
-    const apiKey = await promptGeminiAPIKey();
-
-    if (apiKey) {
-      configureGeminiKey(apiKey);
-    } else {
-      console.log('\n  ℹ Skipped API key configuration');
-      console.log('  Set later: export GEMINI_API_KEY="your-key"');
-    }
   } else {
-    console.log('\n📝 Manual installation steps:');
-    console.log('  1. npm install -g @google/gemini-cli');
-    console.log('  2. Get API key: https://aistudio.google.com/apikey');
-    console.log('  3. export GEMINI_API_KEY="your-key"');
+    const shouldInstall = await promptInstallGemini();
+    if (shouldInstall) {
+      installGeminiCLI();
+    } else {
+      console.log('\n  ℹ Skipped gemini-cli installation');
+      console.log('  • hapo:inspector will work in internal mode (default)');
+      console.log('  • To install later: npm install -g @google/gemini-cli');
+    }
+  }
+
+  // Always prompt for API config since we need it for hapo:test Multimodal
+  const apiKey = await promptGeminiAPIKey();
+  if (apiKey) {
+    configureGeminiKey(apiKey, platforms);
+  } else {
+    console.log('\n  ℹ Skipped API key configuration');
+    console.log('  Set later: export GEMINI_API_KEY="your-key"');
   }
 }
 
@@ -1021,8 +1026,8 @@ async function main() {
       console.log();
     }
 
-    // Setup Gemini CLI for hapo:inspector ext mode
-    await setupGeminiCLI();
+    // Setup Gemini CLI and API Key config
+    await setupGeminiCLI(platforms);
 
     // Note: CLAUDE.md and docs/ are generated via /docs init command
 

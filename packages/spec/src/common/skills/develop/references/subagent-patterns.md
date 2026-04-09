@@ -27,3 +27,20 @@ Task(subagent_type="ui-ux-designer", prompt="Implement the frontend code for [fe
 ```
 Task(subagent_type="code-reviewer", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return score (X/10), list of critical issues, warnings, and suggestions.", description="Review [phase]")
 ```
+
+## Test Execution Phase
+```
+Task(subagent_type="test-runner",
+  prompt="Run tests for recently implemented code. Apply blast-radius scoping
+    unless --full is requested. Return structured verdict with Status, Results,
+    Coverage, Failures, and Action.",
+  description="Test [feature]")
+```
+
+## Parallel Quality Gate (Step 4)
+Spawn both simultaneously — do NOT wait for one before starting the other:
+```
+Task(subagent_type="test-runner",  prompt="...", description="Test [feature]")
+Task(subagent_type="code-reviewer", prompt="...", description="Review [feature]")
+```
+Wait for both results → apply quality-gate.md combine logic.

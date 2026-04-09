@@ -1,0 +1,26 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# environment configurations
+.env*
+!.env.example
+
+# memory stores and caching
+test-memory.json
+.cache
+.tmp
+
+# ide
+.vscode/
+.idea/
+
+# os specific
+.DS_Store
+Thumbs.db

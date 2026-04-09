@@ -1,32 +1,65 @@
-# Quality Gate — Auto-Fix Review Loop
+# Quality Gate — Parallel Test + Review Loop
 
-This is the critical checkpoint protecting codebase quality at Step 4 of `hapo:develop`. The entire process runs AUTOMATICALLY without bothering the user unless deadlocked.
+This is the critical checkpoint protecting codebase quality at Step 4 of `hapo:develop`.
+Runs AUTOMATICALLY. Only escalates to user after 3 consecutive failures or a critical block.
 
-## Auto-Quality Cycle
+## Parallel Quality Cycle
 
-This cycle has a maximum retry counter of **3 attempts** (Max Retries = 3). Exceeding 3 attempts triggers a collapse warning and escalates to the user.
+Maximum retry counter: **3 attempts**. Exceeding 3 triggers a collapse warning.
 
 ```text
 Variable: retry_count = 0
 
 START_LOOP:
-  -------------------------------------------------------------
-  Phase 1: CODE REVIEW (Invoke code-reviewer agent)
-  -------------------------------------------------------------
-  Code-reviewer agent must return:
-  [Score / 10], [Critical issue count], [Warning list]
+  ---------------------------------------------------------------
+  PARALLEL GATE: Spawn BOTH agents simultaneously
+  ---------------------------------------------------------------
+  → Task(subagent_type="test-runner",
+        prompt="Run tests for recently implemented code. Blast-radius mode.",
+        description="Test [feature]")
 
-  IF Critical > 0 OR Score < 9.5:
+  → Task(subagent_type="code-reviewer",
+        prompt="Review all recently written code. Check security, performance,
+          YAGNI/KISS/DRY. Return score (X/10), critical count, warning list.",
+        description="Review [feature]")
+
+  Wait for BOTH to return results.
+
+  ---------------------------------------------------------------
+  COMBINE RESULTS
+  ---------------------------------------------------------------
+
+  CASE 1 — Test FAIL:
     - Increment retry_count++
     - If retry_count >= 3:
-        → COLLAPSE! Call `AskUserQuestion`: "Code does not meet minimum standards! User intervention required!"
+        → COLLAPSE! AskUserQuestion: "Tests critically failing! User intervention required!"
     - If retry_count < 3:
-        → Read the reviewer's warning log and fix each issue one by one.
-        → After fixing: GOTO START_LOOP
+        → Return to Step 3 (god-developer). Fix the failing tests first.
+        → GOTO START_LOOP (re-run BOTH test + review)
 
-  IF Fully Satisfied (Score >= 9.5 & Critical = 0):
-    - PASS! Auto-approved.
-    - PROCEED to completion report.
+  CASE 2 — Test PASS + Review FAIL (Score < 9.5 OR Critical > 0):
+    - Increment retry_count++
+    - If retry_count >= 3:
+        → COLLAPSE! AskUserQuestion: "Code does not meet minimum standards! User intervention required!"
+    - If retry_count < 3:
+        → Fix each review issue from warning log.
+        → GOTO REVIEW_ONLY (skip re-test — tests already passed)
+
+  CASE 3 — Test PASS + Review PASS (Score >= 9.5 AND Critical = 0):
+    → PASS! Auto-approved.
+    → PROCEED to completion report.
+
+REVIEW_ONLY:
+  ---------------------------------------------------------------
+  Re-run ONLY code-reviewer (tests already passed — no re-test)
+  ---------------------------------------------------------------
+  → Task(subagent_type="code-reviewer", ...)
+
+  IF Score >= 9.5 AND Critical = 0 → PASS!
+  IF Score < 9.5 OR Critical > 0:
+    - retry_count++
+    - If retry_count >= 3 → COLLAPSE
+    - Else → fix issues, GOTO REVIEW_ONLY
 ```
 
 ## Critical Issue Definitions
@@ -36,8 +69,10 @@ START_LOOP:
 - **Principles:** YAGNI violations, KISS violations, DRY violations (excessive code duplication).
 
 ## Terminal Log Format
+
 Must log the Quality Gate result to the terminal for user visibility:
 
-- **Quick Pass:** `✓ Step 4 Quality Gate: Review 9.5/10 - Auto-Approved`
-- **Hard-Won Pass:** `✓ Step 4 Quality Gate: Failed 2 rounds → Finally scored 9.6/10`
+- **Quick Pass:** `✓ Step 4 Quality Gate: Test PASS + Review 9.5/10 - Auto-Approved`
+- **Hard-Won Pass:** `✓ Step 4 Quality Gate: Failed 2 rounds → Test PASS + Review 9.6/10`
+- **Test Fix Needed:** `[~] Step 4 Quality Gate: Tests failed → returned to god-developer`
 - **Awaiting Rescue:** `[!] Step 4 Quality Gate: Failed 3 rounds! Awaiting user intervention...`
