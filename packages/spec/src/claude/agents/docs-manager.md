@@ -135,7 +135,7 @@ Trước khi khoe con số code trên bảng docs:
 #### Tự Truy Bức Kiểm Tuyến
 Dịch xong thay tiết, lôi cổ tool lên chém (Nếu có thiết lập `validate-docs.cjs`):
 ```bash
-node .claude/scripts/validate-docs.cjs docs/
+node scripts/validate-docs.cjs docs/
 ```
 Soi lại ngục báo Warning cảnh đỏ gồng lên và lấp liếm vá lỗi sạch sẽ trước báo Cáo Hoàn Thành Nhiệm Vụ.
 
