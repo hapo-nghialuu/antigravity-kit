@@ -2,13 +2,13 @@
 /**
  * Copyright (c) 2024-2025 Haposoft. MIT License.
  *
- * PreToolUse Hook — inspector-block.cjs
+ * PreToolUse Hook — inspect-block.cjs
  * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks
  *
  * Blocks access to heavy directories that would flood the LLM context window.
  * Also warns on overly-broad glob patterns.
  *
- * Disable: set "inspector": { "enabled": false } in .claude/runtime.json
+ * Disable: set "inspect": { "enabled": false } in .claude/runtime.json
  *
  * Exit: 0 = allow, 2 = block
  */
@@ -78,7 +78,7 @@ try {
   const cwd       = data.cwd        || process.cwd();
   const runtime   = readRuntime(cwd);
 
-  if (runtime.scout?.enabled === false || runtime.inspector?.enabled === false) process.exit(0);
+  if (runtime.scout?.enabled === false || runtime.inspect?.enabled === false) process.exit(0);
 
   // Allow all-permitted bash commands immediately
   if (toolInput.command) {
@@ -118,7 +118,7 @@ try {
     const d = p.join(__dirname, '.logs');
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     fs.appendFileSync(p.join(d, 'hook-log.jsonl'),
-      JSON.stringify({ ts: new Date().toISOString(), hook: 'inspector-block', status: 'crash', error: e.message }) + '\n');
+      JSON.stringify({ ts: new Date().toISOString(), hook: 'inspect-block', status: 'crash', error: e.message }) + '\n');
   } catch (_) {}
   process.exit(0);
 }

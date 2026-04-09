@@ -7,7 +7,7 @@
 Before planning, establish project awareness:
 
 - Read `./docs/codebase-summary.md` if it exists and is fresh (< 2 days old)
-- Otherwise, generate one using `repomix` or delegate to `hapo:inspector` for scoped discovery
+- Otherwise, generate one using `repomix` or delegate to `hapo:inspect` for scoped discovery
 - Scan `./docs/code-standards.md` and `./docs/system-architecture.md` for constraints
 - Identify which parts of the codebase are affected by the upcoming work
 

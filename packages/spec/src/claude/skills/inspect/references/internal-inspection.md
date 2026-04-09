@@ -73,7 +73,7 @@ Agent 6: Inspect types/, interfaces/ for auth types
 ### Task Registration Flow
 
 ```
-TaskList()                          // Check for existing inspector tasks
+TaskList()                          // Check for existing inspect tasks
   → Found tasks?  → Skip creation, reuse existing
   → Empty?        → TaskCreate per agent
 ```

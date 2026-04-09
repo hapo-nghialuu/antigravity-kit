@@ -56,7 +56,7 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/inspector-block.cjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/inspect-block.cjs\""
           }
         ]
       }

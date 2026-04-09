@@ -1,11 +1,11 @@
 ---
-name: hapo:inspector
+name: hapo:inspect
 description: "Fast codebase discovery using parallel agents. Use for file discovery, task context gathering, quick searches across directories. Supports internal (Explore) and external (Gemini) agents."
 version: 2.0.0
 argument-hint: "[search-target] [ext]"
 ---
 
-# Inspector
+# Inspect
 
 Fast, token-efficient codebase discovery using parallel agents to find files needed for tasks.
 
@@ -85,7 +85,7 @@ Follow-up: "Want to investigate deeper? Choose: backend API | frontend component
 **Fallback to AskUserQuestion:**
 - If Scout result is ambiguous (flat structure, no obvious divisions, < 3 distinguishable areas)
 - Use `AskUserQuestion` with 2-4 concrete scope suggestions derived from Scout findings
-- After user selects, re-invoke inspector with chosen scope
+- After user selects, re-invoke inspect with chosen scope
 
 ## Built-in No-Scan Guidance
 
@@ -155,7 +155,7 @@ Where:
 
 ### 3. Register Inspect Tasks
 - **Skip if:** Agent count ≤ 2 (overhead exceeds benefit)
-- `TaskList` first — check for existing inspector tasks in session
+- `TaskList` first — check for existing inspect tasks in session
 - If not found, `TaskCreate` per agent with scope metadata
 - See `./references/internal-inspection.md` for patterns and examples
 
@@ -189,7 +189,7 @@ Load appropriate reference:
 ## Report Format
 
 ```markdown
-# Inspector Report
+# Inspect Report
 
 ## Relevant Files
 - `path/to/file.ts` - Brief description
@@ -204,7 +204,7 @@ Load appropriate reference:
 
 ## Rules
 
-- Keep scope narrow. Do not use `hapo:inspector` as a runtime policy engine.
+- Keep scope narrow. Do not use `hapo:inspect` as a runtime policy engine.
 - Prefer listing files first, then reading only the shortlisted files.
 - Never encourage scanning ignored/generated/sensitive areas from the no-scan list.
 - Keep reports concise and actionable.

@@ -18,7 +18,7 @@
     "required": [
       "specs",
       "impact-analysis",
-      "inspector",
+      "inspect",
       "spec-init",
       "spec-requirements",
       "spec-design",
@@ -37,7 +37,7 @@
       "debugger.md",
       "docs-manager.md",
       "git-manager.md",
-      "inspector.md",
+      "inspect.md",
       "project-manager.md",
       "researcher.md"
     ]
@@ -56,7 +56,7 @@
       "hooks/agent.cjs",
       "hooks/usage.cjs",
       "hooks/privacy-block.cjs",
-      "hooks/inspector-block.cjs",
+      "hooks/inspect-block.cjs",
       "hooks/rules.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",

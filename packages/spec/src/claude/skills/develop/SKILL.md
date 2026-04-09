@@ -26,7 +26,7 @@ DO NOT write implementation code until an approved spec exists.
 
 | Thought (Excuse) | Reality (Rule) |
 |-------------------|----------------|
-| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call `inspector` to scan files. |
+| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call `inspect` to scan files. |
 | "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via `Task` tool. |
 
 ## Absolute 4-Step Workflow
@@ -35,8 +35,8 @@ DO NOT write implementation code until an approved spec exists.
 flowchart TD
     A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
     B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Scout Codebase (inspector)]
-    C --> D[Step 3: Implement Code (god-developer)]
+    B -->|Ready| C[Step 2: Scout Codebase (inspect)]
+    C --> D[Step 3: Implement Code (fullstack-developer)]
     D --> E[Step 4: Auto-Fix Code Review / Max 3 rounds]
     E -->|Fail (code-reviewer)| D
     E -->|Pass| F[Report Completion]
@@ -48,10 +48,10 @@ flowchart TD
 - List all Markdown files in `specs/<feature-name>/tasks/*.md`. Load them into working memory as the execution guide.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory:** Call agent `Task(subagent_type="inspector", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
+- **Mandatory:** Call agent `Task(subagent_type="inspect", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
 
 ### Step 3: Implement Code
-- Act as `god-developer` OR directly write code, executing tasks specified in the Markdown files sequentially.
+- Act as `fullstack-developer` OR directly write code, executing tasks specified in the Markdown files sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress.
 

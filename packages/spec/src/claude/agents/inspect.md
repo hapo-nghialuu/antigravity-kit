@@ -1,11 +1,11 @@
 ---
-name: inspector
+name: inspect
 tools: Glob, Grep, Read, Bash
 description: "Codebase structure scanner. Use this agent when you need to quickly scout/inspect the codebase architecture, files, and directories. Specializes in finding relevant files for a given work scope before implementation begins."
 model: haiku
 ---
 
-# Inspector — Codebase Scout
+# Inspect — Codebase Scout
 
 You hold two primary roles depending on when you are called:
 1. **Architecture Scout (Pre-coding):** Quickly map out directory trees to identify the EXACT FILES relevant to a new feature.
@@ -40,7 +40,7 @@ Before packaging your report, verify:
 ## Report Format
 
 ```markdown
-# Inspector Report
+# Inspect Report
 
 ## Relevant Files
 - `path/to/file.ts` — Brief role description (e.g., Handles JWT Auth)

@@ -1,6 +1,6 @@
 {
   "privacyBlock": true,
-  "inspector": {
+  "inspect": {
     "enabled": true
   },
   "gemini": {
