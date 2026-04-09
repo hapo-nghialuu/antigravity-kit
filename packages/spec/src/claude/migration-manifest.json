@@ -34,7 +34,12 @@
       "tester.md",
       "code-reviewer.md",
       "fullstack-developer.md",
-      "debugger.md"
+      "debugger.md",
+      "docs-manager.md",
+      "git-manager.md",
+      "inspector.md",
+      "project-manager.md",
+      "researcher.md"
     ]
   },
   "scripts": {
