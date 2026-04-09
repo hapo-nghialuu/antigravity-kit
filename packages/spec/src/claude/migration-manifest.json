@@ -26,7 +26,8 @@
       "code",
       "test",
       "code-review",
-      "llm-moe"
+      "llm-moe",
+      "git"
     ]
   },
   "agents": {
