@@ -1,13 +1,13 @@
 ---
 name: hapo:code-review
-description: "Adversarial code review with technical rigor. Supports 3-Stage Protocol with llm-moe injection for multimodal spec compliance. Red-team analysis finds security holes, logic gaps, and architecture violations."
+description: "Adversarial code review with technical rigor. Supports 3-Stage Protocol with ai-multimodal injection for multimodal spec compliance. Red-team analysis finds security holes, logic gaps, and architecture violations."
 argument-hint: "[#PR | COMMIT | --pending | scope]"
-version: 2.0.0
+version: 1.0.0
 ---
 
-# Hapo Code Review
+# Code Review
 
-Adversarial code review with technical rigor, evidence-based claims, and visual/document intelligence via the `hapo:llm-moe` Hub.
+Adversarial code review with technical rigor, evidence-based claims, and visual/document intelligence via the `hapo:ai-multimodal` Hub.
 
 Runs during the `hapo:develop` Quality Gate (parallel to `hapo:test`), or standalone.
 
@@ -21,7 +21,7 @@ Before executing any review, firmly grasp these two pillars:
 ## Core Principles
 1. **YAGNI**, **KISS**, **DRY** always prevail. 
 2. Technical correctness over social comfort. Be honest and straight to the point.
-3. If Specs are provided as PDF or Design Images, do not guess — use `hapo:llm-moe` to verify.
+3. If Specs are provided as PDF or Design Images, do not guess — use `hapo:ai-multimodal` to verify.
 
 ## Usage & Input Modes
 
@@ -38,10 +38,10 @@ If invoked without explicit arguments, default to reviewing recent changes (pend
 
 Ensure verification walks through these three stages before delivering a final score.
 
-### Stage 1 — Spec Compliance (with `llm-moe` injection)
+### Stage 1 — Spec Compliance (with `ai-multimodal` injection)
 Does the code match what was requested?
 - Read contextual spec records (markdown files).
-- **Multimodal Delegation:** If the spec references or provides PDF requirements, architecture diagrams, or UI mockups (images), **STOP**. Delegate to `hapo:llm-moe` scripts (e.g. `visual-analyze.js` or `ocr.js`) to parse the JSON constraints from the document, then compare the implementation against the true layout/logic constraints.
+- **Multimodal Delegation:** If the spec references or provides PDF requirements, architecture diagrams, or UI mockups (images), **STOP**. Delegate to `hapo:ai-multimodal` scripts (e.g. `gemini_batch_process.py`) to parse the JSON constraints from the document, then compare the implementation against the true layout/logic constraints.
 - Any missing requirements? Any unjustified extras?
 
 ### Stage 2 — Code Quality
@@ -71,7 +71,7 @@ Format:
 **Target:** [PR | Commit | Path]
 
 ## Stage 1: Spec Compliance
-- [Issue or OK] (If visual/PDF used, mention llm-moe analysis result)
+- [Issue or OK] (If visual/PDF used, mention ai-multimodal analysis result)
 
 ## Stage 2: Code Quality
 - [Issue or OK]
@@ -87,5 +87,5 @@ Format:
 
 ## Related
 - Parallel skill: `/hapo:test`
-- AI Hub: `/hapo:llm-moe`
+- AI Hub: `/hapo:ai-multimodal`
 - Parent orchestrator: `quality-gate.md`

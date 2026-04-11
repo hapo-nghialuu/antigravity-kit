@@ -539,9 +539,42 @@ function copyPlatformFiles(platformKey, results, options = {}) {
           console.log(`  ✓ Dependency installed: ${path.join(platform.agentsDir, fileName)}`);
         }
       });
+
+      // Copy agent reference manuals (debugger manuals, etc.) recursively
+      const refsSource = path.join(agentsSourceDir, 'references');
+      if (fs.existsSync(refsSource)) {
+        const refsDest = path.join(platform.agentsDir, 'references');
+        const refsExisted = fs.existsSync(refsDest);
+        copyRecursive(refsSource, refsDest, options);
+
+        if (shouldOverwriteManagedFiles && refsExisted) {
+          console.log(`  ↻ Agent reference manuals updated`);
+          results.updated++;
+        } else {
+          console.log(`  ✓ Agent reference manuals installed`);
+          results.copied++;
+        }
+      }
+
     } else {
       results.missingDependencies++;
       console.log(`  ⚠ Missing dependency template: ${platform.agentsDir}`);
+    }
+
+    // Copy native scripts (browser-tool, docs-fetch, validate-docs)
+    const scriptsSourceDir = path.join(__dirname, '../src/claude/scripts');
+    if (fs.existsSync(scriptsSourceDir)) {
+      const scriptsDest = path.join(platform.folder, 'scripts');
+      const scriptsExisted = fs.existsSync(scriptsDest);
+      copyRecursive(scriptsSourceDir, scriptsDest, options);
+
+      if (shouldOverwriteManagedFiles && scriptsExisted) {
+        console.log(`  ↻ Native scripts updated`);
+        results.updated++;
+      } else {
+        console.log(`  ✓ Native scripts installed`);
+        results.copied++;
+      }
     }
 
   }

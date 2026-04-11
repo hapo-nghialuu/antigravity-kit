@@ -3,6 +3,7 @@
   "created_at": "{{TIMESTAMP}}",
   "updated_at": "{{TIMESTAMP}}",
   "language": "vi",
+  "status": "pending",
   "phase": "initialized",
   "priority": "P2",
   "effort": null,

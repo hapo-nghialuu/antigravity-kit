@@ -25,7 +25,7 @@ To clear the Verification Gate, you must cite one of the following concrete proo
 - **Test Suite Logs:** Output showing tests ran and passed (e.g., `PASS src/components/Login.test.tsx`).
 - **Compilation/Build Status:** Terminal output proving the typescript compiler (`tsc`) or bundler succeeded with `Exit code: 0`.
 - **Linter Completion:** Output proving no syntax errors exist.
-- **Multimodal Visual Evidence:** `hapo:llm-moe` confirming that the visual rendering perfectly matches the design layout.
+- **Multimodal Visual Evidence:** `hapo:ai-multimodal` confirming that the visual rendering perfectly matches the design layout.
 
 ## 4. How to Handle Missing Proof
 If you are asked to review a PR or commit and no execution proof is available in the memory or context:

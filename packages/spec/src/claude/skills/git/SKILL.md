@@ -2,12 +2,10 @@
 name: hapo:git
 description: "Hapo Native Git Operations & Worktree Management. Handles safe commits, conventional split, secret scanning, and sibling-branch worktrees locally."
 argument-hint: "commit | push | pr | worktree <feature-desc>"
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: "1.0.0"
 ---
 
-# Hapo Git Operations & Worktree
+# Git Operations & Worktree
 
 This skill merges Version Control Systems (VSC) capabilities and parallel Worktree management into a single, clean-room execution engine utilizing pure Bash commands rather than proprietary Node scripts.
 

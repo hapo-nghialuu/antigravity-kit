@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Hapo Native Docs Validator
- * Mạch kiểm duyệt tài liệu (Markdown) rút gọn - Clean-room rewrite.
+ * Native Docs Validator
+ * Rapid standalone markdown integrity verification (Clean-room rewrite layer).
  */
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+// const { spawnSync } = require('child_process');
 
 function findMarkdownFiles(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -28,10 +28,10 @@ function checkBrokenLinks(docsDir) {
   const issues = [];
   files.forEach(file => {
     const content = fs.readFileSync(file, 'utf8');
-    // Bắt pattern [text](./relative/link.md)
+    // Regex mapping string patterns [text](./relative/link.md)
     const links = content.match(/\[[^\]]+\]\(\.\/[^)]+\)/g) || [];
     links.forEach(link => {
-      const href = link.match(/\(\.\/([^)]+)\)/)[1].split('#')[0]; // Bỏ anchor #
+      const href = link.match(/\(\.\/([^)]+)\)/)[1].split('#')[0]; // Isolate anchor tags
       const targetPath = path.resolve(path.dirname(file), href);
       if (!fs.existsSync(targetPath)) {
         issues.push({ file, brokenLink: href });
@@ -43,25 +43,26 @@ function checkBrokenLinks(docsDir) {
 
 function main() {
   const docsDir = path.resolve(process.cwd(), 'docs');
-  console.log(`[Hapo Docs Validator] Đang quét thư mục: ${docsDir}`);
+  console.log(`[Docs Validator] Auditing bounds directory: ${docsDir}`);
   
   if (!fs.existsSync(docsDir)) {
-    console.log('Không tìm thấy thư mục docs/ để kiểm tra.');
+    console.log('Terminal: Core docs/ directory bounds block not found. Ceasing validation sequence.');
     process.exit(0);
   }
 
   const linkIssues = checkBrokenLinks(docsDir);
   if (linkIssues.length > 0) {
-    console.warn('\n⚠️ CẢNH BÁO: TÌM THẤY LIÊN KẾT ĐỨT GÃY TRONG TÀI LIỆU!');
+    console.warn('\n⚠️ WARNING: CRITICAL HYPERLINK CORRUPTION DETECTED IN DOCUMENTATION MATRIX!');
     linkIssues.forEach(issue => {
-      console.warn(`- File: ${path.relative(process.cwd(), issue.file)} -> Trỏ đến Link Chết: ./${issue.brokenLink}`);
+      console.warn(`- Compromised File: ${path.relative(process.cwd(), issue.file)} -> Links externally to Missing Null Pointer: ./${issue.brokenLink}`);
     });
   } else {
-    console.log('✅ Chúc mừng! Không tìm thấy link đứt gãy nào trong tài liệu.');
+    console.log('✅ Validation verified! Zero broken integrity links detected across the system.');
   }
 
-  // Chú ý: Vì Hapo tôn trọng Tốc Độ Môi Trường, việc grep đè xuống mã nguồn code quá thô bạo (check function) 
-  // đã được cắt giảm để đảm bảo validator hoàn thành <1s (Zero-latency validation logic).
+  // Structural Note: To honor Execution Velocity patterns inherent to Architecture,
+  // aggressive deep-code grepping functions (function tracing) have been stripped.
+  // This ensures document validation pipeline triggers definitively under < 1s (Zero-latency verification).
 }
 
 main();

@@ -15,7 +15,7 @@ Task(subagent_type="inspect", prompt="Scan and identify all files related to [fe
 
 ## Code Implementation Phase
 ```
-Task(subagent_type="fullstack-developer", prompt="Implement the sub-tasks from [tasks-directory] based on the specification in [spec.json]", description="Code Feature [feature]")
+Task(subagent_type="god-developer", prompt="Implement the sub-tasks from [tasks-directory] based on the specification in [spec.json]", description="Code Feature [feature]")
 ```
 
 ## UI Implementation Phase
@@ -25,12 +25,12 @@ Task(subagent_type="ui-ux-designer", prompt="Implement the frontend code for [fe
 
 ## Code Review Phase
 ```
-Task(subagent_type="code-reviewer", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return score (X/10), list of critical issues, warnings, and suggestions.", description="Review [phase]")
+Task(subagent_type="code-auditor", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return score (X/10), list of critical issues, warnings, and suggestions.", description="Review [phase]")
 ```
 
 ## Test Execution Phase
 ```
-Task(subagent_type="tester",
+Task(subagent_type="test-runner",
   prompt="Run tests for recently implemented code. Apply blast-radius scoping
     unless --full is requested. Return structured verdict with Status, Results,
     Coverage, Failures, and Action.",
@@ -40,7 +40,7 @@ Task(subagent_type="tester",
 ## Parallel Quality Gate (Step 4)
 Spawn both simultaneously — do NOT wait for one before starting the other:
 ```
-Task(subagent_type="tester",  prompt="...", description="Test [feature]")
-Task(subagent_type="code-reviewer", prompt="...", description="Review [feature]")
+Task(subagent_type="test-runner",  prompt="...", description="Test [feature]")
+Task(subagent_type="code-auditor", prompt="...", description="Review [feature]")
 ```
 Wait for both results → apply quality-gate.md combine logic.

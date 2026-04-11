@@ -19,32 +19,40 @@
       "specs",
       "impact-analysis",
       "inspect",
-      "spec-init",
-      "spec-requirements",
-      "spec-design",
-      "spec-tasks",
       "code",
       "test",
       "code-review",
-      "llm-moe",
-      "git"
+      "git",
+      "develop",
+      "hotfix",
+      "sync",
+      "research"
     ]
   },
   "agents": {
     "required": [
-      "tester.md",
-      "code-reviewer.md",
-      "fullstack-developer.md",
+      "test-runner.md",
+      "code-auditor.md",
+      "god-developer.md",
       "debugger.md",
-      "docs-manager.md",
-      "git-manager.md",
-      "inspect.md",
-      "project-manager.md",
-      "researcher.md"
+      "docs-keeper.md",
+      "git-ops.md",
+      "inspector.md",
+      "battle-chief.md",
+      "researcher.md",
+      "spec-maker.md",
+      "ui-ux-designer.md",
+      "deployer.md"
     ]
   },
   "scripts": {
-    "required": []
+    "required": [
+      "docs-fetch.js",
+      "validate-docs.cjs"
+    ]
+  },
+  "agentReferences": {
+    "copyRecursive": true
   },
   "hooks": {
     "assumed": []
@@ -59,6 +67,7 @@
       "hooks/privacy-block.cjs",
       "hooks/inspect-block.cjs",
       "hooks/rules.cjs",
+      "hooks/spec-state.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",

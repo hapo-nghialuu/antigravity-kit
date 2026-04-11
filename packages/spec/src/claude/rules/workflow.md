@@ -13,7 +13,7 @@ Before planning, establish project awareness:
 
 ## Phase 1: Plan
 
-- Delegate to `hapo:planner` to draft an implementation plan with actionable TODO items in `./specs`
+- Delegate to `hapo:spec-maker` to draft an implementation plan with actionable TODO items in `./specs`
 - For complex features, spawn multiple `hapo:researcher` agents in parallel to investigate different technical areas, then feed findings back into the plan
 - Never start coding without a clear, reviewed plan
 
@@ -28,18 +28,18 @@ Before planning, establish project awareness:
 
 ### 2b. Test
 
-- Delegate to `hapo:tester` to validate the **final, production-ready code**
+- Delegate to `hapo:test-runner` to validate the **final, production-ready code**
 - Expectations for test suites:
   - Comprehensive unit coverage
   - Error scenario testing
   - Performance validation where applicable
 - Absolutely **no fake data, mocks-for-passing, or temporary workarounds** to make CI green
-- If tests fail: fix the root cause, re-run via `hapo:tester`, repeat until all pass — never end a session with red tests
+- If tests fail: fix the root cause, re-run via `hapo:test-runner`, repeat until all pass — never end a session with red tests
 - If a test failure persists after **3 fix attempts**, stop and escalate to the user with a diagnostic summary
 
 ### 2c. Review
 
-- Once tests are green, delegate to `hapo:reviewer` for a code quality pass
+- Once tests are green, delegate to `hapo:code-auditor` for a code quality pass
 - Self-documenting code is the goal; add comments only for genuinely complex logic
 - Optimize for long-term maintainability and runtime performance
 
@@ -48,7 +48,7 @@ Before planning, establish project awareness:
 - Follow the plan established by `hapo:planner` throughout integration
 - Honor existing API contracts and preserve backward compatibility
 - Document any breaking changes explicitly
-- Delegate to `hapo:docs-manager` to keep `./docs` in sync with the implementation
+- Delegate to `hapo:docs-keeper` to keep `./docs` in sync with the implementation
 
 ### Handling Production Issues
 
@@ -56,5 +56,5 @@ When bugs surface in production or CI/CD:
 
 1. Delegate to `hapo:debugger` to analyze failures and produce a diagnostic report
 2. Implement the fix based on the report
-3. Delegate to `hapo:tester` to verify the fix
+3. Delegate to `hapo:test-runner` to verify the fix
 4. If new test failures appear, resolve them and loop back to **Phase 2c (Review)**

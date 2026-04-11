@@ -4,7 +4,7 @@ description: "Code execution engine: Reads specs and implements code end-to-end 
 argument-hint: "[feature-name|specs-directory-path]"
 ---
 
-# Hapo Develop — Feature Implementation (Full Build)
+# Develop — Feature Implementation (Full Build)
 
 Reads the full project specification (`hapo:specs`) and relentlessly implements code from A to Z in a disciplined, single-track workflow. Automatically overcomes obstacles and only escalates to the user when facing persistent critical failures.
 
@@ -36,9 +36,9 @@ flowchart TD
     A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
     B -->|Missing| Z[Stop: Run /hapo:specs]
     B -->|Ready| C[Step 2: Scout Codebase (inspect)]
-    C --> D[Step 3: Implement Code (fullstack-developer)]
+    C --> D[Step 3: Implement Code (god-developer)]
     D --> E[Step 4: Auto-Fix Code Review / Max 3 rounds]
-    E -->|Fail (code-reviewer)| D
+    E -->|Fail (code-auditor)| D
     E -->|Pass| F[Report Completion]
 ```
 
@@ -51,13 +51,13 @@ flowchart TD
 - **Mandatory:** Call agent `Task(subagent_type="inspect", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
 
 ### Step 3: Implement Code
-- Act as `fullstack-developer` OR directly write code, executing tasks specified in the Markdown files sequentially.
+- Act as `god-developer` OR directly write code, executing tasks specified in the Markdown files sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress.
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
-**Mantra:** All feedback from code-reviewer must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
+**Mantra:** All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
 - Only escalate to the user after 3 consecutive failed review rounds.
 

@@ -15,11 +15,11 @@ The project maintains these core documents in `./docs`:
 
 - Before updating any doc, check its last modified date
 - If a doc hasn't been updated in >2 weeks while development is active, flag it for review
-- The `hapo:docs-manager` should proactively scan for stale docs during weekly reviews
+- The `hapo:docs-keeper` should proactively scan for stale docs during weekly reviews
 
 ## When to Update
 
-The `hapo:docs-manager` agent is responsible for keeping these documents current. Trigger an update whenever:
+The `hapo:docs-keeper` agent is responsible for keeping these documents current. Trigger an update whenever:
 
 - A development phase transitions (e.g., "In Progress" → "Complete")
 - A significant feature ships or a critical bug is resolved
@@ -53,62 +53,39 @@ Use [Keep a Changelog](https://keepachangelog.com/) convention:
 
 ---
 
-## Implementation Plans
+## Specification & Execution Tracker (Hapo Protocol)
 
-### Where Plans Live
+### Where Specs Live
+Hapo does not use chaotic plan folders. Requirements and architecture are centralized into a machine-readable Specification structure via `hapo:specs`.
 
-Store plans under `./plans` using a timestamped, descriptive directory name.
-
-**Naming convention:** `YYYYMMDD-HHmm-descriptive-kebab-slug`
-
-**Example:** `plans/20251101-1505-user-auth-and-profiles/`
+All specifications exist strictly in `./specs/<feature-slug>/`.
 
 ### Directory Layout
-
-```
-plans/
-└── 20251101-1505-user-auth-and-profiles/
-    ├── plan.md                          # High-level overview (≤80 lines)
-    ├── research/
-    │   └── researcher-*.md              # Background research reports
-    ├── reports/
-    │   └── *.md                         # Inspector, reviewer, etc. reports
-    ├── phase-01-environment-setup.md
-    ├── phase-02-data-models.md
-    ├── phase-03-api-layer.md
-    ├── phase-04-ui-components.md
-    └── phase-05-testing.md
+```text
+specs/
+└── user-auth/
+    ├── spec.json               # System state machine & global status
+    ├── design.md               # Architecture, requirements, and data flows
+    └── tasks/
+        ├── task-01-setup.md    # Actionable granular steps for development
+        └── task-02-api.md      # Next sequential task
 ```
 
-### Overview File (`plan.md`)
+### The State Machine (`spec.json`)
+The `spec.json` is the sole source of truth for the Project State. 
+When creating or updating a spec, it must accurately reflect the overall progress.
 
-Keep it concise — under 80 lines. It should list:
-- Each phase with its current status
-- Links to the detailed phase files
-- Key dependencies and blockers
+### Architecture Document (`design.md`)
+This blueprint covers:
+- **Context & Overview:** The "Why" of the feature.
+- **Data Flow:** Mandatory Mermaid Data Flow Diagram detailing state transitions, DB interactions, and API payloads.
+- **Risk Assessment:** Pre-identified failure points and mitigations.
 
-### Phase Files (`phase-XX-*.md`)
+### Execution Checklists (`tasks/task-0*.md`)
+Work is decomposed into linear markdown task files.
+Each task file contains:
+- **Prerequisites:** Blockers that must clear before this stage begins. (Task N+1 cannot start without Task N defining its payload).
+- **Execution Checklist:** Granular `[ ]` markdown items for agents to toggle `[x]` as they implement code.
+- **Success Criteria:** Strict definition of "Done".
 
-Comply with the development rules in `./.claude/rules/ai-dev-rules.md`.
-
-Each phase file covers:
-
-**Context & Overview**
-- Links to related reports and reference material
-- Priority level, current status, and a short description
-
-**Specification**
-- Functional and non-functional requirements
-- Architecture decisions, component interactions, data flow
-- Key research insights and critical considerations
-
-**Execution**
-- Files to create, modify, or remove
-- Numbered implementation steps with specific instructions
-- Checklist for progress tracking
-
-**Validation & Risk**
-- Success criteria and how to verify them
-- Risk assessment with mitigation strategies
-- Security considerations (auth, data protection)
-- Follow-up tasks and dependencies on other phases
+Comply with the overarching rules in `./rules/ai-dev-rules.md`.

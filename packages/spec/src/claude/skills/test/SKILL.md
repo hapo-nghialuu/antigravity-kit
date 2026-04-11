@@ -5,7 +5,7 @@ argument-hint: "[scope|--full|--ui <url>|--ui-auth <url>]"
 version: 2.0.0
 ---
 
-# Hapo Test — Verify Implementation Quality
+# Test — Verify Implementation Quality
 
 Run the project's test suite, analyze results, and return a structured verdict.
 Designed to work **after `hapo:code`** and to run **in parallel with `hapo:code-review`** during the `hapo:develop` Quality Gate.
@@ -71,9 +71,9 @@ affected by recent file changes. See `references/execution-strategy.md` Phase A.
 Execute multi-page discovery, then spawn **Parallel UI Subagents** (test-runner instances) to handle Smoke, Core-Vitals, Accessibility, SEO, Security, and User Flows simultaneously.
 See `references/execution-strategy.md` Phase C for full phase breakdown.
 
-Delegate execution to `tester` agent:
+Delegate execution to `test-runner` agent:
 ```
-Task(subagent_type="tester",
+Task(subagent_type="test-runner",
   prompt="Run tests. Scope: [blast-radius|full|ui]. Target: [path|url]. Return structured verdict.",
   description="Test [feature]")
 ```
@@ -111,7 +111,7 @@ Return a **structured verdict** (required format — not free-form prose):
 
 ### Action
 - PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to fullstack-developer.
+- FAIL → [list specific fixes needed] → Return to god-developer.
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
 
@@ -124,20 +124,19 @@ Return a **structured verdict** (required format — not free-form prose):
 
 ### Phase 4 — Sync Memory
 
-After receiving the verdict from `tester`, the orchestrator (`hapo:test`) intercepts the `<lessons_learned>` block.
+After receiving the verdict from `test-runner`, the orchestrator (`hapo:test`) intercepts the `<lessons_learned>` block.
 It merges the JSON data into `.hapo/test-memory.json` per `references/test-memory.md` to ensure that future runs remember flaky tests or environment setup requirements without modifying the codebase.
 
 ## Skill Interconnections
 
 | Skill / Agent | Direction | Role |
 |---|---|---|
-| `hapo:code` | → calls hapo:test | Triggers test after implementation |
 | `hapo:code-review` | runs in parallel | Both run at Quality Gate Step 4 |
 | `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
-| `inspect` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
-| `fullstack-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
-| `tester` agent | hapo:test → | Primary executor, spawned via Task tool |
-| chrome-devtools scripts | tester → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
+| `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
+| `god-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
+| `test-runner` agent | hapo:test → | Primary executor, spawned via Task tool |
+| chrome-devtools scripts | test-runner → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
 
 ## References
 
@@ -146,6 +145,6 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 
 ## Related
 
-- Previous skill: `hapo:code`
+- Previous skill: `hapo:develop`
 - Parallel skill: `hapo:code-review`
 - Parent workflow: `hapo:develop` Step 4 Quality Gate

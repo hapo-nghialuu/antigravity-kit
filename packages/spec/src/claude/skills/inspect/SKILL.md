@@ -113,7 +113,7 @@ Follow-up: "Want to investigate deeper? Choose: backend API | frontend component
 
 ## Configuration
 
-Read from `.claude/runtime.json`:
+Read from `packages/spec/src/claude/runtime.json`:
 ```json
 {
   "gemini": {

@@ -5,7 +5,7 @@ version: 2.0.0
 argument-hint: "<feature-description> | status | resume | review | archive"
 ---
 
-# Hapo Specs (SDD — Specification-Driven Development)
+# Specs (SDD — Specification-Driven Development)
 
 > A structured specification system that turns vague ideas into actionable, implementable task lists.
 
@@ -62,7 +62,7 @@ Display selection menu via `AskUserQuestion`:
 {
   "questions": [{
     "question": "What would you like to do?",
-    "header": "Hapo Specs",
+    "header": "Specs",
     "options": [
       { "label": "Create new spec", "description": "Initialize spec from a feature description" },
       { "label": "status", "description": "View status of all specs in specs/" },

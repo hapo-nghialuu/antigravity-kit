@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copyright (c) 2024-2025 Haposoft. MIT License.
+ * Copyright (c) 2026 Haposoft. MIT License.
  *
  * PreToolUse Hook — inspect-block.cjs
  * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks

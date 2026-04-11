@@ -108,7 +108,7 @@ Check for: unresolved deps, deprecation warnings, missing env vars.
 
 ## Phase C: UI Verification via chrome-devtools Scripts
 
-**Script directory:** `.claude/skills/chrome-devtools/scripts/`
+**Script directory:** `packages/spec/src/claude/skills/chrome-devtools/scripts/`
 
 ### Execution Model: Parallel Subagents
 
@@ -136,10 +136,10 @@ Each subagent must run **Phase C-pre (Lazy Install)** first before executing its
 Chrome-devtools scripts require Puppeteer & Chromium. Installed strictly on first use.
 
 1. Check if `node_modules` exists:
-   `test -d .claude/skills/chrome-devtools/scripts/node_modules`
+   `test -d packages/spec/src/claude/skills/chrome-devtools/scripts/node_modules`
 2. If NOT found:
    Log: *"Preparing UI Testing environment (first-time setup)..."*
-   Run: `cd .claude/skills/chrome-devtools/scripts && npm install`
+   Run: `cd packages/spec/src/claude/skills/chrome-devtools/scripts && npm install`
    *(Downloads Puppeteer & Chromium — may take 1-2 minutes.)*
 3. Proceed after successful installation.
 
@@ -244,11 +244,10 @@ Collects Core Web Vitals: `LCP`, `FID`, `CLS`, `FCP`, `TTFB`, `JSHeapUsedSize`.
 node screenshot.js --url <url> --output screenshots/mobile-375.png --full-page true
 node screenshot.js --url <url> --output screenshots/desktop-1440.png --full-page true
 
-# AI Visual Analysis (Delegate to hapo:llm-moe Hub)
-pushd ../../llm-moe/scripts
-npm list @google/generative-ai || npm install
-node visual-analyze.js --image "../../chrome-devtools/scripts/screenshots/mobile-375.png"
-node visual-analyze.js --image "../../chrome-devtools/scripts/screenshots/desktop-1440.png"
+# AI Visual Analysis (Delegate to hapo:ai-multimodal Hub)
+pushd ../../ai-multimodal/scripts
+python gemini_batch_process.py --files "../../chrome-devtools/scripts/screenshots/mobile-375.png" --task analyze --prompt "Check for layout overlap"
+python gemini_batch_process.py --files "../../chrome-devtools/scripts/screenshots/desktop-1440.png" --task analyze --prompt "Check for layout overlap"
 popd
 ```
 

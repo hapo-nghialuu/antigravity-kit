@@ -18,7 +18,7 @@ START_LOOP:
         prompt="Run tests for recently implemented code. Blast-radius mode.",
         description="Test [feature]")
 
-  → Task(subagent_type="code-reviewer",
+  → Task(subagent_type="code-auditor",
         prompt="Review all recently written code. Check security, performance,
           YAGNI/KISS/DRY. Return score (X/10), critical count, warning list.",
         description="Review [feature]")
@@ -51,9 +51,9 @@ START_LOOP:
 
 REVIEW_ONLY:
   ---------------------------------------------------------------
-  Re-run ONLY code-reviewer (tests already passed — no re-test)
+  Re-run ONLY code-auditor (tests already passed — no re-test)
   ---------------------------------------------------------------
-  → Task(subagent_type="code-reviewer", ...)
+  → Task(subagent_type="code-auditor", ...)
 
   IF Score >= 9.5 AND Critical = 0 → PASS!
   IF Score < 9.5 OR Critical > 0:

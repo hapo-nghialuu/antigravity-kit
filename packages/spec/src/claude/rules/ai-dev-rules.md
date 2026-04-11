@@ -32,12 +32,20 @@ Activate relevant skills from the catalog before starting work:
 | Database inspection | `psql` CLI |
 
 
+## Visual Explanations (Diagrams First)
+
+When asked to explain complex logic, unfamiliar code patterns, system architecture, or workflows involving 3+ intersecting components:
+- **DO NOT** output dense walls of text.
+- **DO** generate clean, inline Markdown `Mermaid.js` diagrams directly in the chat response to map out the data flows.
+- **ASCII Art:** Use simple terminal-friendly ASCII block diagrams if Mermaid is considered overkill for basic structures.
+- **Priority:** Optimize for speed, cleanliness, and visual clarity above writing verbose prose.
+
 ## Quality & Review Process
 
 - Ensure code compiles without syntax errors — this is non-negotiable
 - Balance readability and functionality over strict linting enforcement
 - Apply structured error handling (`try/catch`) and follow security best practices
-- After each implementation cycle, delegate to `hapo:code-reviewer` for a review pass
+- After each implementation cycle, delegate to `hapo:code-auditor` for a review pass
 - Adhere to coding standards outlined in `./docs`
 
 ## Common Pitfalls
