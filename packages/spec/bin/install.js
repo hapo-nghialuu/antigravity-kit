@@ -1045,21 +1045,23 @@ async function main() {
     }
     console.log();
     console.log('Next steps:');
-    console.log('  1. Start your AI editor');
+    console.log('  1. Start your AI editor (Claude Code or Antigravity)');
 
-    // Show platform-specific commands
+    // Show platform-specific hints
     for (const platformKey of platforms) {
       const platform = PLATFORMS[platformKey];
       console.log(`\n  For ${platform.name}:`);
-      console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
       if (platformKey === 'claude') {
-        console.log('     Or use skill: /hapo:spec-init <feature-description>');
+        console.log('     Use skill: /hapo:specs <feature-description>');
+      } else {
+        console.log(`     Instruct the agent to start a new feature or brainstorm`);
       }
     }
 
-    console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - code-review');
+    console.log('\n  2. The AI will automatically sync docs/ (Continuous Documentation)');
+    console.log('  3. Project API Keys are now securely isolated in .claude/.env');
     if (!installerOptions.upgrade) {
-      console.log('  3. To refresh managed templates later, run installer with --upgrade');
+      console.log('  4. To refresh managed templates later, run installer with --upgrade');
     }
     console.log();
     console.log('Documentation: https://github.com/haposoft/cafekit');
