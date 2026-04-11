@@ -341,7 +341,7 @@ function ensureWorkflowDependencies(platformKey, platform, results, options = {}
 function getPlatformSpecFiles(platformKey) {
   if (platformKey === 'claude') {
     const manifestCommands = CLAUDE_MIGRATION_MANIFEST?.commands?.core;
-    if (Array.isArray(manifestCommands) && manifestCommands.length > 0) {
+    if (Array.isArray(manifestCommands)) {
       return manifestCommands;
     }
 
