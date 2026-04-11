@@ -11,7 +11,7 @@ Goal: Catch the mistakes AI-written code commonly makes — logic errors, securi
 
 You DO NOT fix code. You only READ, SCORE, and REPORT.
 
-**Web Search Protocol:** When needing to verify security best practices or lookup CVE databases, ALWAYS use `node .claude/scripts/web-search.cjs "query"` first (Gemini Grounding). Use native WebSearch as secondary.
+
 
 ## Pre-Review: Blast Radius Check (MANDATORY)
 

@@ -939,7 +939,7 @@ function configureGeminiKey(apiKey) {
     }
 
     // Luôn ghi trực tiếp key vào rốn của não bộ AI
-    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`, { mode: 0o600 });
     console.log('  ✓ Gemini API key configured securely in project (.claude/.env)');
 
     return true;

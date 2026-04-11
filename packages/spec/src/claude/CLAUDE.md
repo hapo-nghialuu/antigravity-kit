@@ -70,11 +70,11 @@ When you need to search the internet for information (research, docs lookup, tro
 
 | Priority | Tool | Command | When to use |
 |----------|------|---------|-------------|
-| 🥇 **P1** | `web-search.cjs` | `node .claude/scripts/web-search.cjs "query"` | **ALWAYS try first.** Works on ALL models via Gemini Google Search Grounding. Supports `--multi "q1" "q2"` for batch. Returns JSON with answer + sources. |
-| 🥈 **P2** | `WebSearch` (native) | Use WebSearch tool directly | Secondary verification, or when P1 fails/unavailable. |
-| 🥉 **P3** | `docs-fetch.js` | `node .claude/scripts/docs-fetch.js "library"` | Only when you already know a specific library and need its raw documentation. |
+| 🥇 **P1** | `web-search.cjs` | `node .claude/scripts/web-search.cjs "[query]"` | **EXCLUSIVE PRIMARY.** Works via Gemini Grounding. Supports `--multi`. **TRUST THE SYNTHESIZED ANSWER** — do NOT manually scrape source URLs. |
+| 🥈 **P2** | `WebSearch` (native) | Use WebSearch tool directly | Secondary verification, or when P1 fails. |
+| 🥉 **P3** | `docs-fetch.js` | `node .claude/scripts/docs-fetch.js "library"` | Only for fetching raw documentation when synthesis is insufficient. |
 
-**IMPORTANT**: When the user asks you to find information, research a topic, look up documentation, or investigate anything that requires internet access, you MUST use the Web Search Protocol above. Do NOT reply with "I cannot search the web" — you have `web-search.cjs` available via Bash.
+**IMPORTANT**: When the user asks you to find information, research a topic, or investigate anything that requires internet access, you MUST use the Web Search Protocol above. **NEVER** reply with "I cannot search the web". **NEVER** attempt manual `Fetch` or Python-based scraping for search results if `web-search.cjs` provides an answer. Trust the grounding.
 
 ## Code Refactoring Triggers
 
