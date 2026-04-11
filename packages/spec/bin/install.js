@@ -543,7 +543,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       // Copy agent reference manuals (debugger manuals, etc.) recursively
       const refsSource = path.join(__dirname, '../src', platform.sourceDir, 'references');
       if (fs.existsSync(refsSource)) {
-        const refsDest = path.join(platform.destDir, 'references');
+        const refsDest = path.join(platform.folder, 'references');
         const refsExisted = fs.existsSync(refsDest);
         copyRecursive(refsSource, refsDest, options);
 
