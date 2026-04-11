@@ -827,6 +827,43 @@ function copyRulesDirectory(platformKey, results, options = {}) {
   }
 }
 
+// Ensure .gitignore configured at root
+function ensureGitignore(results, options = {}) {
+  const gitignorePath = path.join(process.cwd(), '.gitignore');
+  const header = '# CafeKit / Ecosystem';
+  const patterns = [
+    'specs/_shared/',
+    'plans/',
+    '!plans/templates/'
+  ];
+
+  if (!fs.existsSync(gitignorePath)) {
+    const content = ['# Git Ignore', '', header, ...patterns, ''].join('\n');
+    fs.writeFileSync(gitignorePath, content, 'utf8');
+    console.log('  ✓ .gitignore created at root');
+    results.copied++;
+    return;
+  }
+
+  const content = fs.readFileSync(gitignorePath, 'utf8');
+  const lines = content.split('\n').map(l => l.trim());
+  const missing = patterns.filter(p => !lines.includes(p));
+
+  if (missing.length > 0) {
+    let newContent = content;
+    if (!newContent.endsWith('\n')) newContent += '\n';
+    if (!content.includes(header)) newContent += `\n${header}\n`;
+
+    newContent += missing.join('\n') + '\n';
+    fs.writeFileSync(gitignorePath, newContent, 'utf8');
+    console.log(`  ↻ .gitignore updated: added ${missing.join(', ')}`);
+    results.updated++;
+  } else {
+    console.log('  → .gitignore already up to date');
+    results.skipped++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // GEMINI CLI SETUP
 // ═══════════════════════════════════════════════════════════
@@ -1023,6 +1060,12 @@ async function main() {
       results.targets.push(platform.commandsDir);
       console.log();
     }
+
+    // Ensure root .gitignore is configured correctly
+    console.log('Root Configuration');
+    console.log('-'.repeat(40));
+    ensureGitignore(results, installerOptions);
+    console.log();
 
     // Setup Gemini CLI and API Key config
     await setupGeminiCLI(platforms);
