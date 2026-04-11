@@ -2,31 +2,34 @@
   "version": 2,
   "scope": "claude-only",
   "commands": {
-    "core": [
-      "docs.md",
-      "spec-init.md",
-      "spec-requirements.md",
-      "spec-design.md",
-      "spec-validate.md",
-      "spec-tasks.md",
-      "spec-status.md",
-      "code.md",
-      "test.md"
-    ]
+    "core": []
   },
   "skills": {
     "required": [
-      "specs",
+      "agent-browser",
+      "ai-multimodal",
+      "backend-development",
+      "brainstorm",
+      "chrome-devtools",
+      "code",
+      "code-review",
+      "develop",
+      "devops",
+      "frontend-design",
+      "frontend-development",
+      "git",
+      "hotfix",
       "impact-analysis",
       "inspect",
-      "code",
-      "test",
-      "code-review",
-      "git",
-      "develop",
-      "hotfix",
+      "llm-moe",
+      "mobile-development",
+      "react-best-practices",
+      "research",
+      "specs",
       "sync",
-      "research"
+      "test",
+      "ui-ux-pro-max",
+      "web-testing"
     ]
   },
   "agents": {
@@ -38,7 +41,8 @@
       "docs-keeper.md",
       "git-ops.md",
       "inspector.md",
-      "battle-chief.md",
+      "project-manager.md",
+      "brainstormer.md",
       "researcher.md",
       "spec-maker.md",
       "ui-ux-designer.md",
@@ -48,7 +52,8 @@
   "scripts": {
     "required": [
       "docs-fetch.js",
-      "validate-docs.cjs"
+      "validate-docs.cjs",
+      "browser-tool.cjs"
     ]
   },
   "agentReferences": {
@@ -62,6 +67,7 @@
       "runtime.json",
       "status.cjs",
       "hooks/session.cjs",
+      "hooks/docs-sync.cjs",
       "hooks/agent.cjs",
       "hooks/usage.cjs",
       "hooks/privacy-block.cjs",

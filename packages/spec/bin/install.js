@@ -784,12 +784,12 @@ function mergeClaudeSettings(platformKey, results, options = {}) {
   fs.writeFileSync(targetPath, JSON.stringify(mergedSettings, null, 2), 'utf8');
 }
 
-// Copy CLAUDE.md template (always overwrite)
+// Copy CLAUDE.md template (always overwrite at Project Root)
 function copyClaudeMdFile(platformKey, results, options = {}) {
   if (platformKey !== 'claude') return;
 
   const source = path.join(__dirname, '../src/claude/CLAUDE.md');
-  const dest = path.join(PLATFORMS.claude.folder, 'CLAUDE.md');
+  const dest = 'CLAUDE.md'; // Xuất thẳng ra thư mục ROOT thay vì nhét vào trong .claude/
 
   if (fs.existsSync(source)) {
     const destinationExists = fs.existsSync(dest);
@@ -892,34 +892,18 @@ async function promptGeminiAPIKey() {
   });
 }
 
-function configureGeminiKey(apiKey, platforms) {
+function configureGeminiKey(apiKey) {
   try {
-    const geminiDir = path.join(os.homedir(), '.gemini');
-    const globalEnvFile = path.join(geminiDir, '.env');
+    const targetDir = path.join(process.cwd(), '.claude');
+    const localEnvFile = path.join(targetDir, '.env');
 
-    // Ensure global .gemini directory exists
-    if (!fs.existsSync(geminiDir)) {
-      fs.mkdirSync(geminiDir, { recursive: true });
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
     }
 
-    // Write API key to global .env file
-    fs.writeFileSync(globalEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
-    console.log('  ✓ Gemini API key configured globally (~/.gemini/.env)');
-
-    // Pin API key into local .env for each activated platform folder
-    if (platforms && platforms.length > 0) {
-      platforms.forEach(platformKey => {
-        const platform = PLATFORMS[platformKey];
-        if (platform && platform.folder) {
-          const localEnvFile = path.join(platform.folder, '.env');
-          if (!fs.existsSync(platform.folder)) {
-            fs.mkdirSync(platform.folder, { recursive: true });
-          }
-          fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
-          console.log(`  ✓ Saved API Key to local project (${platform.folder}/.env)`);
-        }
-      });
-    }
+    // Luôn ghi trực tiếp key vào rốn của não bộ AI
+    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+    console.log('  ✓ Gemini API key configured securely in project (.claude/.env)');
 
     return true;
   } catch (error) {
@@ -949,7 +933,7 @@ async function setupGeminiCLI(platforms) {
   // Always prompt for API config since we need it for hapo:test Multimodal
   const apiKey = await promptGeminiAPIKey();
   if (apiKey) {
-    configureGeminiKey(apiKey, platforms);
+    configureGeminiKey(apiKey);
   } else {
     console.log('\n  ℹ Skipped API key configuration');
     console.log('  Set later: export GEMINI_API_KEY="your-key"');
@@ -1042,8 +1026,6 @@ async function main() {
 
     // Setup Gemini CLI and API Key config
     await setupGeminiCLI(platforms);
-
-    // Note: CLAUDE.md and docs/ are generated via /docs init command
 
     // Summary
     console.log('╔════════════════════════════════════════════════════════╗');

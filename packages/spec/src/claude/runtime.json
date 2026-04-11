@@ -4,7 +4,7 @@
     "enabled": true
   },
   "gemini": {
-    "model": "gemini-3-flash-preview"
+    "model": "gemma-4-31b-it"
   },
   "statusline": "full",
   "statuslineColors": true,
@@ -13,7 +13,7 @@
   },
   "paths": {
     "docs": "docs",
-    "plans": "plans"
+    "specs": "specs"
   },
   "locale": {
     "thinkingLanguage": null,

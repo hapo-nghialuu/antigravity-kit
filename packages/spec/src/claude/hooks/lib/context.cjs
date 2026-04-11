@@ -366,7 +366,7 @@ function buildRulesSection({ devRulesPath, catalogScript, skillsVenv, plansPath,
   }
 
   lines.push(`- When skills' scripts are failed to execute, always fix them and run again, repeat until success.`);
-  lines.push(`- Follow **YAGNI (You Aren't Gonna Need It) - KISS (Keep It Simple, Stupid) - DRY (Don't Repeat Yourself)** principles`);
+  lines.push(`- Follow **YAGNI - KISS - DRY** principles`);
   lines.push(`- Sacrifice grammar for the sake of concision when writing reports.`);
   lines.push(`- In reports, list any unresolved questions at the end, if any.`);
   lines.push(`- IMPORTANT: Ensure token consumption efficiency while maintaining high quality.`);

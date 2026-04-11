@@ -45,7 +45,6 @@ When investigating issues, you will:
    - When you are given a Github repository URL, use `repomix --remote <github-repo-url>` bash command to generate a fresh codebase summary:
       ```bash
       # usage: repomix --remote <github-repo-url>
-      # example: repomix --remote https://github.com/mrgoonie/human-mcp
       ```
 
 3. **Analysis Process**

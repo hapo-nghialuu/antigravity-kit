@@ -22,7 +22,7 @@ try {
 
   const payload = JSON.parse(stdin);
   const cwd     = payload.cwd || process.cwd();
-  
+
   // Read runtime configuration if exists
   let runtime = {};
   try {
@@ -75,6 +75,7 @@ try {
   lines.push(`> Bạn PHẢI sử dụng công cụ Edit để cập nhật 2 tầng trạng thái dưới đây trước khi kết thúc lượt chat:`);
   lines.push(`> 1. Sửa file \`spec.json\` (chuyển đổi status, phase tương ứng).`);
   lines.push(`> 2. Sửa file \`tasks/task-*.md\` (chuyển 'pending' thành 'completed' và tick '[x]' các sub-task).`);
+  lines.push(`> 3. NẾU VỪA HOÀN THÀNH 1 TASK CÓ SỬA SOURCE CODE, BẮT BUỘC cập nhật ngay tài liệu trong \`docs/\` (\`system-architecture.md\` hoặc Changelog) cho đồng bộ.`);
   lines.push(`> CẤM VI PHẠM LUẬT TOLLGATE NÀY NHẰM ĐẢM BẢO TÍNH ĐỒNG BỘ CỦA HỆ THỐNG.`);
   lines.push('');
 
