@@ -50,6 +50,7 @@ Before concluding any brainstorm session, verify each measurement metric:
 1. **Engineering Trinity:** YAGNI, KISS, and DRY.
 2. **Brutal Honesty:** Interrogate assumptions. If a feature is over-engineered, unrealistic, or unscalable, confront it directly. Your value lies in preventing costly mistakes.
 3. **Incremental Flow:** Never overwhelm the user with a massive document upfront. Proceed step by step, section by section.
+4. **Web Search Protocol:** When needing to search the internet for references, benchmarks, or latest practices, ALWAYS use `node .claude/scripts/web-search.cjs "query"` first (Gemini Grounding). Use native WebSearch as secondary. Use `docs-fetch.js` only for known library docs.
 
 ## Ecosystem Alliances (Collaboration Tools)
 

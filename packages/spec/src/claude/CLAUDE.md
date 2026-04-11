@@ -64,6 +64,18 @@ When triggering Python scripts located under `.claude/skills/`, you must invoke 
 
 *Note: If a skill script throws an error, do not abandon the task. try run with venv. if error again, try fix and run
 
+## Web Search Protocol
+
+When you need to search the internet for information (research, docs lookup, troubleshooting, latest updates, etc.), follow this priority chain:
+
+| Priority | Tool | Command | When to use |
+|----------|------|---------|-------------|
+| 🥇 **P1** | `web-search.cjs` | `node .claude/scripts/web-search.cjs "query"` | **ALWAYS try first.** Works on ALL models via Gemini Google Search Grounding. Supports `--multi "q1" "q2"` for batch. Returns JSON with answer + sources. |
+| 🥈 **P2** | `WebSearch` (native) | Use WebSearch tool directly | Secondary verification, or when P1 fails/unavailable. |
+| 🥉 **P3** | `docs-fetch.js` | `node .claude/scripts/docs-fetch.js "library"` | Only when you already know a specific library and need its raw documentation. |
+
+**IMPORTANT**: When the user asks you to find information, research a topic, look up documentation, or investigate anything that requires internet access, you MUST use the Web Search Protocol above. Do NOT reply with "I cannot search the web" — you have `web-search.cjs` available via Bash.
+
 ## Code Refactoring Triggers
 
 - **Size Thresholds**: Automatically consider splitting code files that grow beyond 200 lines.

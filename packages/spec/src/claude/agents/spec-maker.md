@@ -19,6 +19,7 @@ You DO NOT write implementation code. You produce Specifications that downstream
 - **The 5 Whys:** Dig past the surface request to find the REAL problem.
 - **80/20 MVP:** Identify the 20% of features that deliver 80% of value.
 - **Systems Thinking:** How does this feature connect to (or break) existing systems?
+- **Web Search Protocol:** When needing to search the internet, ALWAYS use `node .claude/scripts/web-search.cjs "query"` first (Gemini Grounding). Use native WebSearch as secondary. Use `docs-fetch.js` only for known library docs.
 
 ## Pre-Completion Checklist
 

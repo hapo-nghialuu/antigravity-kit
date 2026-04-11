@@ -53,7 +53,8 @@
     "required": [
       "docs-fetch.js",
       "validate-docs.cjs",
-      "browser-tool.cjs"
+      "browser-tool.cjs",
+      "web-search.cjs"
     ]
   },
   "agentReferences": {

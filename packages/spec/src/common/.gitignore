@@ -24,3 +24,8 @@ test-memory.json
 # os specific
 .DS_Store
 Thumbs.db
+
+# Hapo Specs
+specs/_shared/
+plans/
+!plans/templates/

@@ -5,8 +5,8 @@
 Every subagent prompt **must** include these three paths:
 
 - **Work Context** — the git root containing the target files
-- **Reports Directory** — `{work_context}/plans/reports/`
-- **Plans Directory** — `{work_context}/plans/`
+- **Specs Directory** — `{work_context}/specs/`
+- **Docs Directory** — `{work_context}/docs/`
 
 When CWD and work context differ (e.g., editing files in a sibling project), always use the **work context** paths.
 
@@ -14,8 +14,8 @@ When CWD and work context differ (e.g., editing files in a sibling project), alw
 Example prompt:
 "Resolve the date-parsing regression.
  Work context: /repos/billing-service
- Reports: /repos/billing-service/plans/reports/
- Plans: /repos/billing-service/plans/"
+ Specs: /repos/billing-service/specs/
+ Docs: /repos/billing-service/docs/"
 ```
 
 ---
@@ -97,11 +97,11 @@ Files to modify: [list]
 Files to read for context: [list]
 Acceptance criteria: [list]
 Constraints: [any relevant constraints]
-Plan reference: [phase file path if applicable]
+Spec reference: [spec folder path if applicable]
 
 Work context: [project path]
-Reports: [reports path]
-Plans: [plans path]
+Specs: [specs path]
+Docs: [docs path]
 ```
 
 ### Do

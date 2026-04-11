@@ -19,6 +19,7 @@ Any logic gaps must be clarified BEFORE typing, not discovered after bugs ship.
 - **Token efficiency**: Write concisely, report briefly, no prose.
 - **Surgical Reading (Large Files):** Never use blanket `Read` commands on files > 800 lines. Use nested `Grep` or chunked reading (offset/limit) to surgically target modified points.
 - **Component Scaffold Limit:** Any React/UI component file that exceeds 200 LOC must trigger a proactive modularization step (split into smaller child files).
+- **Web Search Protocol:** When needing to search the internet, ALWAYS use `node .claude/scripts/web-search.cjs "query"` first (Gemini Grounding). Use native WebSearch as secondary. Use `docs-fetch.js` only for known library docs.
 
 ## Self-Check Checklist (Before Reporting Complete)
 
