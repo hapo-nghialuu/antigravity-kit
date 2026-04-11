@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * Usage Cache Writer - UserPromptSubmit & PostToolUse Hook
+ * Copyright (c) 2026 Haposoft. MIT License.
+ *
+ * UserPromptSubmit & PostToolUse Hook — usage.cjs
+ * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks
  *
  * Fetches Claude Code usage limits from Anthropic OAuth API and writes to cache.
- * The cache is read by:
- * - status.cjs (for display)
- * - context.cjs (for injection)
+ * Cache is read by status.cjs for statusline display.
  *
  * Features:
  * - Cross-platform credential retrieval (macOS Keychain, file-based)
- * - API response caching (60s TTL)
- * - Throttled API calls (1 min for prompts, 5 mins for tool use)
+ * - Throttled API calls: 1 min (prompt) / 5 min (tool use)
+ * - Disable: set "usage": { "enabled": false } in .claude/runtime.json
  */
 
 // Crash wrapper
@@ -19,12 +20,15 @@ try {
   const path = require("path");
   const os = require("os");
   const { execSync } = require("child_process");
-  const { isHookEnabled } = require('./lib/config.cjs');
 
-  // Early exit if hook disabled in config
-  if (!isHookEnabled('usage-context-awareness')) {
-    process.exit(0);
-  }
+  // Check if usage tracking is disabled in runtime.json
+  try {
+    const runtimePath = path.join(process.cwd(), '.claude', 'runtime.json');
+    if (fs.existsSync(runtimePath)) {
+      const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
+      if (runtime.usage?.enabled === false) process.exit(0);
+    }
+  } catch { /* fail-open */ }
 
 // Cache configuration
 const USAGE_CACHE_FILE = path.join(os.tmpdir(), "ck-usage-limits-cache.json");
@@ -114,7 +118,7 @@ async function fetchAndCacheUsageLimits() {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 				"anthropic-beta": "oauth-2025-04-20",
-				"User-Agent": "claudekit-engineer/1.0",
+				"User-Agent": "cafekit/1.0",
 			},
 		});
 

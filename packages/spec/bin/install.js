@@ -58,21 +58,21 @@ const DEPENDENCY_TEMPLATES = {
     claude: {},
     antigravity: {
       'code.md': `---
-description: Implement approved work from specification tasks and then hand off to test and review.
+description: Implement approved work from specification tasks and then hand off to test and hapo:code-review.
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash
 argument-hint: <feature-name>
 ---
 
-# /code - Implement from spec tasks
+# /code
 
 Use this workflow after /spec-tasks.
 
 1. Read .specs/$ARGUMENTS/tasks.md and identify the next pending task.
 2. Implement only that task following project standards.
 3. Run /test.
-4. Run /review.
+4. Run /hapo:code-review.
 
-Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /review
+Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /hapo:code-review
 `,
       'test.md': `---
 description: Run project tests and report failures concisely.
@@ -88,22 +88,6 @@ Run the project's test command and report:
 - root cause hints
 - next fix action
 `,
-      'review.md': `---
-description: Review recent code changes for quality, security, and maintainability.
-allowed-tools: Bash, Read, Grep, Glob
-argument-hint: [scope]
----
-
-# /review
-
-Review recent code changes. Prioritize:
-- correctness
-- security
-- regressions
-- maintainability
-
-Output findings by severity and include concrete fixes.
-`
     }
   },
   agents: {
@@ -357,7 +341,7 @@ function ensureWorkflowDependencies(platformKey, platform, results, options = {}
 function getPlatformSpecFiles(platformKey) {
   if (platformKey === 'claude') {
     const manifestCommands = CLAUDE_MIGRATION_MANIFEST?.commands?.core;
-    if (Array.isArray(manifestCommands) && manifestCommands.length > 0) {
+    if (Array.isArray(manifestCommands)) {
       return manifestCommands;
     }
 
@@ -370,9 +354,6 @@ function getPlatformSpecFiles(platformKey) {
       'spec-status.md',
       'code.md',
       'test.md',
-      'review.md',
-      'review/codebase.md',
-      'review/codebase/parallel.md',
       'docs.md'
     ];
   }
@@ -408,7 +389,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
   // Source directories - support different subfolder names per platform
   const sourceSubdir = platform.sourceSubdir || 'commands';
   const commandsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/${sourceSubdir}`);
-  const skillsSourceDir = path.join(__dirname, '../src/common/skills');
+  const skillsSourceDir = path.join(__dirname, '../src/claude/skills');
   const agentsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/agents`);
 
   // Create directories
@@ -490,7 +471,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
       // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug'];
+      requiredSkills = ['impact-analysis', 'debug', 'llm-moe'];
     }
 
     requiredSkills
@@ -558,9 +539,42 @@ function copyPlatformFiles(platformKey, results, options = {}) {
           console.log(`  ✓ Dependency installed: ${path.join(platform.agentsDir, fileName)}`);
         }
       });
+
+      // Copy agent reference manuals (debugger manuals, etc.) recursively
+      const refsSource = path.join(__dirname, '../src', platform.sourceDir, 'references');
+      if (fs.existsSync(refsSource)) {
+        const refsDest = path.join(platform.folder, 'references');
+        const refsExisted = fs.existsSync(refsDest);
+        copyRecursive(refsSource, refsDest, options);
+
+        if (shouldOverwriteManagedFiles && refsExisted) {
+          console.log(`  ↻ Agent reference manuals updated`);
+          results.updated++;
+        } else {
+          console.log(`  ✓ Agent reference manuals installed`);
+          results.copied++;
+        }
+      }
+
     } else {
       results.missingDependencies++;
       console.log(`  ⚠ Missing dependency template: ${platform.agentsDir}`);
+    }
+
+    // Copy native scripts (browser-tool, docs-fetch, validate-docs)
+    const scriptsSourceDir = path.join(__dirname, '../src/claude/scripts');
+    if (fs.existsSync(scriptsSourceDir)) {
+      const scriptsDest = path.join(platform.folder, 'scripts');
+      const scriptsExisted = fs.existsSync(scriptsDest);
+      copyRecursive(scriptsSourceDir, scriptsDest, options);
+
+      if (shouldOverwriteManagedFiles && scriptsExisted) {
+        console.log(`  ↻ Native scripts updated`);
+        results.updated++;
+      } else {
+        console.log(`  ✓ Native scripts installed`);
+        results.copied++;
+      }
     }
 
   }
@@ -770,6 +784,49 @@ function mergeClaudeSettings(platformKey, results, options = {}) {
   fs.writeFileSync(targetPath, JSON.stringify(mergedSettings, null, 2), 'utf8');
 }
 
+// Copy CLAUDE.md template (always overwrite at Project Root)
+function copyClaudeMdFile(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const source = path.join(__dirname, '../src/claude/CLAUDE.md');
+  const dest = 'CLAUDE.md'; // Xuất thẳng ra thư mục ROOT thay vì nhét vào trong .claude/
+
+  if (fs.existsSync(source)) {
+    const destinationExists = fs.existsSync(dest);
+
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(source, dest);
+
+    if (destinationExists) {
+      console.log(`  ↻ CLAUDE.md overwritten`);
+      results.updated++;
+    } else {
+      console.log(`  ✓ CLAUDE.md installed`);
+      results.copied++;
+    }
+  } else {
+    console.log(`  ⚠ CLAUDE.md template not found`);
+    results.missingDependencies++;
+  }
+}
+
+// Copy rules directory (always overwrite)
+function copyRulesDirectory(platformKey, results, options = {}) {
+  if (platformKey !== 'claude') return;
+
+  const source = path.join(__dirname, '../src/claude/rules');
+  const dest = path.join(PLATFORMS.claude.folder, 'rules');
+
+  if (fs.existsSync(source)) {
+    copyRecursive(source, dest, { upgrade: true });
+    console.log(`  ↻ rules/ directory overwritten`);
+    results.updated++;
+  } else {
+    console.log(`  ⚠ rules/ directory not found`);
+    results.missingDependencies++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // GEMINI CLI SETUP
 // ═══════════════════════════════════════════════════════════
@@ -803,7 +860,7 @@ async function promptInstallGemini() {
   });
 
   console.log('\n📦 Optional: Gemini CLI Installation');
-  console.log('  hapo:inspector with ext mode requires gemini-cli');
+  console.log('  hapo:inspect with ext mode requires gemini-cli');
   console.log('  • Install now: Auto-install and configure API key');
   console.log('  • Skip: You can still use hapo:inspect in internal mode');
   console.log();
@@ -837,18 +894,17 @@ async function promptGeminiAPIKey() {
 
 function configureGeminiKey(apiKey) {
   try {
-    const geminiDir = path.join(os.homedir(), '.gemini');
-    const envFile = path.join(geminiDir, '.env');
+    const targetDir = path.join(process.cwd(), '.claude');
+    const localEnvFile = path.join(targetDir, '.env');
 
-    // Ensure .gemini directory exists
-    if (!fs.existsSync(geminiDir)) {
-      fs.mkdirSync(geminiDir, { recursive: true });
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
     }
 
-    // Write API key to .env file
-    fs.writeFileSync(envFile, `GEMINI_API_KEY=${apiKey}\n`, { mode: 0o600 });
-    console.log('  ✓ Gemini API key configured successfully');
-    console.log('  ✓ Saved to ~/.gemini/.env');
+    // Luôn ghi trực tiếp key vào rốn của não bộ AI
+    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+    console.log('  ✓ Gemini API key configured securely in project (.claude/.env)');
+
     return true;
   } catch (error) {
     console.log('  ✗ Failed to configure Gemini API key');
@@ -858,39 +914,29 @@ function configureGeminiKey(apiKey) {
   }
 }
 
-async function setupGeminiCLI() {
+async function setupGeminiCLI(platforms) {
   const hasGemini = checkGeminiCLI();
 
   if (hasGemini) {
     console.log('  ✓ gemini-cli already installed');
-    return;
-  }
-
-  const shouldInstall = await promptInstallGemini();
-
-  if (!shouldInstall) {
-    console.log('\n  ℹ Skipped gemini-cli installation');
-    console.log('  • hapo:inspector will work in internal mode (default)');
-    console.log('  • To install later: npm install -g @google/gemini-cli');
-    return;
-  }
-
-  const installed = installGeminiCLI();
-
-  if (installed) {
-    const apiKey = await promptGeminiAPIKey();
-
-    if (apiKey) {
-      configureGeminiKey(apiKey);
-    } else {
-      console.log('\n  ℹ Skipped API key configuration');
-      console.log('  Set later: export GEMINI_API_KEY="your-key"');
-    }
   } else {
-    console.log('\n📝 Manual installation steps:');
-    console.log('  1. npm install -g @google/gemini-cli');
-    console.log('  2. Get API key: https://aistudio.google.com/apikey');
-    console.log('  3. export GEMINI_API_KEY="your-key"');
+    const shouldInstall = await promptInstallGemini();
+    if (shouldInstall) {
+      installGeminiCLI();
+    } else {
+      console.log('\n  ℹ Skipped gemini-cli installation');
+      console.log('  • hapo:inspect will work in internal mode (default)');
+      console.log('  • To install later: npm install -g @google/gemini-cli');
+    }
+  }
+
+  // Always prompt for API config since we need it for hapo:test Multimodal
+  const apiKey = await promptGeminiAPIKey();
+  if (apiKey) {
+    configureGeminiKey(apiKey);
+  } else {
+    console.log('\n  ℹ Skipped API key configuration');
+    console.log('  Set later: export GEMINI_API_KEY="your-key"');
   }
 }
 
@@ -965,6 +1011,8 @@ async function main() {
         copyRoutingFile(platformKey, results, installerOptions);
         copyClaudeRuntimeFiles(platformKey, results, installerOptions);
         mergeClaudeSettings(platformKey, results, installerOptions);
+        copyClaudeMdFile(platformKey, results, installerOptions);
+        copyRulesDirectory(platformKey, results, installerOptions);
       }
 
       // Copy GEMINI.md for Antigravity platform
@@ -976,10 +1024,8 @@ async function main() {
       console.log();
     }
 
-    // Setup Gemini CLI for hapo:inspector ext mode
-    await setupGeminiCLI();
-
-    // Note: CLAUDE.md and docs/ are generated via /docs init command
+    // Setup Gemini CLI and API Key config
+    await setupGeminiCLI(platforms);
 
     // Summary
     console.log('╔════════════════════════════════════════════════════════╗');
@@ -999,21 +1045,23 @@ async function main() {
     }
     console.log();
     console.log('Next steps:');
-    console.log('  1. Start your AI editor');
+    console.log('  1. Start your AI editor (Claude Code or Antigravity)');
 
-    // Show platform-specific commands
+    // Show platform-specific hints
     for (const platformKey of platforms) {
       const platform = PLATFORMS[platformKey];
       console.log(`\n  For ${platform.name}:`);
-      console.log(`     Run: ${platform.commandPrefix}spec-init <feature-name>`);
       if (platformKey === 'claude') {
-        console.log('     Or use skill: /hapo:spec-init <feature-description>');
+        console.log('     Use skill: /hapo:specs <feature-description>');
+      } else {
+        console.log(`     Instruct the agent to start a new feature or brainstorm`);
       }
     }
 
-    console.log('\n  2. Follow the workflow: requirements - design - tasks - code - test - review');
+    console.log('\n  2. The AI will automatically sync docs/ (Continuous Documentation)');
+    console.log('  3. Project API Keys are now securely isolated in .claude/.env');
     if (!installerOptions.upgrade) {
-      console.log('  3. To refresh managed templates later, run installer with --upgrade');
+      console.log('  4. To refresh managed templates later, run installer with --upgrade');
     }
     console.log();
     console.log('Documentation: https://github.com/haposoft/cafekit');

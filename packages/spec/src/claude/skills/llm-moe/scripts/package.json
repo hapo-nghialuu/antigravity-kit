@@ -1,0 +1,10 @@
+{
+  "name": "hapo-llm-moe-scripts",
+  "version": "1.0.0",
+  "description": "LLM scripts for visual and text analysis using Gemini/Gemma models.",
+  "main": "visual-analyze.js",
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  }
+}

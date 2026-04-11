@@ -2,45 +2,62 @@
   "version": 2,
   "scope": "claude-only",
   "commands": {
-    "core": [
-      "docs.md",
-      "spec-init.md",
-      "spec-requirements.md",
-      "spec-design.md",
-      "spec-validate.md",
-      "spec-tasks.md",
-      "spec-status.md",
-      "code.md",
-      "test.md",
-      "review.md",
-      "review/codebase.md",
-      "review/codebase/parallel.md"
-    ]
+    "core": []
   },
   "skills": {
     "required": [
-      "specs",
-      "impact-analysis",
-      "inspector",
-      "spec-init",
-      "spec-requirements",
-      "spec-design",
-      "spec-tasks",
+      "agent-browser",
+      "ai-multimodal",
+      "backend-development",
+      "brainstorm",
+      "chrome-devtools",
       "code",
+      "code-review",
+      "develop",
+      "devops",
+      "frontend-design",
+      "frontend-development",
+      "git",
+      "hotfix",
+      "impact-analysis",
+      "inspect",
+      "llm-moe",
+      "mobile-development",
+      "react-best-practices",
+      "research",
+      "specs",
+      "sync",
       "test",
-      "review"
+      "ui-ux-pro-max",
+      "web-testing"
     ]
   },
   "agents": {
     "required": [
-      "tester.md",
-      "code-reviewer.md",
-      "fullstack-developer.md",
-      "debugger.md"
+      "test-runner.md",
+      "code-auditor.md",
+      "god-developer.md",
+      "debugger.md",
+      "docs-keeper.md",
+      "git-ops.md",
+      "inspector.md",
+      "project-manager.md",
+      "brainstormer.md",
+      "researcher.md",
+      "spec-maker.md",
+      "ui-ux-designer.md",
+      "deployer.md"
     ]
   },
   "scripts": {
-    "required": []
+    "required": [
+      "docs-fetch.js",
+      "validate-docs.cjs",
+      "browser-tool.cjs"
+    ]
+  },
+  "agentReferences": {
+    "copyRecursive": true
   },
   "hooks": {
     "assumed": []
@@ -50,8 +67,14 @@
       "runtime.json",
       "status.cjs",
       "hooks/session.cjs",
+      "hooks/docs-sync.cjs",
       "hooks/agent.cjs",
       "hooks/usage.cjs",
+      "hooks/privacy-block.cjs",
+      "hooks/inspect-block.cjs",
+      "hooks/rules.cjs",
+      "hooks/spec-state.cjs",
+      "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",
       "hooks/lib/counter.cjs",
@@ -62,6 +85,6 @@
     ]
   },
   "settings": {
-    "template": "settings/status.settings.json"
+    "template": "settings/settings.json"
   }
 }
