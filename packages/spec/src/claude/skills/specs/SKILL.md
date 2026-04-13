@@ -93,10 +93,14 @@ flowchart TD
     E -->|No| F["Ask user 1-2 clarifying questions"]
     F --> D
     E -->|Yes| G["Step 2: Scan specs/ for related specs"]
-    G --> H["Step 3: Assess complexity"]
-    H --> I{Need scope inquiry?}
-    I -->|Yes| J["Ask 3 Scope questions → user picks level"]
-    I -->|No| K["Keep default scope"]
+    G --> H["Step 3: 5-Dimension Assessment"]
+    H --> H1{Risk level?}
+    H1 -->|Chaotic| HX["Exit → redirect to hapo:hotfix"]
+    H1 -->|Complex| H2["Include spike/prototype tasks"]
+    H1 -->|Clear/Complicated| H3{Need scope inquiry?}
+    H2 --> H3
+    H3 -->|Yes| J["Present 5D summary → user picks Expand/Hold/Reduce"]
+    H3 -->|No| K["Keep default scope"]
     J --> L["Step 4: Init — create specs/<feature>/"]
     K --> L
     L --> M["Step 5: Requirements — write EARS"]
@@ -140,9 +144,11 @@ Load: `references/cross-spec-dependency.md`
 
 ### Step 3: Complexity Assessment & Scope Inquiry
 Load: `references/scope-inquiry.md`
-- Apply when task complexity is medium or higher
-- Ask 3 questions: What exists already? What's the minimum change? How complex?
-- User picks: Expand / Hold / Reduce
+- Evaluate the request across **5 dimensions**: Semantic Intent, Implementation Hypothesis, Gap Sizing, Risk/Uncertainty (Cynefin), and Blast Radius
+- If Risk = **Chaotic** → exit spec workflow, redirect to `hapo:hotfix`
+- If Risk = **Complex** → include spike/prototype tasks in the spec
+- If Blast Radius = **Critical Path** → spec MUST include rollback strategy and test coverage requirements
+- User picks scope level: Expand / Hold / Reduce
 - **Skip if:** trivial task (< 20 words, 1 file, user says "just do it")
 
 ### Step 4: Init
