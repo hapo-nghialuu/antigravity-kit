@@ -471,7 +471,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
       // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug', 'llm-moe'];
+      requiredSkills = ['impact-analysis', 'debug', 'ai-multimodal'];
     }
 
     requiredSkills

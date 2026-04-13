@@ -237,7 +237,7 @@ Collects Core Web Vitals: `LCP`, `FID`, `CLS`, `FCP`, `TTFB`, `JSHeapUsedSize`.
 
 ---
 
-### Phase C-5: Responsive Screenshots (screenshot.js & visual-analyze.js)
+### Phase C-5: Responsive Screenshots (screenshot.js & gemini_batch_process.py)
 
 ```bash
 # Capture screenshots
