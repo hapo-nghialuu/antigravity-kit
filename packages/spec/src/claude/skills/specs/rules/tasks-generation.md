@@ -79,6 +79,33 @@ Grouping tasks vertically by requirement carries the risk of "siloed" or fragmen
 2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
 3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
 
+### 3d. Spike Tasks for Complex/Uncertain Areas (MANDATORY)
+
+When the 5-Dimension Complexity Assessment (Step 3) flags a component or requirement as **Risk = Complex** (Cynefin), the task breakdown MUST include a dedicated **spike/prototype task** before the main implementation task for that area.
+
+**Purpose**: Validate assumptions and reduce uncertainty before committing to full implementation.
+
+**Naming convention:** `tasks/task-R{N}-00-spike-<slug>.md`
+- Use `00` as the sequence number to ensure it runs FIRST within its requirement group.
+
+**Spike task structure:**
+1. **Objective**: State the specific uncertainty to resolve (e.g., "Validate that Google Meet captions DOM can be reliably scraped across account types")
+2. **Success Criteria**: Define what a successful spike looks like (e.g., "Demonstrate caption text extraction from 3 different Meet account types")
+3. **Time-box**: Maximum 4 hours. If spike exceeds time-box, escalate to user.
+4. **Output**: A brief findings report (can be inline in the task file) and a go/no-go recommendation.
+5. **Dependencies**: The main implementation task for this area MUST depend on the spike task.
+
+**When NOT to create spike tasks:**
+- Risk = Clear or Complicated → skip spike, proceed directly.
+- The uncertain area is already covered by research.md with concrete evidence (real API tests, not just documentation links).
+
+### 6. Risk Assessment Table (MANDATORY)
+
+Every task file MUST contain the Risk Assessment table, even if no risks are identified.
+- **Rule**: If there are risks, list them with Severity and Mitigation.
+- **Rule**: If no risks are found, you MUST still include the table and write `| None identified | — | — |`.
+- Never skip the `## Risk Assessment` section.
+
 ### 4. Requirements Mapping
 
 **End each task detail section with**:

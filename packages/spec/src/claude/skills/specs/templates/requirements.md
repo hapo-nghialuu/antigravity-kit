@@ -24,3 +24,15 @@
 2. When [event] and [condition], the [system] shall [response/action]
 
 <!-- Additional requirements follow the same pattern -->
+
+## Non-Functional Requirements (NFRs)
+
+### Performance & Scalability
+- The [system] shall [measurable performance metric, e.g. "respond within 500ms"]
+- The [system] shall [measurable scale metric, e.g. "support 100 concurrent users"]
+
+### Security & Privacy
+- The [system] shall [measurable security behavior, e.g. "encrypt data at rest using AES-256"]
+
+### Reliability & Availability
+- If [failure condition], the [system] shall [recovery behavior]

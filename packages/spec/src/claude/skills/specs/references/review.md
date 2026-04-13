@@ -212,5 +212,5 @@ Validate: {Q} questions asked, {D} decisions confirmed
 
 Files modified: {list}
 
-📌 Next step: /code <feature>
+📌 Next step: /hapo:develop <feature>
 ```

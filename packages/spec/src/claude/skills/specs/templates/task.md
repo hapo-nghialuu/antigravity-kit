@@ -11,6 +11,12 @@
 
 {{Brief 1-2 sentence objective detailing WHAT to accomplish, not HOW. Must relate directly to requirement R{{REQ_NUMBER}}.}}
 
+## Constraints
+
+- **MUST**: {{Non-negotiable requirement or technical constraint}}
+- **SHOULD**: {{Recommended approach or optimization}}
+- **MUST NOT**: {{Explicitly forbidden action or approach}}
+
 ## Implementation Steps
 
 - [ ] 1. {{MAJOR_STEP_1}}

@@ -50,7 +50,7 @@ Assess how many other parts of the system are affected if this change breaks or 
 
 ## Level Selection
 
-After answering the 3 questions, present via `AskUserQuestion`:
+After completing the 5-Dimension Assessment, present via `AskUserQuestion`:
 
 **Title:** "Scope Inquiry"
 **Question:** "Based on analysis, what scope level do you want?"

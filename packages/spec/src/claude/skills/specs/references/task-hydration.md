@@ -70,7 +70,7 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 3. Skips re-creation, begins implementing directly
 
 ### New session (resume)
-1. User runs `/code <feature>` in a new session
+1. User runs `/hapo:develop <feature>` in a new session
 2. Code reads `TaskList` → empty (tasks died with old session)
 3. Code reads task files → re-hydrates from `[ ]` items
 4. `[x]` items = done, skip those

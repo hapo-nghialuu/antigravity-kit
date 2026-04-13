@@ -3,9 +3,9 @@
 ## Core Design Principles
 
 ### 1. Type Safety is Mandatory
-- **NEVER** use `any` type in TypeScript interfaces
+- **NEVER** use generic/loosely-typed patterns (e.g., `any` in TypeScript, `object` in Python, `interface{}` in Go unless strictly necessary)
 - Define explicit types for all parameters and returns
-- Use discriminated unions for error handling
+- Use discriminated unions for error handling where supported
 - Specify generic constraints clearly
 
 ### 2. Design vs Implementation

@@ -252,10 +252,10 @@ Error tracking, logging, and health monitoring implementation.
 - E2E/UI Tests (if applicable): 3–5 critical user paths (e.g., forms, dashboards)
 - Performance/Load (if applicable): 3–4 items (e.g., concurrency, high-volume ops)
 
-## Optional Sections (include when relevant)
+## Conditional Sections (Include when relevant)
 
 ### Security Considerations
-_Use this section for features handling auth, sensitive data, external integrations, or user permissions. Capture only decisions unique to this feature; defer baseline controls to steering docs._
+_**REQUIRED** when features handle user data, authentication, PII, external integrations, or permissions. Omit only for purely internal UI changes._
 - Threat modeling, security controls, compliance requirements
 - Authentication and authorization patterns
 - Data protection and privacy considerations

@@ -39,30 +39,14 @@ Init → Requirements → Design → Tasks
 4. **After each phase**: Update `spec.json` with correct `phase`, `progress`, `timestamps`, and approval fields
 
 ### Auto-Approval Behavior
-- When running the full pipeline end-to-end, auto-approve between phases (set `approved: true` before proceeding)
-- When running a single phase, stop and report status after completion
+- When running the full pipeline end-to-end, follow the auto-approval rules defined in `SKILL.md`.
+- When running a single phase, stop and report status after completion.
 
 ## Scope Lock Protocol (MANDATORY)
 
-Every specification MUST have a `scope_lock` in `spec.json`:
-
-```json
-{
-  "scope_lock": {
-    "source": "<original user description>",
-    "in_scope": ["<confirmed capability 1>", "<confirmed capability 2>"],
-    "out_of_scope": ["<excluded capability 1>", "<excluded capability 2>"],
-    "expansion_policy": "requires-user-approval"
-  }
-}
-```
-
-### Scope Lock Rules
-- **Initialize** `scope_lock` during Init phase from user description + clarifying questions
-- **Filter** all requirements against `scope_lock.in_scope` during Requirements phase
-- **Reject** design elements that don't map to in-scope requirement IDs during Design phase
-- **Defer** out-of-scope task candidates during Tasks phase
-- **NEVER** expand scope without explicit user approval
+Every specification MUST govern its scope through the `scope_lock` object in `spec.json`.
+- **NEVER** expand scope without explicit user approval.
+- Follow the rules defined in `SKILL.md` precisely.
 
 ## Requirements Protocol
 
@@ -108,7 +92,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 ## Task Generation Protocol
 
 ### Task File Structure
-- Create **individual task files**: `tasks/task-01-<slug>.md`, `task-02-<slug>.md`...
+- Create **individual task files**: `tasks/task-R{N}-{SEQ}-<slug>.md`
 - Each file follows `{{SKILLS_DIR}}/specs/templates/task.md`
 - Load `{{SKILLS_DIR}}/specs/rules/tasks-generation.md`
 
@@ -149,19 +133,7 @@ Task(subagent_type="researcher", prompt="Research [feature topic]")
 
 ## Pre-Completion Checklist
 
-Before finalizing any specification, assert:
-
-- [ ] **scope_lock** initialized and respected throughout all phases
-- [ ] **EARS format** applied to all acceptance criteria in requirements.md
-- [ ] **Numeric requirement IDs** assigned to every requirement
-- [ ] **Discovery mode** selected and recorded in spec.json.design_context
-- [ ] **Requirements traceability** matrix present in design.md
-- [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
-- [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
-- [ ] **Dependency graph complete**: no task can start before its blockers are listed
-- [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
-- [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
-- [ ] **spec.json fully updated**: phase, progress, timestamps, approvals, design_context
+Before finalizing any specification, assert all 11 points in the `Pre-Finalization Checklist` defined in `SKILL.md`. Do not exit or declare completion until verifiable.
 
 ## Execution Workflow Summary
 
@@ -182,8 +154,8 @@ specs/<feature>/
 ├── design.md              # Architecture with traceability matrix and diagrams
 ├── research.md            # Research findings
 └── tasks/
-    ├── task-01-<name>.md  # Individual task files with requirement mapping
-    ├── task-02-<name>.md
+    ├── task-R0-01-<slug>.md  # Individual task files with requirement mapping
+    ├── task-R1-01-<slug>.md
     └── ...
 ```
 

@@ -11,10 +11,10 @@ argument-hint: "<feature-description> | status | resume | review | archive"
 
 ## Overview
 
-This skill provides a 7-phase workflow to transform ideas into specs and real implementations:
+This skill provides a 10-step workflow to transform ideas into specs:
 
 ```
-Init → Requirements → Design → Tasks → Code → Test → Review
+Analyze → Dependency Scan → Complexity Assessment → Init → Requirements → Design → Tasks → Hydration → Review → Completion
 ```
 
 **CRITICAL:** Before starting, the system MUST:
@@ -170,14 +170,17 @@ Load: `references/scope-inquiry.md`
 - Analyze existing codebase if this is an enhancement (not greenfield)
 - **MANDATORY Research:** Spawn `researcher` subagent to gather best practices, documentation, and technical foundation before detailing requirements. Use `Task(subagent_type="researcher", prompt="Research [feature]", description="Research")`.
 - Write requirements in **EARS** format (see `rules/ears-format.md`)
+- **Feasibility Check:** Cross-check each requirement against known technical constraints from `research.md`.
 - Each requirement gets a unique numeric ID
+- **Verify Quality:** Before proceeding, assert each requirement is: *Singular, Unambiguous, Testable, and has a numeric ID*. Include Non-Functional Requirements (Performance, Security, Scalability, Reliability, Accessibility).
 - Record any findings in `research.md` from template `templates/research.md`
 - Update `spec.json` phase + timestamps
 
 ### Step 6: Design
-- Read `spec.json` — stop if requirements aren't ready
-- Read project docs before designing (see `references/codebase-analysis.md`)
-- Pick discovery mode:
+- Read `spec.json` — stop if requirements haven't completed
+- Pick discovery mode: `minimal` / `light` / `full` based on complexity. **Default: `light`** unless certain it is simple UI (minimal) or complex integration (full).
+- Load `rules/design-principles.md`
+- Load `rules/design-discovery-[mode].md`:
   - **minimal**: UI-only or simple CRUD
   - **light**: extending existing system
   - **full**: integration, security, schema, or performance
@@ -255,7 +258,7 @@ Load: `references/task-hydration.md`
 - Task files are the single source of truth — hydration is just a convenience
 
 ### Step 9: Review (Optional)
-Load: `references/review.md`
+Load: `references/review.md` + `rules/design-review.md`
 - System auto-evaluates spec complexity and decides review depth:
   - **< 3 task files, no security concerns** → Validate only (lightweight interview)
   - **>= 5 task files OR security/migration keywords** → Red Team first, then Validate
@@ -294,6 +297,22 @@ When user calls `hapo:specs`, system checks `specs/`:
 | Spec is `blocked` | "Warning: spec `X` is blocking this spec" |
 
 **State persistence:** Update `spec.json` `phase` field on each transition. `spec.json` is the single source of truth.
+
+### spec.json Update Rules (MANDATORY)
+
+**Timestamps:** Each `timestamps.*_done` field MUST use the **actual current time** (ISO 8601 with timezone) when that specific phase completes. Do NOT reuse the `init` timestamp for later phases. If running the full pipeline end-to-end, capture a fresh timestamp at each phase transition.
+
+**Approvals (auto-approval behavior):**
+- When running the **full pipeline end-to-end** (init → tasks in one session): set `approvals.{phase}.generated = true` AND `approvals.{phase}.approved = true` for each completed phase before proceeding to the next.
+- When running a **single phase**: set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
+
+**`ready_for_implementation`:** This field MUST only be set to `true` when ALL of the following conditions are met:
+1. `approvals.requirements.approved = true`
+2. `approvals.design.approved = true`
+3. `approvals.tasks.approved = true`
+4. `progress.tasks = "done"`
+
+If any approval is `false`, `ready_for_implementation` MUST remain `false`.
 
 ## Output Structure
 
@@ -350,12 +369,18 @@ specs/
 - No over-engineering: if a function suffices, don't create a class
 
 ### Pre-Finalization Checklist
-- [ ] Every requirement has an ID and is testable
-- [ ] Design covers all requirements (no gaps)
-- [ ] Every task file maps to at least 1 requirement ID
-- [ ] No task is outside scope_lock
-- [ ] No dependency cycles between task files
-- [ ] `spec.json` has updated phase and timestamps
+Before finalizing any specification, assert all the following:
+- [ ] **scope_lock** initialized and respected throughout all phases
+- [ ] **EARS format** applied to all acceptance criteria in requirements.md
+- [ ] **Numeric requirement IDs** assigned to every requirement
+- [ ] **Discovery mode** selected and recorded in spec.json.design_context
+- [ ] **Requirements traceability** matrix present in design.md
+- [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
+- [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
+- [ ] **Dependency graph complete**: no task can start before its blockers are listed
+- [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
+- [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
+- [ ] **spec.json fully updated**: phase, progress, timestamps, approvals, design_context
 
 ## When TO Use
 
@@ -385,12 +410,13 @@ specs/
 - `design-principles.md` — Design principles
 - `design-discovery-full.md` — Full research workflow
 - `design-discovery-light.md` — Lightweight research workflow
-- `tasks-generation.md` — Task generation rules
+- `design-review.md` — Design review GO/NO-GO process
+- `tasks-generation.md` — Task generation rules (includes spike task rules)
 - `tasks-parallel-analysis.md` — Parallel task analysis
 
 ### References (`references/`)
 - `cross-spec-dependency.md` — Cross-spec dependency detection
-- `scope-inquiry.md` — Scope inquiry (3 questions)
+- `scope-inquiry.md` — 5-Dimension Complexity Assessment (Semantic, Hypothesis, Gap, Risk/Cynefin, Blast Radius)
 - `research-strategy.md` — Research strategy (7 tools)
 - `codebase-analysis.md` — Codebase analysis (4 mandatory files)
 - `task-hydration.md` — Task files → Claude Tasks conversion
