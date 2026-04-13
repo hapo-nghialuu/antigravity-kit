@@ -1,0 +1,17 @@
+# Environment and Sandbox credentials within .claude
+.env
+.env.*
+!.env.example
+
+# Virtual environments for python scripts (skills)
+skills/.venv/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# System generated or logs
+hooks/.logs/
+agent-memory/
+settings.bak.json
+.mcp.json

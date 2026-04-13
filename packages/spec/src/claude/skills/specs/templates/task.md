@@ -1,35 +1,66 @@
-# Task {{NUMBER}}: {{TITLE}}
+# Task R{{REQ_NUMBER}}-{{SEQ}}: {{TITLE}}
 
-**Trạng thái:** pending
-**Yêu cầu liên quan:** {{REQUIREMENT_IDS}}
-**Ưu tiên:** {{PRIORITY}}
-**Thời gian ước tính:** {{EFFORT}}
-**Phụ thuộc:** {{DEPENDENCIES}}
+**Requirement:** R{{REQ_NUMBER}} — {{REQUIREMENT_TITLE}}
+**Status:** pending
+**Priority:** {{PRIORITY}}
+**Estimated Effort:** {{EFFORT}}
+**Dependencies:** {{DEPENDENCIES}}
 **Spec:** specs/{{FEATURE_NAME}}/
 
-## Các bước thực hiện
+## Objective
 
-- [ ] {{STEP_1}}
-- [ ] {{STEP_2}}
-- [ ] {{STEP_3}}
+{{Brief 1-2 sentence objective detailing WHAT to accomplish, not HOW. Must relate directly to requirement R{{REQ_NUMBER}}.}}
 
-## File liên quan
+## Implementation Steps
 
-| Đường dẫn | Hành động | Mô tả |
+- [ ] 1. {{MAJOR_STEP_1}}
+  - [ ] 1.1 {{Sub-task describing specific behavior/action}}
+    - {{Detail: business logic, behavior, target validation}}
+    - {{Detail: edge case or constraint}}
+    - _Requirements: {{REQ_NUMBER}}.{{X}}_
+  - [ ] 1.2 {{Next sub-task}}
+    - {{Detail items}}
+    - _Requirements: {{REQ_NUMBER}}.{{Y}}_
+
+- [ ] 2. {{MAJOR_STEP_2}}
+  - [ ] 2.1 {{Sub-task}}
+    - {{Details}}
+    - _Requirements: {{REQ_NUMBER}}.{{Z}}_
+  - [ ] 2.2 {{Sub-task}}
+    - {{Details}}
+    - _Requirements: {{REQ_NUMBER}}.{{W}}_
+
+- [ ] 3. Test coverage for R{{REQ_NUMBER}}
+  - [ ] 3.1 Unit tests
+    - {{Test case 1: target behavior to verify}}
+    - {{Test case 2: edge case / error case}}
+    - _Requirements: {{REQ_NUMBER}}_
+  - [ ]* 3.2 Integration tests (optional for MVP)
+    - {{Describe end-to-end flow to verify}}
+    - _Requirements: {{REQ_NUMBER}}_
+
+## Related Files
+
+| Path | Action | Description |
 |---|---|---|
-| `{{FILE_PATH_1}}` | Tạo mới / Chỉnh sửa / Xóa | {{DESCRIPTION_1}} |
-| `{{FILE_PATH_2}}` | Tạo mới / Chỉnh sửa / Xóa | {{DESCRIPTION_2}} |
+| `{{FILE_PATH_1}}` | Create / Modify / Delete | {{DESCRIPTION_1}} |
+| `{{FILE_PATH_2}}` | Create / Modify / Delete | {{DESCRIPTION_2}} |
 
-## Tiêu chí hoàn thành
+## Completion Criteria
 
-- {{CRITERIA_1}}
-- {{CRITERIA_2}}
+- [ ] {{Criteria 1 — observable, testable, maps to acceptance criteria R{{REQ_NUMBER}}}}
+- [ ] {{Criteria 2 — measurable, objective}}
+- [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md}}
 
-## Đánh giá Rủi ro
+## Risk Assessment
 
-- Rủi ro: {{RISK_1}} → Giải pháp: {{MITIGATION_1}}
+| Risk | Severity | Mitigation |
+|---|---|---|
+| {{RISK_1}} | High/Medium/Low | {{MITIGATION_1}} |
+| {{RISK_2}} | High/Medium/Low | {{MITIGATION_2}} |
 
 ---
 
-> **Ghi chú parallel**: Đánh dấu `(P)` sau tiêu đề nếu task có thể chạy song song với task khác.
-> **Ghi chú test**: Sub-task nào liên quan đến test coverage thì đánh dấu `- [ ]*`.
+> **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.

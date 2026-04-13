@@ -11,15 +11,17 @@ Focus on capabilities and outcomes, not code structure.
 - Features and capabilities
 - Domain language and concepts
 - Data relationships and workflows
+**Required (Hybrid Human-AI Style)**:
+Every sub-task MUST balance Human Intent (for PM review) and Code-Level Details (for AI implementation).
+Detail bullets must include:
+1. **Human Intent (The "Why")**: Briefly explain the business logic, expected UX behavior, or why this code exists (e.g., "Mục đích: Chặn user sử dụng extension nếu chưa đồng ý Privacy").
+2. **AI Code-Level Details (The "How")**:
+   - File paths and specific UI components to create/modify.
+   - Database tables, columns, and Zod/Type schemas (e.g., `Update users.consent_version`).
+   - API payloads, routes, and JSON contracts.
+   - Edge cases, error handling, and exact validation thresholds (e.g., `Return 403 if invalid`).
 
-**Avoid**:
-- File paths and directory structure
-- Function/method names and signatures
-- Type definitions and interfaces
-- Class names and API contracts
-- Specific data structures
-
-**Rationale**: Implementation details (files, methods, types) are defined in design.md. Tasks describe the functional work to be done.
+**Rationale**: Humans review tasks to verify business requirements are met; AI Coders (like god-developer or ck) read tasks to write explicit code. If you only write business jargon, the AI hallucinates. If you only write code names, the human reviewer cannot verify the business value. You MUST provide both.
 
 ### 2. Task Integration & Progression
 
@@ -41,7 +43,41 @@ Focus on capabilities and outcomes, not code structure.
 - **Sub-tasks**: 1-3 hours each, 3-10 details per sub-task
 - Balance between too granular and too broad
 
-**Don't force arbitrary numbers** - let logical grouping determine structure.
+### 3b. Requirement-to-Task Splitting Heuristics
+
+Each requirement from `requirements.md` generates **1 or more task files**. Use the following decision logic to determine how many:
+
+#### When to keep as 1 task file
+- Requirement has ≤ 3 acceptance criteria
+- All criteria touch the same architectural layer (e.g., all frontend, all backend)
+- Total estimated effort ≤ 3 hours
+
+#### When to split into multiple task files
+- Requirement has > 3 acceptance criteria spanning different concerns
+- Acceptance criteria touch **multiple architectural layers** (e.g., frontend + backend + database)
+- Total estimated effort > 4 hours
+- Criteria contain both "happy path" AND "error/edge case" logic that are independently testable
+
+#### Splitting strategy
+When splitting a requirement into multiple tasks:
+1. **Split by architectural layer** — e.g., R1-01 for content script, R1-02 for API endpoint, R1-03 for database schema
+2. **Split by concern** — e.g., R3-01 for consent onboarding UI, R3-02 for consent version re-check logic
+3. **Split by dependency chain** — if acceptance criteria A must finish before B can start, they belong in separate task files with explicit `Dependencies:`
+4. **Never split by arbitrary size** — don't create 3 task files just because "3 feels right"
+
+#### Cross-cutting requirements
+Some requirements (e.g., "language handling", "error handling") naturally touch code in many other requirements' tasks. For these:
+- Create 1 primary task file for the core logic (e.g., `task-R6-01-language-detection.md`)
+- Add secondary `_Requirements: 6_` references in other tasks' sub-tasks where the cross-cutting concern applies
+- Do NOT duplicate the same work across multiple task files
+
+### 3c. Maintaining the Big Picture (Preventing Fragmentation)
+
+Grouping tasks vertically by requirement carries the risk of "siloed" or fragmented code (e.g., each requirement building its own isolated setup). To ensure the system remains cohesive:
+
+1. **Foundation First (The R0 Concept)**: Extract shared infrastructure, core database migrations, authentication wrappers, and base UI layouts into foundational tasks running before feature work. If these aren't explicitly in requirements, classify them as `task-R0-XX-foundation.md` or map them to the most logical architectural requirement. All parallel feature tasks MUST depend on these foundation tasks.
+2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
+3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
 
 ### 4. Requirements Mapping
 

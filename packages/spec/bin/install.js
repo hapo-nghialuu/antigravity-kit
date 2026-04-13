@@ -281,7 +281,8 @@ function copyRecursive(src, dest, options = {}) {
       fs.mkdirSync(dest, { recursive: true });
     }
     fs.readdirSync(src).forEach(childItemName => {
-      copyRecursive(path.join(src, childItemName), path.join(dest, childItemName), options);
+      const destItemName = childItemName === 'gitignore' ? '.gitignore' : childItemName;
+      copyRecursive(path.join(src, childItemName), path.join(dest, destItemName), options);
     });
   } else {
     if (fs.existsSync(dest) && !shouldOverwriteManagedFiles) {

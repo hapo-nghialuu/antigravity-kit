@@ -1,7 +1,7 @@
 # Parallel Task Analysis Rules
 
 ## Purpose
-Provide a consistent way to identify implementation tasks that can be safely executed in parallel while generating `tasks.md`.
+Provide a consistent way to identify implementation tasks that can be safely executed in parallel while generating individual task files.
 
 ## When to Consider Tasks Parallel
 Only mark a task as parallel-capable when **all** of the following are true:

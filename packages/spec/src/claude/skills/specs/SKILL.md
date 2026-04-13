@@ -122,6 +122,13 @@ flowchart TD
 
 ### Step 1: Analyze Description
 - Assess clarity and complexity of the description
+- **Multimodal & Document Auto-Ingestion (MANDATORY)**: If the input includes file paths or URLs pointing to images, audio, video, or Office documents, you MUST spawn the matching subagent to extract content BEFORE proceeding:
+  - `.mp3`, `.wav`, `.mp4`, `.mov`, `.jpg`, `.png`, `.webp` → `Task(subagent_type="hapo:ai-multimodal", prompt="Transcribe/Analyze [path]")`
+  - `.pdf` → `Task(subagent_type="hapo:pdf", prompt="Extract text and tables from [path]")`
+  - `.docx` → `Task(subagent_type="hapo:docx", prompt="Extract content from [path]")`
+  - `.pptx` → `Task(subagent_type="hapo:pptx", prompt="Extract slide content from [path]")`
+  - `.xlsx`, `.csv` → `Task(subagent_type="hapo:xlsx", prompt="Extract data from [path]")`
+  - *Append the extracted findings into your working memory as the enriched "description".*
 - If description < 20 words or lacks concrete nouns → ask 1-2 clarifying questions
 - If task is too simple → warn user that a spec may not be needed
 
@@ -176,12 +183,63 @@ Load: `references/scope-inquiry.md`
 ### Step 7: Task Breakdown
 - Read `spec.json` — stop if `requirements.md` or `design.md` missing
 - Respect `scope_lock` — only use valid requirement IDs within `in_scope`
-- Create individual task files: `tasks/task-01-<slug>.md`, `task-02-<slug>.md`...
+- Load `rules/tasks-generation.md` for core principles
+- Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
-- Each task maps to at least 1 requirement ID
-- Max 2 levels: major tasks and sub-tasks (checkboxes)
-- Remove or defer tasks outside scope
 - Update `spec.json` phase + task metadata
+
+#### Requirement-Driven Task Grouping (MANDATORY)
+Tasks MUST be organized **by requirement**, NOT by technical concern. Each requirement from `requirements.md` gets its own cluster of task files.
+
+**Naming convention:** `tasks/task-R{N}-{SEQ}-<slug>.md`
+- `R{N}` = requirement number (e.g., R1, R2, R3...)
+- `{SEQ}` = sequential number within that requirement (01, 02, 03...)
+- `<slug>` = descriptive kebab-case name
+
+**Example output:**
+```
+tasks/
+├── task-R0-01-database-schema-foundation.md  # Shared foundation
+├── task-R0-02-auth-routing-foundation.md     # Shared foundation
+├── task-R1-01-captions-observer.md
+├── task-R1-02-gap-marker-detector.md
+├── task-R1-03-chunk-api-endpoint.md
+├── task-R2-01-summarize-orchestrator.md
+├── task-R2-02-haiku-integration.md
+├── task-R3-01-consent-onboarding.md
+...
+```
+
+**Splitting rules:**
+- Each requirement → 1 or more task files (split by sub-scope within the requirement)
+- A task file MUST serve exactly 1 primary requirement (cross-cutting references allowed as secondary)
+- If a requirement has only 1 natural task, create 1 file (no forced splitting)
+- If a requirement has many acceptance criteria spanning different concerns → split into multiple task files
+- After generating all tasks: verify **every requirement ID** appears as primary in at least one task file — gaps = failure
+
+**Dependency ordering:** Tasks within the same requirement are ordered by natural implementation flow. Cross-requirement dependencies use `Dependencies:` field referencing other task file names.
+
+#### Task File Quality Requirements (MANDATORY)
+Each task file MUST be **self-contained and implementation-ready** — detailed enough for a junior developer or AI coding agent to execute without guessing.
+
+**Structure per task file:**
+1. **Objective** — 1-2 sentence objective (WHAT, not HOW)
+2. **Implementation Steps** — Hierarchical breakdown:
+   - Major steps (`- [ ] 1. ...`) group by cohesion
+   - Sub-tasks (`- [ ] 1.1 ...`) are specific actionable items (1-3 hours each)
+   - Detail bullets under each sub-task describe:
+     - Business logic and behavior to implement
+     - Edge cases and constraints
+     - Validation rules
+   - `_Requirements: X.X_` at the END of every sub-task — **no exceptions**
+3. **Test coverage** — Last major step in every task must cover unit + integration tests
+4. **Related Files** — Table with exact paths, action type, and descriptions
+5. **Completion Criteria** — Observable, testable criteria (checkbox format)
+6. **Risk Assessment** — Table with risk, severity, mitigation
+
+**Parallel markers:** Append `(P)` to tasks that can run concurrently (no data dependency, no shared files, no prerequisite approval from another task). Tasks serving DIFFERENT requirements are often parallelizable.
+
+**FORBIDDEN:** Task files with only 3-5 top-level checkboxes and no sub-task breakdown. This level of detail is INSUFFICIENT for implementation.
 
 ### Step 8: Task Hydration
 Load: `references/task-hydration.md`
@@ -199,14 +257,14 @@ Load: `references/review.md`
 - When both run: Red Team ALWAYS before Validate (red team may change the spec)
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
-After completing the spec, MUST output:
+After completing the spec, output a short summary of what was generated, then you MUST output the following block EXACTLY as written. DO NOT use awkward translations like "Điểm đã phản ánh đúng quyết định của bạn", keep it professional or just output the block directly:
 
 ```
 ✅ Spec complete: specs/<feature>/
 📌 Next step — run:
-   /code <feature>
+   /hapo:develop <feature>
 
-💡 Tip: Run /clear before implementing to reduce planning context carryover.
+💡 Tip: Run /clear or start a new chat session before implementing to reduce planning context carryover.
 ```
 
 ## Active Spec State
@@ -226,7 +284,7 @@ When user calls `hapo:specs`, system checks `specs/`:
 | `init` done | "Next: write requirements" |
 | `requirements` done | "Next: architectural design" |
 | `design` done | "Next: break into tasks" |
-| `tasks` done | "Next: `/code <feature>`" |
+| `tasks` done | "Next: `/hapo:develop <feature>`" |
 | Spec is `blocked` | "Warning: spec `X` is blocking this spec" |
 
 **State persistence:** Update `spec.json` `phase` field on each transition. `spec.json` is the single source of truth.
@@ -240,9 +298,12 @@ specs/
     ├── requirements.md        # Technical requirements (EARS format)
     ├── research.md            # Research notes
     ├── design.md              # Architectural design
-    ├── tasks/                 # One file per major task group
-    │   ├── task-01-setup.md
-    │   ├── task-02-core.md
+    ├── tasks/                 # Grouped by requirement (R1, R2, R3...)
+    │   ├── task-R0-01-foundation.md
+    │   ├── task-R1-01-<slug>.md
+    │   ├── task-R1-02-<slug>.md
+    │   ├── task-R2-01-<slug>.md
+    │   ├── task-R3-01-<slug>.md
     │   └── ...
     └── reports/               # Auxiliary reports
         ├── researcher-01.md

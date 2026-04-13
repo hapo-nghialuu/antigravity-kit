@@ -15,21 +15,24 @@
       "code-review",
       "develop",
       "devops",
+      "docx",
       "frontend-design",
       "frontend-development",
       "git",
       "hotfix",
       "impact-analysis",
       "inspect",
-      "ai-multimodal",
       "mobile-development",
+      "pdf",
+      "pptx",
       "react-best-practices",
       "research",
       "specs",
       "sync",
       "test",
       "ui-ux-pro-max",
-      "web-testing"
+      "web-testing",
+      "xlsx"
     ]
   },
   "agents": {

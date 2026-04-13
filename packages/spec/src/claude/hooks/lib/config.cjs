@@ -1,5 +1,5 @@
 /**
- * Shared utilities for ClaudeKit hooks
+ * Shared utilities for CafeKit hooks
  *
  * Contains config loading, path sanitization, and common constants
  * used by session.cjs and other hooks
@@ -300,7 +300,7 @@ function execSafe(cmd, options = {}) {
  * - 'mostRecent': REMOVED - was causing stale plan pollution
  *
  * @param {string} sessionId - Session identifier (optional)
- * @param {Object} config - ClaudeKit config
+ * @param {Object} config - CafeKit config
  * @returns {{ path: string|null, resolvedBy: 'session'|'branch'|null }} Resolution result with tracking
  */
 function resolvePlanPath(sessionId, config) {
