@@ -2,7 +2,7 @@
 name: hapo:specs
 description: "Structured specification workflow — from vague idea to actionable task list. Includes init, requirements, design, task breakdown, review, and archiving."
 version: 2.0.0
-argument-hint: "<feature-description> | status | resume | review | archive"
+argument-hint: "<feature-description> | status | resume | --validate | archive"
 ---
 
 # Specs (SDD — Specification-Driven Development)
@@ -67,7 +67,7 @@ Display selection menu via `AskUserQuestion`:
       { "label": "Create new spec", "description": "Initialize spec from a feature description" },
       { "label": "status", "description": "View status of all specs in specs/" },
       { "label": "resume", "description": "Continue an in-progress spec" },
-      { "label": "review", "description": "Review spec (auto-decides: red team or validation)" },
+      { "label": "--validate", "description": "Review spec (auto-decides: red team or validation)" },
       { "label": "archive", "description": "Archive completed specs + write journal" }
     ],
     "multiSelect": false
@@ -82,12 +82,27 @@ System auto-analyzes the description:
 - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
 - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
 
+### When called WITH `--validate` argument
+
+System IMMEDIATELY jumps to **Step 9: Validation Review**.
+The system MUST NOT execute Steps 1-8. Instead, load `references/review.md` and follow it **step-by-step**.
+
+#### `--validate` Guardrails (NON-NEGOTIABLE)
+
+1. **Red Team cannot be skipped by the system.** If auto-decision says "Red Team + Validate", you MUST run Red Team. A previous `code-auditor` review does NOT count — code-auditor reviews source code, NOT specifications. Only the USER can downgrade to "Validate only" by explicitly saying so.
+2. **MUST use the 4 Personas** defined in `review.md` Part A Step 3 (Security Adversary, Failure Mode Analyst, Assumption Destroyer, Scope & Complexity Critic). Generic observations without persona attribution are REJECTED.
+3. **MUST use the Finding Format** defined in `review.md` Part A (Severity, Location, Flaw, Failure scenario, Evidence, Suggested fix, Disposition, Rationale). Shortened or custom formats are REJECTED.
+4. **MUST create `reports/red-team-report.md`** when Red Team runs (review.md Part A Step 8).
+5. **MUST NOT create implementation code files** (`.ts`, `.js`, `.py`, etc.). The validate workflow produces ONLY markdown spec documents and reports. If a fix requires a new shared module, describe it in the relevant task file instead of creating the actual code file.
+6. **MUST NOT over-engineer fixes.** Apply YAGNI — if user says "configure later", add an abstraction note to the task, do NOT generate 4 concrete provider implementations.
+7. **MUST follow auto-decision table exactly.** Count task files + scan for keywords → pick mode. No self-justification to override the table result.
+
 ## Workflow Diagram
 
 ```mermaid
 flowchart TD
     A["Call /hapo:specs"] --> B{Has description?}
-    B -->|No| C["Menu: init / status / resume / review / archive"]
+    B -->|No| C["Menu: init / status / resume / --validate / archive"]
     B -->|Yes| D["Step 1: Analyze description"]
     D --> E{Clear enough?}
     E -->|No| F["Ask user 1-2 clarifying questions"]
@@ -257,13 +272,15 @@ Load: `references/task-hydration.md`
 - If TaskCreate tool unavailable → fallback to `TodoWrite`
 - Task files are the single source of truth — hydration is just a convenience
 
-### Step 9: Review (Optional)
+### Step 9: Validation Review (Optional)
 Load: `references/review.md` + `rules/design-review.md`
 - System auto-evaluates spec complexity and decides review depth:
   - **< 3 task files, no security concerns** → Validate only (lightweight interview)
   - **>= 5 task files OR security/migration keywords** → Red Team first, then Validate
   - **User explicit request** → respect user's intent
 - When both run: Red Team ALWAYS before Validate (red team may change the spec)
+- **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
+- **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
 After completing the spec, output a short summary of what was generated, then you MUST output the following block EXACTLY as written. DO NOT use awkward translations like "Điểm đã phản ánh đúng quyết định của bạn", keep it professional or just output the block directly:
@@ -342,7 +359,7 @@ specs/
 |---|---|---|
 | `/hapo:specs status` | View status of all specs | — |
 | `/hapo:specs resume <feature>` | Continue an in-progress spec | — |
-| `/hapo:specs review <feature>` | Review spec (auto: red team + validate based on complexity) | `references/review.md` |
+| `/hapo:specs --validate <feature>` | Validate spec (auto: red team + validate based on complexity) | `references/review.md` |
 | `/hapo:specs archive` | Archive completed specs + write journal | `references/archive-workflow.md` |
 
 ## Quality Standards

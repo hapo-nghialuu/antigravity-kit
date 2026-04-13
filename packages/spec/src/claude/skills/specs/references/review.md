@@ -28,6 +28,19 @@ The system evaluates the spec and picks the appropriate review mode:
 1. Red Team may change the spec (added risks, removed sections)
 2. Validate should confirm the FINAL spec, not a pre-review draft
 
+## Guardrails (NON-NEGOTIABLE)
+
+These rules override any self-reasoning or optimization the system may attempt:
+
+1. **No self-override of auto-decision.** If the table above says "Red Team → then Validate", you MUST run Red Team. You CANNOT skip it because:
+   - A `code-auditor` previously reviewed the spec (code review ≠ spec review)
+   - The spec "looks good" to you
+   - You want to "save time"
+   - Only the USER can downgrade the mode by explicitly saying "just validate" or "skip red team"
+2. **No implementation code files.** This workflow produces ONLY `.md` files. If a finding requires a new shared module or config file, describe it inside the relevant `task-*.md` file. Do NOT create `.ts`, `.js`, `.py`, or any source code file.
+3. **Findings must use the exact format** defined in Part A Step 5 below. No shortened or custom formats.
+4. **Apply YAGNI to fixes.** When user says "configure later" or "decide later", add a single note to the task file. Do NOT generate multiple concrete implementations (e.g., 4 provider files when user only asked for abstraction).
+
 ---
 
 ## Part A: Red Team Review (Adversarial)
