@@ -30,7 +30,7 @@ DO NOT write implementation code until an approved spec exists.
 | "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call `inspect` to scan files. |
 | "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via `Task` tool. |
 
-## Absolute 4-Step Workflow
+## Absolute Workflow
 
 ```mermaid
 flowchart TD
@@ -40,7 +40,8 @@ flowchart TD
     C --> D[Step 3: Implement Code (god-developer)]
     D --> E[Step 4: Auto-Fix Code Review / Max 3 rounds]
     E -->|Fail (code-auditor)| D
-    E -->|Pass| F[Report Completion]
+    E -->|Pass| F[Step 5: Incremental Docs Sync]
+    F --> G[Report Completion]
 ```
 
 ### Step 1: Initialize & Load Spec
@@ -65,6 +66,11 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 **Mantra:** All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
 - Only escalate to the user after 3 consecutive failed review rounds.
+
+### Step 5: Incremental Docs Sync
+- After passing the Quality Gate, evaluate if any actual codebase modifications occurred (e.g., check pending files via git status).
+- If files were created or modified: Trigger `docs-keeper` automatically to execute `repomix` and update the global `/docs/` and project logs.
+- Do NOT skip this step! The user explicitly requires documentation to be synced immediately after every `/hapo:develop` action, overriding the default Phase 3-only rule.
 
 ---
 ## Attached References
