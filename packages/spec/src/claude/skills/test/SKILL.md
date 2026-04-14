@@ -109,9 +109,13 @@ Return a **structured verdict** (required format — not free-form prose):
 - Accessibility issues: N found | none
 - Screenshots: [paths]
 
+### Test Regression Check
+- **Comparison:** Compare current test count and assertion depth against previous runs.
+- **Result:** OK | REGRESSION (tests deleted/weakened)
+
 ### Action
 - PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to god-developer.
+- FAIL → [list specific fixes needed] → Return to god-developer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
 

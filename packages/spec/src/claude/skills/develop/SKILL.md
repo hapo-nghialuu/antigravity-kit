@@ -58,6 +58,7 @@ flowchart TD
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress.
 - **Hard Stop Protocol:** If you were asked to implement a specific task file, you MUST STOP completely after that task is verified. DO NOT auto-chain or jump to "Next Task" simply because you see it in the spec. Wait for the user's next command.
+- **Test Integrity Protocol:** You MUST NOT delete, replace, or reduce the scope of existing test cases to make tests pass. If a test fails, you must fix the **implementation code** or fix the **test setup/mock**, NOT remove the assertion. Reducing test count or weakening assertions (e.g., removing `toHaveBeenCalledWith` and replacing with `toEqual(expect.any(...))`) is a Critical violation.
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
