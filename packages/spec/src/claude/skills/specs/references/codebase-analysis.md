@@ -6,7 +6,7 @@ Understand the current codebase before designing solutions — ensure the new sp
 
 ## Skip Conditions
 
-- Already provided with scout reports → skip, use directly
+- Already provided with inspector reports → skip, use directly
 
 ## 4 Mandatory Files to Read First
 
@@ -17,7 +17,7 @@ Understand the current codebase before designing solutions — ensure the new sp
 | 3 | `./docs/code-standards.md` | Coding conventions, language-specific patterns | High |
 | 4 | `./docs/design-guidelines.md` | Design system, branding, UI/UX conventions | If exists |
 
-> If a file doesn't exist → skip it silently. If all are missing → use scout to explore the codebase directly.
+> If a file doesn't exist → skip it silently. If all are missing → use an inspector to explore the codebase directly.
 
 ## Analysis Activities
 
@@ -39,16 +39,16 @@ Understand the current codebase before designing solutions — ensure the new sp
 - Understand data flow and state management
 - Consider backward compatibility
 
-### 4. Scout Usage (when needed)
-- Use scout agents for targeted file discovery in large codebases
-- Each scout targets a specific aspect of the task
-- Wait for all scouts to report before analysis
-- Save results to `reports/scout-report.md`
+### 4. Inspector Usage (when needed)
+- Use inspector agents for targeted file discovery in large codebases
+- Each inspector targets a specific aspect of the task
+- Wait for all inspectors to report before analysis
+- Save results to `reports/inspect-report.md`
 
 ## Best Practices
 
 - Start with documentation before diving into code
-- Use scouts for targeted file discovery
+- Use inspectors for targeted file discovery
 - Document patterns found for consistency
 - Note any inconsistencies or technical debt
 - Consider impact on existing features

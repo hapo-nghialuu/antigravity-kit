@@ -120,7 +120,7 @@ flowchart TD
     K --> L
     L --> M["Step 5: Requirements — write EARS"]
     M --> N{Need deep research?}
-    N -->|Yes| O["Research: researchers + scout + docs"]
+    N -->|Yes| O["Research: researchers + inspector + docs"]
     O --> P["Write research.md"]
     N -->|No| P
     P --> Q["Step 6: Design — pick discovery mode"]
@@ -349,7 +349,7 @@ specs/
     │   └── ...
     └── reports/               # Auxiliary reports
         ├── researcher-01.md
-        ├── scout-report.md
+        ├── inspect-report.md
         └── red-team-report.md
 ```
 
