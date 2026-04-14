@@ -240,6 +240,7 @@ tasks/
 - If a requirement has only 1 natural task, create 1 file (no forced splitting)
 - If a requirement has many acceptance criteria spanning different concerns → split into multiple task files
 - After generating all tasks: verify **every requirement ID** appears as primary in at least one task file — gaps = failure
+- **Legacy Protection:** If the `research.md` identified existing codebase files or tests that will be broken (Blast Radius), you MUST generate explicitly tasked files (e.g., `task-R5-01-update-legacy-tests.md`) to fix those breakages. Do not leave broken tests out of scope.
 
 **Dependency ordering:** Tasks within the same requirement are ordered by natural implementation flow. Cross-requirement dependencies use `Dependencies:` field referencing other task file names.
 
