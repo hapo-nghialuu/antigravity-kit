@@ -15,6 +15,7 @@ Reads the full project specification (`hapo:specs`) and relentlessly implements 
 ```bash
 /hapo:develop <feature name>
 /hapo:develop specs/<feature-name>
+/hapo:develop <feature name> <specific-task-file.md>
 ```
 
 <HARD-GATE>
@@ -43,17 +44,20 @@ flowchart TD
 ```
 
 ### Step 1: Initialize & Load Spec
-- Identify input. Open `specs/<feature-name>/spec.json`.
+- Identify input: Open `specs/<feature-name>/spec.json`.
 - Check `ready_for_implementation` status. If not ready, notify user.
-- List all Markdown files in `specs/<feature-name>/tasks/*.md`. Load them into working memory as the execution guide.
+- **Task Scoping (CRITICAL):**
+  - If the user specifies a particular task file (e.g., `task-R0-02...md`), load **ONLY** that specific file into working memory.
+  - If no specific task is mentioned, list and load all Markdown files in `specs/<feature-name>/tasks/*.md`.
 
 ### Step 2: Scout (Codebase Inspection)
 - **Mandatory:** Call agent `Task(subagent_type="inspect", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
 
 ### Step 3: Implement Code
-- Act as `god-developer` OR directly write code, executing tasks specified in the Markdown files sequentially.
+- Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress.
+- **Hard Stop Protocol:** If you were asked to implement a specific task file, you MUST STOP completely after that task is verified. DO NOT auto-chain or jump to "Next Task" simply because you see it in the spec. Wait for the user's next command.
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
