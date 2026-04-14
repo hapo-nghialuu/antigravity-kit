@@ -70,6 +70,7 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 ### Step 5: Incremental Docs Sync
 - After passing the Quality Gate, evaluate if any actual codebase modifications occurred (e.g., check pending files via git status).
 - If files were created or modified: Trigger `docs-keeper` automatically to execute `repomix` and update the global `/docs/` and project logs.
+- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and crash.
 - Do NOT skip this step! The user explicitly requires documentation to be synced immediately after every `/hapo:develop` action, overriding the default Phase 3-only rule.
 
 ---
