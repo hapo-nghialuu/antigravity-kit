@@ -33,10 +33,10 @@ Init → Requirements → Design → Tasks
 ```
 
 ### Phase Gate Rules
-1. **Init → Requirements**: `spec.json` must exist with `phase: "initialized"` and valid `scope_lock`
+1. **Init → Requirements**: `spec.json` must exist with `phase: "initialized"`, `status: "in_progress"`, `current_phase: "init"`, and valid `scope_lock`
 2. **Requirements → Design**: `requirements.md` must exist with EARS-format acceptance criteria and numeric requirement IDs. `spec.json.approvals.requirements.generated` must be `true`
 3. **Design → Tasks**: `design.md` must exist. `spec.json.approvals.design.generated` must be `true`
-4. **After each phase**: Update `spec.json` with correct `phase`, `progress`, `timestamps`, and approval fields
+4. **After each phase**: Update `spec.json` with correct `phase`, `current_phase`, `progress`, `timestamps`, and approval fields
 
 ### Auto-Approval Behavior
 - When running the full pipeline end-to-end, follow the auto-approval rules defined in `SKILL.md`.
@@ -62,6 +62,7 @@ All acceptance criteria MUST follow EARS syntax. Load `{{SKILLS_DIR}}/specs/rule
 ### Requirement ID Rules
 - Every requirement MUST have a unique **numeric** ID (e.g., "1", "1.1", "2")
 - NEVER use alphabetic IDs (e.g., "Requirement A")
+- Non-functional requirements MUST continue the same numeric sequence. NEVER emit labels like `NFR-1`, `SEC-1`, `PERF-1`.
 - Requirement IDs are referenced downstream in design traceability and task mapping
 
 ## Design Protocol
@@ -83,6 +84,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - For full mode: Load `{{SKILLS_DIR}}/specs/rules/design-discovery-full.md`
 - For light mode: Load `{{SKILLS_DIR}}/specs/rules/design-discovery-light.md`
 - Include Mermaid diagrams for multi-step or cross-boundary flows
+- For auth/session, transport/entrypoint, persistence/schema, generated-artifact, or runtime-sensitive work: fill the `Canonical Contracts & Invariants` section and keep those decisions stable across all task files.
 - Record `discovery_mode` and `discovery_reason` in `spec.json.design_context`
 
 ### Requirements Traceability (MANDATORY)
@@ -103,6 +105,8 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Reject tasks outside `scope_lock.in_scope`
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
 - Apply `(P)` parallel markers when applicable (load `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md`)
+- Every task MUST include `Verification & Evidence` with exact commands, artifacts/runtime surfaces, and negative-path checks.
+- Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
 
 ### Sub-Task Detail Requirements (MANDATORY)
 Each task file MUST contain granular sub-tasks with the following structure:
@@ -135,6 +139,16 @@ Task(subagent_type="researcher", prompt="Research [feature topic]")
 
 Before finalizing any specification, assert all 11 points in the `Pre-Finalization Checklist` defined in `SKILL.md`. Do not exit or declare completion until verifiable.
 
+### Finalization Audit (MANDATORY)
+
+Before marking the spec ready:
+1. Re-scan `tasks/` and write `spec.json.task_files` from the real filesystem (sorted, relative paths)
+2. Fail if any on-disk task file is missing from `task_files`
+3. Fail if any path in `task_files` does not exist
+4. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
+5. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
+6. Reject task files that use legacy non-numeric mappings like `NFR-1`
+
 ## Execution Workflow Summary
 
 ### 1. Scope Assessment
@@ -161,6 +175,7 @@ specs/<feature>/
 
 ### 4. Handoff
 - Update `spec.json` with `"status": "in_progress"` and `"current_phase": "develop"`
+- Ensure `task_files` is synchronized and `ready_for_implementation` reflects the finalization audit outcome
 - Report the spec directory path to the orchestrator
 - DO NOT begin implementation yourself
 

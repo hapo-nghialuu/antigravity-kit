@@ -3,8 +3,9 @@
   "created_at": "{{TIMESTAMP}}",
   "updated_at": "{{TIMESTAMP}}",
   "language": "vi",
-  "status": "pending",
+  "status": "in_progress",
   "phase": "initialized",
+  "current_phase": "init",
   "priority": "P2",
   "effort": null,
   "tags": [],
@@ -32,6 +33,8 @@
     "blockedBy": [],
     "blocks": []
   },
+  "task_files": [],
+  "blocker": null,
   "progress": {
     "init": "done",
     "requirements": "pending",

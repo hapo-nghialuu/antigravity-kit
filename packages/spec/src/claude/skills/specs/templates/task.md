@@ -54,9 +54,21 @@
 
 ## Completion Criteria
 
-- [ ] {{Criteria 1 — observable, testable, maps to acceptance criteria R{{REQ_NUMBER}}}}
-- [ ] {{Criteria 2 — measurable, objective}}
-- [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md}}
+- [ ] {{Criteria 1 — observable output or artifact, maps to acceptance criteria R{{REQ_NUMBER}}}}
+- [ ] {{Criteria 2 — measurable behavior or negative-path outcome}}
+- [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md and can be proven below}}
+
+## Verification & Evidence
+
+- [ ] Automated verification
+  - Command(s): `{{TYPECHECK / TEST / BUILD COMMANDS OR N/A}}`
+  - Expected proof: {{What output, exit code, or report proves success}}
+- [ ] Artifact / runtime verification
+  - Inspect: `{{artifact path | route | UI state | DB object | manifest entry}}`
+  - Expect: {{Observable result that proves the task is really wired}}
+- [ ] Contract / negative-path verification
+  - Check: {{Unauthorized path, validation error, permission omission, missing env behavior, deletion effect, etc.}}
+  - Expect: {{Concrete failure mode or contract-preserving behavior}}
 
 ## Risk Assessment
 
@@ -70,3 +82,4 @@
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
 > **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
+> **Verification rule**: No `## Verification & Evidence` section = invalid task file.

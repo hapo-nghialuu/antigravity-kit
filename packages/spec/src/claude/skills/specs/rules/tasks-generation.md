@@ -32,6 +32,7 @@ Detail bullets must include:
 - Validate core functionality early in sequence
 - Respect architecture boundaries defined in design.md (Architecture Pattern & Boundary Map)
 - Honor interface contracts documented in design.md
+- Translate completion criteria into concrete proof (commands, artifacts, routes, manifests, schema objects, UI states)
 - Use major task summaries sparingly—omit detail bullets if the work is fully captured by child tasks.
 
 **End with integration tasks** to wire everything together.
@@ -131,6 +132,22 @@ Every task file MUST contain the Risk Assessment table, even if no risks are ide
 - When the design already guarantees functional coverage and rapid MVP delivery is prioritized, mark purely test-oriented follow-up work (e.g., baseline rendering/unit tests) as **optional** using the `- [ ]*` checkbox form.
 - Only apply the optional marker when the sub-task directly references acceptance criteria from requirements.md in its detail bullets.
 - Never mark implementation work or integration-critical verification as optional—reserve `*` for auxiliary/deferrable test coverage that can be revisited post-MVP.
+- Never mark auth, permissions, privacy, data deletion, migration, schema, or contract verification work as optional.
+
+### Mandatory Verification & Evidence
+
+Every task file MUST include a `## Verification & Evidence` section.
+
+That section MUST contain:
+1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`
+2. **Artifact/runtime proof** — exact files, routes, UI surfaces, generated outputs, or persisted state to inspect
+3. **Contract/negative-path proof** — at least one contract-preserving check for unauthorized, invalid, missing-permission, rollback, or failure-path behavior when relevant
+
+Rules:
+- If the task produces a build artifact or generated file, name the exact artifact path to inspect.
+- If the task wires entrypoints (popup, content script, route, worker, CLI command), name the exact runtime surface that must exist after implementation.
+- If verification depends on environment or manual setup, document the blocker explicitly instead of implying success.
+- Build success alone is NEVER enough evidence for a completed task.
 
 ## Task Hierarchy Rules
 

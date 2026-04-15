@@ -48,7 +48,7 @@ try {
       if (fs.existsSync(specFile)) {
         try {
           const specData = JSON.parse(fs.readFileSync(specFile, 'utf8'));
-          if (specData.status === 'in_progress') {
+          if (specData.status === 'in_progress' || specData.status === 'in-progress') {
             activeSpec = specData;
             featureName = entry.name;
             break; // take the first active one
@@ -72,9 +72,9 @@ try {
   lines.push(`- **Current Phase:** \`${phase}\``);
   lines.push('');
   lines.push(`> BẮT BUỘC (MANDATORY): Nếu bạn vừa hoàn thành một bước, bạn KHÔNG ĐƯỢC báo cáo "Đã xong" ngay.`);
-  lines.push(`> Bạn PHẢI sử dụng công cụ Edit để cập nhật 2 tầng trạng thái dưới đây trước khi kết thúc lượt chat:`);
-  lines.push(`> 1. Sửa file \`spec.json\` (chuyển đổi status, phase tương ứng).`);
-  lines.push(`> 2. Sửa file \`tasks/task-*.md\` (chuyển 'pending' thành 'completed' và tick '[x]' các sub-task).`);
+  lines.push(`> Bạn PHẢI sử dụng công cụ Edit để cập nhật trạng thái vật lý sau khi đã có bằng chứng verify thật (build/test/runtime/artifact), không phải chỉ vì code đã viết xong.`);
+  lines.push(`> 1. Sửa file \`spec.json\` (status, phase/current_phase, timestamps, \`task_files\`, validation state nếu có thay đổi).`);
+  lines.push(`> 2. Chỉ khi verify xong mới sửa file \`tasks/task-*.md\` (status + tick '[x]' các sub-task và completion criteria liên quan).`);
   lines.push(`> 3. NẾU VỪA HOÀN THÀNH 1 TASK CÓ SỬA SOURCE CODE, BẮT BUỘC cập nhật ngay tài liệu trong \`docs/\` (\`system-architecture.md\` hoặc Changelog) cho đồng bộ.`);
   lines.push(`> CẤM VI PHẠM LUẬT TOLLGATE NÀY NHẰM ĐẢM BẢO TÍNH ĐỒNG BỘ CỦA HỆ THỐNG.`);
   lines.push('');

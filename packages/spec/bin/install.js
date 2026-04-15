@@ -430,7 +430,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
         'requirements.md',
         'design.md',
         'research.md',
-        'tasks.md'
+        'task.md'
       ];
 
       specTemplates.forEach((fileName) => {
@@ -472,7 +472,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
       // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug', 'ai-multimodal'];
+      requiredSkills = ['impact-analysis', 'debug', 'ai-multimodal', 'generate-graph'];
     }
 
     requiredSkills
@@ -1089,7 +1089,8 @@ async function main() {
     }
     console.log();
     console.log('Next steps:');
-    console.log('  1. Start your AI editor (Claude Code or Antigravity)');
+    const nextEditorLabel = platforms.length === 1 ? PLATFORMS[platforms[0]].name : 'your AI editor';
+    console.log(`  1. Start ${nextEditorLabel}`);
 
     // Show platform-specific hints
     for (const platformKey of platforms) {

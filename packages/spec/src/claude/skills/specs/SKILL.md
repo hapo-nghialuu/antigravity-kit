@@ -19,7 +19,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Requirements 
 
 **CRITICAL:** Before starting, the system MUST:
 1. Scan `specs/` directory for incomplete specs
-2. If any spec is `in-progress` → ask user whether to continue or create new
+2. If any spec is `in_progress` (accept legacy `in-progress` when reading) → ask user whether to continue or create new
 3. Detect cross-spec dependencies (see `references/cross-spec-dependency.md`)
 
 ## Core Responsibilities & Rules
@@ -39,6 +39,12 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Requirements 
 - Respect `scope_lock` absolutely once user has confirmed
 - Never silently expand or shrink scope
 - If scope change needed → ask user, record reason in `spec.json`
+
+### State & Integrity Rules
+- Canonical active status string is `in_progress`. Legacy `in-progress` may be READ for compatibility but MUST NOT be generated in new specs.
+- `current_phase` is required for live work and must track the active phase (`init`, `requirements`, `design`, `tasks`, `develop`, `test`, `review`).
+- `task_files` in `spec.json` MUST exactly match the real files under `tasks/` after Step 7.
+- `ready_for_implementation` is a hard gate, not a convenience flag. Never set it before the finalization audit passes.
 
 ### Output Criteria
 - Never implement code — only create spec documents
@@ -66,7 +72,7 @@ Display selection menu via `AskUserQuestion`:
     "options": [
       { "label": "Create new spec", "description": "Initialize spec from a feature description" },
       { "label": "status", "description": "View status of all specs in specs/" },
-      { "label": "resume", "description": "Continue an in-progress spec" },
+      { "label": "resume", "description": "Continue an active spec" },
       { "label": "--validate", "description": "Review spec (auto-decides: red team or validation)" },
       { "label": "archive", "description": "Archive completed specs + write journal" }
     ],
@@ -202,6 +208,7 @@ Load: `references/scope-inquiry.md`
 - Record findings in `research.md` before finalizing design
 - Write `design.md` from template `templates/design.md` (see `rules/design-principles.md`)
 - Add diagrams only when design has multi-step or cross-boundary flows
+- For auth/session, transport/entrypoint, persistence/schema, generated-artifact, or runtime-sensitive work, the design MUST fill the `Canonical Contracts & Invariants` section and tasks MUST inherit the same decisions verbatim.
 - Update `spec.json` phase, timestamps, discovery mode
 
 ### Step 7: Task Breakdown
@@ -210,6 +217,7 @@ Load: `references/scope-inquiry.md`
 - Load `rules/tasks-generation.md` for core principles
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
+- Each task file MUST include `Completion Criteria` and `Verification & Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
 - Update `spec.json` phase + task metadata
 
 #### Requirement-Driven Task Grouping (MANDATORY)
@@ -279,9 +287,19 @@ Load: `references/review.md` + `rules/design-review.md`
   - **< 3 task files, no security concerns** → Validate only (lightweight interview)
   - **>= 5 task files OR security/migration keywords** → Red Team first, then Validate
   - **User explicit request** → respect user's intent
+- Set `design_context.validation_recommended = true` if the spec includes any of: auth/session, privacy, deletion, migration, schema change, external AI/provider switching, browser extension permissions, or 5+ task files.
 - When both run: Red Team ALWAYS before Validate (red team may change the spec)
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
+
+### Step 9.5: Finalization Audit (MANDATORY)
+- Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)
+- FAIL if any task file exists on disk but is missing from `task_files`
+- FAIL if any path in `task_files` does not exist on disk
+- FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
+- FAIL if a task lacks `Completion Criteria` or `Verification & Evidence`
+- If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit accepted-risk state recorded by the user), `ready_for_implementation` MUST remain `false`
+- Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
 After completing the spec, output a short summary of what was generated, then you MUST output the following block EXACTLY as written. DO NOT use awkward translations like "Điểm đã phản ánh đúng quyết định của bạn", keep it professional or just output the block directly:
@@ -300,7 +318,7 @@ When user calls `hapo:specs`, system checks `specs/`:
 
 | Situation | Action |
 |---|---|
-| A spec is `in-progress` | Ask: "You have spec `<name>` at phase `<phase>`. Continue? [Y/n]" |
+| A spec is `in_progress` | Ask: "You have spec `<name>` at phase `<phase>`. Continue? [Y/n]" |
 | A spec matches current git branch | Ask: "Branch `feature/X` has spec `X`. Activate or create new?" |
 | Nothing found | Create new spec or show menu |
 
@@ -318,17 +336,25 @@ When user calls `hapo:specs`, system checks `specs/`:
 
 ### spec.json Update Rules (MANDATORY)
 
+**Canonical status vocabulary:** Use `in_progress`, `blocked`, `done`, and `archived`. New specs MUST NOT emit `in-progress`.
+
 **Timestamps:** Each `timestamps.*_done` field MUST use the **actual current time** (ISO 8601 with timezone) when that specific phase completes. Do NOT reuse the `init` timestamp for later phases. If running the full pipeline end-to-end, capture a fresh timestamp at each phase transition.
 
 **Approvals (auto-approval behavior):**
 - When running the **full pipeline end-to-end** (init → tasks in one session): set `approvals.{phase}.generated = true` AND `approvals.{phase}.approved = true` for each completed phase before proceeding to the next.
 - When running a **single phase**: set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
 
+**Task inventory:** `task_files` MUST be present and MUST list every real task file exactly once using relative paths like `tasks/task-R1-01-example.md`.
+
+**Validation recommendation:** `design_context.validation_recommended` MUST be `true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs.
+
 **`ready_for_implementation`:** This field MUST only be set to `true` when ALL of the following conditions are met:
 1. `approvals.requirements.approved = true`
 2. `approvals.design.approved = true`
 3. `approvals.tasks.approved = true`
 4. `progress.tasks = "done"`
+5. `task_files` matches the real filesystem
+6. If `design_context.validation_recommended = true`, `validation.status = "completed"` (or another explicit user-accepted risk state that is recorded)
 
 If any approval is `false`, `ready_for_implementation` MUST remain `false`.
 
@@ -359,7 +385,7 @@ specs/
 | Command | Purpose | Reference |
 |---|---|---|
 | `/hapo:specs status` | View status of all specs | — |
-| `/hapo:specs resume <feature>` | Continue an in-progress spec | — |
+| `/hapo:specs resume <feature>` | Continue an active spec | — |
 | `/hapo:specs --validate <feature>` | Validate spec (auto: red team + validate based on complexity) | `references/review.md` |
 | `/hapo:specs archive` | Archive completed specs + write journal | `references/archive-workflow.md` |
 
@@ -393,12 +419,16 @@ Before finalizing any specification, assert all the following:
 - [ ] **Numeric requirement IDs** assigned to every requirement
 - [ ] **Discovery mode** selected and recorded in spec.json.design_context
 - [ ] **Requirements traceability** matrix present in design.md
+- [ ] **Canonical Contracts & Invariants** filled for auth/transport/persistence/artifact-sensitive work
 - [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
+- [ ] **Every task file** includes `Verification & Evidence` with executable or inspectable proof
 - [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
 - [ ] **Dependency graph complete**: no task can start before its blockers are listed
 - [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
 - [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
-- [ ] **spec.json fully updated**: phase, progress, timestamps, approvals, design_context
+- [ ] **task_files inventory synced**: no missing or orphaned task references
+- [ ] **Validation gate consistent**: validation_recommended and validation.status agree with spec risk
+- [ ] **spec.json fully updated**: phase, current_phase, progress, timestamps, approvals, design_context
 
 ## When TO Use
 

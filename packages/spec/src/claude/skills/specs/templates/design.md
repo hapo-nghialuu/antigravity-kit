@@ -65,6 +65,19 @@ When modifying existing systems:
 
 > Keep rationale concise here and, when more depth is required (trade-offs, benchmarks), add a short summary plus pointer to the Supporting References section and `research.md` for raw investigation notes.
 
+## Canonical Contracts & Invariants
+
+Capture only the contracts whose inconsistency would break downstream implementation or verification. If the feature touches auth/session, transport/entrypoints, persistence/schema, generated artifacts, or runtime outputs, this section is mandatory.
+
+| Contract Area | Canonical Decision | Applies To | Must Stay Consistent In |
+|---------------|--------------------|------------|-------------------------|
+| Auth / session | | | |
+| Transport / entrypoints | | | |
+| Data / persistence | | | |
+| Generated artifacts / runtime outputs | | | |
+
+> Task files must reuse the same contract wording. If implementation later needs a different contract, update this section first before generating or editing tasks.
+
 ## System Flows
 
 Provide only the diagrams needed to explain non-trivial flows. Use pure Mermaid syntax. Common patterns:

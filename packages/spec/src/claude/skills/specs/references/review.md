@@ -7,7 +7,7 @@ Review a spec before implementation. The system auto-decides the review depth ba
 ## Spec Resolution
 
 1. If `<feature>` argument provided → use `specs/<feature>/`
-2. If not → check active spec (spec with `in-progress` status)
+2. If not → check active spec (spec with `in_progress` status; accept legacy `in-progress` when reading existing files)
 3. If nothing found → ask user to specify path
 
 ## Auto-Decision: When to Red Team vs Validate

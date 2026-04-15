@@ -1,6 +1,6 @@
 # CafeKit
 
-> Spec-Driven Development workflow for AI coding assistants
+> Claude Code-first spec-driven workflow for AI coding assistants.
 
 ## Quick Install
 
@@ -8,83 +8,51 @@
 npx @haposoft/cafekit
 ```
 
-## What is CafeKit?
+## What It Is
 
-CafeKit is a structured spec-driven development workflow for AI coding assistants. It works with both **[Claude Code](https://claude.ai/code)** (Anthropic) and **[Antigravity](https://antigravity.google/)** (Google), adding 10 powerful slash commands that guide you through building complex features and managing documentation:
+CafeKit installs a working runtime bundle for Claude Code:
+- `hapo:specs` for structured specification work
+- `hapo:develop` for implementation from approved specs
+- `hapo:test` and `hapo:code-review` for verification
+- `hapo:generate-graph` for technical diagrams
+- supporting hooks, agents, rules, and statusline runtime
 
-### Spec Workflows
+Core flow:
 
-| Command | Purpose |
-|---------|---------|
-| `/spec-init` | Initialize feature specification |
-| `/spec-requirements` | Generate EARS-format requirements |
-| `/spec-design` | Create technical design |
-| `/spec-tasks` | Break down into implementable tasks |
-| `/code` | Implement from approved task list |
-| `/test` | Validate, run tests and analyze failures |
-| `/review` | Review correctness, security, and regressions |
-| `/spec-status` | Check progress |
-
-### Documentation Workflows
-
-| Platform | Init Command | Update Command |
-|----------|--------------|----------------|
-| **Claude Code** | `/docs init` | `/docs update` |
-| **Antigravity** | `/docs-init` | `/docs-update` |
-
-## Why Spec-Driven Development?
-
-Traditional AI coding often leads to:
-- Incomplete requirements causing rework
-- Missing edge cases discovered late
-- Lost context between sessions
-
-**CafeKit solves this** with a structured spec-driven workflow:
-
+```text
+Idea -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
-Idea → /spec-init → /spec-requirements → /spec-design → /spec-tasks → /code → /test → /review
-```
-
-## Platform Compatibility
-
-| Platform | Status | Directory | Installation |
-|----------|--------|-----------|--------------|
-| **Claude Code** (Anthropic) | ✅ Fully supported | `.claude/` | `npx @haposoft/cafekit` |
-| **Antigravity** (Google) | ✅ Fully supported | `.agent/` | `npx @haposoft/cafekit` |
 
 ## Quick Start
 
 ```bash
-# 1. Install (auto-detects your platform)
-npx @haposoft/cafekit
-
-# 2. Initialize a spec
-/spec-init user-authentication
-
-# 3. Gather requirements
-/spec-requirements user-authentication
-
-# 4. Create design
-/spec-design user-authentication
-
-# 5. Generate tasks
-/spec-tasks user-authentication
-
-# 6. Implement, Test, and Review
-/code
-/test
-/review
+/hapo:specs Build a meeting transcript extension with AI summaries
+/hapo:develop meet-transcript-mvp
+/hapo:test --full
+/hapo:code-review --pending
 ```
+
+Specs are stored under:
+
+```text
+specs/<feature-name>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/task-R*.md
+```
+
+## Platform Status
+
+- Claude Code: primary supported runtime
+- Antigravity: legacy path still present in the repo, not the focus of current releases
 
 ## Documentation
 
-- **[Installation](https://cafekit.haposoft.com/docs/getting-started/installation)** - Get set up
-- **[Quickstart](https://cafekit.haposoft.com/docs/getting-started/quickstart)** - Build your first spec
-- **[Spec Workflow](https://cafekit.haposoft.com/docs/guides/spec-workflow)** - Complete guide
-
-## Acknowledgments
-
-CafeKit is inspired by and built upon ideas from [Antigravity Kit](https://github.com/vudovn/antigravity-kit) by [@vudovn](https://github.com/vudovn).
+- Installation: https://cafekit.haposoft.com/docs/getting-started/installation
+- Quickstart: https://cafekit.haposoft.com/docs/getting-started/quickstart
+- Spec workflow: https://cafekit.haposoft.com/docs/guides/spec-workflow
 
 ## License
 
