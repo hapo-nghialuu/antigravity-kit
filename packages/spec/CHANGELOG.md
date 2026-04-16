@@ -5,6 +5,18 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.25] - 2026-04-16
+
+### Changed
+- `hapo:specs` now maintains `task_registry` machine-state in `spec.json` alongside `task_files`
+- `hapo:specs --validate` now requires a reconciliation audit before marking validation complete or enabling implementation readiness
+- task hydration, sync, develop, and the active-spec hook now understand requirement-driven `task-R*.md` files and shared per-task machine state
+
+### Fixed
+- provider drift such as stale `Claude API` / `Haiku` wording is now treated as a validation failure outside `research.md`
+- delete-data specs now require a single canonical deletion/retention policy instead of mixed task-level interpretations
+- legacy `task-01` / `task-02` references were removed from Claude Code-facing protocols and docs
+
 ## [0.7.23] - 2026-04-15
 
 ### Added

@@ -85,6 +85,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - For light mode: Load `{{SKILLS_DIR}}/specs/rules/design-discovery-light.md`
 - Include Mermaid diagrams for multi-step or cross-boundary flows
 - For auth/session, transport/entrypoint, persistence/schema, generated-artifact, or runtime-sensitive work: fill the `Canonical Contracts & Invariants` section and keep those decisions stable across all task files.
+- For privacy/delete-data work: the design MUST choose one canonical deletion policy and express it verbatim in `Canonical Contracts & Invariants` before tasks are generated.
 - Record `discovery_mode` and `discovery_reason` in `spec.json.design_context`
 
 ### Requirements Traceability (MANDATORY)
@@ -107,6 +108,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Apply `(P)` parallel markers when applicable (load `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md`)
 - Every task MUST include `Verification & Evidence` with exact commands, artifacts/runtime surfaces, and negative-path checks.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
+- Validation decisions that affect implementation MUST be written into implementation-facing sections (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Verification & Evidence`) rather than only `Risk Assessment`.
 
 ### Sub-Task Detail Requirements (MANDATORY)
 Each task file MUST contain granular sub-tasks with the following structure:
@@ -137,17 +139,22 @@ Task(subagent_type="researcher", prompt="Research [feature topic]")
 
 ## Pre-Completion Checklist
 
-Before finalizing any specification, assert all 11 points in the `Pre-Finalization Checklist` defined in `SKILL.md`. Do not exit or declare completion until verifiable.
+Before finalizing any specification, assert every point in the `Pre-Finalization Checklist` defined in `SKILL.md`. Do not exit or declare completion until verifiable.
 
 ### Finalization Audit (MANDATORY)
 
 Before marking the spec ready:
 1. Re-scan `tasks/` and write `spec.json.task_files` from the real filesystem (sorted, relative paths)
-2. Fail if any on-disk task file is missing from `task_files`
-3. Fail if any path in `task_files` does not exist
-4. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
-5. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
-6. Reject task files that use legacy non-numeric mappings like `NFR-1`
+2. Build or refresh `spec.json.task_registry` from the same filesystem scan. Each registry entry MUST include `id`, `title`, `status`, `dependencies` (relative task paths), `blocker`, `started_at`, `completed_at`, and `last_updated_at`
+3. Fail if any on-disk task file is missing from `task_files`
+4. Fail if any path in `task_files` does not exist
+5. Fail if any on-disk task file is missing from `task_registry` or any registry path does not exist
+6. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
+7. If the spec scope switched away from Claude/Anthropic, fail if `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider strings like `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` may mention old providers only as historical comparison.
+8. For delete/privacy specs, fail if requirements/design/tasks mix multiple deletion policies (for example `email_hash` in one place and `deleted-<uuid>` in another) without one canonical design decision.
+9. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
+10. Reject task files that use legacy non-numeric mappings like `NFR-1`
+11. If validation decisions were accepted, fail unless they are reflected in implementation-facing sections of affected artifacts and `spec.json.updated_at` / review timestamps reflect the reviewed state
 
 ## Execution Workflow Summary
 
@@ -175,7 +182,7 @@ specs/<feature>/
 
 ### 4. Handoff
 - Update `spec.json` with `"status": "in_progress"` and `"current_phase": "develop"`
-- Ensure `task_files` is synchronized and `ready_for_implementation` reflects the finalization audit outcome
+- Ensure `task_files` + `task_registry` are synchronized and `ready_for_implementation` reflects the finalization audit outcome
 - Report the spec directory path to the orchestrator
 - DO NOT begin implementation yourself
 

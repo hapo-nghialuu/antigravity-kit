@@ -33,6 +33,7 @@ Detail bullets must include:
 - Respect architecture boundaries defined in design.md (Architecture Pattern & Boundary Map)
 - Honor interface contracts documented in design.md
 - Translate completion criteria into concrete proof (commands, artifacts, routes, manifests, schema objects, UI states)
+- Reuse canonical contracts from `design.md` verbatim; never invent alternate auth/provider/deletion policies in task prose
 - Use major task summaries sparingly—omit detail bullets if the work is fully captured by child tasks.
 
 **End with integration tasks** to wire everything together.
@@ -113,6 +114,7 @@ Every task file MUST contain the Risk Assessment table, even if no risks are ide
 - `_Requirements: X.X, Y.Y_` listing **only numeric requirement IDs** (comma-separated). Never append descriptive text, parentheses, translations, or free-form labels.
 - For cross-cutting requirements, list every relevant requirement ID. All requirements MUST have numeric IDs in requirements.md. If an ID is missing, stop and correct requirements.md before generating tasks.
 - Reference components/interfaces from design.md when helpful (e.g., `_Contracts: AuthService API`)
+- If a validation interview or red-team finding changes implementation behavior, update the sub-task itself. Do NOT hide the decision only inside `Risk Assessment`.
 
 ### 5. Code-Only Focus
 
@@ -148,6 +150,8 @@ Rules:
 - If the task wires entrypoints (popup, content script, route, worker, CLI command), name the exact runtime surface that must exist after implementation.
 - If verification depends on environment or manual setup, document the blocker explicitly instead of implying success.
 - Build success alone is NEVER enough evidence for a completed task.
+- For provider-sensitive work, use provider-neutral wording unless the scope lock explicitly names a vendor.
+- For delete-data/privacy work, task text MUST match the single deletion/retention policy chosen in `design.md`. Mixed policies are invalid.
 
 ## Task Hierarchy Rules
 

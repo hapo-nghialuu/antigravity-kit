@@ -74,9 +74,10 @@ Capture only the contracts whose inconsistency would break downstream implementa
 | Auth / session | | | |
 | Transport / entrypoints | | | |
 | Data / persistence | | | |
+| Deletion / retention policy | | | |
 | Generated artifacts / runtime outputs | | | |
 
-> Task files must reuse the same contract wording. If implementation later needs a different contract, update this section first before generating or editing tasks.
+> Task files must reuse the same contract wording. If the feature touches delete-data or privacy retention, explicitly decide whether re-registration is blocked and how that lock works without keeping raw PII. If implementation later needs a different contract, update this section first before generating or editing tasks.
 
 ## System Flows
 

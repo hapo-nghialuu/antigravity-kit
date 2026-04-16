@@ -2,34 +2,54 @@
 
 The following guidelines dictate exactly how `hapo:sync` should interact with files to prevent data corruption.
 
+**Canonical task status vocabulary:** `pending`, `in_progress`, `blocked`, `done`
+
 ## 1. Updating `spec.json`
 
 When requested to update a phase or change task configuration, `spec.json` must maintain its strict schema (defined in `hapo:specs/templates/init.json`).
 
-*   **JSON Modification Rule:** Do not output whole files. Instead, load the JSON structure, apply the update to `status`, `current_phase`, `blocker` (if any), and overwrite the file cleanly.
-*   **Status Update:** If a task changes to `blocked`, `spec.json`'s main `status` must transition to `"blocked"`, and the `"blocker"` string must record the task ID & reason.
+*   **JSON Modification Rule:** Do not output whole files. Instead, load the JSON structure, apply the update to `status`, `current_phase`, `blocker` (if any), `task_files`, and the relevant `task_registry` entry, then overwrite the file cleanly.
+*   **Task Registry Rule:** Resolve the incoming task reference to a single relative path in `task_registry`. Accept either:
+    - compact task ID like `R0-02`
+    - full filename like `task-R0-02-extension-shell.md`
+    - full relative path like `tasks/task-R0-02-extension-shell.md`
+*   **Status Update:** If a task changes to `blocked`, the matching `task_registry[path].status` must become `"blocked"`, `task_registry[path].blocker` must record the reason, and `spec.json.status` / `spec.json.blocker` must reflect the top-level block if work is globally blocked.
+*   **Timestamp Rule:** Update `task_registry[path].started_at`, `completed_at`, and `last_updated_at` consistently with the new state. Also refresh `spec.json.updated_at`.
 
 ## 2. Updating `tasks/task-**.md`
 
-The structure of `tasks/task.md` relies heavily on exact keyword markers. Follow these surgical regex protocols:
+The structure of `tasks/task.md` relies heavily on exact keyword markers. Follow these surgical protocols against `tasks/task-R*.md`:
 
 ### A. Completing a Task
-When `/hapo:sync <feature> <task-id> completed`:
-1. Find: `**Trạng thái:** pending` (or `in_progress`).
-2. Replace with: `**Trạng thái:** completed`.
-3. Locate block: `## Các bước thực hiện`.
-4. Convert every `- [ ]` into `- [x]` strictly within that section. Ignore checkboxes elsewhere in the document.
+When `/hapo:sync <feature> <task-id> done`:
+1. Find: `**Status:** pending` (or `in_progress` / `blocked`).
+2. Replace with: `**Status:** done`.
+3. Locate block: `## Implementation Steps`.
+4. Convert `- [ ]` into `- [x]` strictly within that section.
+5. Update relevant checkboxes in `## Completion Criteria` and `## Verification & Evidence` only when the caller provides or the file already contains real proof.
 
 ### B. Blocking a Task
 When `/hapo:sync <feature> <task-id> blocked "API error"`:
-1. Find: `**Trạng thái:** <anything>`.
-2. Replace with: `**Trạng thái:** blocked`.
-3. Ensure that an entry under `## Đánh giá Rủi ro` or a new section `## Blocker Log` is injected recording the explicit reason (e.g. `API error`).
+1. Find: `**Status:** <anything>`.
+2. Replace with: `**Status:** blocked`.
+3. Ensure that an entry under `## Blocker Log` exists recording the explicit reason (e.g. `API error`) and timestamp.
+
+### C. Starting / Resuming a Task
+When `/hapo:sync <feature> <task-id> in_progress`:
+1. Find: `**Status:** pending` (or `blocked`).
+2. Replace with: `**Status:** in_progress`.
+3. Do NOT pre-check completion boxes.
+4. Stamp `task_registry[path].started_at` if missing and refresh `last_updated_at`.
 
 ## 3. Audit Protocol
 
 When `/hapo:sync audit <feature>` is activated:
 1. **Load Truth:** Read `specs/<feature>/spec.json`.
 2. **Scan Directory:** Loop through `specs/<feature>/tasks/`.
-3. **Compare Constraints:** If parsing `task-01.md` reveals `Trạng thái: completed` but `spec.json` is missing this accounting, update the JSON. 
-4. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed.
+3. **Compare Constraints:** Rebuild `task_files` from disk, ensure every file exists in `task_registry`, and compare markdown `**Status:**` headers against `task_registry[path].status`.
+4. **Reconciliation Rules:**
+   - Missing registry entry → create it
+   - Missing disk file referenced in registry → remove or flag it
+   - Markdown says `done` but registry not done → registry wins only if evidence already exists; otherwise downgrade markdown or flag conflict
+   - Registry says `done` but markdown still pending → update markdown only if evidence exists
+5. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed and any unresolved conflicts requiring manual review.

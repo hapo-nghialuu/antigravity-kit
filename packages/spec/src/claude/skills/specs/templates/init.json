@@ -34,6 +34,7 @@
     "blocks": []
   },
   "task_files": [],
+  "task_registry": {},
   "blocker": null,
   "progress": {
     "init": "done",
@@ -53,7 +54,8 @@
     "tasks_done": null,
     "code_done": null,
     "test_done": null,
-    "review_done": null
+    "review_done": null,
+    "validation_done": null
   },
   "design_context": {
     "discovery_mode": null,

@@ -67,8 +67,8 @@ specs/
     ├── spec.json               # System state machine & global status
     ├── design.md               # Architecture, requirements, and data flows
     └── tasks/
-        ├── task-01-setup.md    # Actionable granular steps for development
-        └── task-02-api.md      # Next sequential task
+        ├── task-R0-01-setup.md  # Actionable granular steps for development
+        └── task-R1-01-api.md    # Next requirement-driven task
 ```
 
 ### The State Machine (`spec.json`)
@@ -81,8 +81,8 @@ This blueprint covers:
 - **Data Flow:** Mandatory Mermaid Data Flow Diagram detailing state transitions, DB interactions, and API payloads.
 - **Risk Assessment:** Pre-identified failure points and mitigations.
 
-### Execution Checklists (`tasks/task-0*.md`)
-Work is decomposed into linear markdown task files.
+### Execution Checklists (`tasks/task-R*.md`)
+Work is decomposed into requirement-driven markdown task files.
 Each task file contains:
 - **Prerequisites:** Blockers that must clear before this stage begins. (Task N+1 cannot start without Task N defining its payload).
 - **Execution Checklist:** Granular `[ ]` markdown items for agents to toggle `[x]` as they implement code.

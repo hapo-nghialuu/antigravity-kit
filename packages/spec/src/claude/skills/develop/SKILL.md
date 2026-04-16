@@ -52,6 +52,7 @@ flowchart TD
 ### Step 1: Initialize & Load Spec
 - Identify input: Open `specs/<feature-name>/spec.json`.
 - Check `ready_for_implementation` status. If not ready, notify user.
+- Load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
 - **Task Scoping (CRITICAL):**
   - If the user specifies a particular task file (e.g., `task-R0-02...md`), load **ONLY** that specific file into working memory.
   - If no specific task is mentioned, list and load all Markdown files in `specs/<feature-name>/tasks/*.md`.
@@ -63,6 +64,7 @@ flowchart TD
   - Requirement IDs referenced by the task
   - Relevant `Canonical Contracts & Invariants` from `design.md`
 - If the task file is missing actionable completion or verification detail, STOP and route back to spec correction. Do not guess.
+- Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
 
 ### Step 2: Scout (Codebase Inspection)
 - **Mandatory:** Call agent `Task(subagent_type="inspect", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
@@ -87,8 +89,13 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 - Only escalate to the user after 3 consecutive failed review rounds.
 
 ### Step 5: State Sync + Incremental Docs Sync
-- Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps.
+- Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps/task_registry.
 - If verification is partial or blocked by environment, keep the task in `pending` or `in_progress` and record the blocker instead of pretending completion.
+- A completed task MUST leave behind:
+  - markdown `**Status:** done`
+  - `spec.json.task_registry[path].status = "done"`
+  - `completed_at` + `last_updated_at`
+  - synchronized top-level `updated_at`
 - After passing the Quality Gate, evaluate if any actual codebase modifications occurred (e.g., check pending files via git status).
 - If files were created or modified: Trigger `docs-keeper` automatically to execute `repomix` and update the global `/docs/` and project logs.
 - **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and crash.

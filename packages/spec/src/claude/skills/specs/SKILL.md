@@ -44,6 +44,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Requirements 
 - Canonical active status string is `in_progress`. Legacy `in-progress` may be READ for compatibility but MUST NOT be generated in new specs.
 - `current_phase` is required for live work and must track the active phase (`init`, `requirements`, `design`, `tasks`, `develop`, `test`, `review`).
 - `task_files` in `spec.json` MUST exactly match the real files under `tasks/` after Step 7.
+- `task_registry` in `spec.json` MUST exist once task files are generated and MUST contain one entry per task file, keyed by relative path.
 - `ready_for_implementation` is a hard gate, not a convenience flag. Never set it before the finalization audit passes.
 
 ### Output Criteria
@@ -132,7 +133,7 @@ flowchart TD
     P --> Q["Step 6: Design — pick discovery mode"]
     Q --> R["Write design.md"]
     R --> S["Step 7: Tasks — split into individual files"]
-    S --> T["Create tasks/task-01.md, task-02.md..."]
+    S --> T["Create tasks/task-R*.md + task_registry"]
     T --> U["Step 8: Hydrate Claude Tasks if >= 3 task files"]
     U --> V{Review?}
     V -->|Yes| W["Run review — auto-pick red team or validation"]
@@ -218,6 +219,15 @@ Load: `references/scope-inquiry.md`
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
 - Each task file MUST include `Completion Criteria` and `Verification & Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
+- Build `spec.json.task_registry` alongside `task_files`. For each task file, register at minimum:
+  - `id`
+  - `title`
+  - `status` (`pending` by default)
+  - `dependencies` (relative task paths, not prose labels)
+  - `blocker`
+  - `started_at`
+  - `completed_at`
+  - `last_updated_at`
 - Update `spec.json` phase + task metadata
 
 #### Requirement-Driven Task Grouping (MANDATORY)
@@ -237,7 +247,7 @@ tasks/
 ├── task-R1-02-gap-marker-detector.md
 ├── task-R1-03-chunk-api-endpoint.md
 ├── task-R2-01-summarize-orchestrator.md
-├── task-R2-02-haiku-integration.md
+├── task-R2-02-provider-integration.md
 ├── task-R3-01-consent-onboarding.md
 ...
 ```
@@ -291,13 +301,24 @@ Load: `references/review.md` + `rules/design-review.md`
 - When both run: Red Team ALWAYS before Validate (red team may change the spec)
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
+- **Reconciliation Rule:** `validation.status = "completed"` is forbidden until all accepted findings and validation decisions are physically propagated into `requirements.md`, `design.md`, `tasks/*.md`, and `spec.json` where applicable.
 
 ### Step 9.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)
+- Rebuild `spec.json.task_registry` from the real filesystem if it is missing, stale, or missing keys. Preserve task status fields when the path still matches.
 - FAIL if any task file exists on disk but is missing from `task_files`
 - FAIL if any path in `task_files` does not exist on disk
+- FAIL if any task file exists on disk but is missing from `task_registry`
+- FAIL if any path in `task_registry` does not exist on disk
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
 - FAIL if a task lacks `Completion Criteria` or `Verification & Evidence`
+- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Verification & Evidence`, canonical contracts, or requirements text).
+- FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
+- FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
+  1. hard-delete with no re-registration lock, or
+  2. privacy-preserving re-registration lock using a non-raw identifier (for example `email_hash` / `email_fingerprint`) with a retention period.
+  Tasks and requirements must reuse the same policy verbatim; mixed policies are invalid.
+- FAIL if `validation.status = "completed"` but `timestamps.validation_done` / `timestamps.review_done`, `updated_at`, and report metadata are not synchronized with the final reviewed state.
 - If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit accepted-risk state recorded by the user), `ready_for_implementation` MUST remain `false`
 - Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`
 
@@ -329,7 +350,8 @@ When user calls `hapo:specs`, system checks `specs/`:
 | `init` done | "Next: write requirements" |
 | `requirements` done | "Next: architectural design" |
 | `design` done | "Next: break into tasks" |
-| `tasks` done | "Next: `/hapo:develop <feature>`" |
+| `tasks` done + validation recommended but incomplete | "Next: `/hapo:specs --validate <feature>`" |
+| `tasks` done + ready_for_implementation = true | "Next: `/hapo:develop <feature>`" |
 | Spec is `blocked` | "Warning: spec `X` is blocking this spec" |
 
 **State persistence:** Update `spec.json` `phase` field on each transition. `spec.json` is the single source of truth.
@@ -338,13 +360,15 @@ When user calls `hapo:specs`, system checks `specs/`:
 
 **Canonical status vocabulary:** Use `in_progress`, `blocked`, `done`, and `archived`. New specs MUST NOT emit `in-progress`.
 
-**Timestamps:** Each `timestamps.*_done` field MUST use the **actual current time** (ISO 8601 with timezone) when that specific phase completes. Do NOT reuse the `init` timestamp for later phases. If running the full pipeline end-to-end, capture a fresh timestamp at each phase transition.
+**Timestamps:** Each `timestamps.*_done` field MUST use the **actual current time** (ISO 8601 with timezone) when that specific phase completes. This includes `review_done` and `validation_done` after review/validate workflows. Do NOT reuse the `init` timestamp for later phases. If running the full pipeline end-to-end, capture a fresh timestamp at each phase transition.
 
 **Approvals (auto-approval behavior):**
 - When running the **full pipeline end-to-end** (init → tasks in one session): set `approvals.{phase}.generated = true` AND `approvals.{phase}.approved = true` for each completed phase before proceeding to the next.
 - When running a **single phase**: set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
 
 **Task inventory:** `task_files` MUST be present and MUST list every real task file exactly once using relative paths like `tasks/task-R1-01-example.md`.
+
+**Task machine-state:** `task_registry` MUST be present after Step 7. Each key is a relative task path, and each value MUST contain `id`, `title`, `status`, `dependencies`, `blocker`, `started_at`, `completed_at`, and `last_updated_at`.
 
 **Validation recommendation:** `design_context.validation_recommended` MUST be `true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs.
 
@@ -354,7 +378,8 @@ When user calls `hapo:specs`, system checks `specs/`:
 3. `approvals.tasks.approved = true`
 4. `progress.tasks = "done"`
 5. `task_files` matches the real filesystem
-6. If `design_context.validation_recommended = true`, `validation.status = "completed"` (or another explicit user-accepted risk state that is recorded)
+6. `task_registry` matches the real filesystem and does not omit any task file
+7. If `design_context.validation_recommended = true`, `validation.status = "completed"` (or another explicit user-accepted risk state that is recorded)
 
 If any approval is `false`, `ready_for_implementation` MUST remain `false`.
 
@@ -363,7 +388,7 @@ If any approval is `false`, `ready_for_implementation` MUST remain `false`.
 ```
 specs/
 └── <feature-name>/
-    ├── spec.json              # Metadata, state, scope_lock, dependencies
+    ├── spec.json              # Metadata, state, scope_lock, dependencies, task_registry
     ├── requirements.md        # Technical requirements (EARS format)
     ├── research.md            # Research notes
     ├── design.md              # Architectural design
@@ -427,7 +452,9 @@ Before finalizing any specification, assert all the following:
 - [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
 - [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
 - [ ] **task_files inventory synced**: no missing or orphaned task references
+- [ ] **task_registry synced**: every task file has exactly one machine-state entry with valid status + dependencies
 - [ ] **Validation gate consistent**: validation_recommended and validation.status agree with spec risk
+- [ ] **Provider wording clean**: no stale vendor/provider strings outside allowed research context
 - [ ] **spec.json fully updated**: phase, current_phase, progress, timestamps, approvals, design_context
 
 ## When TO Use

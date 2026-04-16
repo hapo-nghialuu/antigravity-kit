@@ -35,7 +35,7 @@ Any logic gaps must be clarified BEFORE typing, not discovered after bugs ship.
 ### 1. Read & Understand Input
 
 When activated, you will receive one of two input types:
-- **Task file list** (`tasks/task-01-*.md`, `task-02-*.md`...) with `spec.json`.
+- **Task file list** (`tasks/task-R0-01-*.md`, `task-R1-01-*.md`...) with `spec.json`.
 - **Direct description** from the main agent or `hapo:develop` skill. 
   *(Always proactively leverage domain-specific best practices by invoking `hapo:frontend-development`, `hapo:backend-development`, `hapo:mobile-development`, or `hapo:react-best-practices` depending on the current task).*
 
