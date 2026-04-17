@@ -19,9 +19,10 @@ If the prompt includes task file paths, requirement IDs, completion criteria, or
 
 Extract and verify:
 1. Declared deliverables (files, routes, entrypoints, UI surfaces, schemas, migrations)
-2. Completion Criteria
-3. Verification & Evidence expectations
-4. Canonical Contracts & Invariants from the design
+2. Declared task scope (`Related Files` and direct support files that are clearly justified)
+3. Completion Criteria
+4. Verification & Evidence expectations
+5. Canonical Contracts & Invariants from the design
 
 Any missing declared deliverable, placeholder-only wiring, or contract drift is a **Critical** issue even if tests/build pass.
 
@@ -58,6 +59,7 @@ Before reading any specific logic, you MUST run a Dependency Scope Check (Blast 
 - Hunt serious logic bugs (crashes, data loss, infinite loops).
 - Hunt severe architecture violations (circular imports, cross-layer coupling).
 - Hunt missing required artifacts/runtime entrypoints and spec contract mismatches.
+- Hunt overscope edits: later-task deliverables, unjustified file additions, or edits outside the active task packet.
 
 **Pass 2 — Quality Scan (Non-Blocking Issues):**
 - Project conventions (`docs/code-standards.md` if available).
@@ -94,6 +96,7 @@ Classify each issue:
 
 ### Task / Spec Compliance
 - [OK or issue] Required deliverables present?
+- [OK or issue] Changes stayed within task scope?
 - [OK or issue] Completion criteria actually satisfied?
 - [OK or issue] Any contract drift vs design/task?
 
@@ -126,6 +129,8 @@ When called from `hapo:develop` Step 4 (Quality Gate Auto-Fix):
 - Missing required entrypoint/artifact/runtime output named in the task/spec
 - Placeholder scaffolding marked as complete when the task demanded real wiring
 - Auth/session/transport/persistence behavior that contradicts the design contracts
+- Files or features from later tasks delivered early without explicit scope-escape justification
+- Task marked complete while required commands/evidence are still FAIL / UNVERIFIED
 
 ## Operating Guidelines
 

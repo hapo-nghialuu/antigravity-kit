@@ -15,6 +15,7 @@ When requested to update a phase or change task configuration, `spec.json` must 
     - full relative path like `tasks/task-R0-02-extension-shell.md`
 *   **Status Update:** If a task changes to `blocked`, the matching `task_registry[path].status` must become `"blocked"`, `task_registry[path].blocker` must record the reason, and `spec.json.status` / `spec.json.blocker` must reflect the top-level block if work is globally blocked.
 *   **Timestamp Rule:** Update `task_registry[path].started_at`, `completed_at`, and `last_updated_at` consistently with the new state. Also refresh `spec.json.updated_at`.
+*   **Done-State Rule:** Never set `task_registry[path].status = "done"` unless the matching markdown task file already contains a verification receipt in `## Verification & Evidence`, or the caller explicitly provides proof that can be written there first.
 
 ## 2. Updating `tasks/task-**.md`
 
@@ -23,10 +24,11 @@ The structure of `tasks/task.md` relies heavily on exact keyword markers. Follow
 ### A. Completing a Task
 When `/hapo:sync <feature> <task-id> done`:
 1. Find: `**Status:** pending` (or `in_progress` / `blocked`).
-2. Replace with: `**Status:** done`.
-3. Locate block: `## Implementation Steps`.
-4. Convert `- [ ]` into `- [x]` strictly within that section.
-5. Update relevant checkboxes in `## Completion Criteria` and `## Verification & Evidence` only when the caller provides or the file already contains real proof.
+2. Inspect `## Verification & Evidence` first. If it has no explicit proof lines (commands run, artifact proof, runtime proof, or blockers cleared), STOP and refuse to mark the task done.
+3. Replace with: `**Status:** done`.
+4. Locate block: `## Implementation Steps`.
+5. Convert `- [ ]` into `- [x]` strictly within that section.
+6. Update relevant checkboxes in `## Completion Criteria` and `## Verification & Evidence` only when the caller provides or the file already contains real proof.
 
 ### B. Blocking a Task
 When `/hapo:sync <feature> <task-id> blocked "API error"`:
@@ -52,4 +54,5 @@ When `/hapo:sync audit <feature>` is activated:
    - Missing disk file referenced in registry → remove or flag it
    - Markdown says `done` but registry not done → registry wins only if evidence already exists; otherwise downgrade markdown or flag conflict
    - Registry says `done` but markdown still pending → update markdown only if evidence exists
+   - Either side says `done` but `## Verification & Evidence` has no concrete proof → downgrade to `in_progress` or flag conflict instead of preserving fake completion
 5. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed and any unresolved conflicts requiring manual review.

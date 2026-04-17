@@ -7,6 +7,13 @@ Green tests are NOT enough. The gate requires three proofs:
 2. Code/spec review
 3. Task evidence (completion criteria + runtime/artifact proof from the task file)
 
+## Automation Semantics
+
+- If the task names exact commands in `Verification & Evidence`, those exact commands are mandatory and must run before any fallback repo defaults.
+- `NO_TESTS` is never an automatic PASS.
+- `NO_TESTS` is acceptable only when the task does **not** require a dedicated test suite command and every other required automated command/evidence item passes.
+- If the task explicitly requires tests and the repo has no such test command or suite, the task is FAIL or BLOCKED, not done.
+
 ## Parallel Quality Cycle
 
 Maximum retry counter: **3 attempts**. Exceeding 3 triggers a collapse warning.
@@ -17,6 +24,7 @@ Variable: retry_count = 0
 Before START_LOOP:
   - Read the active task file(s)
   - Extract Related Files, Completion Criteria, Verification & Evidence
+  - Extract the exact executable verification commands in declaration order
   - Extract relevant design contracts/invariants for the touched area
   - If any of these are missing or too vague to verify, FAIL immediately and route back to spec correction
 
@@ -25,11 +33,11 @@ START_LOOP:
   PARALLEL GATE: Spawn BOTH agents simultaneously
   ---------------------------------------------------------------
   → Task(subagent_type="test-runner",
-        prompt="Run task-aware verification for the recently implemented code. Read the active task file(s) and execute: pre-flight typecheck/lint, relevant tests, build commands, and every Verification & Evidence item that is executable. Inspect named artifacts/runtime outputs. Return PASS only if automated checks and task evidence both pass. Mark anything unexecuted as UNVERIFIED.",
+        prompt="Run task-aware verification for the recently implemented code. Read the active task file(s) and execute the exact verification commands named there first, in order. After that, run any additional repo-level typecheck/test/build checks needed for confidence. Inspect named artifacts/runtime outputs. Return PASS only if automated checks and task evidence both pass. Mark anything unexecuted as UNVERIFIED. Treat NO_TESTS as non-passing unless the task did not require a dedicated test suite.",
         description="Test [feature]")
 
   → Task(subagent_type="code-auditor",
-        prompt="Review all recently written code against the active task file(s), referenced requirements, and design contracts. Missing deliverables, placeholder-only wiring, missing runtime entrypoints, or contract drift are Critical even if build/tests pass. Check security, logic, architecture, YAGNI/KISS/DRY. Return score (X/10), critical count, warning list, and evidence gaps.",
+        prompt="Review all recently written code against the active task file(s), referenced requirements, and design contracts. Missing deliverables, placeholder-only wiring, missing runtime entrypoints, overscope edits outside the task packet, or contract drift are Critical even if build/tests pass. Check security, logic, architecture, YAGNI/KISS/DRY. Return score (X/10), critical count, warning list, and evidence gaps.",
         description="Review [feature]")
 
   Wait for BOTH to return results.
@@ -38,7 +46,7 @@ START_LOOP:
   COMBINE RESULTS
   ---------------------------------------------------------------
 
-  CASE 1 — Test FAIL OR Evidence FAIL / UNVERIFIED:
+  CASE 1 — Automated FAIL OR required command missing OR Evidence FAIL / UNVERIFIED OR NO_TESTS when tests were required:
     - Increment retry_count++
     - If retry_count >= 3:
         → COLLAPSE! AskUserQuestion: "Quality gate cannot prove this task is complete! User intervention required!"
@@ -56,7 +64,7 @@ START_LOOP:
 
   CASE 3 — Test PASS + Evidence PASS + Review PASS (Score >= 9.5 AND Critical = 0):
     → PASS! Auto-approved.
-    → PROCEED to completion report.
+    → PROCEED to completion report with a verification receipt summarizing exact commands executed, artifact/runtime proof, and review result.
 
 REVIEW_ONLY:
   ---------------------------------------------------------------
@@ -77,6 +85,7 @@ REVIEW_ONLY:
 - **Architecture:** Breaking MVC boundaries, cross-module coupling, convention violations.
 - **Principles:** YAGNI violations, KISS violations, DRY violations (excessive code duplication).
 - **Evidence / Done-Criteria Drift:** Missing required artifacts, placeholder-only wiring, missing entrypoints, unproven completion criteria, or runtime contract mismatches.
+- **Overscope Delivery Drift:** Implementing later-task deliverables or editing out-of-scope files without direct justification for the active task.
 
 ## Terminal Log Format
 

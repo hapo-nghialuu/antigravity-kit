@@ -35,7 +35,8 @@ Scans the `spec.json` against all physical `task-R*.md` files to detect mismatch
 1. **Precision Edits:** Never overwrite the entire `spec.json` string blindly. Update only the required keys, while keeping JSON valid.
 2. **Machine + Human Sync:** Every task status update MUST modify both `spec.json.task_registry[...]` and the matching markdown task file header/status section.
 3. **Markdown Integrity:** When marking a task `done`, only then turn `[ ]` into `[x]` inside `## Implementation Steps` and relevant `Completion Criteria` / `Verification & Evidence` checkboxes that have actual proof.
-4. **Task Completion Hook:** When `hapo:sync` marks the final pending task as `done`, it should automatically prompt the user if they'd like to advance the phase.
+4. **Verification Receipt Rule:** `done` is illegal without a human-readable verification receipt already present in `## Verification & Evidence` (commands executed, artifact/runtime proof, or equivalent concrete evidence). If proof is missing, keep the task `in_progress` or `blocked`.
+5. **Task Completion Hook:** When `hapo:sync` marks the final pending task as `done`, it should automatically prompt the user if they'd like to advance the phase.
 
 ## References
 Read `references/sync-protocols.md` for exact Search/Replace regex patterns and JSON schema expectations before acting on the files.
