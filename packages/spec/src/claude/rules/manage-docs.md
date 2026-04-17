@@ -22,6 +22,7 @@ The project maintains these core documents in `./docs`:
 The `hapo:docs-keeper` agent is responsible for keeping these documents current. Trigger an update whenever:
 
 - A development phase transitions (e.g., "In Progress" → "Complete")
+- A verified task completion changes user-facing behavior, architecture, API contracts, operational flow, or project status enough that docs should be refreshed
 - A significant feature ships or a critical bug is resolved
 - Security patches are applied or dependencies change
 - Project scope or timeline shifts

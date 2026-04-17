@@ -138,7 +138,7 @@ If "Review each one": For each finding, ask: "Apply" | "Reject" | "Modify sugges
 
 | # | Finding | Severity | Disposition | Applied To |
 |---|---------|----------|-------------|------------|
-| 1 | {title} | Critical | Accept | Task 02 |
+| 1 | {title} | Critical | Accept | task-R0-02-... |
 ```
 
 ---

@@ -16,6 +16,7 @@ When requested to update a phase or change task configuration, `spec.json` must 
 *   **Status Update:** If a task changes to `blocked`, the matching `task_registry[path].status` must become `"blocked"`, `task_registry[path].blocker` must record the reason, and `spec.json.status` / `spec.json.blocker` must reflect the top-level block if work is globally blocked.
 *   **Timestamp Rule:** Update `task_registry[path].started_at`, `completed_at`, and `last_updated_at` consistently with the new state. Also refresh `spec.json.updated_at`.
 *   **Done-State Rule:** Never set `task_registry[path].status = "done"` unless the matching markdown task file already contains a verification receipt in `## Verification & Evidence`, or the caller explicitly provides proof that can be written there first.
+*   **Task Docs Rule:** After a task is moved to `done`, emit a short alert that a task-level docs checkpoint is due for this verified task.
 
 ## 2. Updating `tasks/task-**.md`
 
@@ -29,6 +30,7 @@ When `/hapo:sync <feature> <task-id> done`:
 4. Locate block: `## Implementation Steps`.
 5. Convert `- [ ]` into `- [x]` strictly within that section.
 6. Update relevant checkboxes in `## Completion Criteria` and `## Verification & Evidence` only when the caller provides or the file already contains real proof.
+7. Surface a note such as: `Docs checkpoint due: task Rn-mm just completed`.
 
 ### B. Blocking a Task
 When `/hapo:sync <feature> <task-id> blocked "API error"`:
@@ -56,3 +58,4 @@ When `/hapo:sync audit <feature>` is activated:
    - Registry says `done` but markdown still pending → update markdown only if evidence exists
    - Either side says `done` but `## Verification & Evidence` has no concrete proof → downgrade to `in_progress` or flag conflict instead of preserving fake completion
 5. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed and any unresolved conflicts requiring manual review.
+6. **Task Docs Alert:** If audit reveals tasks newly marked `done`, include whether task-level docs sync appears still due or already accounted for in the current run summary.

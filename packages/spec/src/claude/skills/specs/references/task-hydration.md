@@ -16,16 +16,16 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 ┌──────────────────┐  Hydrate   ┌───────────────────┐
 │ Task Files       │ ─────────► │ Claude Tasks      │
 │ (persistent)     │            │ (session-scoped)  │
-│ [ ] Task 01      │            │ ◼ pending         │
-│ [ ] Task 02      │            │ ◼ pending         │
+│ [ ] task-R0-01   │            │ ◼ pending         │
+│ [ ] task-R0-02   │            │ ◼ pending         │
 └──────────────────┘            └───────────────────┘
                                         │ Work
                                         ▼
 ┌──────────────────┐  Sync-back ┌───────────────────┐
 │ Task Files       │ ◄───────── │ Task Updates      │
 │ (updated)        │            │ (completed)       │
-│ [x] Task 01      │            │ ✓ completed       │
-│ [ ] Task 02      │            │ ◼ in_progress     │
+│ [x] task-R0-01   │            │ ✓ completed       │
+│ [ ] task-R0-02   │            │ ◼ in_progress     │
 └──────────────────┘            └───────────────────┘
 ```
 

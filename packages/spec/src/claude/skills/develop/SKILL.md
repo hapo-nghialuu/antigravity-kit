@@ -116,7 +116,7 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 - If build/test passes but task evidence is missing, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
-### Step 5: State Sync + Incremental Docs Sync
+### Step 5: State Sync + Task-Level Docs Sync
 - Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps/task_registry.
 - If verification is partial or blocked by environment, keep the task in `pending` or `in_progress` and record the blocker instead of pretending completion.
 - A completed task MUST leave behind:
@@ -125,10 +125,14 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
   - a human-readable verification receipt inside the task's `Verification & Evidence` section showing which commands ran and what proof was observed
-- After passing the Quality Gate, evaluate if any actual codebase modifications occurred (e.g., check pending files via git status).
-- If files were created or modified: Trigger `docs-keeper` automatically to execute `repomix` and update the global `/docs/` and project logs.
+- After syncing the active task, run a **Task Closeout Docs Checkpoint**
+- Task Closeout Docs Checkpoint:
+  - Evaluate `Docs impact: none | minor | major` based on real behavior changes from the just-completed task
+  - If `none`: record that explicitly in the completion report and stop
+  - If `minor` or `major`: trigger `docs-keeper` to surgically update affected existing docs under `./docs`
+  - Default to **lightweight docs sync**: update only the docs touched by this task and its verified behavior; do NOT run `repomix` unless `docs-keeper` truly cannot verify the required architecture/context from the code, spec, and current docs
 - **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and crash.
-- Do NOT skip this step! The user explicitly requires documentation to be synced immediately after every `/hapo:develop` action, overriding the default Phase 3-only rule.
+- Task-level docs sync happens after every verified completed task, but actual edits still depend on `Docs impact`.
 - In **Specific-Task Mode**, STOP after sync and report the result.
 - In **Full-Spec Mode**, only after sync may you re-read `task_registry`, pick the next unblocked pending task, and repeat from Step 1 for that task.
 
