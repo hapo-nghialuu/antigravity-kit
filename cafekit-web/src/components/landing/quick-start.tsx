@@ -13,16 +13,12 @@ export function QuickStart() {
 
   const commands = [
     'npx @haposoft/cafekit',
-    '/docs init',
-    '/spec-init user-authentication',
-    '/spec-requirements user-authentication',
-    '/spec-design user-authentication',
-    '/spec-validate user-authentication',
-    '/spec-tasks user-authentication',
-    '/code',
-    '/test',
-    '/review',
-    '/docs update',
+    '/hapo:specs Build a user authentication system',
+    '/hapo:specs --validate user-authentication',
+    '/hapo:develop user-authentication task-R0-02-auth-setup-dual-mode.md',
+    '/hapo:test --full',
+    '/hapo:code-review --pending',
+    '/hapo:sync audit user-authentication',
   ];
 
   const codeLines = [
@@ -31,12 +27,16 @@ export function QuickStart() {
     '',
     t.comments[1],
     commands[1],
+    commands[2],
     '',
     t.comments[2],
-    ...commands.slice(2, 10),
+    commands[3],
     '',
     t.comments[3],
-    commands[10],
+    commands[4],
+    commands[5],
+    '',
+    commands[6],
   ];
 
   const codeExample = codeLines.join('\n');
@@ -48,18 +48,18 @@ export function QuickStart() {
   };
 
   return (
-    <section className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 py-20 dark:from-zinc-900 dark:via-amber-950/20 dark:to-zinc-900">
+    <section className="bg-[linear-gradient(180deg,_rgba(242,234,157,0.14),_rgba(167,197,238,0.12),_rgba(255,255,255,0.96))] py-20 dark:bg-[linear-gradient(180deg,_#114734,_#101820_42%,_#101820)]">
       <div className="mx-auto max-w-4xl px-6">
-        <h2 className="mb-4 text-center text-3xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-4xl">
+        <h2 className="mb-4 text-center text-3xl font-bold text-[#101820] dark:text-[#F6FAF7] sm:text-4xl">
           {t.heading}
         </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-center text-lg text-zinc-600 dark:text-zinc-400">
+        <p className="mx-auto mb-12 max-w-2xl text-center text-lg text-[#3A5249] dark:text-[#CFE1D9]">
           {t.subheading}
         </p>
 
         <div className="relative">
-          <div className="overflow-hidden rounded-xl border-2 border-amber-900/20 bg-zinc-900 shadow-2xl dark:border-amber-100/20">
-            <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-4 py-3">
+          <div className="overflow-hidden rounded-xl border border-[#A7C5EE]/24 bg-[#101820] shadow-[0_24px_80px_-32px_rgba(16,24,32,0.48)]">
+            <div className="flex items-center justify-between border-b border-[#A7C5EE]/12 bg-[#0D161C] px-4 py-3">
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-500"></div>
                 <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
@@ -67,7 +67,7 @@ export function QuickStart() {
               </div>
               <button
                 onClick={handleCopy}
-                className="rounded-md bg-zinc-700 px-3 py-1 text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-600"
+                className="rounded-md bg-[#114734] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#006242]"
               >
                 {copied ? t.copied : t.copy}
               </button>
@@ -76,22 +76,22 @@ export function QuickStart() {
             <div className="p-6">
               <pre className="font-mono text-sm leading-relaxed">
                 {codeLines.map((line, i) => (
-                  <code key={i} className={line.startsWith('#') ? 'text-zinc-500 block' : 'text-emerald-400 block'}>
-                    {line.startsWith('#') ? line : line === '' ? '\u00A0' : <><span className="text-zinc-500">$ </span>{line}</>}
+                  <code key={i} className={line.startsWith('#') ? 'text-[#8EACD0] block' : 'text-[#F2EA9D] block'}>
+                    {line.startsWith('#') ? line : line === '' ? '\u00A0' : <><span className="text-[#6FD4A2]">$ </span>{line}</>}
                   </code>
                 ))}
               </pre>
             </div>
           </div>
 
-          <div className="absolute -bottom-4 -right-4 -z-10 h-24 w-24 rounded-full bg-amber-500/20 blur-3xl"></div>
-          <div className="absolute -left-4 -top-4 -z-10 h-24 w-24 rounded-full bg-orange-500/20 blur-3xl"></div>
+          <div className="absolute -bottom-4 -right-4 -z-10 h-24 w-24 rounded-full bg-[#A7C5EE]/28 blur-3xl"></div>
+          <div className="absolute -left-4 -top-4 -z-10 h-24 w-24 rounded-full bg-[#F2EA9D]/28 blur-3xl"></div>
         </div>
 
         <div className="mt-12 text-center">
           <Link
             href="/docs/getting-started/quickstart"
-            className="group inline-flex items-center gap-2 text-amber-900 transition-colors hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+            className="group inline-flex items-center gap-2 text-[#006242] transition-colors hover:text-[#114734] dark:text-[#A7C5EE] dark:hover:text-[#F2EA9D]"
           >
             <span className="font-medium">{t.viewGuide}</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

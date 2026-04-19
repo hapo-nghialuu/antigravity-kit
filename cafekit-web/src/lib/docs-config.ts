@@ -1,428 +1,191 @@
 type DocsConfig = {
-    mainNav: {
-        title: string;
-        href: string;
+  mainNav: {
+    title: string;
+    href: string;
+  }[];
+  sidebarNav: {
+    title: string;
+    items: {
+      title: string;
+      href: string;
     }[];
-    sidebarNav: {
-        title: string;
-        items: {
-            title: string;
-            href: string;
-        }[];
-    }[];
+  }[];
 };
 
 const mainNav = [
-    {
-        title: "Documentation",
-        href: "/docs",
-    },
-    {
-        title: "Examples",
-        href: "/docs/examples",
-    },
+  {
+    title: "Documentation",
+    href: "/docs",
+  },
+  {
+    title: "Quickstart",
+    href: "/docs/getting-started/quickstart",
+  },
+  {
+    title: "Reference",
+    href: "/docs/reference",
+  },
 ];
 
-const sidebarNavEn = [
-    {
-        title: "Getting Started",
-        items: [
-            {
-                title: "Introduction",
-                href: "/docs",
-            },
-            {
-                title: "Installation",
-                href: "/docs/getting-started/installation",
-            },
-            {
-                title: "Quick Start",
-                href: "/docs/getting-started/quickstart",
-            },
-        ],
-    },
-    {
-        title: "Documentation Workflows",
-        items: [
-            {
-                title: "Overview",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
-            },
-        ],
-    },
-    {
-        title: "Spec Workflows",
-        items: [
-            {
-                title: "Overview",
-                href: "/docs/spec",
-            },
-            {
-                title: "/spec-init",
-                href: "/docs/spec/init",
-            },
-            {
-                title: "/spec-requirements",
-                href: "/docs/spec/requirements",
-            },
-            {
-                title: "/spec-design",
-                href: "/docs/spec/design",
-            },
-            {
-                title: "/spec-tasks",
-                href: "/docs/spec/tasks",
-            },
-            {
-                title: "/code",
-                href: "/docs/spec/code",
-            },
-            {
-                title: "/test",
-                href: "/docs/spec/test",
-            },
-            {
-                title: "/review",
-                href: "/docs/spec/review",
-            },
-            {
-                title: "/spec-status",
-                href: "/docs/spec/status",
-            },
-        ],
-    },
-    {
-        title: "Platform Guides",
-        items: [
-            {
-                title: "Platform Guides",
-                href: "/docs/platforms",
-            },
-            {
-                title: "Claude Code",
-                href: "/docs/platforms/claude",
-            },
-            {
-                title: "Antigravity",
-                href: "/docs/platforms/antigravity",
-            },
-        ],
-    },
-    {
-        title: "Examples",
-        items: [
-            {
-                title: "Overview",
-                href: "/docs/examples",
-            },
-            {
-                title: "User Authentication",
-                href: "/docs/examples/user-authentication",
-            },
-            {
-                title: "Todo App API",
-                href: "/docs/examples/todo-app",
-            },
-        ],
-    },
-    {
-        title: "Reference",
-        items: [
-            {
-                title: "Reference",
-                href: "/docs/reference",
-            },
-            {
-                title: "File Structure",
-                href: "/docs/reference/file-structure",
-            },
-            {
-                title: "FAQ",
-                href: "/docs/faq",
-            },
-        ],
-    },
-];
+const hrefGroups = {
+  gettingStarted: [
+    { href: "/docs", key: "introduction" },
+    { href: "/docs/getting-started/installation", key: "installation" },
+    { href: "/docs/getting-started/quickstart", key: "quickstart" },
+  ],
+  coreConcepts: [
+    { href: "/docs/core-concepts", key: "overview" },
+    { href: "/docs/core-concepts/spec-lifecycle", key: "specLifecycle" },
+    { href: "/docs/core-concepts/task-registry", key: "taskRegistry" },
+  ],
+  workflows: [
+    { href: "/docs/workflows/specs", key: "/hapo:specs" },
+    { href: "/docs/workflows/develop", key: "/hapo:develop" },
+    { href: "/docs/workflows/test-review", key: "/hapo:test + /hapo:code-review" },
+    { href: "/docs/workflows/sync", key: "/hapo:sync" },
+    { href: "/docs/workflows/generate-graph", key: "/hapo:generate-graph" },
+  ],
+  docsWorkflow: [
+    { href: "/docs/docs-workflow", key: "overview" },
+    { href: "/docs/docs-workflow/init", key: "/docs init" },
+    { href: "/docs/docs-workflow/update", key: "/docs update" },
+  ],
+  platforms: [
+    { href: "/docs/platforms", key: "overview" },
+    { href: "/docs/platforms/claude", key: "claudeCode" },
+    { href: "/docs/platforms/antigravity", key: "antigravityComingSoon" },
+    { href: "/docs/platforms/cursor", key: "cursorComingSoon" },
+  ],
+  reference: [
+    { href: "/docs/reference", key: "overview" },
+    { href: "/docs/reference/file-structure", key: "fileStructure" },
+    { href: "/docs/reference/commands", key: "commandCheatsheet" },
+    { href: "/docs/faq", key: "faq" },
+  ],
+} as const;
 
-const sidebarNavVi = [
-    {
-        title: "Bắt đầu",
-        items: [
-            {
-                title: "Giới thiệu",
-                href: "/docs",
-            },
-            {
-                title: "Cài đặt",
-                href: "/docs/getting-started/installation",
-            },
-            {
-                title: "Bắt đầu nhanh",
-                href: "/docs/getting-started/quickstart",
-            },
-        ],
+const labels = {
+  en: {
+    sectionTitles: {
+      gettingStarted: "Getting Started",
+      coreConcepts: "Core Concepts",
+      workflows: "Workflows",
+      docsWorkflow: "Docs Workflow",
+      platforms: "Platforms",
+      reference: "Reference",
     },
-    {
-        title: "Documentation Workflows",
-        items: [
-            {
-                title: "Tổng quan",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
-            },
-        ],
+    itemTitles: {
+      introduction: "Introduction",
+      installation: "Installation",
+      quickstart: "Quickstart",
+      overview: "Overview",
+      specLifecycle: "Spec Lifecycle",
+      taskRegistry: "Task Registry",
+      claudeCode: "Claude Code",
+      antigravityComingSoon: "Antigravity (Coming Soon)",
+      cursorComingSoon: "Cursor (Coming Soon)",
+      fileStructure: "File Structure",
+      commandCheatsheet: "Command Cheatsheet",
+      faq: "FAQ",
     },
-    {
-        title: "Spec Workflows",
-        items: [
-            {
-                title: "Tổng quan",
-                href: "/docs/spec",
-            },
-            {
-                title: "/spec-init",
-                href: "/docs/spec/init",
-            },
-            {
-                title: "/spec-requirements",
-                href: "/docs/spec/requirements",
-            },
-            {
-                title: "/spec-design",
-                href: "/docs/spec/design",
-            },
-            {
-                title: "/spec-tasks",
-                href: "/docs/spec/tasks",
-            },
-            {
-                title: "/code",
-                href: "/docs/spec/code",
-            },
-            {
-                title: "/test",
-                href: "/docs/spec/test",
-            },
-            {
-                title: "/review",
-                href: "/docs/spec/review",
-            },
-            {
-                title: "/spec-status",
-                href: "/docs/spec/status",
-            },
-        ],
+  },
+  vi: {
+    sectionTitles: {
+      gettingStarted: "Bắt đầu",
+      coreConcepts: "Khái niệm cốt lõi",
+      workflows: "Workflows",
+      docsWorkflow: "Docs Workflow",
+      platforms: "Nền tảng",
+      reference: "Tham khảo",
     },
-    {
-        title: "Platform Guides",
-        items: [
-            {
-                title: "Hướng dẫn Nền tảng",
-                href: "/docs/platforms",
-            },
-            {
-                title: "Claude Code",
-                href: "/docs/platforms/claude",
-            },
-            {
-                title: "Antigravity",
-                href: "/docs/platforms/antigravity",
-            },
-        ],
+    itemTitles: {
+      introduction: "Giới thiệu",
+      installation: "Cài đặt",
+      quickstart: "Bắt đầu nhanh",
+      overview: "Tổng quan",
+      specLifecycle: "Vòng đời spec",
+      taskRegistry: "Task registry",
+      claudeCode: "Claude Code",
+      antigravityComingSoon: "Antigravity (Sắp có)",
+      cursorComingSoon: "Cursor (Sắp có)",
+      fileStructure: "Cấu trúc file",
+      commandCheatsheet: "Bảng lệnh",
+      faq: "FAQ",
     },
-    {
-        title: "Ví Dụ",
-        items: [
-            {
-                title: "Tổng quan",
-                href: "/docs/examples",
-            },
-            {
-                title: "Xác thực ngườì dùng",
-                href: "/docs/examples/user-authentication",
-            },
-            {
-                title: "Todo App API",
-                href: "/docs/examples/todo-app",
-            },
-        ],
+  },
+  ja: {
+    sectionTitles: {
+      gettingStarted: "はじめに",
+      coreConcepts: "コアコンセプト",
+      workflows: "ワークフロー",
+      docsWorkflow: "Docs Workflow",
+      platforms: "プラットフォーム",
+      reference: "リファレンス",
     },
-    {
-        title: "Tham Khảo",
-        items: [
-            {
-                title: "Tham khảo",
-                href: "/docs/reference",
-            },
-            {
-                title: "Cấu trúc File",
-                href: "/docs/reference/file-structure",
-            },
-            {
-                title: "Câu hỏi thường gặp",
-                href: "/docs/faq",
-            },
-        ],
+    itemTitles: {
+      introduction: "はじめに",
+      installation: "インストール",
+      quickstart: "クイックスタート",
+      overview: "概要",
+      specLifecycle: "Spec ライフサイクル",
+      taskRegistry: "Task registry",
+      claudeCode: "Claude Code",
+      antigravityComingSoon: "Antigravity (Coming Soon)",
+      cursorComingSoon: "Cursor (Coming Soon)",
+      fileStructure: "ファイル構成",
+      commandCheatsheet: "コマンド早見表",
+      faq: "FAQ",
     },
-];
+  },
+} as const;
 
-const sidebarNavJa = [
+function buildSidebar(locale: keyof typeof labels) {
+  const localeLabels = labels[locale] ?? labels.en;
+
+  const makeItems = (group: keyof typeof hrefGroups) =>
+    hrefGroups[group].map((item) => ({
+      title: localeLabels.itemTitles[item.key as keyof typeof localeLabels.itemTitles] ?? item.key,
+      href: item.href,
+    }));
+
+  return [
     {
-        title: "はじめに",
-        items: [
-            {
-                title: "はじめに",
-                href: "/docs",
-            },
-            {
-                title: "インストール",
-                href: "/docs/getting-started/installation",
-            },
-            {
-                title: "クイックスタート",
-                href: "/docs/getting-started/quickstart",
-            },
-        ],
+      title: localeLabels.sectionTitles.gettingStarted,
+      items: makeItems("gettingStarted"),
     },
     {
-        title: "Documentation Workflows",
-        items: [
-            {
-                title: "概要",
-                href: "/docs/docs-workflow",
-            },
-            {
-                title: "/docs init",
-                href: "/docs/docs-workflow/init",
-            },
-            {
-                title: "/docs update",
-                href: "/docs/docs-workflow/update",
-            },
-        ],
+      title: localeLabels.sectionTitles.coreConcepts,
+      items: makeItems("coreConcepts"),
     },
     {
-        title: "Spec Workflows",
-        items: [
-            {
-                title: "概要",
-                href: "/docs/spec",
-            },
-            {
-                title: "/spec-init",
-                href: "/docs/spec/init",
-            },
-            {
-                title: "/spec-requirements",
-                href: "/docs/spec/requirements",
-            },
-            {
-                title: "/spec-design",
-                href: "/docs/spec/design",
-            },
-            {
-                title: "/spec-tasks",
-                href: "/docs/spec/tasks",
-            },
-            {
-                title: "/code",
-                href: "/docs/spec/code",
-            },
-            {
-                title: "/test",
-                href: "/docs/spec/test",
-            },
-            {
-                title: "/review",
-                href: "/docs/spec/review",
-            },
-            {
-                title: "/spec-status",
-                href: "/docs/spec/status",
-            },
-        ],
+      title: localeLabels.sectionTitles.workflows,
+      items: makeItems("workflows"),
     },
     {
-        title: "Platform Guides",
-        items: [
-            {
-                title: "プラットフォームガイド",
-                href: "/docs/platforms",
-            },
-            {
-                title: "Claude Code",
-                href: "/docs/platforms/claude",
-            },
-            {
-                title: "Antigravity",
-                href: "/docs/platforms/antigravity",
-            },
-        ],
+      title: localeLabels.sectionTitles.docsWorkflow,
+      items: makeItems("docsWorkflow"),
     },
     {
-        title: "実例",
-        items: [
-            {
-                title: "概要",
-                href: "/docs/examples",
-            },
-            {
-                title: "ユーザー認証",
-                href: "/docs/examples/user-authentication",
-            },
-            {
-                title: "Todo App API",
-                href: "/docs/examples/todo-app",
-            },
-        ],
+      title: localeLabels.sectionTitles.platforms,
+      items: makeItems("platforms"),
     },
     {
-        title: "リファレンス",
-        items: [
-            {
-                title: "リファレンス",
-                href: "/docs/reference",
-            },
-            {
-                title: "ファイル構成",
-                href: "/docs/reference/file-structure",
-            },
-            {
-                title: "FAQ",
-                href: "/docs/faq",
-            },
-        ],
+      title: localeLabels.sectionTitles.reference,
+      items: makeItems("reference"),
     },
-];
+  ];
+}
 
 export const docsConfig = {
-    mainNav,
-    sidebarNav: sidebarNavEn,
+  mainNav,
+  sidebarNav: buildSidebar("en"),
 };
 
 export function getDocsConfig(locale: string): DocsConfig {
-    const sidebarMap: Record<string, typeof sidebarNavEn> = {
-        en: sidebarNavEn,
-        vi: sidebarNavVi,
-        ja: sidebarNavJa,
-    };
-    return {
-        mainNav,
-        sidebarNav: sidebarMap[locale] ?? sidebarNavEn,
-    };
+  const normalized = locale === "vi" || locale === "ja" ? locale : "en";
+
+  return {
+    mainNav,
+    sidebarNav: buildSidebar(normalized),
+  };
 }

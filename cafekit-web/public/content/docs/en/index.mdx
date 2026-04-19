@@ -1,215 +1,93 @@
 ---
-title: Documentation
-description: Learn how to use CafeKit to build features faster with spec-driven development for AI coding assistants (Claude Code, Antigravity).
+title: CafeKit Documentation
+description: Claude Code-first documentation for CafeKit's spec-driven runtime, workflows, and reference material.
 ---
 
 # CafeKit Documentation
 
-Welcome to CafeKit - a structured spec-driven development workflow for AI coding assistants ([Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google/)).
+CafeKit is a **Claude Code-first runtime bundle** for spec-driven development. It installs the workflows, agents, hooks, and runtime context needed to move from idea to verified implementation without relying on ad-hoc prompts.
 
-## What is CafeKit?
+## Who This Is For
 
-CafeKit extends AI coding assistants with 8 powerful workflow commands that guide you through building complex features and managing project documentation.
-Instead of ad-hoc prompts, CafeKit gives you a repeatable process for turning ideas into production code.
+Use CafeKit if you want:
 
-## Choose Your Command
+- a structured feature workflow instead of one-off prompting
+- spec artifacts that stay with the project
+- task-level execution with explicit verification
+- review and docs checkpoints before claiming work is done
 
-<DecisionTree locale="en" />
+## Core Loop
 
-## Multi-Platform Support
-
-CafeKit works with both popular AI assistant platforms:
-
-<Cards columns={2}>
-  <Card href="/docs/platforms/claude">
-    <div className="flex items-center gap-3 mb-3">
-      <div className="w-8 h-8 rounded-lg bg-[#d97757]/10 flex items-center justify-center">
-        <img src="/icons/claude.svg" alt="Claude Code" className="w-5 h-5" />
-      </div>
-      <div>
-        <h3 className="font-semibold">Claude Code</h3>
-        <span className="text-sm text-gray-500">From Anthropic</span>
-      </div>
-    </div>
-    <ul className="text-sm text-gray-600 space-y-1">
-      <li>Commands: <code>/spec-init</code></li>
-      <li>File: <code>.claude/ROUTING.md</code></li>
-      <li>Single AI instance</li>
-    </ul>
-  </Card>
-  <Card href="/docs/platforms/antigravity">
-    <div className="flex items-center gap-3 mb-3">
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/10 via-green-500/10 to-yellow-500/10 flex items-center justify-center">
-        <img src="/icons/antigravity.svg" alt="Antigravity" className="w-5 h-5" />
-      </div>
-      <div>
-        <h3 className="font-semibold">Antigravity</h3>
-        <span className="text-sm text-gray-500">From Google</span>
-      </div>
-    </div>
-    <ul className="text-sm text-gray-600 space-y-1">
-      <li>Commands: <code>/spec-init</code></li>
-      <li>File: <code>.agent/rules/GEMINI.md</code></li>
-      <li>Multi-agent system</li>
-    </ul>
-  </Card>
-</Cards>
-
-## Quick Links
-
-Get started with these essential guides:
-
-- [Installation](/docs/getting-started/installation) - Get CafeKit installed in under a minute
-- [Quickstart](/docs/getting-started/quickstart) - Build your first spec
-- [Documentation Workflows](/docs/docs-workflow) - Manage project documentation
-- [Spec Workflows](/docs/spec) - Master the spec command chain
-
-## Why Spec-Driven Development?
-
-Traditional AI coding often leads to:
-- Incomplete requirements causing rework
-- Missing edge cases discovered late
-- Lost context between sessions
-- Inconsistent implementation
-
-**CafeKit solves this** by creating a structured workflow.
-
-**Result:** Faster development, fewer bugs, better documentation.
-
-## Getting Started
-
-### 1. Install CafeKit
-
-```bash
-npx @haposoft/cafekit
+```text
+Idea
+  -> /hapo:specs
+  -> /hapo:develop
+  -> /hapo:test
+  -> /hapo:code-review
 ```
 
-Select your platform (Claude Code or Antigravity) in the installation menu.
+Common support commands:
 
-### 2. Create Your First Spec
+- `/hapo:specs --validate <feature>`
+- `/hapo:sync audit <feature>`
+- `/hapo:generate-graph <request>`
+- `/docs init` and `/docs update` for project documentation workflows
 
-<Tabs>
-  <TabsList>
-    <TabsTrigger value="claude">Claude Code</TabsTrigger>
-    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
-  </TabsList>
-  <TabsPanel value="claude">
+## What CafeKit Installs
 
-```bash
-/spec-init
-/spec-requirements
+At install time, CafeKit adds a runtime bundle to `.claude/`:
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
 ```
 
-  </TabsPanel>
-  <TabsPanel value="antigravity">
+The primary release surface is:
 
-```bash
-/spec-init
-/spec-requirements
-```
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:generate-graph`
 
-  </TabsPanel>
-</Tabs>
+## Documentation Map
 
-The AI guides you through defining requirements, designing architecture, and breaking down tasks.
+### Getting Started
 
-### 3. Implement with AI Guidance
+- [Installation](/docs/getting-started/installation)
+- [Quickstart](/docs/getting-started/quickstart)
 
-<Tabs>
-  <TabsList>
-    <TabsTrigger value="claude">Claude Code</TabsTrigger>
-    <TabsTrigger value="antigravity">Antigravity</TabsTrigger>
-  </TabsList>
-  <TabsPanel value="claude">
+### Core Concepts
 
-```bash
-/code
-/test
-/review
-```
+- [Spec Lifecycle](/docs/core-concepts/spec-lifecycle)
+- [Task Registry](/docs/core-concepts/task-registry)
 
-  </TabsPanel>
-  <TabsPanel value="antigravity">
+### Workflows
 
-```bash
-/code
-/test
-/review
-```
+- [`/hapo:specs`](/docs/workflows/specs)
+- [`/hapo:develop`](/docs/workflows/develop)
+- [`/hapo:test + /hapo:code-review`](/docs/workflows/test-review)
+- [`/hapo:sync`](/docs/workflows/sync)
+- [`/hapo:generate-graph`](/docs/workflows/generate-graph)
 
-  </TabsPanel>
-</Tabs>
+### Reference
 
-The AI reads your spec and helps you build task-by-task, with verification at each step.
+- [File Structure](/docs/reference/file-structure)
+- [Command Cheatsheet](/docs/reference/commands)
+- [FAQ](/docs/faq)
 
-[Read the full Quickstart Guide](/docs/getting-started/quickstart)
+## Product Position
 
-## Core Concepts
+- **Claude Code** is the active runtime today.
+- **Antigravity** is coming soon.
+- **Cursor** is coming soon.
 
-### Specs
+## Next Step
 
-A **spec** is a structured workspace for one feature. It contains:
-
-- `spec.json` - Phase and approval status
-- `requirements.md` - EARS format requirements
-- `design.md` - Technical design
-- `tasks.md` - Task breakdown
-- `spec.json` - Phase and approval status
-
-Specs live in `.specs/` and are committed to Git for team collaboration.
-
-### Documentation
-
-The documentation system automatically creates:
-
-- `codebase-summary.md` - Codebase overview
-- `project-overview-pdr.md` - Product requirements
-- `code-standards.md` - Coding conventions
-- `system-architecture.md` - System architecture
-- `design-guidelines.md` - UI/UX guidelines
-- `deployment-guide.md` - Deployment guide
-- `project-roadmap.md` - Project roadmap
-
-Docs live in `docs/` and help AI assistants understand the project better.
-
-## Use Cases
-
-### Perfect for:
-
-- **Complex features** - Authentication, payments, admin dashboards
-- **New projects** - Architecture decisions need documentation
-- **Team collaboration** - Specs provide shared context
-- **Long-running work** - Track progress across multiple sessions
-
-### Not needed for:
-
-- Simple bug fixes (`<30 min`)
-- Copy changes or typo fixes
-- Minor CSS tweaks
-- Trivial refactors
-
-## Learning Path
-
-Follow this path to master CafeKit:
-
-1. **[Installation](/docs/getting-started/installation)** (2 min) - Get set up
-2. **[Quickstart](/docs/getting-started/quickstart)** (10 min) - Build your first spec
-3. **[Documentation Workflows](/docs/docs-workflow)** (10 min) - Manage project documentation
-4. **[Spec Workflows](/docs/spec)** (20 min) - Learn the complete command chain
-
-Total time to productivity: **~45 minutes**
-
-## Getting Help
-
-- **[FAQ](/docs/faq)** - Common questions answered
-- **[GitHub Issues](https://github.com/haposoft/cafekit/issues)** - Report bugs or request features
-
-## What's Next?
-
-Ready to start? Pick your path:
-
-- [Install CafeKit](/docs/getting-started/installation)
-- [Claude Code Guide](/docs/platforms/claude)
-- [Antigravity Guide](/docs/platforms/antigravity)
-
-**Happy coding with CafeKit!**
+Start with [Installation](/docs/getting-started/installation), then follow the [Quickstart](/docs/getting-started/quickstart).

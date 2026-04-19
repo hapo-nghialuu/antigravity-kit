@@ -1,106 +1,51 @@
 ---
 title: Claude Code
-description: Guide for using CafeKit with Claude Code
+description: Primary platform guide for using CafeKit with Claude Code.
 ---
 
 # Claude Code
 
-Complete guide for using CafeKit with Claude Code.
+Claude Code is the **primary supported runtime** for current CafeKit releases.
 
-## Installation
+## Command Surface
 
-```bash
-npx @haposoft/cafekit
-```
+The main commands are:
 
-Select **Claude Code** in the installer menu.
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:sync`
+- `/hapo:generate-graph`
 
-## File Structure
+## Installed Runtime Shape
 
-After installation, CafeKit adds workflow files to `.claude/`:
-
-```
+```text
 .claude/
-├── commands/
-│   ├── spec-init.md
-│   ├── spec-requirements.md
-│   ├── spec-design.md
-│   ├── spec-tasks.md
-│   ├── spec-status.md
-│   ├── code.md
-│   ├── test.md
-│   ├── review.md
-│   └── docs.md
-├── agents/
-│   ├── tester.md
-│   ├── code-reviewer.md
-│   ├── fullstack-developer.md
-│   └── debugger.md
 ├── skills/
-│   └── specs/
-└── ROUTING.md
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
 ```
 
-## Command Set
+## Runtime Characteristics
 
-### Spec workflow
-| Command | Description |
-|---------|-------------|
-| `/spec-init` | Initialize a new spec |
-| `/spec-requirements` | Gather and generate requirements |
-| `/spec-design` | Generate technical design |
-| `/spec-tasks` | Generate implementation tasks |
-| `/code` | Implement next approved task |
-| `/test` | Run tests and summarize failures |
-| `/review` | Review code correctness and security |
-| `/spec-status` | Show current spec status |
+- spec-aware hooks
+- task-state awareness
+- quality gates before completion sync
+- task-level docs checkpoints
 
-### Documentation workflow
-| Command | Description |
-|---------|-------------|
-| `/docs init` | Initialize project docs |
-| `/docs update` | Update docs after changes |
+## Recommended Workflow
 
-## Usage Examples
-
-### Start a feature
-
-```
-> /spec-init payment-gateway
+```text
+/hapo:specs
+-> /hapo:specs --validate
+-> /hapo:develop
+-> /hapo:test
+-> /hapo:code-review
 ```
 
-### Implement from tasks
-
-```
-> /code payment-gateway
-> /test
-> /review
-```
-
-### Manage project docs
-
-```
-> /docs init
-> /docs update
-```
-
-## Differences from Antigravity
-
-| | Claude Code | Antigravity |
-|---|---|---|
-| Workflow directory | `.claude/commands/` | `.agent/workflows/` |
-| Agent directory | `.claude/agents/` | `.agent/agents/` |
-| Routing file | `.claude/ROUTING.md` | `.agent/rules/GEMINI.md` |
-| Command trigger | `/...` | `/...` or `@...` |
-
-## Troubleshooting
-
-### Commands not showing
-```bash
-ls -la .claude/commands/
-```
-
-### Command execution issues
-- Restart Claude Code
-- Verify command files use `.md` with valid frontmatter
-- Re-run installer: `npx @haposoft/cafekit`
+Use [`/hapo:sync`](/docs/workflows/sync) whenever spec state drifts.

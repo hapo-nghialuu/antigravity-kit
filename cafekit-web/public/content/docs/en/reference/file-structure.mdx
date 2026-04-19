@@ -1,208 +1,45 @@
 ---
 title: File Structure
-description: Overview of files and directories created by CafeKit
+description: Reference layout for installed Claude runtime files and generated spec artifacts.
 ---
 
 # File Structure
 
-Overview of all files and directories created by CafeKit.
+## Installed Claude Runtime
 
-## Claude Code Structure
-
-```
-project-root/
-├── .claude/
-│   ├── commands/
-│   │   ├── spec-init.md
-│   │   ├── spec-requirements.md
-│   │   ├── spec-design.md
-│   │   ├── spec-tasks.md
-│   │   ├── spec-status.md
-│   │   ├── code.md
-│   │   ├── test.md
-│   │   ├── review.md
-│   │   └── docs.md
-│   ├── agents/
-│   │   ├── tester.md
-│   │   ├── code-reviewer.md
-│   │   ├── fullstack-developer.md
-│   │   └── debugger.md
-│   ├── skills/
-│   │   └── specs/
-│   └── ROUTING.md
-├── .specs/
-│   └── [feature-name]/
-│       ├── spec.json
-│       ├── requirements.md
-│       ├── design.md
-│       └── tasks.md
-└── docs/
-    ├── codebase-summary.md
-    ├── project-overview-pdr.md
-    ├── code-standards.md
-    ├── system-architecture.md
-    ├── design-guidelines.md
-    ├── deployment-guide.md
-    ├── project-roadmap.md
-    └── .backups/
-        └── [timestamp]/
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
 ```
 
-## Antigravity Structure
+## Generated Spec Workspace
 
-```
-project-root/
-├── .agent/
-│   ├── workflows/
-│   │   ├── spec-init.md
-│   │   ├── spec-requirements.md
-│   │   ├── spec-design.md
-│   │   ├── spec-tasks.md
-│   │   ├── spec-status.md
-│   │   ├── code.md
-│   │   ├── test.md
-│   │   ├── review.md
-│   │   ├── docs-init.md
-│   │   └── docs-update.md
-│   ├── agents/
-│   │   ├── frontend-specialist.md
-│   │   ├── test-engineer.md
-│   │   └── code-archaeologist.md
-│   ├── skills/
-│   │   └── specs/
-│   └── rules/
-│       └── GEMINI.md
-├── .specs/
-│   └── [feature-name]/
-│       ├── spec.json
-│       ├── requirements.md
-│       ├── design.md
-│       └── tasks.md
-└── docs/
-    ├── codebase-summary.md
-    ├── project-overview-pdr.md
-    ├── code-standards.md
-    ├── system-architecture.md
-    ├── design-guidelines.md
-    ├── deployment-guide.md
-    ├── project-roadmap.md
-    └── .backups/
-        └── [timestamp]/
+```text
+specs/<feature-name>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/
+    ├── task-R0-01-*.md
+    ├── task-R0-02-*.md
+    └── ...
 ```
 
-## File Details
+## Key State Locations
 
-### AI Config Files
+- `spec.json`: machine-readable feature state
+- `tasks/task-R*.md`: human-readable task packet and evidence
+- `docs/`: broader project documentation
 
-| File | Claude | Antigravity | Purpose |
-|------|--------|-------------|---------|
-| `ROUTING.md` | ✅ | ❌ | Claude command routing rules |
-| `rules/GEMINI.md` | ❌ | ✅ | Antigravity workspace behavior rules |
+## Notes
 
-### Spec Files
-
-| File | Description | Created by |
-|------|-------------|------------|
-| `spec.json` | Phase and approval status | `/spec-init` |
-| `requirements.md` | EARS requirements | `/spec-requirements` |
-| `design.md` | Technical design | `/spec-design` |
-| `tasks.md` | Task breakdown | `/spec-tasks` |
-
-### Documentation Files
-
-| File | Description | Updated by |
-|------|-------------|------------|
-| `codebase-summary.md` | Tech stack, structure | `/docs init`, `/docs update` |
-| `project-overview-pdr.md` | Product requirements | `/docs init`, `/docs update` |
-| `code-standards.md` | Coding conventions | `/docs init`, `/docs update` |
-| `system-architecture.md` | Architecture docs | `/docs init`, `/docs update` |
-| `design-guidelines.md` | UI/UX guidelines | `/docs init`, `/docs update` |
-| `deployment-guide.md` | Deployment guide | `/docs init`, `/docs update` |
-| `project-roadmap.md` | Project roadmap | `/docs init`, `/docs update` |
-
-## Platform Comparison
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        PROJECT ROOT                         │
-├─────────────────────────────────────────────────────────────┤
-│  CLAUDE CODE                    │  ANTIGRAVITY              │
-│  .claude/                       │  .agent/                  │
-│  ├── commands/                  │  ├── workflows/           │
-│  │   ├── spec-init.md           │  │   ├── spec-init.md     │
-│  │   ├── spec-requirements.md   │  │   ├── spec-design.md   │
-│  │   ├── spec-design.md         │  │   ├── spec-tasks.md    │
-│  │   ├── spec-tasks.md          │  │   ├── code.md          │
-│  │   ├── spec-status.md         │  │   ├── test.md          │
-│  │   ├── code.md                │  │   ├── review.md        │
-│  │   ├── test.md                │  │   └── spec-status.md   │
-│  │   └── review.md              │  ├── agents/              │
-│  ├── agents/                    │  ├── skills/specs/        │
-│  ├── skills/specs/              │  └── rules/GEMINI.md      │
-│  └── ROUTING.md                 │                           │
-├─────────────────────────────────────────────────────────────┤
-│  COMMON (both platforms)                                    │
-│  .specs/                       docs/                        │
-│  └── [feature]/                ├── codebase-summary.md      │
-│      ├── spec.json             ├── project-overview-pdr.md  │
-│      ├── requirements.md       ├── code-standards.md        │
-│      ├── design.md             ├── system-architecture.md   │
-│      └── tasks.md              ├── design-guidelines.md     │
-│                                ├── deployment-guide.md      │
-│                                ├── project-roadmap.md       │
-│                                └── .backups/                │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Permissions and Git
-
-### Should commit
-- `.specs/` (all spec files)
-- `.claude/` or `.agent/` workflow config
-- `docs/` (documentation)
-
-### Should not commit
-- `.backups/` (auto-generated, can be large)
-- `repomix-output.xml` (can be regenerated)
-
-### Sample Gitignore
-
-```gitignore
-# CafeKit backups
-docs/.backups/
-repomix-output.xml
-```
-
-## Migrating Between Platforms
-
-### From Claude Code to Antigravity
-```bash
-# Backup specs and docs
-cp -r .specs .specs-backup
-cp -r docs docs-backup
-
-# Install Antigravity
-npx @haposoft/cafekit
-# Select Antigravity
-
-# Restore specs and docs
-cp -r .specs-backup/* .specs/
-cp -r docs-backup/* docs/
-```
-
-### From Antigravity to Claude Code
-```bash
-# Backup specs and docs
-cp -r .specs .specs-backup
-cp -r docs docs-backup
-
-# Install Claude Code
-npx @haposoft/cafekit
-# Select Claude Code
-
-# Restore specs and docs
-cp -r .specs-backup/* .specs/
-cp -r docs-backup/* docs/
-```
-
-Specs and docs are **platform-agnostic**, just transfer and they work immediately.
+- `task_registry` lives in `spec.json`
+- `task_files` should match the actual files on disk
+- completed tasks should carry verification receipts
