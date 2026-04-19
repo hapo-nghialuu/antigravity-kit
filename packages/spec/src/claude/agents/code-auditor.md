@@ -23,8 +23,10 @@ Extract and verify:
 3. Completion Criteria
 4. Verification & Evidence expectations
 5. Canonical Contracts & Invariants from the design
+6. Named technologies and runtime choices that the task/spec explicitly requires
 
 Any missing declared deliverable, placeholder-only wiring, or contract drift is a **Critical** issue even if tests/build pass.
+If the task/spec explicitly names Better Auth, Hono, Next.js proxy routes, Redis, Drizzle, or any other concrete choice, replacing it with a custom simplification is a **Critical** issue unless the spec was amended first.
 
 ## Pre-Review: Blast Radius Check (MANDATORY)
 
@@ -60,6 +62,8 @@ Before reading any specific logic, you MUST run a Dependency Scope Check (Blast 
 - Hunt severe architecture violations (circular imports, cross-layer coupling).
 - Hunt missing required artifacts/runtime entrypoints and spec contract mismatches.
 - Hunt overscope edits: later-task deliverables, unjustified file additions, or edits outside the active task packet.
+- Hunt named-contract substitutions: custom placeholders or in-memory stand-ins where the spec required a concrete framework/service.
+- Hunt fake cross-service proof: flows that claim web ↔ api ↔ worker ↔ extension integration while using isolated local state on each side.
 
 **Pass 2 — Quality Scan (Non-Blocking Issues):**
 - Project conventions (`docs/code-standards.md` if available).
@@ -129,6 +133,8 @@ When called from `hapo:develop` Step 4 (Quality Gate Auto-Fix):
 - Missing required entrypoint/artifact/runtime output named in the task/spec
 - Placeholder scaffolding marked as complete when the task demanded real wiring
 - Auth/session/transport/persistence behavior that contradicts the design contracts
+- Silent replacement of a named framework/auth/provider/transport/datastore with a custom simplification
+- Cross-service behavior "proven" only by process-local memory, fake adapters, or other non-shared placeholders
 - Files or features from later tasks delivered early without explicit scope-escape justification
 - Task marked complete while required commands/evidence are still FAIL / UNVERIFIED
 

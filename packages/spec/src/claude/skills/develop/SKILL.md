@@ -48,6 +48,11 @@ A task is NOT done because code compiles or a placeholder renders.
 A task is done only when the task file's Completion Criteria AND Verification & Evidence section are satisfied with real execution proof.
 </DEFINITION-OF-DONE>
 
+<CONTRACT-FIDELITY>
+If the spec/task explicitly names a framework, auth system, datastore, transport path, or runtime boundary, that named choice is contractual.
+You MUST NOT silently replace it with a simpler custom substitute ("for MVP", "placeholder", "temporary auth", "in-memory until later") unless the spec itself is updated first.
+</CONTRACT-FIDELITY>
+
 ## Anti-Rationalization Protocol
 
 | Thought (Excuse) | Reality (Rule) |
@@ -83,6 +88,7 @@ flowchart TD
   - Verification & Evidence
   - Exact executable verification commands named in the task
   - Requirement IDs referenced by the task
+  - Named technologies, frameworks, protocols, and data stores that the task/spec explicitly requires
   - Relevant `Canonical Contracts & Invariants` from `design.md`
 - If the task file is missing actionable completion or verification detail, STOP and route back to spec correction. Do not guess.
 - Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
@@ -103,17 +109,22 @@ flowchart TD
 - **Full-Spec Loop Protocol:** If you were asked to implement the whole feature, you MUST still work one task at a time. Finish Step 4 and Step 5 for the current task before selecting the next unblocked task from `task_registry`.
 - **Test Integrity Protocol:** You MUST NOT delete, replace, or reduce the scope of existing test cases to make tests pass. If a test fails, you must fix the **implementation code** or fix the **test setup/mock**, NOT remove the assertion. Reducing test count or weakening assertions (e.g., removing `toHaveBeenCalledWith` and replacing with `toEqual(expect.any(...))`) is a Critical violation.
 - **Contract Integrity Protocol:** If implementation appears to require changing auth/session, transport, persistence, entrypoint wiring, or generated artifact behavior beyond what `design.md` states, STOP and route back to spec correction instead of inventing a new contract in code.
+- **Named Technology Rule:** If the task/spec explicitly requires a named dependency or runtime choice (for example Better Auth, Hono, Next.js proxy routes, Redis, Drizzle, S3), you MUST implement that choice or stop. Do not swap it for a custom/in-memory/local substitute and still call the task complete.
+- **Cross-Service Reality Rule:** If a task spans multiple processes or runtimes (web ↔ API, worker ↔ DB, extension ↔ backend), you MUST prove the integration uses shared real state or a real contract boundary. Process-local placeholders on both sides do not count as completion.
+- **Placeholder Completion Rule:** You MAY scaffold future files only when the active task truly needs them to compile, but placeholder route handlers, in-memory stores, or fake adapters MUST NOT be used as evidence that the current task's behavior works end-to-end.
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
 **Mantra:** All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
 - Passing Step 4 requires ALL of the following:
-  1. Automated verification passes, including every exact command named in the task's `Verification & Evidence` section
+  1. Automated verification passes, including preflight compile/typecheck/build health and every exact command named in the task's `Verification & Evidence` section
   2. Code review passes
   3. Task evidence passes (artifacts/runtime surfaces/negative-path checks from the task file are proven)
+- `PRECHECK_FAIL` outranks `NO_TESTS`. If compile/typecheck/build fails, the task is FAIL even when no test suite exists yet.
 - `NO_TESTS` is NOT equivalent to PASS. If the task explicitly requires a test command or automated test proof, `NO_TESTS` is a FAIL or BLOCKED outcome until the requirement is satisfied or the spec is corrected.
 - If build/test passes but task evidence is missing, the task is still FAIL.
+- If the implementation silently replaced a named contract choice or relies on cross-service process-local stand-ins, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
 ### Step 5: State Sync + Task-Level Docs Sync
@@ -124,7 +135,8 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
   - `spec.json.task_registry[path].status = "done"`
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
-  - a human-readable verification receipt inside the task's `Verification & Evidence` section showing which commands ran and what proof was observed
+  - a human-readable verification receipt inside the task's `Verification & Evidence` section showing which commands ran, their outcomes, and what proof was observed
+- Verification receipts with `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation intentionally simplified a named contract MUST NOT be synchronized as `done`.
 - After syncing the active task, run a **Task Closeout Docs Checkpoint**
 - Task Closeout Docs Checkpoint:
   - Evaluate `Docs impact: none | minor | major` based on real behavior changes from the just-completed task
