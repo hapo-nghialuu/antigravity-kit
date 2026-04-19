@@ -80,6 +80,7 @@ ck.md
 
 # Agent memory (project scope)
 .claude/agent-memory/
+specs/_shared/
 
 # Hook diagnostics logs
 .claude/hooks/.logs/
@@ -95,3 +96,5 @@ worktrees/
 
 # Go binary
 apps/go-gateway/main
+
+.claude_cc/

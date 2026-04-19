@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Convert task files (persistent storage) into Claude Tasks (session-scoped only), enabling real-time progress tracking and automatic unblocking when predecessor tasks complete.
+Convert task files (persistent storage) into Claude Tasks (session-scoped only), enabling real-time progress tracking and automatic unblocking when predecessor tasks complete. `spec.json.task_registry` is the machine-state bridge between markdown task files and session-scoped Claude Tasks.
 
 ## When to Run
 
@@ -16,16 +16,16 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 ┌──────────────────┐  Hydrate   ┌───────────────────┐
 │ Task Files       │ ─────────► │ Claude Tasks      │
 │ (persistent)     │            │ (session-scoped)  │
-│ [ ] Task 01      │            │ ◼ pending         │
-│ [ ] Task 02      │            │ ◼ pending         │
+│ [ ] task-R0-01   │            │ ◼ pending         │
+│ [ ] task-R0-02   │            │ ◼ pending         │
 └──────────────────┘            └───────────────────┘
                                         │ Work
                                         ▼
 ┌──────────────────┐  Sync-back ┌───────────────────┐
 │ Task Files       │ ◄───────── │ Task Updates      │
 │ (updated)        │            │ (completed)       │
-│ [x] Task 01      │            │ ✓ completed       │
-│ [ ] Task 02      │            │ ◼ in_progress     │
+│ [x] task-R0-01   │            │ ✓ completed       │
+│ [ ] task-R0-02   │            │ ◼ in_progress     │
 └──────────────────┘            └───────────────────┘
 ```
 
@@ -37,23 +37,24 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 
 | Field | Description | Example |
 |---|---|---|
-| `taskNumber` | Task sequence number | `1` |
+| `taskNumber` | Task sequence number | `R0-02` |
 | `priority` | Priority level | `P1`, `P2`, `P3` |
 | `effort` | Time estimate | `2h` |
 | `specDir` | Spec directory path | `specs/mobile-app/` |
-| `taskFile` | Task file name | `task-01-setup.md` |
+| `taskFile` | Task file name | `task-R0-02-extension-shell.md` |
 
 ## Hydration Workflow
 
-1. Read all `tasks/task-*.md` files → filter incomplete tasks
-2. Create `TaskCreate` for each major task, attach `addBlockedBy` per dependency chain:
+1. Read all `tasks/task-R*.md` files → filter incomplete tasks
+2. Load `spec.json.task_registry` and prefer its task status/dependencies when present
+3. Create `TaskCreate` for each major task, attach `addBlockedBy` per dependency chain:
    ```
-   Task 01 (no blockers) ← start here
-   Task 02 (addBlockedBy: [task-01-id])
-   Task 03 (addBlockedBy: [task-02-id])
+   Task R0-01 (no blockers) ← start here
+   Task R0-02 (addBlockedBy: [task-R0-01-id])
+   Task R1-01 (addBlockedBy: [task-R0-02-id])
    ```
-3. Create additional `TaskCreate` for high-risk steps within tasks (if any)
-4. Verify: no dependency cycles, all tasks have complete metadata
+4. Create additional `TaskCreate` for high-risk steps within tasks (if any)
+5. Verify: no dependency cycles, all tasks have complete metadata, and every hydrated task has a corresponding `task_registry` entry
 
 ## Fallback
 
@@ -70,7 +71,7 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 3. Skips re-creation, begins implementing directly
 
 ### New session (resume)
-1. User runs `/code <feature>` in a new session
+1. User runs `/hapo:develop <feature>` in a new session
 2. Code reads `TaskList` → empty (tasks died with old session)
 3. Code reads task files → re-hydrates from `[ ]` items
 4. `[x]` items = done, skip those
@@ -78,8 +79,9 @@ Convert task files (persistent storage) into Claude Tasks (session-scoped only),
 ### Sync-back (after code completes)
 1. `TaskUpdate` marks tasks as completed
 2. Update `[ ]` → `[x]` in task files
-3. Update `spec.json` progress for the corresponding phase
-4. Git commit captures the state transition
+3. Update `spec.json.task_registry[path].status`, timestamps, blocker, and last_updated_at
+4. Update `spec.json` progress for the corresponding phase
+5. Git commit captures the state transition
 
 ## Quality Checks
 

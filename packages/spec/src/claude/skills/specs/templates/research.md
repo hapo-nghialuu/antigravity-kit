@@ -1,4 +1,4 @@
-# Research & Design Decisions Template
+# Research & Design Decisions
 
 ---
 **Purpose**: Capture discovery findings, architectural investigations, and rationale that inform the technical design.
@@ -45,6 +45,7 @@ Record major decisions that influence `design.md`. Focus on choices with signifi
   2. Option B — short description
 - **Selected Approach**: What was chosen and how it works
 - **Rationale**: Why this approach fits the current project context
+- **Status**: [Proposed / Accepted / Superseded]
 - **Trade-offs**: Benefits vs. compromises
 - **Follow-up**: Items to verify during implementation or testing
 

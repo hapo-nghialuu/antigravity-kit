@@ -65,6 +65,20 @@ When modifying existing systems:
 
 > Keep rationale concise here and, when more depth is required (trade-offs, benchmarks), add a short summary plus pointer to the Supporting References section and `research.md` for raw investigation notes.
 
+## Canonical Contracts & Invariants
+
+Capture only the contracts whose inconsistency would break downstream implementation or verification. If the feature touches auth/session, transport/entrypoints, persistence/schema, generated artifacts, or runtime outputs, this section is mandatory.
+
+| Contract Area | Canonical Decision | Applies To | Must Stay Consistent In |
+|---------------|--------------------|------------|-------------------------|
+| Auth / session | | | |
+| Transport / entrypoints | | | |
+| Data / persistence | | | |
+| Deletion / retention policy | | | |
+| Generated artifacts / runtime outputs | | | |
+
+> Task files must reuse the same contract wording. If the feature touches delete-data or privacy retention, explicitly decide whether re-registration is blocked and how that lock works without keeping raw PII. If implementation later needs a different contract, update this section first before generating or editing tasks.
+
 ## System Flows
 
 Provide only the diagrams needed to explain non-trivial flows. Use pure Mermaid syntax. Common patterns:
@@ -252,10 +266,10 @@ Error tracking, logging, and health monitoring implementation.
 - E2E/UI Tests (if applicable): 3–5 critical user paths (e.g., forms, dashboards)
 - Performance/Load (if applicable): 3–4 items (e.g., concurrency, high-volume ops)
 
-## Optional Sections (include when relevant)
+## Conditional Sections (Include when relevant)
 
 ### Security Considerations
-_Use this section for features handling auth, sensitive data, external integrations, or user permissions. Capture only decisions unique to this feature; defer baseline controls to steering docs._
+_**REQUIRED** when features handle user data, authentication, PII, external integrations, or permissions. Omit only for purely internal UI changes._
 - Threat modeling, security controls, compliance requirements
 - Authentication and authorization patterns
 - Data protection and privacy considerations

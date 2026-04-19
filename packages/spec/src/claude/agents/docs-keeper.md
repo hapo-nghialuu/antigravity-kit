@@ -40,9 +40,20 @@ Before documenting ANY code reference, you MUST prove it exists:
 
 ### 4. Codebase Summary Engine
 Generate the project's technical DNA map:
-- Run `repomix` to compact the entire repo into `./repomix-output.xml`.
+- Default to direct code + docs verification first.
+- Run `repomix` only when macro-architecture context is truly required or `./docs/codebase-summary.md` is missing/stale enough that you cannot safely update docs from the local evidence alone.
+- When `repomix` is used, compact the repo into `./repomix-output.xml`.
 - Digest and synthesize into `./docs/codebase-summary.md` (Update the existing one).
 - This file acts as the single source of truth for all other agents to quickly grasp the project landscape.
+
+### 4b. Task Closeout Mode
+When called from `hapo:develop` after a verified task is complete:
+- Treat the job as a **lightweight task-closeout sync**
+- Update only the existing docs affected by that task
+- Start by classifying `Docs impact: none | minor | major`
+- If impact is `none`, return a short report and do not force edits
+- If impact is `minor` or `major`, prefer surgical edits to `docs/project-overview-pdr.md`, `docs/system-architecture.md`, `docs/code-standards.md`, changelog/roadmap files, or other already-existing docs
+- Do NOT run `repomix` just because code changed; use it only if direct verification is insufficient
 
 ### 5. File Size Discipline
 If any doc file exceeds **800 LOC**, enforce modularity:

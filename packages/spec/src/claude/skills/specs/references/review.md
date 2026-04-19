@@ -7,7 +7,7 @@ Review a spec before implementation. The system auto-decides the review depth ba
 ## Spec Resolution
 
 1. If `<feature>` argument provided → use `specs/<feature>/`
-2. If not → check active spec (spec with `in-progress` status)
+2. If not → check active spec (spec with `in_progress` status; accept legacy `in-progress` when reading existing files)
 3. If nothing found → ask user to specify path
 
 ## Auto-Decision: When to Red Team vs Validate
@@ -27,6 +27,22 @@ The system evaluates the spec and picks the appropriate review mode:
 **Important:** When both modes run, Red Team ALWAYS runs BEFORE Validate because:
 1. Red Team may change the spec (added risks, removed sections)
 2. Validate should confirm the FINAL spec, not a pre-review draft
+
+## Guardrails (NON-NEGOTIABLE)
+
+These rules override any self-reasoning or optimization the system may attempt:
+
+1. **No self-override of auto-decision.** If the table above says "Red Team → then Validate", you MUST run Red Team. You CANNOT skip it because:
+   - A `code-auditor` previously reviewed the spec (code review ≠ spec review)
+   - The spec "looks good" to you
+   - You want to "save time"
+   - Only the USER can downgrade the mode by explicitly saying "just validate" or "skip red team"
+2. **No implementation code files.** This workflow produces ONLY `.md` files. If a finding requires a new shared module or config file, describe it inside the relevant `task-*.md` file. Do NOT create `.ts`, `.js`, `.py`, or any source code file.
+3. **Findings must use the exact format** defined in Part A Step 5 below. No shortened or custom formats.
+4. **Apply YAGNI to fixes.** When user says "configure later" or "decide later", add a single note to the task file. Do NOT generate multiple concrete implementations (e.g., 4 provider files when user only asked for abstraction).
+5. **No false completion.** You MUST NOT set `validation.status = "completed"` or `ready_for_implementation = true` until a reconciliation audit proves the accepted findings and validation decisions are reflected in the physical spec artifacts.
+6. **Provider drift is a real defect.** If the scope changed away from Claude/Anthropic, stale strings like `Claude API`, `Haiku`, or `haiku_reachable` in `requirements.md`, `design.md`, or `tasks/*.md` are validation failures. `research.md` may mention them only as historical comparison.
+7. **Implementation-facing propagation is mandatory.** A decision that affects implementation is NOT considered applied if it only appears in `Risk Assessment`, `validate-log.md`, or `red-team-report.md`. It must update at least one of: `requirements.md`, `Canonical Contracts & Invariants`, `Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, or `Verification & Evidence`.
 
 ---
 
@@ -97,6 +113,7 @@ If "Review each one": For each finding, ask: "Apply" | "Reject" | "Modify sugges
 #### Step 8: Apply to Spec
 - Edit design.md / task files directly for accepted findings
 - Create `reports/red-team-report.md` documenting the full review session
+- Mark a finding as `Applied To = ...` only after the physical file really contains the change
 
 ### Finding Output Format
 
@@ -121,14 +138,14 @@ If "Review each one": For each finding, ask: "Apply" | "Reject" | "Modify sugges
 
 | # | Finding | Severity | Disposition | Applied To |
 |---|---------|----------|-------------|------------|
-| 1 | {title} | Critical | Accept | Task 02 |
+| 1 | {title} | Critical | Accept | task-R0-02-... |
 ```
 
 ---
 
 ## Part B: Validation Interview
 
-### 6-Step Workflow
+### 8-Step Workflow
 
 #### Step 1: Read Spec
 - `requirements.md` — technical requirements
@@ -198,6 +215,31 @@ Save to `reports/validate-log.md`:
 | Risk | Task files (Risk Assessment section) |
 | Unknown | `design.md` (add new subsection) |
 
+**Additional propagation rules:**
+- If the decision changes implementation behavior, update an implementation-facing section, not only `Risk Assessment`.
+- If the decision changes scope or provider choice, scan `requirements.md`, `design.md`, and `tasks/*.md` for stale wording and normalize it.
+- If the decision changes deletion/privacy behavior, update `Canonical Contracts & Invariants` first, then tasks that inherit that contract.
+
+#### Step 7: Reconciliation Audit (MANDATORY)
+Before declaring validation complete:
+1. Re-read `spec.json`, `requirements.md`, `design.md`, and all `tasks/task-*.md`
+2. Verify every accepted red-team finding and every validation action item is reflected in the correct physical file(s)
+3. Fail the audit if:
+   - a report says "applied" but the file still contains the old text
+   - stale provider strings remain after a provider change
+   - delete-data/privacy artifacts mix multiple canonical policies
+   - `spec.json.updated_at`, `timestamps.review_done`, or `timestamps.validation_done` do not reflect the final reviewed state
+4. Only after the audit passes may you:
+   - set `spec.json.validation.status = "completed"`
+   - set `spec.json.timestamps.validation_done`
+   - set `spec.json.timestamps.review_done`
+   - set `spec.json.ready_for_implementation = true` when all other gates are satisfied
+
+#### Step 8: Final Status Write-Back
+- Update `spec.json.updated_at` to the reconciliation time
+- Ensure `red-team-report.md` and `validate-log.md` do not contradict `spec.json`
+- If reconciliation fails, keep `validation.status` as `not-run` or `in_progress` and list blockers explicitly
+
 ---
 
 ## Combined Output
@@ -212,5 +254,5 @@ Validate: {Q} questions asked, {D} decisions confirmed
 
 Files modified: {list}
 
-📌 Next step: /code <feature>
+📌 Next step: /hapo:develop <feature>    (ONLY if reconciliation audit passed)
 ```

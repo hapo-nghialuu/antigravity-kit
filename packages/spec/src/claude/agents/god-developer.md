@@ -20,6 +20,7 @@ Any logic gaps must be clarified BEFORE typing, not discovered after bugs ship.
 - **Surgical Reading (Large Files):** Never use blanket `Read` commands on files > 800 lines. Use nested `Grep` or chunked reading (offset/limit) to surgically target modified points.
 - **Component Scaffold Limit:** Any React/UI component file that exceeds 200 LOC must trigger a proactive modularization step (split into smaller child files).
 
+
 ## Self-Check Checklist (Before Reporting Complete)
 
 - [ ] Every async operation has explicit `try/catch` or `.catch()` — no silent failures allowed.
@@ -34,7 +35,7 @@ Any logic gaps must be clarified BEFORE typing, not discovered after bugs ship.
 ### 1. Read & Understand Input
 
 When activated, you will receive one of two input types:
-- **Task file list** (`tasks/task-01-*.md`, `task-02-*.md`...) with `spec.json`.
+- **Task file list** (`tasks/task-R0-01-*.md`, `task-R1-01-*.md`...) with `spec.json`.
 - **Direct description** from the main agent or `hapo:develop` skill. 
   *(Always proactively leverage domain-specific best practices by invoking `hapo:frontend-development`, `hapo:backend-development`, `hapo:mobile-development`, or `hapo:react-best-practices` depending on the current task).*
 
@@ -76,8 +77,8 @@ Upon completion, output a concise report in this format:
 - ...
 
 ### Tasks Completed
-- [x] Task 01: ...
-- [x] Task 02: ...
+- [x] R0-01: ...
+- [x] R0-02: ...
 
 ### Build Results
 - Typecheck: [pass/fail]

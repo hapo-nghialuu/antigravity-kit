@@ -38,7 +38,7 @@ When `--full` is NOT specified, narrow the test scope to only what changed:
 ### Pre-flight Checks (always run first)
 
 Catch compile errors before spending time on tests.
-**HARD RULE:** If a pre-flight tool (like `eslint`, `flake8`, `tsc`) is missing, you MUST install it (e.g., `npm install -D eslint`, `pip install flake8`). Do NOT skip the pre-flight check.
+**HARD RULE:** Do NOT auto-install missing tooling during verification. If a required pre-flight tool (like `eslint`, `flake8`, `tsc`) is missing, stop and report it as an environment gap or missing project setup.
 
 ```bash
 # JavaScript / TypeScript
@@ -59,7 +59,7 @@ cargo check
 flutter analyze
 ```
 
-If pre-flight fails → report `Compile Error`, do NOT proceed to test execution.
+If pre-flight fails or a required tool is missing → report `Compile Error` / `Environment Gap`, do NOT proceed to test execution.
 
 ### Test Execution by Language
 
@@ -237,7 +237,7 @@ Collects Core Web Vitals: `LCP`, `FID`, `CLS`, `FCP`, `TTFB`, `JSHeapUsedSize`.
 
 ---
 
-### Phase C-5: Responsive Screenshots (screenshot.js & visual-analyze.js)
+### Phase C-5: Responsive Screenshots (screenshot.js & gemini_batch_process.py)
 
 ```bash
 # Capture screenshots
@@ -360,5 +360,4 @@ Flag as `Security Warning` if:
 - API keys, secrets, or JWT tokens visible in page HTML
 - Mixed content (HTTP resources on HTTPS page) detected via network audit
 - `autocomplete="off"` missing on password fields
-
 

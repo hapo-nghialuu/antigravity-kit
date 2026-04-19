@@ -45,5 +45,6 @@ Keep EARS trigger keywords and fixed phrases in English (`When`, `If`, `While`, 
 
 ## Quality Criteria
 - Requirements must be testable, verifiable, and describe a single behavior.
+- **Measurability:** Avoid qualitative terms (e.g. "safe state", "fast", "some coverage"). Replace with measurable thresholds (e.g., "HTTP 400 error", "< 500ms response", ">= 80% coverage").
 - Use objective language: "shall" for mandatory behavior, "should" for recommendations; avoid ambiguous terms.
 - Follow EARS syntax: [condition], the [system] shall [response/action].

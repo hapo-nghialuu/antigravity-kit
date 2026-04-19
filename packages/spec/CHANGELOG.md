@@ -5,6 +5,33 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.25] - 2026-04-16
+
+### Changed
+- `hapo:specs` now maintains `task_registry` machine-state in `spec.json` alongside `task_files`
+- `hapo:specs --validate` now requires a reconciliation audit before marking validation complete or enabling implementation readiness
+- task hydration, sync, develop, and the active-spec hook now understand requirement-driven `task-R*.md` files and shared per-task machine state
+
+### Fixed
+- provider drift such as stale `Claude API` / `Haiku` wording is now treated as a validation failure outside `research.md`
+- delete-data specs now require a single canonical deletion/retention policy instead of mixed task-level interpretations
+- legacy `task-01` / `task-02` references were removed from Claude Code-facing protocols and docs
+
+## [0.7.23] - 2026-04-15
+
+### Added
+- **hapo:generate-graph** bundled into the Claude Code skill catalog for technical SVG/PNG diagram generation
+
+### Changed
+- Claude Code is now the primary documented release surface for CafeKit
+- `hapo:specs` protocol tightened around canonical state, task inventory integrity, contract locking, and implementation readiness gates
+- `hapo:develop` quality gate tightened around completion criteria, verification evidence, and task-aware definition-of-done
+
+### Fixed
+- Claude installer now syncs `task.md` instead of expecting the removed `tasks.md` template
+- Claude manifest no longer references the removed `code` skill
+- bundled `generate-graph` metadata and docs now point to CafeKit instead of upstream install instructions
+
 ## [0.5.6] - 2026-03-26
 
 ### Added
@@ -180,6 +207,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.7.23]: https://github.com/haposoft/cafekit/compare/v0.5.6...v0.7.23
 [0.4.0]: https://github.com/haposoft/cafekit/compare/v0.3.12...v0.4.0
 [0.3.12]: https://github.com/haposoft/cafekit/compare/v0.3.1...v0.3.12
 [0.3.1]: https://github.com/haposoft/cafekit/compare/v0.2.2...v0.3.1

@@ -11,25 +11,28 @@
       "backend-development",
       "brainstorm",
       "chrome-devtools",
-      "code",
       "code-review",
       "develop",
       "devops",
+      "docx",
       "frontend-design",
       "frontend-development",
+      "generate-graph",
       "git",
       "hotfix",
       "impact-analysis",
       "inspect",
-      "llm-moe",
       "mobile-development",
+      "pdf",
+      "pptx",
       "react-best-practices",
       "research",
       "specs",
       "sync",
       "test",
       "ui-ux-pro-max",
-      "web-testing"
+      "web-testing",
+      "xlsx"
     ]
   },
   "agents": {
@@ -53,7 +56,8 @@
     "required": [
       "docs-fetch.js",
       "validate-docs.cjs",
-      "browser-tool.cjs"
+      "browser-tool.cjs",
+      "web-search.cjs"
     ]
   },
   "agentReferences": {

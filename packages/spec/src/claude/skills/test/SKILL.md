@@ -1,14 +1,14 @@
 ---
 name: hapo:test
 description: "Run and verify project tests across all scopes: unit, integration, e2e, and UI. Blast-radius scoping for speed, chrome-devtools for UI verification, structured verdicts for downstream automation."
-argument-hint: "[scope|--full|--ui <url>|--ui-auth <url>]"
+argument-hint: "[scope|--full|--ui <url>|--ui-auth <url>|--ui-flow <url>]"
 version: 2.0.0
 ---
 
 # Test — Verify Implementation Quality
 
 Run the project's test suite, analyze results, and return a structured verdict.
-Designed to work **after `hapo:code`** and to run **in parallel with `hapo:code-review`** during the `hapo:develop` Quality Gate.
+Designed to work **after `hapo:develop`**. Standalone `/hapo:test` uses the same `test-runner` contract that `hapo:develop` relies on during its Quality Gate, and may run **in parallel with `hapo:code-review`**.
 
 **Principles:** Fail-fast | Blast-radius scoping | Zero hidden failures | No mocking to pass
 
@@ -109,9 +109,13 @@ Return a **structured verdict** (required format — not free-form prose):
 - Accessibility issues: N found | none
 - Screenshots: [paths]
 
+### Test Regression Check
+- **Comparison:** Compare current test count and assertion depth against previous runs.
+- **Result:** OK | REGRESSION (tests deleted/weakened)
+
 ### Action
 - PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to god-developer.
+- FAIL → [list specific fixes needed] → Return to god-developer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
 

@@ -3,8 +3,9 @@
   "created_at": "{{TIMESTAMP}}",
   "updated_at": "{{TIMESTAMP}}",
   "language": "vi",
-  "status": "pending",
+  "status": "in_progress",
   "phase": "initialized",
+  "current_phase": "init",
   "priority": "P2",
   "effort": null,
   "tags": [],
@@ -32,6 +33,9 @@
     "blockedBy": [],
     "blocks": []
   },
+  "task_files": [],
+  "task_registry": {},
+  "blocker": null,
   "progress": {
     "init": "done",
     "requirements": "pending",
@@ -50,7 +54,8 @@
     "tasks_done": null,
     "code_done": null,
     "test_done": null,
-    "review_done": null
+    "review_done": null,
+    "validation_done": null
   },
   "design_context": {
     "discovery_mode": null,

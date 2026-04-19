@@ -23,7 +23,7 @@ Referenced by `SKILL.md` Phase 3 and by the `test-runner` agent.
 | 12 | **SEO Error** | Missing meta tags, H1 issues, broken canonical | `evaluate.js` |
 | 13 | **Security Warning** | Missing HTTP security headers, exposed secrets | `network.js` / source |
 | 14 | **Broken Links** | Internal crawler found 404s on discovered pages | Phase 0.5 Crawler |
-| 15 | **UI Visual Error** | AI visual analysis detected layout break, overlap | `visual-analyze.js` |
+| 15 | **UI Visual Error** | AI visual analysis detected layout break, overlap | `gemini_batch_process.py` |
 
 ---
 

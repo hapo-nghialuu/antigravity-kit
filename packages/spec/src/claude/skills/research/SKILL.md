@@ -23,9 +23,11 @@ Call the `TaskCreate` tool to spin up the `researcher` subagent.
 **Instructions to pass to Researcher:**
 ```text
 Conduct comprehensive research on: [topic]
-Constraint 1: Limit WebSearch calls to a maximum of 5 distinct queries to conserve context.
-Constraint 2: Utilize scripts/docs-fetch.js if official Github/Doc URLs are discovered.
-Constraint 3: Validate information via cross-referencing capabilities.
+Constraint 1: ALWAYS use `node .claude/scripts/web-search.cjs "[query]"` as the EXCLUSIVE primary search method. This tool uses Gemini Grounding and returns a synthesized answer + cited sources. Do NOT manually crawl source URLs if the script provides a sufficient answer.
+Constraint 2: TRUST THE SYNTHESIS. The output contains the research results. Read the JSON and use the `answer` field directly. Do NOT write Python scripts to re-parse it or manually `Fetch` sources unless deep implementation details are missing.
+Constraint 3: Use native WebSearch or manual Fetch ONLY if the script fails or returns no results.
+Constraint 4: Limit total search calls to a maximum of 5 distinct queries.
+Constraint 5: Stop excessive "chain-searching". Use the grounding answer as the definitive summary.
 Output Format: Must strictly follow the 'Standard Research Report' layout.
 ```
 
@@ -36,6 +38,16 @@ Instruct the Researcher Subagent with this strict requirement:
 > "Sử dụng nguyên bản template tại `packages/spec/src/claude/skills/specs/templates/research.md`. Tuyệt đối không tự ý đẻ thêm các đề mục ngoài phạm vi file template này."
 
 ## Post-Execution
-Once the `researcher` completes the Task and returns the Markdown output:
-1. Save the file cleanly using the naming path format injected by the Context Hook (typically `plans/reports/Report-<slug>-<date>.md`).
-2. Conclude the workflow by providing the user with the file path.
+Once the `researcher` completes the Task and returns the Markdown output, save it based on context:
+
+### Output Routing
+| Context | Save to | Example |
+|---|---|---|
+| Active spec exists (`specs/<feature>/`) | `specs/<feature>/research.md` | `specs/auth-login/research.md` |
+| No active spec (system-wide / general) | `specs/_shared/Research-<slug>-<date>.md` | `specs/_shared/Research-mv3-best-practices-2026-04-11.md` |
+
+### Rules
+1. **Feature research** → Always save inside the active spec folder. If `specs/<feature>/` doesn't exist yet, create it.
+2. **System-wide research** → Save to `specs/_shared/`. Create the directory if it doesn't exist.
+3. **Never** save to `plans/reports/` or `docs/`. All research belongs in `specs/`.
+4. Conclude the workflow by providing the user with the saved file path.

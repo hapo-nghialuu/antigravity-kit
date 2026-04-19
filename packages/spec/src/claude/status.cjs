@@ -402,8 +402,8 @@ async function main() {
           const session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
           const planPath = session.activePlan?.trim();
           if (planPath) {
-            // Extract slug from path like "plans/260106-1554-statusline-visual"
-            const match = planPath.match(/plans\/\d+-\d+-(.+?)(?:\/|$)/);
+            // Extract slug from path like "specs/auth-login" or legacy "plans/260106-1554-feature"
+            const match = planPath.match(/(?:specs|plans)\/(?:\d+-\d+-)?(.+?)(?:\/|$)/);
             activePlan = match ? match[1] : planPath.split('/').pop();
           }
         }

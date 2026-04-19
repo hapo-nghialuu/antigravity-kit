@@ -281,7 +281,8 @@ function copyRecursive(src, dest, options = {}) {
       fs.mkdirSync(dest, { recursive: true });
     }
     fs.readdirSync(src).forEach(childItemName => {
-      copyRecursive(path.join(src, childItemName), path.join(dest, childItemName), options);
+      const destItemName = childItemName === 'gitignore' ? '.gitignore' : childItemName;
+      copyRecursive(path.join(src, childItemName), path.join(dest, destItemName), options);
     });
   } else {
     if (fs.existsSync(dest) && !shouldOverwriteManagedFiles) {
@@ -429,7 +430,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
         'requirements.md',
         'design.md',
         'research.md',
-        'tasks.md'
+        'task.md'
       ];
 
       specTemplates.forEach((fileName) => {
@@ -471,7 +472,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
     } else if (platformKey === 'antigravity') {
       // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug', 'llm-moe'];
+      requiredSkills = ['impact-analysis', 'debug', 'ai-multimodal', 'generate-graph'];
     }
 
     requiredSkills
@@ -827,6 +828,43 @@ function copyRulesDirectory(platformKey, results, options = {}) {
   }
 }
 
+// Ensure .gitignore configured at root
+function ensureGitignore(results, options = {}) {
+  const gitignorePath = path.join(process.cwd(), '.gitignore');
+  const header = '# CafeKit / Ecosystem';
+  const patterns = [
+    'specs/_shared/',
+    'plans/',
+    '!plans/templates/'
+  ];
+
+  if (!fs.existsSync(gitignorePath)) {
+    const content = ['# Git Ignore', '', header, ...patterns, ''].join('\n');
+    fs.writeFileSync(gitignorePath, content, 'utf8');
+    console.log('  ✓ .gitignore created at root');
+    results.copied++;
+    return;
+  }
+
+  const content = fs.readFileSync(gitignorePath, 'utf8');
+  const lines = content.split('\n').map(l => l.trim());
+  const missing = patterns.filter(p => !lines.includes(p));
+
+  if (missing.length > 0) {
+    let newContent = content;
+    if (!newContent.endsWith('\n')) newContent += '\n';
+    if (!content.includes(header)) newContent += `\n${header}\n`;
+
+    newContent += missing.join('\n') + '\n';
+    fs.writeFileSync(gitignorePath, newContent, 'utf8');
+    console.log(`  ↻ .gitignore updated: added ${missing.join(', ')}`);
+    results.updated++;
+  } else {
+    console.log('  → .gitignore already up to date');
+    results.skipped++;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // GEMINI CLI SETUP
 // ═══════════════════════════════════════════════════════════
@@ -902,7 +940,7 @@ function configureGeminiKey(apiKey) {
     }
 
     // Luôn ghi trực tiếp key vào rốn của não bộ AI
-    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\n`, { mode: 0o600 });
+    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`, { mode: 0o600 });
     console.log('  ✓ Gemini API key configured securely in project (.claude/.env)');
 
     return true;
@@ -1024,6 +1062,12 @@ async function main() {
       console.log();
     }
 
+    // Ensure root .gitignore is configured correctly
+    console.log('Root Configuration');
+    console.log('-'.repeat(40));
+    ensureGitignore(results, installerOptions);
+    console.log();
+
     // Setup Gemini CLI and API Key config
     await setupGeminiCLI(platforms);
 
@@ -1045,7 +1089,8 @@ async function main() {
     }
     console.log();
     console.log('Next steps:');
-    console.log('  1. Start your AI editor (Claude Code or Antigravity)');
+    const nextEditorLabel = platforms.length === 1 ? PLATFORMS[platforms[0]].name : 'your AI editor';
+    console.log(`  1. Start ${nextEditorLabel}`);
 
     // Show platform-specific hints
     for (const platformKey of platforms) {
