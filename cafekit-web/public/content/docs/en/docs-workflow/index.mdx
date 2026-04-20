@@ -1,87 +1,40 @@
 ---
-title: Documentation Workflows
-description: Automate project documentation creation and updates
+title: Docs Workflow
+description: Optional project documentation workflows that complement the core CafeKit runtime.
 ---
 
-# Documentation Workflows
+# Docs Workflow
 
-Documentation Workflows provide commands to automate project documentation so AI assistants can understand the codebase faster.
+The docs workflow is **supporting infrastructure**, not the core execution loop.
 
-## Command Mapping by Platform
-
-| Platform | Command Style |
-|----------|---------------|
-| **Claude Code** | `/docs init`, `/docs update` |
-| **Antigravity** | `/docs-init`, `/docs-update` |
-
-## Why Documentation Workflows?
-
-### The Problem
-When working with AI assistants, each new session often starts with limited context:
-- AI has to re-learn project structure
-- Time is spent re-explaining architecture and conventions
-- Context window is consumed by catch-up
-
-### The Solution
-CafeKit standardizes docs generation for core project context:
-1. **codebase-summary.md** - Codebase overview
-2. **project-overview-pdr.md** - Product requirements
-3. **code-standards.md** - Coding conventions
-4. **system-architecture.md** - System architecture
-5. **design-guidelines.md** - UI/UX guidelines
-6. **deployment-guide.md** - Deployment guide
-7. **project-roadmap.md** - Project roadmap
-
-Plus:
-- **repomix-output.xml** for compact AI-readable codebase context
-- **CLAUDE.md** (root, Claude projects)
-- **.agent/rules/AGENTS.md** (Antigravity projects)
-
-## Generated Files
+Core loop:
 
 ```text
-docs/
-├── codebase-summary.md
-├── project-overview-pdr.md
-├── code-standards.md
-├── system-architecture.md
-├── design-guidelines.md
-├── deployment-guide.md
-└── project-roadmap.md
-
-repomix-output.xml
-
-CLAUDE.md (Claude Code projects)
-.agent/rules/AGENTS.md (Antigravity projects)
+/hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
-## Typical Usage
+Support docs flow:
 
-### First-time setup
-```bash
+```text
 /docs init
-# Antigravity: /docs-init
-```
-
-### After major changes
-```bash
 /docs update
-# Antigravity: /docs-update
 ```
 
-## Best Practices
+## What It Is For
 
-### Run init when:
-- New project onboarding
-- First time preparing AI context
-- Documentation baseline is missing
+Use the docs workflow when you want project-level documentation such as:
 
-### Run update when:
-- Major features merged
-- Architecture/deployment changed
-- Before handoff to another contributor or AI session
+- codebase summary
+- architecture notes
+- coding standards
+- deployment guidance
 
-## See Also
+## What It Is Not For
 
-- [`/docs init`](/docs/docs-workflow/init) - Init command details
-- [`/docs update`](/docs/docs-workflow/update) - Update command details
+It is not a replacement for:
+
+- task-level docs checkpoints
+- spec artifacts
+- verification evidence
+
+CafeKit already expects lighter docs sync after verified task completion. `/docs init` and `/docs update` exist for broader project documentation work.

@@ -1,195 +1,77 @@
 ---
 title: Installation
-description: Get started with CafeKit in under a minute. Install the spec workflow command chain for structured feature development.
+description: Install CafeKit into a Claude Code project and verify the runtime bundle.
 ---
 
 # Installation
 
-Get CafeKit installed and start using spec-driven development in your projects.
-
-## Prerequisites
-
-Before installing, ensure you have:
-
-- **Node.js 18+** - Required for running the CLI
-- **AI coding assistant** - CafeKit works with [Claude Code](https://claude.ai/code) or [Antigravity](https://antigravity.google/)
-- **Reasoning Model** - Required to use **Claude Opus 4.5 (Thinking Mode)** to ensure best logic for planning skills (`spec-*`).
-- **Git** - For version control and updates
-- **repomix** - Required for the `/docs init` command to compact codebase into XML for AI analysis:
-  ```bash
-  npm install -g repomix
-  # or: pnpm install -g repomix
-  # or: yarn global add repomix
-  ```
-
-## Platform Compatibility
-
-CafeKit supports multiple AI coding assistant platforms:
-
-| Platform | Command Format | Status |
-|----------|---------------|--------|
-| **[Claude Code](https://claude.ai/code)** | `/spec-init` | Available |
-| **[Antigravity](https://antigravity.google/)** | `/spec-init` (or `@spec-init`) | Available |
-
-The installation process automatically detects your platform and installs the appropriate command format.
-
-## Install CafeKit
-
-Run the install command in your project root:
+Install CafeKit in your project root:
 
 ```bash
 npx @haposoft/cafekit
 ```
 
-The installer will prompt you to select your platform:
+## Prerequisites
 
-```
-? Select your AI coding assistant platform:
-  ❯ Claude Code
-    Antigravity
-```
+- Node.js 18+
+- a Claude Code project
+- a writable project root where `.claude/` can be managed
 
-This command will:
-- Detect your project structure
-- Install the core command set (`/spec-init`, `/spec-requirements`, `/spec-design`, `/spec-tasks`, `/spec-status`, `/code`, `/test`, `/review`)
-- Configure your workspace for spec-driven development
+Optional:
 
-## What Gets Installed
+- `repomix` if you plan to use `/docs init` or `/docs update`
 
-After running the install command, you'll have the CafeKit framework installed in your project:
-
-### Claude Code
-```
-.claude/
-├── commands/
-│   ├── spec-init.md
-│   ├── spec-requirements.md
-│   ├── spec-design.md
-│   ├── spec-tasks.md
-│   ├── spec-status.md
-│   ├── code.md
-│   ├── test.md
-│   ├── review.md
-│   └── docs.md
-├── agents/
-│   ├── tester.md
-│   ├── code-reviewer.md
-│   ├── fullstack-developer.md
-│   └── debugger.md
-├── skills/
-│   └── specs/
-└── ROUTING.md
-```
-
-### Antigravity
-```
-.agent/
-├── workflows/
-│   ├── spec-init.md
-│   ├── spec-requirements.md
-│   ├── spec-design.md
-│   ├── spec-tasks.md
-│   ├── spec-status.md
-│   ├── code.md
-│   ├── test.md
-│   ├── review.md
-│   ├── docs-init.md
-│   └── docs-update.md
-├── agents/
-│   ├── frontend-specialist.md
-│   ├── test-engineer.md
-│   └── code-archaeologist.md
-├── skills/
-│   └── specs/
-└── rules/
-    └── GEMINI.md
-```
-
-### Documentation Setup (Claude Code only)
-
-**Prerequisite:** Ensure you have [repomix](https://github.com/yamadashy/repomix) installed globally:
 ```bash
 npm install -g repomix
 ```
 
-After installation, use the `/docs` command to generate project documentation:
+## What The Installer Does
 
-```bash
-# Initialize project docs baseline
-/docs init
+CafeKit installs and manages a Claude runtime bundle:
 
-# Or update existing docs
-/docs update
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
 ```
 
-**What repomix does:** It compacts your codebase into `repomix-output.xml` so AI can analyze your project structure and generate accurate documentation.
+It also installs the main command surface:
 
-This will create:
-- Platform context file (`CLAUDE.md` or `.agent/rules/AGENTS.md`)
-- `docs/` folder with:
-  - `codebase-summary.md`
-  - `project-overview-pdr.md`
-  - `code-standards.md`
-  - `system-architecture.md`
-  - `design-guidelines.md`
-  - `deployment-guide.md`
-  - `project-roadmap.md`
-
-**Note:** `/docs` is exposed as `/docs init` and `/docs update` commands. These rely on your AI environment capabilities and project context files.
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:generate-graph`
 
 ## Verify Installation
 
-Open your AI coding assistant and type the init command for your platform:
-
-### Claude Code
-```
-/spec-init
-```
-
-### Antigravity
-```
-/spec-init
-# or
-@spec-init
-```
-
-You should see the spec initialization workflow start.
-
-## Troubleshooting
-
-### Command not found
-
-If the spec commands don't work:
-
-1. **Check file locations** - Ensure files are in the correct folder:
-   - Claude Code: `.claude/commands/`
-   - Antigravity: `.agent/workflows/`
-2. **Restart your AI assistant** - Some tools require a restart to detect new commands
-3. **Verify file format** - Commands must be `.md` files with proper frontmatter
-4. **Check platform selection** - Re-run installer and verify correct platform was selected
-
-### Wrong directory
-
-If CafeKit installs to the wrong directory, you can manually move files:
+Open Claude Code in the project and run:
 
 ```bash
-# For Claude Code - ensure .claude/commands/ exists
-mkdir -p .claude/commands/
-
-# For Antigravity - ensure .agent/workflows/ exists
-mkdir -p .agent/workflows/
-
-# Re-run installer
-npx @haposoft/cafekit
+/hapo:specs Build a small feature from a clear problem statement
 ```
 
-## Next Steps
+If CafeKit is installed correctly, Claude will enter the spec workflow instead of treating the command as plain text.
 
-Now that CafeKit is installed:
+## Upgrade Existing Installs
 
-- **[Quickstart Guide](/docs/getting-started/quickstart)** - Create your first spec in 5 minutes
-- **[Spec Workflow Guide](/docs/guides/spec-workflow)** - Learn the full spec command chain
+To refresh the managed bundle:
 
----
+```bash
+npx @haposoft/cafekit --upgrade
+```
 
-**Need help?** Open an issue on [GitHub](https://github.com/haposoft/cafekit) or contact support.
+## Notes
+
+- CafeKit is **Claude Code-first**.
+- Antigravity and Cursor support are planned but not available yet.
+- `/docs init` and `/docs update` are support workflows, not part of the required core install path.
+
+## Next Step
+
+Continue with the [Quickstart](/docs/getting-started/quickstart).

@@ -1,110 +1,18 @@
 ---
-title: Antigravity
-description: Guide for using CafeKit with Antigravity
+title: Antigravity (Coming Soon)
+description: Antigravity support is planned, but not available in the current CafeKit runtime release.
 ---
 
-# Antigravity
+# Antigravity (Coming Soon)
 
-Complete guide for using CafeKit with Antigravity.
+Antigravity is **not available yet** in the active CafeKit release line.
 
-## Installation
+## Current Status
 
-```bash
-npx @haposoft/cafekit
-```
+- Claude Code is the only actively documented and supported runtime
+- Antigravity support is planned
+- this page exists only to set expectations clearly
 
-Select **Antigravity** in the installer menu.
+## Recommendation
 
-## File Structure
-
-After installation, CafeKit adds workflow files to `.agent/`:
-
-```
-.agent/
-├── workflows/
-│   ├── spec-init.md
-│   ├── spec-requirements.md
-│   ├── spec-design.md
-│   ├── spec-tasks.md
-│   ├── spec-status.md
-│   ├── code.md
-│   ├── test.md
-│   ├── review.md
-│   ├── docs-init.md
-│   └── docs-update.md
-├── agents/
-│   ├── frontend-specialist.md
-│   ├── test-engineer.md
-│   └── code-archaeologist.md
-├── skills/
-│   └── specs/
-└── rules/
-    └── GEMINI.md
-```
-
-## Command Set
-
-Antigravity supports both `/command` and `@command` styles.
-
-### Spec workflow
-| Command | Description |
-|---------|-------------|
-| `/spec-init` | Initialize a new spec |
-| `/spec-requirements` | Gather and generate requirements |
-| `/spec-design` | Generate technical design |
-| `/spec-tasks` | Generate implementation tasks |
-| `/code` | Implement next approved task |
-| `/test` | Run tests and summarize failures |
-| `/review` | Review code correctness and security |
-| `/spec-status` | Show current spec status |
-
-### Documentation workflow
-| Command | Description |
-|---------|-------------|
-| `/docs-init` | Initialize project docs |
-| `/docs-update` | Update docs after changes |
-
-## Usage Examples
-
-### Start a feature
-
-```
-> /spec-init payment-gateway
-# or
-> @spec-init payment-gateway
-```
-
-### Implement from tasks
-
-```
-> /code payment-gateway
-> /test
-> /review
-```
-
-### Update documentation
-
-```
-> /docs-update
-```
-
-## Differences from Claude Code
-
-| | Antigravity | Claude Code |
-|---|---|---|
-| Workflow directory | `.agent/workflows/` | `.claude/commands/` |
-| Agent directory | `.agent/agents/` | `.claude/agents/` |
-| Routing rules file | `.agent/rules/GEMINI.md` | `.claude/ROUTING.md` |
-| Command trigger | `/...` or `@...` | `/...` |
-
-## Troubleshooting
-
-### Commands not showing
-```bash
-ls -la .agent/workflows/
-```
-
-### Command execution issues
-- Restart Antigravity
-- Verify workflow files use `.md` with valid frontmatter
-- Re-run installer: `npx @haposoft/cafekit`
+If you need CafeKit today, use [Claude Code](/docs/platforms/claude).

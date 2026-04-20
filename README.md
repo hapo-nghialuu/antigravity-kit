@@ -46,13 +46,14 @@ specs/<feature-name>/
 ## Platform Status
 
 - Claude Code: primary supported runtime
-- Antigravity: legacy path still present in the repo, not the focus of current releases
+- Antigravity: coming soon
+- Cursor: coming soon
 
 ## Documentation
 
 - Installation: https://cafekit.haposoft.com/docs/getting-started/installation
 - Quickstart: https://cafekit.haposoft.com/docs/getting-started/quickstart
-- Spec workflow: https://cafekit.haposoft.com/docs/guides/spec-workflow
+- Spec workflow: https://cafekit.haposoft.com/docs/workflows/specs
 
 ## License
 

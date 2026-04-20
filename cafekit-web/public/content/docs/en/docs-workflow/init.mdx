@@ -1,29 +1,20 @@
 ---
 title: /docs init
-description: Initialize project documentation for AI-assisted development
+description: Initialize project-level documentation for AI and team context.
 ---
 
-# /docs init
+# `/docs init`
 
-Create baseline project documentation for AI and team context.
+Initialize the broader documentation baseline for a project.
 
 ## Usage
 
-**Claude Code:**
 ```bash
 /docs init
 ```
 
-**Antigravity:**
-```bash
-/docs-init
-```
+## Typical Outputs
 
-## Description
-
-This command analyzes the codebase and generates core docs.
-
-Generated outputs typically include:
 - `docs/codebase-summary.md`
 - `docs/project-overview-pdr.md`
 - `docs/code-standards.md`
@@ -31,18 +22,15 @@ Generated outputs typically include:
 - `docs/design-guidelines.md`
 - `docs/deployment-guide.md`
 - `docs/project-roadmap.md`
-- `repomix-output.xml`
 
-Platform context files:
-- **Claude**: `CLAUDE.md`
-- **Antigravity**: `.agent/rules/AGENTS.md`
+Depending on the environment, this workflow may also use `repomix` to compact codebase context.
 
-## Notes
+## When To Run
 
-- Best run at project start or when docs are missing
-- Existing docs may be merged or refreshed depending on workflow behavior
-- Review generated docs and adjust project-specific details
+- new project onboarding
+- missing documentation baseline
+- before a team or AI handoff
 
-## Next Steps
+## Note
 
-- Run [`/docs update`](/docs/docs-workflow/update) after major code changes
+This is optional. The CafeKit runtime itself does not require `/docs init` before you can start spec work.

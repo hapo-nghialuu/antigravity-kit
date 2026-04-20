@@ -1,47 +1,27 @@
 ---
 title: /docs update
-description: Update documentation to reflect latest codebase changes
+description: Refresh project-level documentation after broader structural changes.
 ---
 
-# /docs update
+# `/docs update`
 
-Refresh project documentation after significant code changes.
+Refresh project-level documentation after meaningful code or architecture changes.
 
 ## Usage
 
-**Claude Code:**
 ```bash
 /docs update
 ```
 
-**Antigravity:**
-```bash
-/docs-update
-```
+## Good Times To Run It
 
-## Description
+- after shipping a major feature
+- after architecture or deployment changes
+- before a formal handoff
+- when project docs have clearly drifted
 
-`/docs update` re-analyzes the current codebase and updates documentation sections that changed.
+## How It Relates To Task-Level Docs Sync
 
-Typical behavior:
-1. Verify `docs/` exists
-2. Create backup/snapshot
-3. Re-scan codebase context (including repomix output)
-4. Update documentation files to match current implementation
+CafeKit already performs lightweight task closeout docs checkpoints after verified task completion.
 
-## Common Update Targets
-
-- `docs/codebase-summary.md`
-- `docs/project-overview-pdr.md`
-- `docs/code-standards.md`
-- `docs/system-architecture.md`
-- `docs/design-guidelines.md`
-- `docs/deployment-guide.md`
-- `docs/project-roadmap.md`
-- Platform context file (`CLAUDE.md` or `.agent/rules/AGENTS.md`)
-
-## Best Practices
-
-- Commit code before running updates
-- Review docs diff after update
-- Re-run when architecture or deployment setup changes significantly
+Use `/docs update` for **broader project docs**, not for every small implementation change.
