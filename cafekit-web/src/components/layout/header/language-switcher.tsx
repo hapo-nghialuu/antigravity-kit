@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/menu';
 import { useEffect, useState } from 'react';
+import { getPreferredClientLocale } from '@/lib/locale-utils';
 
 export function LanguageSwitcher() {
     const pathname = usePathname();
@@ -20,11 +21,7 @@ export function LanguageSwitcher() {
 
     useEffect(() => {
         setMounted(true);
-        // Determine initial locale from cookie
-        const match = document.cookie.match(new RegExp('(^| )NEXT_LOCALE=([^;]+)'));
-        if (match) {
-            setLocale(match[2]);
-        }
+        setLocale(getPreferredClientLocale());
     }, []);
 
     // Prevent hydration mismatch by not rendering until mounted

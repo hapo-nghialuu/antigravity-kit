@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getPreferredClientLocale } from '@/lib/locale-utils';
 
 export type Locale = 'en' | 'vi' | 'ja';
 
@@ -9,10 +10,7 @@ export function useLocale(): Locale {
 
     useEffect(() => {
         const updateLocale = () => {
-            const match = document.cookie.match(new RegExp('(^| )NEXT_LOCALE=([^;]+)'));
-            if (match && ['en', 'vi', 'ja'].includes(match[2])) {
-                setLocale(match[2] as Locale);
-            }
+            setLocale(getPreferredClientLocale());
         };
 
         updateLocale();

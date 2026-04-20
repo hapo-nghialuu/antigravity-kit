@@ -1,166 +1,619 @@
-import type { Locale } from '@/hooks/use-locale';
+import type { Locale } from "@/hooks/use-locale";
+
+type WorkflowNote = {
+  title: string;
+  description: string;
+};
+
+type WorkflowStep = {
+  tab: string;
+  title: string;
+  description: string;
+  status?: string;
+  highlights: string[];
+  notes: WorkflowNote[];
+};
 
 type LandingTranslations = {
-    hero: {
-        badge: string;
-        subtitle: string;
-        readDocs: string;
-        copied: string;
-        copy: string;
-    };
-    features: {
-        heading: string;
-        subheading: string;
-        items: {
-            title: string;
-            description: string;
-        }[];
-    };
-    quickStart: {
-        heading: string;
-        subheading: string;
-        viewGuide: string;
-        copied: string;
-        copy: string;
-        comments: string[];
-    };
+  hero: {
+    badge: string;
+    subtitle: string;
+    readDocs: string;
+    copied: string;
+    copy: string;
+  };
+  features: {
+    heading: string;
+    subheading: string;
+    workflowLabel: string;
+    detailsLabel: string;
+    notesLabel: string;
+    steps: WorkflowStep[];
+  };
+  quickStart: {
+    heading: string;
+    subheading: string;
+    viewGuide: string;
+    copied: string;
+    copy: string;
+    comments: string[];
+  };
 };
 
 const translations: Record<Locale, LandingTranslations> = {
-    en: {
-        hero: {
-            badge: 'Claude Code-first runtime for spec-driven delivery',
-            subtitle: 'Build from approved specs, execute one verified task at a time, and keep project docs aligned. Claude Code is available now. Antigravity and Cursor are coming soon.',
-            readDocs: 'Read Documentation',
-            copied: 'Copied!',
-            copy: 'Copy',
-        },
-        features: {
-            heading: 'Build features with confidence',
-            subheading: 'CafeKit turns feature work into a stateful runtime with specs, task packets, quality gates, and incremental docs sync.',
-            items: [
-                {
-                    title: 'Validated Specs',
-                    description: 'Start with structured spec artifacts, explicit contracts, and a validation step before coding begins.',
-                },
-                {
-                    title: 'Task Registry State',
-                    description: 'Track pending, in-progress, blocked, and done work in spec.json instead of relying on markdown alone.',
-                },
-                {
-                    title: 'Evidence-Based Gates',
-                    description: 'Implementation is not done until build health, test signals, review, and task evidence all agree.',
-                },
-                {
-                    title: 'Incremental Docs Sync',
-                    description: 'Run lightweight docs checkpoints after verified tasks instead of waiting for a giant docs pass at the end.',
-                },
-            ],
-        },
-        quickStart: {
-            heading: 'Get Started in Seconds',
-            subheading: 'Install CafeKit, create a spec, validate it, implement one task, and verify it with the current hapo workflow.',
-            viewGuide: 'View full quickstart guide',
-            copied: 'Copied!',
-            copy: 'Copy',
-            comments: [
-                '# 1. Install CafeKit',
-                '# 2. Create and validate a feature spec',
-                '# 3. Implement one task packet at a time',
-                '# 4. Verify, review, and sync docs',
-            ],
-        },
+  en: {
+    hero: {
+      badge: "Claude Code-first runtime for spec-driven delivery",
+      subtitle:
+        "Build from approved specs, execute one verified task at a time, and keep project docs aligned. Claude Code is available now.",
+      readDocs: "Read Documentation",
+      copied: "Copied!",
+      copy: "Copy",
     },
-    vi: {
-        hero: {
-            badge: 'Runtime Claude Code-first cho quy trình spec-driven',
-            subtitle: 'Xây dựng từ spec đã được duyệt, triển khai từng task đã verify, và giữ docs luôn đồng bộ. Claude Code dùng được ngay. Antigravity và Cursor sẽ có sau.',
-            readDocs: 'Đọc tài liệu hướng dẫn',
-            copied: 'Đã copy!',
-            copy: 'Copy',
+    features: {
+      heading: "One runtime from first prompt to release",
+      subheading:
+        "Install the runtime, move through specs, develop, test, review, git handoff, then ship with your existing deploy stack.",
+      workflowLabel: "Runtime Workflow",
+      detailsLabel: "What Happens",
+      notesLabel: "Critical Notes",
+      steps: [
+        {
+          tab: "install",
+          title: "Install the runtime bundle",
+          description:
+            "Bootstrap CafeKit into an existing Claude Code project before any feature-specific work begins.",
+          highlights: [
+            "Installs skills, hooks, rules, statusline, and workflow context into .claude.",
+            "Sets the project up for spec-driven commands instead of ad-hoc prompting.",
+            "Keeps Claude Code as the primary supported runtime today.",
+          ],
+          notes: [
+            {
+              title: "Command",
+              description: "Run `npx @haposoft/cafekit` in the project root.",
+            },
+            {
+              title: "Result",
+              description: "The repo is ready for `hapo:*` workflows immediately.",
+            },
+          ],
         },
-        features: {
-            heading: 'Phát triển tính năng với sự tự tin tuyệt đối',
-            subheading: 'CafeKit biến feature workflow thành một runtime có state rõ ràng: spec, task packet, quality gate và docs sync theo từng task.',
-            items: [
-                {
-                    title: 'Spec được validate',
-                    description: 'Bắt đầu từ spec có cấu trúc, contract rõ ràng và có bước validate trước khi cho phép code.',
-                },
-                {
-                    title: 'Task Registry rõ trạng thái',
-                    description: 'Theo dõi pending, in_progress, blocked và done trong spec.json thay vì chỉ dựa vào checkbox markdown.',
-                },
-                {
-                    title: 'Quality Gate theo bằng chứng',
-                    description: 'Task không được coi là xong nếu build, test, review và evidence chưa cùng xác nhận.',
-                },
-                {
-                    title: 'Docs Sync tăng dần',
-                    description: 'Chạy docs checkpoint nhẹ sau mỗi task đã verify thay vì dồn một đợt update tài liệu lớn ở cuối.',
-                },
-            ],
+        {
+          tab: "/hapo:specs",
+          title: "Create the feature contract",
+          description:
+            "Generate `spec.json`, requirements, design notes, and task packets. Validation is part of this stage before implementation starts.",
+          highlights: [
+            "Creates `specs/<feature>/` with machine-readable state and task files.",
+            "Runs reconciliation and validation before handing work to implementation.",
+            "Locks the runtime contract that develop, test, and sync rely on.",
+          ],
+          notes: [
+            {
+              title: "Validation first",
+              description:
+                "Treat `/hapo:specs --validate` as part of the specs stage, not an optional afterthought.",
+            },
+            {
+              title: "Task packets",
+              description:
+                "Each `task-R*.md` becomes the execution boundary for `hapo:develop`.",
+            },
+          ],
         },
-        quickStart: {
-            heading: 'Sẵn sàng chỉ sau vài giây',
-            subheading: 'Cài CafeKit, tạo spec, validate spec, triển khai một task và verify bằng workflow hapo hiện tại.',
-            viewGuide: 'Xem hướng dẫn bắt đầu nhanh đầy đủ',
-            copied: 'Đã copy!',
-            copy: 'Copy',
-            comments: [
-                '# 1. Cài đặt CafeKit',
-                '# 2. Tạo và validate spec cho feature',
-                '# 3. Triển khai từng task packet',
-                '# 4. Verify, review, rồi sync docs',
-            ],
+        {
+          tab: "/hapo:develop",
+          title: "Implement one task packet at a time",
+          description:
+            "Ship code through a verified task loop instead of coding the whole feature in one pass.",
+          highlights: [
+            "Supports both full-spec orchestration and surgical single-task execution.",
+            "Uses task boundaries, verification receipts, and registry sync before marking work done.",
+            "Runs lightweight docs checkpoints after verified tasks.",
+          ],
+          notes: [
+            {
+              title: "Definition of done",
+              description: "A task is not done unless build, evidence, and review all agree.",
+            },
+            {
+              title: "No fake progress",
+              description:
+                "Placeholder scaffolds and scope drift are blocked instead of silently accepted.",
+            },
+          ],
         },
+        {
+          tab: "/hapo:test",
+          title: "Verify with real build and runtime signals",
+          description:
+            "Run task-aware verification that prioritizes exact commands, prechecks, and runtime proof over shallow green checkmarks.",
+          highlights: [
+            "Runs build, typecheck, test suites, and UI verification depending on task evidence.",
+            "Treats `PRECHECK_FAIL` as stronger than `NO_TESTS`.",
+            "Returns a structured verdict instead of a vague success message.",
+          ],
+          notes: [
+            {
+              title: "Exact commands",
+              description:
+                "Verification starts from the commands declared in the task packet itself.",
+            },
+            {
+              title: "UI mode",
+              description:
+                "Protected flows can use `--ui-auth` or `--ui-flow` when runtime pages are available.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:code-review",
+          title: "Review for regressions and security",
+          description:
+            "Run adversarial review after testing so the final merge candidate is checked for correctness, regressions, and contract drift.",
+          highlights: [
+            "Findings-first review output keeps focus on real bugs and risk.",
+            "Flags security, behavior drift, and missing verification evidence.",
+            "Pairs cleanly with `hapo:test` during the quality gate.",
+          ],
+          notes: [
+            {
+              title: "Review posture",
+              description: "Assume regressions are possible until evidence proves otherwise.",
+            },
+            {
+              title: "Release gate",
+              description:
+                "Critical findings should stop the handoff to Git and deployment.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:git",
+          title: "Commit and push safely",
+          description:
+            "Use native Git operations for commits, pushes, PR prep, and safe worktree flows once code is verified.",
+          highlights: [
+            "Supports `commit`, `push`, `pr`, and sibling-directory `worktree` flows.",
+            "Scans staged diff content for secrets before commit.",
+            "Keeps version control operations consistent with the runtime workflow.",
+          ],
+          notes: [
+            {
+              title: "Command surface",
+              description: "Use `/hapo:git commit` and `/hapo:git push` after review is green.",
+            },
+            {
+              title: "Safety",
+              description:
+                "Conventional commits and secret checks happen before the repo is handed off.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:deploy",
+          title: "Ship with a deployment handoff",
+          description:
+            "Treat this as the final release surface after runtime verification, review, and Git handoff are complete.",
+          highlights: [
+            "Represents the final deployment step in the CafeKit release story on the homepage.",
+            "Can stand in for Vercel, CI/CD, or your own production delivery pipeline.",
+            "Keeps the flow visually complete from install all the way to release.",
+          ],
+          notes: [
+            {
+              title: "Temporary surface",
+              description:
+                "This section is a visual placeholder for the future native deploy handoff.",
+            },
+            {
+              title: "Release input",
+              description:
+                "Only ship code that already passed `hapo:test`, `hapo:code-review`, and `hapo:git`.",
+            },
+          ],
+        },
+      ],
     },
-    ja: {
-        hero: {
-            badge: 'Claude Code-first の spec-driven runtime',
-            subtitle: '承認済み spec から始め、検証済みタスクを1つずつ実装し、docs を同期させます。Claude Code は今すぐ利用可能で、Antigravity と Cursor は coming soon です。',
-            readDocs: 'ドキュメントを読む',
-            copied: 'コピーしました！',
-            copy: 'コピー',
-        },
-        features: {
-            heading: '確信を持って機能を開発する',
-            subheading: 'CafeKit は spec、task packet、quality gate、docs sync を備えた stateful runtime として機能します。',
-            items: [
-                {
-                    title: '検証済み Spec',
-                    description: '構造化された spec と明示的な contract、そして実装前の validation を前提に進みます。',
-                },
-                {
-                    title: 'Task Registry',
-                    description: 'pending、in_progress、blocked、done を spec.json で追跡し、markdown だけに依存しません。',
-                },
-                {
-                    title: '証拠ベースの Gate',
-                    description: 'build、test、review、evidence が揃わなければ task は完了とみなしません。',
-                },
-                {
-                    title: '段階的な Docs Sync',
-                    description: '大きな一括更新ではなく、検証済み task ごとに軽量な docs checkpoint を実行します。',
-                },
-            ],
-        },
-        quickStart: {
-            heading: 'たった数秒でセットアップ完了',
-            subheading: 'CafeKit をインストールし、spec を作成・検証し、1つの task を実装して現在の hapo workflow で検証します。',
-            viewGuide: 'クイックスタートガイドを詳しく見る',
-            copied: 'コピーしました！',
-            copy: 'コピー',
-            comments: [
-                '# 1. CafeKit をインストール',
-                '# 2. feature spec を作成して validate',
-                '# 3. task packet を1つずつ実装',
-                '# 4. verify と review の後に docs を同期',
-            ],
-        },
+    quickStart: {
+      heading: "Get Started in Seconds",
+      subheading:
+        "Install CafeKit, create and validate a spec, implement a task, verify it, then commit and deploy with your existing release stack.",
+      viewGuide: "View full quickstart guide",
+      copied: "Copied!",
+      copy: "Copy",
+      comments: [
+        "# 1. Install CafeKit",
+        "# 2. Create and validate a feature spec",
+        "# 3. Implement one task packet at a time",
+        "# 4. Verify and review the release candidate",
+        "# 5. Commit, push, and deploy",
+      ],
     },
+  },
+  vi: {
+    hero: {
+      badge: "Runtime Claude Code-first cho quy trình spec-driven",
+      subtitle:
+        "Xây dựng từ spec đã được duyệt, triển khai từng task đã verify, và giữ docs luôn đồng bộ. Claude Code dùng được ngay.",
+      readDocs: "Đọc tài liệu hướng dẫn",
+      copied: "Đã copy!",
+      copy: "Copy",
+    },
+    features: {
+      heading: "Một runtime xuyên suốt từ prompt đầu tiên tới release",
+      subheading:
+        "Cài runtime, đi qua specs, develop, test, review, git handoff rồi ship bằng stack deploy hiện có của bạn.",
+      workflowLabel: "Runtime Workflow",
+      detailsLabel: "Điều Gì Xảy Ra",
+      notesLabel: "Điểm Cần Giữ Chặt",
+      steps: [
+        {
+          tab: "install",
+          title: "Cài runtime bundle",
+          description:
+            "Khởi tạo CafeKit vào project Claude Code trước khi bắt đầu bất kỳ feature nào.",
+          highlights: [
+            "Cài skills, hooks, rules, statusline và workflow context vào `.claude`.",
+            "Đưa project sang command surface spec-driven thay vì prompt rời rạc.",
+            "Claude Code là runtime chính đang được hỗ trợ ngay lúc này.",
+          ],
+          notes: [
+            {
+              title: "Command",
+              description: "Chạy `npx @haposoft/cafekit` ở root của project.",
+            },
+            {
+              title: "Kết quả",
+              description: "Repo sẵn sàng chạy `hapo:*` workflow ngay.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:specs",
+          title: "Tạo contract cho feature",
+          description:
+            "Sinh `spec.json`, requirements, design và task packet. Validate là một phần của giai đoạn này trước khi code bắt đầu.",
+          highlights: [
+            "Tạo `specs/<feature>/` với state machine-readable và task files.",
+            "Chạy reconciliation và validation trước khi handoff sang implementation.",
+            "Khóa runtime contract mà develop, test và sync sẽ bám vào.",
+          ],
+          notes: [
+            {
+              title: "Validate trước",
+              description:
+                "Xem `/hapo:specs --validate` là một phần của stage specs, không phải bước phụ.",
+            },
+            {
+              title: "Task packet",
+              description:
+                "Mỗi `task-R*.md` là biên thực thi cho `hapo:develop`.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:develop",
+          title: "Triển khai từng task packet",
+          description:
+            "Code theo verified task loop thay vì làm cả feature trong một lượt dài.",
+          highlights: [
+            "Hỗ trợ cả full-spec orchestration lẫn chạy một task rất cụ thể.",
+            "Dùng task boundary, verification receipt và registry sync trước khi mark done.",
+            "Có docs checkpoint nhẹ sau mỗi task đã verify.",
+          ],
+          notes: [
+            {
+              title: "Definition of done",
+              description:
+                "Task chưa được coi là done nếu build, evidence và review chưa cùng đồng ý.",
+            },
+            {
+              title: "Không có fake progress",
+              description:
+                "Placeholder scaffold và scope drift sẽ bị chặn thay vì bị chấp nhận ngầm.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:test",
+          title: "Verify bằng tín hiệu thật",
+          description:
+            "Chạy verification theo đúng task, ưu tiên exact commands, prechecks và runtime proof thay vì green check hời hợt.",
+          highlights: [
+            "Chạy build, typecheck, test suite và UI verification tùy theo evidence của task.",
+            "Xem `PRECHECK_FAIL` là tín hiệu mạnh hơn `NO_TESTS`.",
+            "Trả verdict có cấu trúc thay vì một câu thành công chung chung.",
+          ],
+          notes: [
+            {
+              title: "Exact commands",
+              description:
+                "Verification bắt đầu từ các command được ghi ngay trong task packet.",
+            },
+            {
+              title: "UI mode",
+              description:
+                "Flow có auth có thể dùng `--ui-auth` hoặc `--ui-flow` khi page runtime đã lên.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:code-review",
+          title: "Review để chặn regression và lỗi bảo mật",
+          description:
+            "Chạy review sau test để candidate cuối cùng được kiểm tra về correctness, regressions và contract drift.",
+          highlights: [
+            "Output findings-first giữ trọng tâm vào bug và rủi ro thật.",
+            "Bắt lỗi security, behavior drift và thiếu verification evidence.",
+            "Ghép tự nhiên với `hapo:test` trong quality gate.",
+          ],
+          notes: [
+            {
+              title: "Tư thế review",
+              description: "Giả định regression có thể xảy ra cho tới khi evidence chứng minh ngược lại.",
+            },
+            {
+              title: "Release gate",
+              description:
+                "Critical findings phải chặn handoff sang Git và deployment.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:git",
+          title: "Commit và push an toàn",
+          description:
+            "Dùng Git operations native cho commit, push, PR prep và safe worktree flows sau khi code đã verify.",
+          highlights: [
+            "Hỗ trợ `commit`, `push`, `pr` và `worktree` ở thư mục sibling.",
+            "Scan staged diff để phát hiện secrets trước khi commit.",
+            "Giữ version control nhất quán với runtime workflow.",
+          ],
+          notes: [
+            {
+              title: "Command surface",
+              description:
+                "Dùng `/hapo:git commit` và `/hapo:git push` sau khi review đã xanh.",
+            },
+            {
+              title: "Safety",
+              description:
+                "Conventional commit và secret check xảy ra trước khi handoff repo.",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:deploy",
+          title: "Ship qua bước handoff deploy",
+          description:
+            "Xem đây là mặt cuối của release sau khi verification, review và Git handoff đã hoàn tất.",
+          highlights: [
+            "Đóng vai trò bước deploy cuối trong release story của CafeKit trên homepage.",
+            "Có thể đại diện cho Vercel, CI/CD hoặc pipeline production hiện có của bạn.",
+            "Giúp flow nhìn trọn vẹn từ install cho tới release.",
+          ],
+          notes: [
+            {
+              title: "Surface tạm thời",
+              description:
+                "Section này là visual placeholder cho deploy handoff native trong tương lai.",
+            },
+            {
+              title: "Điều kiện release",
+              description:
+                "Chỉ ship code đã qua `hapo:test`, `hapo:code-review` và `hapo:git`.",
+            },
+          ],
+        },
+      ],
+    },
+    quickStart: {
+      heading: "Sẵn sàng chỉ sau vài giây",
+      subheading:
+        "Cài CafeKit, tạo và validate spec, triển khai một task, verify nó, rồi commit và deploy bằng release stack hiện tại.",
+      viewGuide: "Xem hướng dẫn bắt đầu nhanh đầy đủ",
+      copied: "Đã copy!",
+      copy: "Copy",
+      comments: [
+        "# 1. Cài đặt CafeKit",
+        "# 2. Tạo và validate spec cho feature",
+        "# 3. Triển khai từng task packet",
+        "# 4. Verify và review release candidate",
+        "# 5. Commit, push và deploy",
+      ],
+    },
+  },
+  ja: {
+    hero: {
+      badge: "Claude Code-first の spec-driven runtime",
+      subtitle:
+        "承認済み spec から始め、検証済みタスクを1つずつ実装し、docs を同期させます。Claude Code は今すぐ利用可能です。",
+      readDocs: "ドキュメントを読む",
+      copied: "コピーしました！",
+      copy: "コピー",
+    },
+    features: {
+      heading: "最初の prompt から release までを1つの runtime で",
+      subheading:
+        "runtime をインストールし、specs、develop、test、review、git handoff を経て、既存の deploy stack で出荷します。",
+      workflowLabel: "Runtime Workflow",
+      detailsLabel: "何が起きるか",
+      notesLabel: "重要なポイント",
+      steps: [
+        {
+          tab: "install",
+          title: "runtime bundle をインストール",
+          description:
+            "feature 作業に入る前に、既存の Claude Code project へ CafeKit を導入します。",
+          highlights: [
+            "skills、hooks、rules、statusline、workflow context を `.claude` に配置します。",
+            "プロジェクトを ad-hoc prompt ではなく spec-driven command surface に切り替えます。",
+            "現在の primary runtime は Claude Code です。",
+          ],
+          notes: [
+            {
+              title: "Command",
+              description: "project root で `npx @haposoft/cafekit` を実行します。",
+            },
+            {
+              title: "Result",
+              description: "repo はすぐに `hapo:*` workflow を実行できます。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:specs",
+          title: "feature contract を作る",
+          description:
+            "`spec.json`、requirements、design、task packet を生成します。validation は実装前にこの段階で行います。",
+          highlights: [
+            "machine-readable な state と task files を持つ `specs/<feature>/` を生成します。",
+            "implementation に渡す前に reconciliation と validation を実行します。",
+            "develop、test、sync が依存する runtime contract を固定します。",
+          ],
+          notes: [
+            {
+              title: "Validate first",
+              description:
+                "`/hapo:specs --validate` は specs stage の一部として扱います。",
+            },
+            {
+              title: "Task packet",
+              description: "`task-R*.md` は `hapo:develop` の実行境界になります。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:develop",
+          title: "task packet を1つずつ実装",
+          description:
+            "feature 全体を一気に書くのではなく、verified task loop で前に進みます。",
+          highlights: [
+            "full-spec orchestration と single-task execution の両方をサポートします。",
+            "done にする前に task boundary、verification receipt、registry sync を使います。",
+            "verified task ごとに軽量な docs checkpoint を実行します。",
+          ],
+          notes: [
+            {
+              title: "Definition of done",
+              description: "build、evidence、review が揃わなければ task は done になりません。",
+            },
+            {
+              title: "No fake progress",
+              description:
+                "placeholder scaffold や scope drift は黙って通さずブロックします。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:test",
+          title: "実際の signal で verify",
+          description:
+            "浅い green check ではなく、exact commands、prechecks、runtime proof を優先して検証します。",
+          highlights: [
+            "task evidence に応じて build、typecheck、test suite、UI verification を実行します。",
+            "`PRECHECK_FAIL` は `NO_TESTS` より強い verdict として扱います。",
+            "曖昧な success ではなく structured verdict を返します。",
+          ],
+          notes: [
+            {
+              title: "Exact commands",
+              description: "verification は task packet に書かれた command から始まります。",
+            },
+            {
+              title: "UI mode",
+              description:
+                "保護された flow は `--ui-auth` や `--ui-flow` を利用できます。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:code-review",
+          title: "regression と security を review",
+          description:
+            "test の後に adversarial review を行い、最後の merge candidate を correctness と security の観点で確認します。",
+          highlights: [
+            "findings-first の出力で bug と risk に集中できます。",
+            "security、behavior drift、verification evidence の欠落を検出します。",
+            "`hapo:test` と自然に組み合わせられます。",
+          ],
+          notes: [
+            {
+              title: "Review posture",
+              description: "evidence が揃うまで regression の可能性を前提に扱います。",
+            },
+            {
+              title: "Release gate",
+              description: "critical findings は Git と deploy への handoff を止めるべきです。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:git",
+          title: "安全に commit と push",
+          description:
+            "検証後の code を native Git operations で commit、push、PR 準備、worktree 管理へ繋げます。",
+          highlights: [
+            "`commit`、`push`、`pr`、sibling-directory `worktree` をサポートします。",
+            "commit 前に staged diff の secret scan を行います。",
+            "version control を runtime workflow と揃えます。",
+          ],
+          notes: [
+            {
+              title: "Command surface",
+              description: "`/hapo:git commit` と `/hapo:git push` を使います。",
+            },
+            {
+              title: "Safety",
+              description: "conventional commit と secret check を先に通します。",
+            },
+          ],
+        },
+        {
+          tab: "/hapo:deploy",
+          title: "deploy handoff で ship",
+          description:
+            "verification、review、Git handoff の後に来る最終 release surface として扱います。",
+          highlights: [
+            "homepage 上では CafeKit release story の最後のステップとして見せます。",
+            "Vercel、CI/CD、または custom pipeline の代理表現として使えます。",
+            "install から release までの流れを視覚的に完結させます。",
+          ],
+          notes: [
+            {
+              title: "Temporary surface",
+              description:
+                "この section は将来の native deploy handoff を先に見せる placeholder です。",
+            },
+            {
+              title: "Release input",
+              description:
+                "`hapo:test`、`hapo:code-review`、`hapo:git` を通った code のみ ship します。",
+            },
+          ],
+        },
+      ],
+    },
+    quickStart: {
+      heading: "数秒で開始",
+      subheading:
+        "CafeKit をインストールし、spec を作成・検証し、task を実装して verify し、その後 commit と deploy を行います。",
+      viewGuide: "クイックスタートを詳しく見る",
+      copied: "コピーしました！",
+      copy: "コピー",
+      comments: [
+        "# 1. CafeKit をインストール",
+        "# 2. feature spec を作成して validate",
+        "# 3. task packet を1つずつ実装",
+        "# 4. verify と review で候補を固める",
+        "# 5. commit, push, deploy",
+      ],
+    },
+  },
 };
 
 export function getLandingTranslations(locale: Locale): LandingTranslations {
-    return translations[locale] ?? translations.en;
+  return translations[locale] ?? translations.en;
 }
