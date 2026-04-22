@@ -1,0 +1,118 @@
+---
+title: Bắt đầu nhanh
+description: Chạy workflow end-to-end đầu tiên của CafeKit với command surface hapo hiện tại.
+---
+
+# Bắt đầu nhanh
+
+Quickstart này dùng runtime surface hiện tại của CafeKit:
+
+```text
+/hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+```
+
+## 1. Cài CafeKit
+
+```bash
+npx @haposoft/cafekit
+```
+
+## 2. Tạo spec
+
+Mô tả feature bằng ngôn ngữ tự nhiên:
+
+```bash
+/hapo:specs Build a meeting transcript extension with AI summaries
+```
+
+CafeKit sẽ sinh một spec workspace như:
+
+```text
+specs/meet-transcript-mvp/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/
+    ├── task-R0-01-*.md
+    ├── task-R0-02-*.md
+    └── ...
+```
+
+## 3. Validate spec
+
+Trước khi code, chạy spec validation:
+
+```bash
+/hapo:specs --validate meet-transcript-mvp
+```
+
+Đây là bước CafeKit kiểm tra:
+
+- requirements, design và tasks có khớp nhau không
+- contracts đã đủ tường minh chưa
+- spec đã sẵn sàng cho implementation chưa
+
+## 4. Triển khai một task
+
+Pattern an toàn nhất là làm task-by-task:
+
+```bash
+/hapo:develop meet-transcript-mvp task-R0-02-auth-setup-dual-mode.md
+```
+
+CafeKit sẽ:
+
+1. load task packet
+2. enforce task boundaries
+3. chạy quality gate
+4. chỉ sync task state sau khi verification pass
+5. chạy docs checkpoint ở cấp task
+
+## 5. Chạy verification
+
+```bash
+/hapo:test --full
+```
+
+CafeKit trả về structured verdict như:
+
+- `PASS`
+- `FAIL`
+- `PARTIAL`
+- `NO_TESTS`
+
+Điểm quan trọng:
+
+- `NO_TESTS` **không** đồng nghĩa với thành công
+- preflight failure phải chặn completion
+
+## 6. Chạy review
+
+```bash
+/hapo:code-review --pending
+```
+
+Dùng bước này để kiểm tra correctness, regressions và security sau khi implement.
+
+## 7. Audit task state khi cần
+
+```bash
+/hapo:sync audit meet-transcript-mvp
+```
+
+Dùng sync audit khi:
+
+- task files và `spec.json` bị lệch
+- một run bị ngắt giữa chừng
+- bạn muốn xác nhận task unblocked tiếp theo
+
+## Cách làm việc được khuyên dùng
+
+Với hầu hết feature:
+
+```text
+spec -> validate -> develop one task -> test -> review -> next task
+```
+
+Pattern này giúp task state, evidence và docs luôn đi cùng nhau.

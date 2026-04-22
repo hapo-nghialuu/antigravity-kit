@@ -4,34 +4,21 @@
 import { useState, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-const navSections = [
-    {
-        title: 'Getting Started',
-        items: [
-            { href: '/docs', label: 'Introduction' },
-            { href: '/docs/installation', label: 'Installation' },
-        ],
-    },
-    {
-        title: 'Core Concepts',
-        items: [
-            { href: '/docs/agents', label: 'Agents' },
-            { href: '/docs/skills', label: 'Skills' },
-            { href: '/docs/workflows', label: 'Workflows' },
-        ],
-    },
-    {
-        title: 'CLI Reference',
-        items: [
-            { href: '/docs/cli', label: 'Commands & Options' },
-        ],
-    },
-];
+import { useLocale } from '@/hooks/use-locale';
+import { getDocsConfig } from '@/lib/docs-config';
 
 export default function MobileMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
+    const locale = useLocale();
+    const docsConfig = getDocsConfig(locale);
+    const navSections = docsConfig.sidebarNav.slice(0, 3).map((section) => ({
+        title: section.title,
+        items: section.items.slice(0, 3).map((item) => ({
+            href: item.href,
+            label: item.title,
+        })),
+    }));
 
     // Close menu when route changes (using layoutEffect to avoid visual flicker)
     useLayoutEffect(() => {

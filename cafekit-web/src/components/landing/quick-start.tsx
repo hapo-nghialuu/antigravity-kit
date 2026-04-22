@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref } from "@/lib/locale-utils";
 import { getLandingTranslations } from "@/lib/landing-translations";
 
 export function QuickStart() {
@@ -18,7 +19,9 @@ export function QuickStart() {
     '/hapo:develop user-authentication task-R0-02-auth-setup-dual-mode.md',
     '/hapo:test --full',
     '/hapo:code-review --pending',
-    '/hapo:sync audit user-authentication',
+    '/hapo:git commit',
+    '/hapo:git push',
+    'vercel --prod',
   ];
 
   const codeLines = [
@@ -36,7 +39,10 @@ export function QuickStart() {
     commands[4],
     commands[5],
     '',
+    t.comments[4],
     commands[6],
+    commands[7],
+    commands[8],
   ];
 
   const codeExample = codeLines.join('\n');
@@ -48,7 +54,7 @@ export function QuickStart() {
   };
 
   return (
-    <section className="bg-[linear-gradient(180deg,_rgba(242,234,157,0.14),_rgba(167,197,238,0.12),_rgba(255,255,255,0.96))] py-20 dark:bg-[linear-gradient(180deg,_#114734,_#101820_42%,_#101820)]">
+    <section id="quickstart" className="bg-[linear-gradient(180deg,_rgba(242,234,157,0.14),_rgba(167,197,238,0.12),_rgba(255,255,255,0.96))] py-20 dark:bg-[linear-gradient(180deg,_#114734,_#101820_42%,_#101820)]">
       <div className="mx-auto max-w-4xl px-6">
         <h2 className="mb-4 text-center text-3xl font-bold text-[#101820] dark:text-[#F6FAF7] sm:text-4xl">
           {t.heading}
@@ -90,7 +96,7 @@ export function QuickStart() {
 
         <div className="mt-12 text-center">
           <Link
-            href="/docs/getting-started/quickstart"
+            href={localizeHref(locale, "/docs/getting-started/quickstart")}
             className="group inline-flex items-center gap-2 text-[#006242] transition-colors hover:text-[#114734] dark:text-[#A7C5EE] dark:hover:text-[#F2EA9D]"
           >
             <span className="font-medium">{t.viewGuide}</span>

@@ -1,0 +1,93 @@
+---
+title: Tài liệu CafeKit
+description: Tài liệu Claude Code-first cho runtime spec-driven, workflow và phần tham chiếu của CafeKit.
+---
+
+# Tài liệu CafeKit
+
+CafeKit là một **runtime bundle Claude Code-first** cho quy trình phát triển theo spec. Nó cài các workflow, agent, hook và runtime context để đi từ ý tưởng tới implementation đã được verify mà không phụ thuộc vào prompt rời rạc.
+
+## Dành Cho Ai
+
+Hãy dùng CafeKit nếu bạn muốn:
+
+- một feature workflow có cấu trúc thay vì prompting từng lần
+- spec artifacts đi cùng project
+- task-level execution với verification rõ ràng
+- review và docs checkpoint trước khi claim công việc đã xong
+
+## Vòng Lặp Cốt Lõi
+
+```text
+Ý tưởng
+  -> /hapo:specs
+  -> /hapo:develop
+  -> /hapo:test
+  -> /hapo:code-review
+```
+
+Các command hỗ trợ thường dùng:
+
+- `/hapo:specs --validate <feature>`
+- `/hapo:sync audit <feature>`
+- `/hapo:generate-graph <request>`
+- `/docs init` và `/docs update` cho workflow tài liệu dự án
+
+## CafeKit Cài Gì
+
+Khi cài, CafeKit thêm runtime bundle vào `.claude/`:
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
+```
+
+Release surface chính là:
+
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:generate-graph`
+
+## Bản Đồ Tài Liệu
+
+### Bắt đầu
+
+- [Cài đặt](/vi/docs/getting-started/installation)
+- [Bắt đầu nhanh](/vi/docs/getting-started/quickstart)
+
+### Khái niệm cốt lõi
+
+- [Vòng đời spec](/vi/docs/core-concepts/spec-lifecycle)
+- [Task Registry](/vi/docs/core-concepts/task-registry)
+
+### Workflow
+
+- [`/hapo:specs`](/vi/docs/workflows/specs)
+- [`/hapo:develop`](/vi/docs/workflows/develop)
+- [`/hapo:test + /hapo:code-review`](/vi/docs/workflows/test-review)
+- [`/hapo:sync`](/vi/docs/workflows/sync)
+- [`/hapo:generate-graph`](/vi/docs/workflows/generate-graph)
+
+### Tham khảo
+
+- [Cấu trúc file](/vi/docs/reference/file-structure)
+- [Bảng lệnh](/vi/docs/reference/commands)
+- [FAQ](/vi/docs/faq)
+
+## Trạng Thái Sản Phẩm
+
+- **Claude Code** là runtime chính hiện tại.
+- **Antigravity** sẽ có sau.
+- **Cursor** sẽ có sau.
+
+## Bước Tiếp Theo
+
+Bắt đầu với [Cài đặt](/vi/docs/getting-started/installation), rồi đi tiếp sang [Bắt đầu nhanh](/vi/docs/getting-started/quickstart).

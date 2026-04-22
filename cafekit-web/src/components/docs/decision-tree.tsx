@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { localizeHref } from '@/lib/locale-utils';
 
 interface Command {
   id: string;
@@ -70,6 +71,10 @@ const translations = {
 export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const t = translations[locale];
+  const localizedCommands = commands.map((command) => ({
+    ...command,
+    href: localizeHref(locale, command.href),
+  }));
 
   return (
     <div className="my-8 rounded-xl border bg-card p-6">
@@ -81,7 +86,7 @@ export function DecisionTree({ locale = 'vi' }: DecisionTreeProps) {
       <p className="mb-6 text-sm text-muted-foreground">{t.description}</p>
 
       <div className="mb-8 flex flex-wrap justify-center gap-2">
-        {commands.map((cmd) => (
+        {localizedCommands.map((cmd) => (
           <Link
             key={cmd.id}
             href={cmd.href}

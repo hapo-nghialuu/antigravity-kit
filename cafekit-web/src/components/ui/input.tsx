@@ -1,14 +1,13 @@
 "use client";
 
 import { Input as InputPrimitive } from "@base-ui/react/input";
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-type InputProps = Omit<
-  InputPrimitive.Props & React.RefAttributes<HTMLInputElement>,
-  "size"
-> & {
+type InputProps = Omit<useRender.ComponentProps<"input">, "size"> & {
   size?: "sm" | "default" | "lg" | number;
   unstyled?: boolean;
   nativeInput?: boolean;
@@ -19,6 +18,7 @@ function Input({
   size = "default",
   unstyled = false,
   nativeInput = false,
+  render,
   ...props
 }: InputProps) {
   const inputClassName = cn(
@@ -45,18 +45,23 @@ function Input({
       data-slot="input-control"
     >
       {nativeInput ? (
-        <input
-          className={inputClassName}
-          data-slot="input"
-          size={typeof size === "number" ? size : undefined}
-          {...props}
-        />
+        useRender({
+          defaultTagName: "input",
+          props: mergeProps<"input">(
+            {
+              className: inputClassName,
+              size: typeof size === "number" ? size : undefined,
+            },
+            props,
+          ),
+          render,
+        })
       ) : (
         <InputPrimitive
           className={inputClassName}
           data-slot="input"
           size={typeof size === "number" ? size : undefined}
-          {...props}
+          {...(props as unknown as InputPrimitive.Props)}
         />
       )}
     </span>

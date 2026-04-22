@@ -1,24 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-export type Locale = 'en' | 'vi' | 'ja';
+import { usePathname } from 'next/navigation';
+import {
+    type Locale,
+    getLocaleFromPathname,
+    getPreferredClientLocale,
+} from '@/lib/locale-utils';
 
 export function useLocale(): Locale {
-    const [locale, setLocale] = useState<Locale>('en');
+    const pathname = usePathname();
+    const routeLocale = getLocaleFromPathname(pathname);
+    const [locale, setLocale] = useState<Locale>(routeLocale ?? 'en');
 
     useEffect(() => {
-        const updateLocale = () => {
-            const match = document.cookie.match(new RegExp('(^| )NEXT_LOCALE=([^;]+)'));
-            if (match && ['en', 'vi', 'ja'].includes(match[2])) {
-                setLocale(match[2] as Locale);
-            }
-        };
+        if (routeLocale) {
+            setLocale(routeLocale);
+            return;
+        }
 
-        updateLocale();
-        window.addEventListener('locale-changed', updateLocale);
-        return () => window.removeEventListener('locale-changed', updateLocale);
-    }, []);
+        setLocale(getPreferredClientLocale());
+    }, [routeLocale]);
 
-    return locale;
+    return routeLocale ?? locale;
 }
