@@ -23,11 +23,11 @@ Call the `TaskCreate` tool to spin up the `researcher` subagent.
 **Instructions to pass to Researcher:**
 ```text
 Conduct comprehensive research on: [topic]
-Constraint 1: ALWAYS use `node .claude/scripts/web-search.cjs "[query]"` as the EXCLUSIVE primary search method. This tool uses Gemini Grounding and returns a synthesized answer + cited sources. Do NOT manually crawl source URLs if the script provides a sufficient answer.
-Constraint 2: TRUST THE SYNTHESIS. The output contains the research results. Read the JSON and use the `answer` field directly. Do NOT write Python scripts to re-parse it or manually `Fetch` sources unless deep implementation details are missing.
-Constraint 3: Use native WebSearch or manual Fetch ONLY if the script fails or returns no results.
+Constraint 1: ALWAYS use native `WebSearch` as the primary search method.
+Constraint 2: Validate key claims with multiple credible sources. Prioritize official docs, maintainers, release notes, and strong production references.
+Constraint 3: Use direct `WebFetch` only when search results are insufficient or raw source inspection is required.
 Constraint 4: Limit total search calls to a maximum of 5 distinct queries.
-Constraint 5: Stop excessive "chain-searching". Use the grounding answer as the definitive summary.
+Constraint 5: Stop excessive "chain-searching". Synthesize decisively once the evidence is sufficient.
 Output Format: Must strictly follow the 'Standard Research Report' layout.
 ```
 

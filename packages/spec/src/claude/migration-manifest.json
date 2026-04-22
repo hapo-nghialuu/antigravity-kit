@@ -54,10 +54,8 @@
   },
   "scripts": {
     "required": [
-      "docs-fetch.js",
       "validate-docs.cjs",
-      "browser-tool.cjs",
-      "web-search.cjs"
+      "browser-tool.cjs"
     ]
   },
   "agentReferences": {

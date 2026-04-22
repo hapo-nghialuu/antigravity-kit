@@ -132,11 +132,10 @@ When you need to search the internet for information (research, docs lookup, tro
 
 | Priority | Tool | Command | When to use |
 |----------|------|---------|-------------|
-| 🥇 **P1** | `web-search.cjs` | `node .claude/scripts/web-search.cjs "[query]"` | **EXCLUSIVE PRIMARY.** Works via Gemini Grounding. Supports `--multi`. **TRUST THE SYNTHESIZED ANSWER** — do NOT manually scrape source URLs. |
-| 🥈 **P2** | `WebSearch` (native) | Use WebSearch tool directly | Secondary verification, or when P1 fails. |
-| 🥉 **P3** | `docs-fetch.js` | `node .claude/scripts/docs-fetch.js "library"` | Only for fetching raw documentation when synthesis is insufficient. |
+| 🥇 **P1** | `WebSearch` (native) | Use WebSearch tool directly | Primary search path for internet lookup and current information. |
+| 🥈 **P2** | `WebFetch` / direct fetch | Use only when a specific source URL must be inspected directly | Fallback for targeted source verification and raw document reading. |
 
-**IMPORTANT**: When the user asks you to find information, research a topic, or investigate anything that requires internet access, you MUST use the Web Search Protocol above. **NEVER** reply with "I cannot search the web". **NEVER** attempt manual `Fetch` or Python-based scraping for search results if `web-search.cjs` provides an answer. Trust the grounding.
+**IMPORTANT**: When the user asks you to find information, research a topic, or investigate anything that requires internet access, you MUST use the protocol above. **NEVER** reply with "I cannot search the web". Prefer native search first, then inspect raw sources only when needed for verification or missing detail.
 
 ## Code Quality
 
