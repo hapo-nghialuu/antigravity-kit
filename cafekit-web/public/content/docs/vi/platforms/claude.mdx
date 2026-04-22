@@ -1,0 +1,51 @@
+---
+title: Claude Code
+description: Primary platform guide for using CafeKit with Claude Code.
+---
+
+# Claude Code
+
+Claude Code is the **primary supported runtime** for current CafeKit releases.
+
+## Command Surface
+
+The main commands are:
+
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:sync`
+- `/hapo:generate-graph`
+
+## Installed Runtime Shape
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
+```
+
+## Runtime Characteristics
+
+- spec-aware hooks
+- task-state awareness
+- quality gates before completion sync
+- task-level docs checkpoints
+
+## Recommended Workflow
+
+```text
+/hapo:specs
+-> /hapo:specs --validate
+-> /hapo:develop
+-> /hapo:test
+-> /hapo:code-review
+```
+
+Use [`/hapo:sync`](/vi/docs/workflows/sync) whenever spec state drifts.

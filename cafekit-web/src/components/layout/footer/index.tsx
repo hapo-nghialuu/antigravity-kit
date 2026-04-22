@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CafeKitLockup } from "@/components/brand/cafekit-lockup";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref } from "@/lib/locale-utils";
 import { getSiteShellTranslations } from "@/lib/site-shell-translations";
 
 function FooterLink({
@@ -42,24 +43,24 @@ export default function Footer() {
   const t = getSiteShellTranslations(locale).footer;
 
   const productLinks = [
-    { href: "/docs", label: t.documentation },
-    { href: "/docs/getting-started/installation", label: t.installation },
-    { href: "/docs/getting-started/quickstart", label: t.quickstart },
-    { href: "/docs/reference/commands", label: t.commandReference },
+    { href: localizeHref(locale, "/docs"), label: t.documentation },
+    { href: localizeHref(locale, "/docs/getting-started/installation"), label: t.installation },
+    { href: localizeHref(locale, "/docs/getting-started/quickstart"), label: t.quickstart },
+    { href: localizeHref(locale, "/docs/reference/commands"), label: t.commandReference },
   ];
 
   const workflowLinks = [
-    { href: "/docs/workflows/specs", label: t.specs },
-    { href: "/docs/workflows/develop", label: t.develop },
-    { href: "/docs/workflows/test-review", label: t.testReview },
-    { href: "/docs/platforms/claude", label: t.claudeCode },
+    { href: localizeHref(locale, "/docs/workflows/specs"), label: t.specs },
+    { href: localizeHref(locale, "/docs/workflows/develop"), label: t.develop },
+    { href: localizeHref(locale, "/docs/workflows/test-review"), label: t.testReview },
+    { href: localizeHref(locale, "/docs/platforms/claude"), label: t.claudeCode },
   ];
 
   const resourceLinks = [
     { href: "https://github.com/haposoft/cafekit", label: t.github, external: true },
     { href: "https://github.com/haposoft/cafekit/releases", label: t.releases, external: true },
     { href: "https://github.com/haposoft/cafekit/issues", label: t.issues, external: true },
-    { href: "/docs/faq", label: t.faq },
+    { href: localizeHref(locale, "/docs/faq"), label: t.faq },
   ];
 
   return (
@@ -67,7 +68,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
           <div className="max-w-sm">
-            <Link href="/" className="inline-flex">
+            <Link href={localizeHref(locale, "/")} className="inline-flex">
               <CafeKitLockup compact />
             </Link>
             <p className="mt-5 text-sm leading-7 text-muted-foreground">
@@ -75,7 +76,7 @@ export default function Footer() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/docs"
+                href={localizeHref(locale, "/docs")}
                 className="inline-flex rounded-full bg-[#006242] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#114734]"
               >
                 {t.readDocs}

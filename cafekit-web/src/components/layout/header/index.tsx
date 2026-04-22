@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CafeKitLockup } from "@/components/brand/cafekit-lockup";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref, stripLocalePrefix } from "@/lib/locale-utils";
 import { getSiteShellTranslations } from "@/lib/site-shell-translations";
 import MobileMenu from "@/components/layout/header/components/mobile-menu";
 import SearchDialog from "@/components/layout/header/components/search-dialog";
@@ -12,8 +13,8 @@ import { LanguageSwitcher } from "./language-switcher";
 
 export default function Header() {
     const pathname = usePathname();
-    const isHome = pathname === "/";
     const locale = useLocale();
+    const isHome = stripLocalePrefix(pathname) === "/";
     const t = getSiteShellTranslations(locale).header;
 
     return (
@@ -29,7 +30,7 @@ export default function Header() {
 
                         {/* Logo - Responsive */}
                         <div className="relative z-10 flex items-center">
-                            <Link href="/" className="transition hover:opacity-95">
+                            <Link href={localizeHref(locale, "/")} className="transition hover:opacity-95">
                                 <CafeKitLockup compact />
                             </Link>
                         </div>
@@ -55,10 +56,10 @@ export default function Header() {
                                 </>
                             ) : (
                                 <>
-                                    <Link href="/docs/getting-started/quickstart" className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                                    <Link href={localizeHref(locale, "/docs/getting-started/quickstart")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
                                         Quickstart
                                     </Link>
-                                    <Link href="/docs/reference/commands" className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                                    <Link href={localizeHref(locale, "/docs/reference/commands")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
                                         Commands
                                     </Link>
                                 </>
@@ -94,7 +95,7 @@ export default function Header() {
                                     {t.github}
                                 </a>
                                 <a
-                                    href="#quickstart"
+                                    href={isHome ? "#quickstart" : localizeHref(locale, "/#quickstart")}
                                     className="hidden sm:inline-flex rounded-full bg-[#006242] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#114734]"
                                 >
                                     {t.tryQuickstart}

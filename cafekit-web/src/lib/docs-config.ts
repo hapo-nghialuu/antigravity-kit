@@ -1,3 +1,5 @@
+import { type Locale, localizeHref } from "@/lib/locale-utils";
+
 type DocsConfig = {
   mainNav: {
     title: string;
@@ -11,21 +13,6 @@ type DocsConfig = {
     }[];
   }[];
 };
-
-const mainNav = [
-  {
-    title: "Documentation",
-    href: "/docs",
-  },
-  {
-    title: "Quickstart",
-    href: "/docs/getting-started/quickstart",
-  },
-  {
-    title: "Reference",
-    href: "/docs/reference",
-  },
-];
 
 const hrefGroups = {
   gettingStarted: [
@@ -145,7 +132,7 @@ function buildSidebar(locale: keyof typeof labels) {
   const makeItems = (group: keyof typeof hrefGroups) =>
     hrefGroups[group].map((item) => ({
       title: localeLabels.itemTitles[item.key as keyof typeof localeLabels.itemTitles] ?? item.key,
-      href: item.href,
+      href: localizeHref(locale, item.href),
     }));
 
   return [
@@ -177,15 +164,41 @@ function buildSidebar(locale: keyof typeof labels) {
 }
 
 export const docsConfig = {
-  mainNav,
+  mainNav: [
+    {
+      title: "Documentation",
+      href: "/en/docs",
+    },
+    {
+      title: "Quickstart",
+      href: "/en/docs/getting-started/quickstart",
+    },
+    {
+      title: "Reference",
+      href: "/en/docs/reference",
+    },
+  ],
   sidebarNav: buildSidebar("en"),
 };
 
 export function getDocsConfig(locale: string): DocsConfig {
-  const normalized = locale === "vi" || locale === "ja" ? locale : "en";
+  const normalized: Locale = locale === "vi" || locale === "ja" ? locale : "en";
 
   return {
-    mainNav,
+    mainNav: [
+      {
+        title: "Documentation",
+        href: localizeHref(normalized, "/docs"),
+      },
+      {
+        title: "Quickstart",
+        href: localizeHref(normalized, "/docs/getting-started/quickstart"),
+      },
+      {
+        title: "Reference",
+        href: localizeHref(normalized, "/docs/reference"),
+      },
+    ],
     sidebarNav: buildSidebar(normalized),
   };
 }

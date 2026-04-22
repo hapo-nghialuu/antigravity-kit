@@ -489,7 +489,7 @@ function buildReminder(params) {
   // Respect hooks config — skip sections when their corresponding hook is disabled
   const hooksConfig = hooks || {};
   const contextEnabled = hooksConfig['context-tracking'] !== false;
-  const usageEnabled = hooksConfig['usage-context-awareness'] !== false;
+  const usageEnabled = hooksConfig['usage'] !== false;
 
   return [
     ...buildLanguageSection({ thinkingLanguage, responseLanguage }),
@@ -564,7 +564,7 @@ function buildReminderContext({ sessionId, config, staticEnv, configDirName = '.
   // Respect hooks config for sections object too
   const hooksConfig = cfg.hooks || {};
   const contextEnabled = hooksConfig['context-tracking'] !== false;
-  const usageEnabled = hooksConfig['usage-context-awareness'] !== false;
+  const usageEnabled = hooksConfig['usage'] !== false;
 
   return {
     content: lines.join('\n'),

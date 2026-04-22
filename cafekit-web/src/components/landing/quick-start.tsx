@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref } from "@/lib/locale-utils";
 import { getLandingTranslations } from "@/lib/landing-translations";
 
 export function QuickStart() {
@@ -95,7 +96,7 @@ export function QuickStart() {
 
         <div className="mt-12 text-center">
           <Link
-            href="/docs/getting-started/quickstart"
+            href={localizeHref(locale, "/docs/getting-started/quickstart")}
             className="group inline-flex items-center gap-2 text-[#006242] transition-colors hover:text-[#114734] dark:text-[#A7C5EE] dark:hover:text-[#F2EA9D]"
           >
             <span className="font-medium">{t.viewGuide}</span>

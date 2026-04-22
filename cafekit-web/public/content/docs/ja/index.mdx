@@ -1,0 +1,93 @@
+---
+title: CafeKit ドキュメント
+description: CafeKit の spec-driven runtime、workflow、reference をまとめた Claude Code-first ドキュメントです。
+---
+
+# CafeKit ドキュメント
+
+CafeKit は **Claude Code-first runtime bundle** です。spec-driven な開発フローに必要な workflow、agent、hook、runtime context を導入し、ad-hoc な prompting に頼らずに idea から verified implementation まで進められます。
+
+## 対象ユーザー
+
+CafeKit は次のようなケースに向いています。
+
+- 単発の prompt ではなく、構造化された feature workflow が欲しい
+- spec artifact を project に残したい
+- task 単位で execution と verification を管理したい
+- done を宣言する前に review と docs checkpoint を通したい
+
+## コアループ
+
+```text
+Idea
+  -> /hapo:specs
+  -> /hapo:develop
+  -> /hapo:test
+  -> /hapo:code-review
+```
+
+よく使う補助 command:
+
+- `/hapo:specs --validate <feature>`
+- `/hapo:sync audit <feature>`
+- `/hapo:generate-graph <request>`
+- project documentation workflow 用の `/docs init` と `/docs update`
+
+## CafeKit が入れるもの
+
+インストール時に CafeKit は `.claude/` に runtime bundle を追加します。
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── settings.json
+├── runtime.json
+├── status.cjs
+└── CLAUDE.md
+```
+
+主な release surface:
+
+- `/hapo:specs`
+- `/hapo:develop`
+- `/hapo:test`
+- `/hapo:code-review`
+- `/hapo:generate-graph`
+
+## ドキュメントマップ
+
+### Getting Started
+
+- [インストール](/ja/docs/getting-started/installation)
+- [クイックスタート](/ja/docs/getting-started/quickstart)
+
+### Core Concepts
+
+- [Spec Lifecycle](/ja/docs/core-concepts/spec-lifecycle)
+- [Task Registry](/ja/docs/core-concepts/task-registry)
+
+### Workflows
+
+- [`/hapo:specs`](/ja/docs/workflows/specs)
+- [`/hapo:develop`](/ja/docs/workflows/develop)
+- [`/hapo:test + /hapo:code-review`](/ja/docs/workflows/test-review)
+- [`/hapo:sync`](/ja/docs/workflows/sync)
+- [`/hapo:generate-graph`](/ja/docs/workflows/generate-graph)
+
+### Reference
+
+- [ファイル構成](/ja/docs/reference/file-structure)
+- [コマンド早見表](/ja/docs/reference/commands)
+- [FAQ](/ja/docs/faq)
+
+## プロダクト状況
+
+- **Claude Code** は現在利用可能な runtime です。
+- **Antigravity** は今後対応予定です。
+- **Cursor** も今後対応予定です。
+
+## 次の一歩
+
+まず [インストール](/ja/docs/getting-started/installation) から始め、その後 [クイックスタート](/ja/docs/getting-started/quickstart) に進んでください。

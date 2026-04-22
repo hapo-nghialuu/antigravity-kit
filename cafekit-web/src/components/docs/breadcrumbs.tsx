@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { getDocsConfig } from '@/lib/docs-config';
+import { type Locale, localizeHref } from '@/lib/locale-utils';
 
 interface BreadcrumbsProps {
   slug?: string[];
-  locale?: string;
+  locale?: Locale;
 }
 
 export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
@@ -16,7 +17,7 @@ export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
   const introTitle = locale === 'vi' ? 'Giới thiệu' : 'Introduction';
 
   const crumbs = [
-    { title: rootTitle, href: '/docs' },
+    { title: rootTitle, href: localizeHref(locale, '/docs') },
   ];
 
   if (slug) {
@@ -25,7 +26,7 @@ export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
     const docsConfig = getDocsConfig(locale);
     const flatNav = docsConfig.sidebarNav.flatMap(section => section.items);
 
-    let currentPath = '/docs';
+    let currentPath = localizeHref(locale, '/docs');
     slug.forEach((part) => {
       currentPath += `/${part}`;
       // Try to find title in config
@@ -39,7 +40,7 @@ export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
     });
   } else {
     // Root docs page
-    crumbs.push({ title: introTitle, href: '/docs' });
+    crumbs.push({ title: introTitle, href: localizeHref(locale, '/docs') });
   }
 
   // Remove duplicates if any (e.g. Docs > Introduction might overlap if slug is empty)

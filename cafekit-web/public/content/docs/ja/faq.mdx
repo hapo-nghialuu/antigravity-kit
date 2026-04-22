@@ -1,0 +1,43 @@
+---
+title: FAQ
+description: Frequently asked questions about CafeKit's current runtime and workflow model.
+---
+
+# FAQ
+
+## Is CafeKit multi-platform today?
+
+Not yet. Current releases are **Claude Code-first**.
+
+Planned:
+
+- Antigravity
+- Cursor
+
+## Where do specs live?
+
+Under:
+
+```text
+specs/<feature-name>/
+```
+
+## Does CafeKit still use `.specs/` and `tasks.md`?
+
+No. The current workflow expects:
+
+- `specs/<feature>/`
+- `spec.json`
+- `tasks/task-R*.md`
+
+## Should I implement an entire feature in one run?
+
+Usually no. Task-by-task execution is safer and keeps `task_registry` trustworthy.
+
+## Is `NO_TESTS` a successful verdict?
+
+No. It only means no test suite was executed. It does not replace real evidence or healthy preflight checks.
+
+## Do I need `/docs init` before `/hapo:specs`?
+
+No. `/docs init` is optional support infrastructure. The core CafeKit loop can start directly with `/hapo:specs`.

@@ -1,4 +1,4 @@
-import type { Locale } from "@/hooks/use-locale";
+import type { Locale } from "@/lib/locale-utils";
 
 type SiteShellTranslations = {
   header: {

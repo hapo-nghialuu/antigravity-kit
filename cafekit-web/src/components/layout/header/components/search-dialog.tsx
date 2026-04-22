@@ -21,6 +21,8 @@ import {
     CommandSeparator,
 } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
+import { useLocale } from '@/hooks/use-locale';
+import { localizeHref } from '@/lib/locale-utils';
 
 interface SearchItem {
     value: string;
@@ -34,64 +36,76 @@ interface SearchGroup {
     items: SearchItem[];
 }
 
-const searchGroups: SearchGroup[] = [
-    {
-        value: 'Getting Started',
-        items: [
-            {
-                label: 'Introduction',
-                value: 'introduction',
-                href: '/docs',
-                keywords: 'getting started overview what is'
-            },
-            {
-                label: 'Installation',
-                value: 'installation',
-                href: '/docs/installation',
-                keywords: 'install setup init npm npx global cli'
-            },
-        ],
-    },
-    {
-        value: 'Core Concepts',
-        items: [
-            {
-                label: 'Agents',
-                value: 'agents',
-                href: '/docs/agents',
-                keywords: 'specialist personas orchestrator planner security backend frontend'
-            },
-            {
-                label: 'Skills',
-                value: 'skills',
-                href: '/docs/skills',
-                keywords: 'knowledge modules react nextjs tailwind patterns testing'
-            },
-            {
-                label: 'Workflows',
-                value: 'workflows',
-                href: '/docs/workflows',
-                keywords: 'slash commands brainstorm create debug deploy enhance'
-            },
-        ],
-    },
-    {
-        value: 'Reference',
-        items: [
-            {
-                label: 'CLI Reference',
-                value: 'cli',
-                href: '/docs/cli',
-                keywords: 'command line interface init update status options'
-            },
-        ],
-    },
-];
-
 export default function SearchDialog() {
     const [open, setOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const router = useRouter();
+    const locale = useLocale();
+    const searchGroups: SearchGroup[] = [
+        {
+            value: 'Getting Started',
+            items: [
+                {
+                    label: 'Introduction',
+                    value: 'introduction',
+                    href: localizeHref(locale, '/docs'),
+                    keywords: 'getting started overview what is'
+                },
+                {
+                    label: 'Installation',
+                    value: 'installation',
+                    href: localizeHref(locale, '/docs/getting-started/installation'),
+                    keywords: 'install setup init npm npx runtime bundle'
+                },
+                {
+                    label: 'Quickstart',
+                    value: 'quickstart',
+                    href: localizeHref(locale, '/docs/getting-started/quickstart'),
+                    keywords: 'quickstart create spec develop test review'
+                },
+            ],
+        },
+        {
+            value: 'Workflows',
+            items: [
+                {
+                    label: '/hapo:specs',
+                    value: 'specs',
+                    href: localizeHref(locale, '/docs/workflows/specs'),
+                    keywords: 'requirements design task packets validate'
+                },
+                {
+                    label: '/hapo:develop',
+                    value: 'develop',
+                    href: localizeHref(locale, '/docs/workflows/develop'),
+                    keywords: 'task packet implementation quality gate evidence'
+                },
+                {
+                    label: '/hapo:test',
+                    value: 'test',
+                    href: localizeHref(locale, '/docs/workflows/test-review'),
+                    keywords: 'verification precheck ui review no tests'
+                },
+            ],
+        },
+        {
+            value: 'Reference',
+            items: [
+                {
+                    label: 'Commands',
+                    value: 'commands',
+                    href: localizeHref(locale, '/docs/reference/commands'),
+                    keywords: 'commands cheatsheet syntax hapo'
+                },
+                {
+                    label: 'FAQ',
+                    value: 'faq',
+                    href: localizeHref(locale, '/docs/faq'),
+                    keywords: 'faq common questions'
+                },
+            ],
+        },
+    ];
 
     function handleItemClick(item: SearchItem) {
         router.push(item.href);

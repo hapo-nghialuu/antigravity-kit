@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, FileJson2, FileText, ShieldCheck } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref } from "@/lib/locale-utils";
 
 const copy = {
   en: {
@@ -89,7 +90,7 @@ export function ArtifactPreview() {
             </p>
 
             <Link
-              href="/docs"
+              href={localizeHref(locale, "/docs")}
               className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[#006242] px-6 py-3 text-sm font-medium text-white shadow-lg shadow-[#006242]/18 transition-all hover:bg-[#114734]"
             >
               {t.cta}

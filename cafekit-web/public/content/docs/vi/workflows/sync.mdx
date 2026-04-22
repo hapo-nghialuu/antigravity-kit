@@ -1,0 +1,34 @@
+---
+title: /hapo:sync
+description: Reconcile task state, audit spec artifacts, and repair drift between markdown and machine state.
+---
+
+# `/hapo:sync`
+
+`/hapo:sync` exists to keep spec state honest.
+
+## Typical Usage
+
+```bash
+/hapo:sync audit meet-transcript-mvp
+```
+
+## When To Use It
+
+Run sync when:
+
+- a session was interrupted
+- markdown and `spec.json` no longer agree
+- task files changed outside the expected develop loop
+- you want to confirm the next unblocked task
+
+## What Audit Should Check
+
+- `task_files` matches the filesystem
+- `task_registry` matches markdown task status
+- completed tasks include verification receipts
+- blocked tasks have recorded blockers
+
+## Important Rule
+
+`/hapo:sync` should not be used to paper over incomplete work. If the evidence is missing, the task should move back to `in_progress` or `blocked`, not stay `done`.

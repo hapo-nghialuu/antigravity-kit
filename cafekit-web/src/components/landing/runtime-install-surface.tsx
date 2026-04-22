@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, FileCode2, Shield, TerminalSquare } from "lucide-react";
+import { BadgeCheck, Bot, FileCode2, Shield, TerminalSquare } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
 
 const copy = {
@@ -16,6 +16,10 @@ const copy = {
       {
         title: ".claude/hooks",
         description: "State reminders, privacy guardrails, and runtime context injection around Claude Code.",
+      },
+      {
+        title: ".claude/agents",
+        description: "Specialist agents for testing, review, docs, sync, and workflow enforcement during delivery.",
       },
       {
         title: ".claude/rules",
@@ -42,6 +46,10 @@ const copy = {
         description: "State reminders, privacy guardrails và runtime context injection quanh Claude Code.",
       },
       {
+        title: ".claude/agents",
+        description: "Các agent chuyên biệt cho test, review, docs, sync và workflow enforcement trong quá trình delivery.",
+      },
+      {
         title: ".claude/rules",
         description: "Rule giữ spec state, quality gate, docs sync và Git handoff đi cùng nhau.",
       },
@@ -66,6 +74,10 @@ const copy = {
         description: "state reminder、privacy guardrail、runtime context injection。",
       },
       {
+        title: ".claude/agents",
+        description: "test、review、docs、sync、workflow enforcement を担う specialist agent 群。",
+      },
+      {
         title: ".claude/rules",
         description: "spec state、quality gate、docs sync、Git handoff を揃える実行ルール。",
       },
@@ -78,7 +90,7 @@ const copy = {
   },
 } as const;
 
-const icons = [TerminalSquare, Shield, BadgeCheck, FileCode2];
+const icons = [TerminalSquare, Shield, Bot, BadgeCheck, FileCode2];
 
 export function RuntimeInstallSurface() {
   const locale = useLocale();
@@ -97,7 +109,7 @@ export function RuntimeInstallSurface() {
           {t.subheading}
         </p>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
           {t.items.map((item, index) => {
             const Icon = icons[index];
 

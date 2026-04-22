@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getDocsConfig } from '@/lib/docs-config';
+import type { Locale } from '@/lib/locale-utils';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
-export default function DocsSidebar({ locale = 'en' }: { locale?: string }) {
+export default function DocsSidebar({ locale = 'en' }: { locale?: Locale }) {
     const pathname = usePathname();
     const config = getDocsConfig(locale);
 

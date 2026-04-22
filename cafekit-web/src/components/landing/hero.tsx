@@ -5,6 +5,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { CafeKitLockup } from "@/components/brand/cafekit-lockup";
 import { useLocale } from "@/hooks/use-locale";
+import { localizeHref } from "@/lib/locale-utils";
 import { getLandingTranslations } from "@/lib/landing-translations";
 import { InteractiveRuntimeTerminal } from "@/components/landing/interactive-runtime-terminal";
 
@@ -90,7 +91,7 @@ export function Hero() {
 
           <div className="flex flex-col items-start gap-4 sm:flex-row">
             <Link
-              href="/docs"
+              href={localizeHref(locale, "/docs")}
               className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#006242] px-8 font-medium text-white shadow-lg shadow-[#006242]/18 transition-all hover:bg-[#114734] hover:shadow-xl"
             >
               {t.readDocs}

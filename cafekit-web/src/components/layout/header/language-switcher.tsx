@@ -11,12 +11,16 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/menu';
 import { useEffect, useState } from 'react';
-import { getPreferredClientLocale } from '@/lib/locale-utils';
+import {
+    type Locale,
+    getPreferredClientLocale,
+    replacePathLocale,
+} from '@/lib/locale-utils';
 
 export function LanguageSwitcher() {
     const pathname = usePathname();
     const router = useRouter();
-    const [locale, setLocale] = useState('en');
+    const [locale, setLocale] = useState<Locale>('en');
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -27,31 +31,24 @@ export function LanguageSwitcher() {
     // Prevent hydration mismatch by not rendering until mounted
     if (!mounted) {
         return (
-            <button
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2 px-2")}
-                disabled
-            >
-                <Languages className="h-4 w-4" />
-                <span className="hidden sm:inline-block">English</span>
-            </button>
+            <div className="h-9 w-9 rounded-md border border-zinc-200 dark:border-zinc-800" />
         );
     }
 
-    const switchLanguage = (target: 'en' | 'vi' | 'ja') => {
-        // Set cookie
-        document.cookie = `NEXT_LOCALE=${target}; path=/; max-age=31536000`; // 1 year
+    const switchLanguage = (target: Locale) => {
+        document.cookie = `NEXT_LOCALE=${target}; path=/; max-age=31536000`;
         setLocale(target);
-        window.dispatchEvent(new Event('locale-changed'));
-        router.refresh();
+        router.push(replacePathLocale(pathname, target));
     };
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2 px-2")}>
-                <Languages className="h-4 w-4" />
-                <span className="hidden sm:inline-block">
-                    {locale === 'vi' ? 'Tiếng Việt' : locale === 'ja' ? '日本語' : 'English'}
-                </span>
+            <DropdownMenuTrigger
+                className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+                aria-label={`Change language. Current: ${locale}`}
+                title={locale === 'vi' ? 'Tiếng Việt' : locale === 'ja' ? '日本語' : 'English'}
+            >
+                <Languages className="h-4 w-4 text-zinc-700 dark:text-zinc-300" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => switchLanguage('en')} className={locale === 'en' ? 'bg-accent' : ''}>

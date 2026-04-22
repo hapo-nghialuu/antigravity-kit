@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getDocsConfig } from '@/lib/docs-config';
+import type { Locale } from '@/lib/locale-utils';
 import { cn } from '@/lib/utils';
 
 interface DocsPagerProps {
   slug?: string[];
-  locale?: string;
+  locale?: Locale;
 }
 
 export function DocsPager({ slug, locale = 'en' }: DocsPagerProps) {
-  const pathname = slug ? `/docs/${slug.join('/')}` : '/docs';
+  const pathname = slug ? `/${locale}/docs/${slug.join('/')}` : `/${locale}/docs`;
 
   // Flatten sidebar config to get linear list of pages
   const config = getDocsConfig(locale);
