@@ -57,7 +57,7 @@ You MUST NOT silently replace it with a simpler custom substitute ("for MVP", "p
 
 | Thought (Excuse) | Reality (Rule) |
 |-------------------|----------------|
-| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call `inspect` to scan files. |
+| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call the `inspector` agent to scan files. |
 | "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via `Task` tool. |
 
 ## Absolute Workflow
@@ -66,7 +66,7 @@ You MUST NOT silently replace it with a simpler custom substitute ("for MVP", "p
 flowchart TD
     A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
     B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Scout Codebase (inspect)]
+    B -->|Ready| C[Step 2: Scout Codebase (inspector)]
     C --> D[Step 3: Implement Code (god-developer)]
     D --> E[Step 4: Quality Gate: Test + Review + Evidence]
     E -->|Fail (code-auditor)| D
@@ -94,7 +94,7 @@ flowchart TD
 - Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory:** Call agent `Task(subagent_type="inspect", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
+- **Mandatory:** Call agent `Task(subagent_type="inspector", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
 
 ### Step 3: Implement Code
 - Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.

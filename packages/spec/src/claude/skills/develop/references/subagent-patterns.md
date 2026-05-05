@@ -10,7 +10,7 @@ Task(subagent_type="[agent-name]", prompt="[task description]", description="[sh
 
 ## Codebase Inspection Phase
 ```
-Task(subagent_type="inspect", prompt="Scan and identify all files related to [feature-name] in the current codebase.", description="Scout [feature-name]")
+Task(subagent_type="inspector", prompt="Scan and identify all files related to [feature-name] in the current codebase.", description="Scout [feature-name]")
 ```
 
 ## Code Implementation Phase
