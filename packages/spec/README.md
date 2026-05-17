@@ -2,7 +2,7 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.7.29-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 
@@ -135,14 +135,16 @@ The active workflow expects:
 - design to define canonical contracts
 - each task file to carry completion criteria and `Task Test Plan & Verification Evidence`
 
-## Release Notes For 0.7.29
+## Release Notes For 0.8.0
 
-This release is centered on Claude Code:
-- fixed `hapo:develop` codebase scouting to call the bundled `inspector` agent instead of a non-existent `inspect` agent
-- tightened `hapo:specs` state integrity and task finalization rules
-- tightened `hapo:develop` definition-of-done and evidence-based quality gates
-- bundled `hapo:generate-graph`
-- cleaned Claude installer expectations so it no longer looks for removed Claude artifacts
+This release strengthens CafeKit's Claude Code workflow:
+- added `hapo:brainstorm` as a scout-first pre-spec design workflow for unclear ideas
+- tightened `hapo:specs` routing so unresolved architecture choices move through brainstorm first
+- added task-level `Task Test Plan & Verification Evidence` guidance across specs, develop, test, review, and sync
+- added skill self-tests for bundled Chrome DevTools and PDF scripts
+- added `hapo:git finish` guidance for verified branch closeout
+- simplified Claude runtime rules and added hook protocol guidance
+- fixed web lint/build issues in the docs app
 
 ## Documentation
 

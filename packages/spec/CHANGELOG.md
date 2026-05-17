@@ -5,6 +5,24 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-17
+
+### Added
+- `hapo:brainstorm` now runs as a scout-first pre-spec workflow for unclear ideas, architectural choices, and scope gates.
+- `brainstormer` now acts as a specialist advisory agent for architecture pressure-testing inside the brainstorm workflow.
+- Skill self-tests now run bundled Chrome DevTools and PDF script tests through `pnpm test`.
+- `hapo:git finish` guidance documents verified branch closeout options.
+- Hook protocol guidance documents privacy-block handling without expanding the main Claude runtime rules.
+
+### Changed
+- `hapo:specs` now routes unclear ideas and unresolved architecture decisions to `hapo:brainstorm` before creating spec artifacts.
+- Specs, develop, test, review, and sync workflows now use `Task Test Plan & Verification Evidence` for task-level proof.
+- Claude runtime rules were simplified around scout-first work, fresh verification, root-cause analysis, and concise reporting.
+- Public docs now surface `hapo:brainstorm` in command references and quickstarts.
+
+### Fixed
+- Web docs lint and build issues around image usage, hooks, unused imports, and dependency overrides.
+
 ## [0.7.29] - 2026-05-05
 
 ### Fixed
@@ -212,6 +230,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.8.0]: https://github.com/haposoft/cafekit/compare/v0.7.29...v0.8.0
 [0.7.29]: https://github.com/haposoft/cafekit/compare/v0.7.28...v0.7.29
 [0.7.23]: https://github.com/haposoft/cafekit/compare/v0.5.6...v0.7.23
 [0.4.0]: https://github.com/haposoft/cafekit/compare/v0.3.12...v0.4.0
