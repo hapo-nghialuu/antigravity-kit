@@ -15,11 +15,14 @@ export function useLocale(): Locale {
 
     useEffect(() => {
         if (routeLocale) {
-            setLocale(routeLocale);
             return;
         }
 
-        setLocale(getPreferredClientLocale());
+        const localeTimer = window.setTimeout(() => {
+            setLocale(getPreferredClientLocale());
+        }, 0);
+
+        return () => window.clearTimeout(localeTimer);
     }, [routeLocale]);
 
     return routeLocale ?? locale;

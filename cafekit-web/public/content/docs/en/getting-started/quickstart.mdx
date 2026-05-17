@@ -8,7 +8,7 @@ description: Run your first end-to-end CafeKit workflow using the current hapo c
 This quickstart uses the current CafeKit runtime:
 
 ```text
-/hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+/hapo:brainstorm (if unclear) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
 ## 1. Install CafeKit
@@ -17,7 +17,17 @@ This quickstart uses the current CafeKit runtime:
 npx @haposoft/cafekit
 ```
 
-## 2. Create A Spec
+## 2. Clarify The Idea When Needed
+
+For ambiguous features or architecture choices, run a scout-first brainstorm:
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+Skip this step when the scope and requirements are already clear.
+
+## 3. Create A Spec
 
 Describe the feature in plain language:
 
@@ -39,7 +49,7 @@ specs/meet-transcript-mvp/
     └── ...
 ```
 
-## 3. Validate The Spec
+## 4. Validate The Spec
 
 Before coding, run the spec validation pass:
 
@@ -53,7 +63,7 @@ This step is where CafeKit checks:
 - contracts are explicit
 - the spec is ready for implementation
 
-## 4. Implement One Task
+## 5. Implement One Task
 
 The safest pattern is task-by-task execution:
 
@@ -69,7 +79,7 @@ CafeKit will:
 4. sync task state only after verification passes
 5. run a task-level docs checkpoint
 
-## 5. Run Verification
+## 6. Run Verification
 
 ```bash
 /hapo:test --full
@@ -87,7 +97,7 @@ Important:
 - `NO_TESTS` is **not** equivalent to success
 - preflight failures should block completion
 
-## 6. Run Review
+## 7. Run Review
 
 ```bash
 /hapo:code-review --pending
@@ -95,7 +105,7 @@ Important:
 
 Use this to verify correctness, regressions, and security after implementation.
 
-## 7. Audit Task State When Needed
+## 8. Audit Task State When Needed
 
 ```bash
 /hapo:sync audit meet-transcript-mvp
@@ -112,7 +122,7 @@ Use sync audit when:
 For most features:
 
 ```text
-spec -> validate -> develop one task -> test -> review -> next task
+brainstorm when unclear -> spec -> validate -> develop one task -> test -> review -> next task
 ```
 
 This keeps task state, evidence, and docs aligned.

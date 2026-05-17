@@ -11,6 +11,7 @@ npx @haposoft/cafekit
 ## What It Is
 
 CafeKit installs a working runtime bundle for Claude Code:
+- `hapo:brainstorm` for scout-first ideation before a spec is ready
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation from approved specs
 - `hapo:test` and `hapo:code-review` for verification
@@ -20,12 +21,13 @@ CafeKit installs a working runtime bundle for Claude Code:
 Core flow:
 
 ```text
-Idea -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+Idea -> /hapo:brainstorm (if unclear) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
 ## Quick Start
 
 ```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
 /hapo:specs Build a meeting transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
 /hapo:test --full

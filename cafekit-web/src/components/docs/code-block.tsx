@@ -2,7 +2,6 @@
 
 import { ComponentPropsWithoutRef, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<'pre'>) {
     const preRef = useRef<HTMLPreElement>(null);

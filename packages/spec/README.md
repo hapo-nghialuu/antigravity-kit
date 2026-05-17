@@ -11,7 +11,7 @@
 CafeKit installs a structured workflow into Claude Code so the assistant can move cleanly from:
 
 ```text
-Idea -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
+Idea -> Brainstorm when unclear -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
 ```
 
 This package currently focuses on the Claude Code runtime:
@@ -66,6 +66,7 @@ Managed runtime features include:
 
 CafeKit ships many skills, but the main release surface is:
 
+- `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
@@ -75,6 +76,12 @@ CafeKit ships many skills, but the main release surface is:
 Common companion skills bundled in this package include `inspect`, `impact-analysis`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
 
 ## Quick Start
+
+For unclear ideas, brainstorm first:
+
+```bash
+/hapo:brainstorm Explore approaches for a Google Meet transcript extension
+```
 
 Create a new spec:
 
@@ -126,7 +133,7 @@ specs/<feature-name>/
 The active workflow expects:
 - `spec.json` to hold state, approvals, validation, and `task_files`
 - design to define canonical contracts
-- each task file to carry completion criteria and verification evidence
+- each task file to carry completion criteria and `Task Test Plan & Verification Evidence`
 
 ## Release Notes For 0.7.29
 

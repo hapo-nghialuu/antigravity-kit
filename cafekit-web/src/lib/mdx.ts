@@ -7,7 +7,6 @@ import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import remarkGfm from 'remark-gfm';
 import { MDXComponents } from '@/components/docs/mdx-components';
-import { fileURLToPath } from 'url';
 
 // Get content directory - use public/content for Vercel compatibility
 const contentDirectory = path.join(process.cwd(), 'public', 'content');

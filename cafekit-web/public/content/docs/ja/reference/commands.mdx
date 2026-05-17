@@ -9,6 +9,7 @@ description: Quick reference for the current CafeKit command surface.
 
 | Command | Purpose |
 |---|---|
+| `/hapo:brainstorm <idea>` | Scout context, clarify requirements, and compare approaches before specs |
 | `/hapo:specs <idea>` | Create or resume a feature spec |
 | `/hapo:specs --validate <feature>` | Validate spec consistency before coding |
 | `/hapo:develop <feature>` | Implement from the next unblocked task |
@@ -26,6 +27,17 @@ description: Quick reference for the current CafeKit command surface.
 | `/docs update` | Refresh project-level docs |
 
 ## Recommended Loop
+
+```text
+/hapo:brainstorm (if unclear)
+-> /hapo:specs
+-> /hapo:specs --validate
+-> /hapo:develop
+-> /hapo:test
+-> /hapo:code-review
+```
+
+For clear, already-scoped work:
 
 ```text
 /hapo:specs

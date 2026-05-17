@@ -8,7 +8,7 @@ description: 現在の hapo command surface を使って、CafeKit の最初の 
 この quickstart では現在の CafeKit runtime を使います。
 
 ```text
-/hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+/hapo:brainstorm (unclear な場合) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
 ## 1. CafeKit をインストール
@@ -17,7 +17,17 @@ description: 現在の hapo command surface を使って、CafeKit の最初の 
 npx @haposoft/cafekit
 ```
 
-## 2. Spec を作成
+## 2. 必要に応じて idea を明確化
+
+feature や architecture choice が曖昧な場合は scout-first brainstorm を実行します。
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+scope と requirements が明確な場合、この step は skip できます。
+
+## 3. Spec を作成
 
 feature を自然言語で説明します。
 
@@ -39,7 +49,7 @@ specs/meet-transcript-mvp/
     └── ...
 ```
 
-## 3. Spec を validate
+## 4. Spec を validate
 
 コードを書く前に spec validation を実行します。
 
@@ -53,7 +63,7 @@ specs/meet-transcript-mvp/
 - contract が明示的か
 - spec が implementation ready か
 
-## 4. 1つの task を実装
+## 5. 1つの task を実装
 
 最も安全なのは task-by-task execution です。
 
@@ -69,7 +79,7 @@ CafeKit は次を行います。
 4. verification が通った後だけ task state を sync
 5. task 単位の docs checkpoint を実行
 
-## 5. Verification を実行
+## 6. Verification を実行
 
 ```bash
 /hapo:test --full
@@ -87,7 +97,7 @@ CafeKit は次のような structured verdict を返します。
 - `NO_TESTS` は成功と同義ではありません
 - preflight failure は completion を止めるべきです
 
-## 6. Review を実行
+## 7. Review を実行
 
 ```bash
 /hapo:code-review --pending
@@ -95,7 +105,7 @@ CafeKit は次のような structured verdict を返します。
 
 実装後に correctness、regression、security を確認するために使います。
 
-## 7. 必要なときに task state を audit
+## 8. 必要なときに task state を audit
 
 ```bash
 /hapo:sync audit meet-transcript-mvp
@@ -112,7 +122,7 @@ CafeKit は次のような structured verdict を返します。
 ほとんどの feature では:
 
 ```text
-spec -> validate -> develop one task -> test -> review -> next task
+brainstorm when unclear -> spec -> validate -> develop one task -> test -> review -> next task
 ```
 
 このパターンなら task state、evidence、docs を揃えたまま進められます。

@@ -113,7 +113,7 @@ export default function SearchDialog() {
     }
 
     useEffect(() => {
-        setMounted(true);
+        const mountTimer = window.setTimeout(() => setMounted(true), 0);
         const down = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -122,7 +122,10 @@ export default function SearchDialog() {
         };
 
         document.addEventListener('keydown', down);
-        return () => document.removeEventListener('keydown', down);
+        return () => {
+            window.clearTimeout(mountTimer);
+            document.removeEventListener('keydown', down);
+        };
     }, []);
 
     // Prevent hydration mismatch by not rendering until mounted

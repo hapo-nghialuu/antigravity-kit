@@ -1,0 +1,124 @@
+#!/usr/bin/env node
+
+import { readdir } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+async function listFiles(directory, predicate) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && predicate(entry.name))
+    .map((entry) => join(directory, entry.name))
+    .sort();
+}
+
+function runCommand({ label, command, args, parseCount }) {
+  return new Promise((resolveRun) => {
+    const child = spawn(command, args, {
+      cwd: packageRoot,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      process.stdout.write(chunk);
+      output += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      process.stderr.write(chunk);
+      output += chunk;
+    });
+    child.on("error", (error) => {
+      resolveRun({ label, code: 1, count: 0, error: error.message });
+    });
+    child.on("close", (code) => {
+      resolveRun({ label, code, count: parseCount(output) });
+    });
+  });
+}
+
+function parseNodeTestCount(output) {
+  const match = output.match(/^(?:#|ℹ)\s+tests\s+(\d+)/m);
+  return match ? Number(match[1]) : 0;
+}
+
+function parsePythonUnittestCount(output) {
+  const match = output.match(/Ran\s+(\d+)\s+tests?/);
+  return match ? Number(match[1]) : 0;
+}
+
+async function main() {
+  const chromeTestsDir = join(
+    packageRoot,
+    "src/claude/skills/chrome-devtools/scripts/__tests__",
+  );
+  const chromeTests = await listFiles(
+    chromeTestsDir,
+    (name) => name.endsWith(".test.js"),
+  );
+
+  const pdfBoundingBoxTest = join(
+    packageRoot,
+    "src/claude/skills/pdf/scripts/check_bounding_boxes_test.py",
+  );
+
+  const testSuites = [
+    {
+      label: "chrome-devtools script tests",
+      command: process.execPath,
+      args: ["--test", ...chromeTests],
+      expectedFiles: chromeTests.length,
+      parseCount: parseNodeTestCount,
+    },
+    {
+      label: "pdf bounding-box tests",
+      command: process.env.PYTHON ?? "python3",
+      args: [pdfBoundingBoxTest],
+      expectedFiles: 1,
+      parseCount: parsePythonUnittestCount,
+    },
+  ];
+
+  const missingSuites = testSuites.filter((suite) => suite.expectedFiles === 0);
+  if (missingSuites.length > 0) {
+    for (const suite of missingSuites) {
+      console.error(`[NO_TESTS] ${suite.label}: no test files found`);
+    }
+    process.exit(1);
+  }
+
+  let totalTests = 0;
+  for (const suite of testSuites) {
+    console.log(`\n[skill-test] ${suite.label}`);
+    const result = await runCommand(suite);
+    if (result.error) {
+      console.error(`[FAIL] ${suite.label}: ${result.error}`);
+      process.exit(1);
+    }
+    if (result.code !== 0) {
+      console.error(`[FAIL] ${suite.label}: exited with code ${result.code}`);
+      process.exit(result.code ?? 1);
+    }
+    if (result.count === 0) {
+      console.error(`[NO_TESTS] ${suite.label}: command passed but ran 0 tests`);
+      process.exit(1);
+    }
+    totalTests += result.count;
+  }
+
+  if (totalTests === 0) {
+    console.error("[NO_TESTS] skill self-test pipeline ran 0 tests");
+    process.exit(1);
+  }
+
+  console.log(`\n[skill-test] PASS: ${totalTests} tests executed`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -24,8 +24,12 @@ export function LanguageSwitcher() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        setLocale(getPreferredClientLocale());
+        const mountTimer = window.setTimeout(() => {
+            setMounted(true);
+            setLocale(getPreferredClientLocale());
+        }, 0);
+
+        return () => window.clearTimeout(mountTimer);
     }, []);
 
     // Prevent hydration mismatch by not rendering until mounted

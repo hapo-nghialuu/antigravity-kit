@@ -85,7 +85,8 @@ Display selection menu via `AskUserQuestion`:
 ### When called WITH a feature description
 
 System auto-analyzes the description:
-- If description is too short (< 20 words) or vague → stop and ask 1-2 clarifying questions
+- If description is too short (< 20 words) or missing one concrete detail → stop and ask 1-2 clarifying questions
+- If the idea has unresolved architecture choices, unclear acceptance criteria, unclear scope boundaries, or multiple plausible approaches → stop and route to `/hapo:brainstorm <idea>` before creating spec artifacts
 - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
 - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
 
@@ -111,7 +112,9 @@ flowchart TD
     A["Call /hapo:specs"] --> B{Has description?}
     B -->|No| C["Menu: init / status / resume / --validate / archive"]
     B -->|Yes| D["Step 1: Analyze description"]
-    D --> E{Clear enough?}
+    D --> DB{"Needs pre-spec brainstorm?"}
+    DB -->|Yes| DB2["Stop: run /hapo:brainstorm with same idea"]
+    DB -->|No| E{Clear enough?}
     E -->|No| F["Ask user 1-2 clarifying questions"]
     F --> D
     E -->|Yes| G["Step 2: Scan specs/ for related specs"]
@@ -148,6 +151,12 @@ flowchart TD
 
 ### Step 1: Analyze Description
 - Assess clarity and complexity of the description
+- Route to `hapo:brainstorm` before creating files when:
+  - the expected output or acceptance criteria are not concrete
+  - the scope boundary is unknown
+  - the request has 2-3 viable architectures and no user-approved direction
+  - the feature spans 3+ independent subsystems and needs decomposition
+  - the user is explicitly asking to explore, compare, debate, or decide
 - **Multimodal & Document Auto-Ingestion (MANDATORY)**: If the input includes file paths or URLs pointing to images, audio, video, or Office documents, you MUST spawn the matching subagent to extract content BEFORE proceeding:
   - `.mp3`, `.wav`, `.mp4`, `.mov`, `.jpg`, `.png`, `.webp` → `Task(subagent_type="hapo:ai-multimodal", prompt="Transcribe/Analyze [path]")`
   - `.pdf` → `Task(subagent_type="hapo:pdf", prompt="Extract text and tables from [path]")`
@@ -218,7 +227,7 @@ Load: `references/scope-inquiry.md`
 - Load `rules/tasks-generation.md` for core principles
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
-- Each task file MUST include `Completion Criteria` and `Verification & Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
+- Each task file MUST include `Completion Criteria` and `Task Test Plan & Verification Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
 - Build `spec.json.task_registry` alongside `task_files`. For each task file, register at minimum:
   - `id`
   - `title`
@@ -311,8 +320,8 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if any task file exists on disk but is missing from `task_registry`
 - FAIL if any path in `task_registry` does not exist on disk
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
-- FAIL if a task lacks `Completion Criteria` or `Verification & Evidence`
-- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Verification & Evidence`, canonical contracts, or requirements text).
+- FAIL if a task lacks `Completion Criteria` or `Task Test Plan & Verification Evidence` (legacy `Verification & Evidence` is accepted only for pre-existing task files)
+- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`, canonical contracts, or requirements text).
 - FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
   1. hard-delete with no re-registration lock, or
@@ -446,7 +455,7 @@ Before finalizing any specification, assert all the following:
 - [ ] **Requirements traceability** matrix present in design.md
 - [ ] **Canonical Contracts & Invariants** filled for auth/transport/persistence/artifact-sensitive work
 - [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
-- [ ] **Every task file** includes `Verification & Evidence` with executable or inspectable proof
+- [ ] **Every task file** includes `Task Test Plan & Verification Evidence` with executable or inspectable proof
 - [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
 - [ ] **Dependency graph complete**: no task can start before its blockers are listed
 - [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items

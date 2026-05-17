@@ -1,60 +1,56 @@
 # Execution Workflow
 
-> Token efficiency matters — deliver high quality without wasting context.
+Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
-## Phase 0: Understand
+## 1. Understand
 
-Before planning, establish project awareness:
+- Read `./README.md` before feature planning or coding.
+- Read the active spec/task file when one exists.
+- Read and activate any CafeKit skill that likely applies before taking action.
+- Inspect only the code needed to understand the affected area.
+- Use `hapo:inspect` or focused search when structure is unclear.
 
-- Read `./docs/codebase-summary.md` if it exists and is fresh (< 2 days old)
-- Otherwise, generate one using `repomix` or delegate to `hapo:inspect` for scoped discovery
-- Scan `./docs/code-standards.md` and `./docs/system-architecture.md` for constraints
-- Identify which parts of the codebase are affected by the upcoming work
+## 2. Plan
 
-## Phase 1: Plan
+- For non-trivial features, use `/hapo:specs` to create or validate the spec.
+- For approved specs, work one task file at a time.
+- Extract from the active task:
+  - `Objective`
+  - `Constraints`
+  - `Related Files`
+  - `Completion Criteria`
+  - `Task Test Plan & Verification Evidence`
+- If these are missing or too vague to verify, route back to spec correction.
 
-- Delegate to `hapo:spec-maker` to draft an implementation plan with actionable TODO items in `./specs`
-- For complex features, spawn multiple `hapo:researcher` agents in parallel to investigate different technical areas, then feed findings back into the plan
-- Never start coding without a clear, reviewed plan
+## 3. Execute
 
-## Phase 2: Execute
+- Implement only the active scope.
+- Modify existing files directly; do not create duplicate "enhanced" variants.
+- Keep named contracts from `design.md` intact.
+- Do not use placeholder wiring, process-local stand-ins, or fake adapters as completion proof.
 
-### 2a. Implement
+## 4. Verify
 
-- Produce clean, maintainable code following the project's architectural patterns
-- Modify existing files — do not create "enhanced" duplicates
-- Cover edge cases and error paths
-- Run compile/build after every file change to catch issues immediately
+- Run exact commands from `Task Test Plan & Verification Evidence` first.
+- Then run repo-level lint/test/build as needed for confidence.
+- Use only fresh verification from the current run when claiming completion.
+- `PRECHECK_FAIL` outranks `NO_TESTS`.
+- `NO_TESTS` or `0 tests + exit 0` is not a pass when automated tests are required.
+- If verification fails, fix root cause and rerun. After 3 failed attempts, escalate with evidence.
 
-### 2b. Test
+## 5. Sync
 
-- Delegate to `hapo:test-runner` to validate the **final, production-ready code**
-- Expectations for test suites:
-  - Comprehensive unit coverage
-  - Error scenario testing
-  - Performance validation where applicable
-- Absolutely **no fake data, mocks-for-passing, or temporary workarounds** to make CI green
-- If tests fail: fix the root cause, re-run via `hapo:test-runner`, repeat until all pass — never end a session with red tests
-- If a test failure persists after **3 fix attempts**, stop and escalate to the user with a diagnostic summary
+- Mark task state only after implementation, tests/evidence, and review pass.
+- Write a verification receipt with commands run, outcomes, and artifact/runtime proof.
+- Keep `spec.json.task_registry` and markdown task files aligned.
+- Run docs checkpoint when a completed task affects public docs or architecture docs.
 
-### 2c. Review
+## Production Or CI Issues
 
-- Once tests are green, delegate to `hapo:code-auditor` for a code quality pass
-- Self-documenting code is the goal; add comments only for genuinely complex logic
-- Optimize for long-term maintainability and runtime performance
+1. Capture the failing signal.
+2. Diagnose root cause with logs/tests.
+3. Implement the smallest fix.
+4. Rerun the failing check plus relevant regression checks.
+5. Review before syncing or shipping.
 
-## Phase 3: Integrate & Verify
-
-- Follow the plan established by `hapo:planner` throughout integration
-- Honor existing API contracts and preserve backward compatibility
-- Document any breaking changes explicitly
-- Delegate to `hapo:docs-keeper` to keep `./docs` in sync with the implementation
-
-### Handling Production Issues
-
-When bugs surface in production or CI/CD:
-
-1. Delegate to `hapo:debugger` to analyze failures and produce a diagnostic report
-2. Implement the fix based on the report
-3. Delegate to `hapo:test-runner` to verify the fix
-4. If new test failures appear, resolve them and loop back to **Phase 2c (Review)**
+Do not patch symptoms before diagnosis unless the issue is a trivial syntax/type/lint failure with an obvious local cause.

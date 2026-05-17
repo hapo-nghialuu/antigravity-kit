@@ -40,6 +40,16 @@ Use when each step relies on the output of the previous one:
 
 Each agent must finish completely before the next one starts. Forward relevant outputs in the handoff prompt.
 
+### Implementation Review Chain
+
+For implementation tasks, keep the chain explicit:
+
+1. Implement against one active task/spec scope.
+2. Verify with `test-runner` using task files and exact evidence commands.
+3. Review with `code-auditor` using task files, design contracts, and the diff.
+
+Do not dispatch multiple implementation agents against the same files or same task. Parallelize only independent scopes with distinct file ownership.
+
 ### Parallel (independent tasks)
 
 Spawn concurrent agents when work does not overlap:
@@ -88,6 +98,7 @@ Agent lacks information to proceed. Supply the missing context and re-dispatch.
 ## Prompt Engineering for Subagents
 
 Subagents operate in a fresh context — they have **zero knowledge** of the parent session.
+They should receive task files, relevant design/requirements excerpts, file paths, acceptance criteria, and current diffs. Do not rely on inherited chat history.
 
 ### Prompt Template
 

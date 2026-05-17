@@ -1,6 +1,6 @@
 # Test Memory
 
-The `packages/spec/src/claude/test-memory.json` file serves as the Long-Term Memory for the testing ecosystem. 
+The `.hapo/test-memory.json` file in the target project serves as the Long-Term Memory for the testing ecosystem.
 
 ## Schema
 
@@ -37,4 +37,4 @@ Example:
 </lessons_learned>
 ```
 
-The orchestrating `hapo:test` skill (Phase 4) then intercepts this block and automatically merges it into `packages/spec/src/claude/test-memory.json`.
+The orchestrating `hapo:test` skill (Phase 4) then intercepts this block and automatically merges it into `.hapo/test-memory.json`.

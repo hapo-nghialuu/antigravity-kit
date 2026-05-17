@@ -31,6 +31,17 @@ function Input({
     props.type === "file" &&
       "text-muted-foreground file:me-3 file:bg-transparent file:font-medium file:text-foreground file:text-sm",
   );
+  const renderedNativeInput = useRender({
+    defaultTagName: "input",
+    props: mergeProps<"input">(
+      {
+        className: inputClassName,
+        size: typeof size === "number" ? size : undefined,
+      },
+      props,
+    ),
+    render,
+  });
 
   return (
     <span
@@ -45,17 +56,7 @@ function Input({
       data-slot="input-control"
     >
       {nativeInput ? (
-        useRender({
-          defaultTagName: "input",
-          props: mergeProps<"input">(
-            {
-              className: inputClassName,
-              size: typeof size === "number" ? size : undefined,
-            },
-            props,
-          ),
-          render,
-        })
+        renderedNativeInput
       ) : (
         <InputPrimitive
           className={inputClassName}

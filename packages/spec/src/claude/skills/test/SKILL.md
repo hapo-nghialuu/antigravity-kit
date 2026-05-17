@@ -27,6 +27,7 @@ Designed to work **after `hapo:develop`**. Standalone `/hapo:test` uses the same
 NEVER claim tests pass when they were NOT actually executed.
 NEVER mock, stub, or skip a failing test to produce a green result.
 If no test command is detected, report NO_TESTS — do not fabricate results.
+If a test command exits 0 but runs 0 tests, report NO_TESTS — this is a green lie, not a PASS.
 If tests fail, list every failure explicitly — do not summarize failures away.
 </HARD-GATE>
 
@@ -65,7 +66,8 @@ affected by recent file changes. See `references/execution-strategy.md` Phase A.
 **Code testing (default):**
 1. Pre-flight: run typecheck/lint to catch compile errors first
 2. Execute test command with coverage flags
-3. Collect results, coverage percentages, and fail stack traces
+3. Collect test counts, coverage percentages, and fail stack traces
+4. Treat 0 executed tests as `NO_TESTS`, even if the command exits 0
 
 **UI verification (`--ui` / `--ui-auth` / `--ui-flow`):**
 Execute multi-page discovery, then spawn **Parallel UI Subagents** (test-runner instances) to handle Smoke, Core-Vitals, Accessibility, SEO, Security, and User Flows simultaneously.
@@ -146,6 +148,7 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 
 - `references/execution-strategy.md` — Blast-radius algorithm, auto-detect logic, UI verification phases (A–E)
 - `references/failure-triage.md` — Failure categories, triage decision tree, escalation rules
+- `references/test-memory.md` — `.hapo/test-memory.json` schema and merge rules
 
 ## Related
 

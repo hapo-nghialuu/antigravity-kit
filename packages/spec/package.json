@@ -8,6 +8,9 @@
   "bin": {
     "cafekit": "./bin/install.js"
   },
+  "scripts": {
+    "test": "node scripts/run-skill-self-tests.mjs"
+  },
   "files": [
     "bin",
     "src",

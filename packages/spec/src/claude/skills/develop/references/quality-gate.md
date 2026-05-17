@@ -9,7 +9,7 @@ Green tests are NOT enough. The gate requires three proofs:
 
 ## Automation Semantics
 
-- If the task names exact commands in `Verification & Evidence`, those exact commands are mandatory and must run before any fallback repo defaults.
+- If the task names exact commands in `Task Test Plan & Verification Evidence` (or legacy `Verification & Evidence`), those exact commands are mandatory and must run before any fallback repo defaults.
 - Preflight compile/typecheck/build health is mandatory. If compile/typecheck/build fails before tests are meaningful, the gate result is `PRECHECK_FAIL`, not `NO_TESTS`.
 - `NO_TESTS` is never an automatic PASS.
 - `NO_TESTS` is acceptable only when the task does **not** require a dedicated test suite command and every other required automated command/evidence item passes.
@@ -26,7 +26,7 @@ Variable: retry_count = 0
 
 Before START_LOOP:
   - Read the active task file(s)
-  - Extract Related Files, Completion Criteria, Verification & Evidence
+  - Extract Related Files, Completion Criteria, Task Test Plan & Verification Evidence (or legacy Verification & Evidence)
   - Extract the exact executable verification commands in declaration order
   - Extract relevant design contracts/invariants for the touched area
   - If any of these are missing or too vague to verify, FAIL immediately and route back to spec correction

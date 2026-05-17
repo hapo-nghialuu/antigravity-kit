@@ -84,6 +84,9 @@ cargo test
 flutter test --coverage
 ```
 
+After each command, parse the runner output for executed test count. A successful
+exit with 0 executed tests is `NO_TESTS`, not `PASS`.
+
 ### Coverage Thresholds
 
 | Metric    | Minimum | Focus Areas                        |
@@ -360,4 +363,3 @@ Flag as `Security Warning` if:
 - API keys, secrets, or JWT tokens visible in page HTML
 - Mixed content (HTTP resources on HTTPS page) detected via network audit
 - `autocomplete="off"` missing on password fields
-

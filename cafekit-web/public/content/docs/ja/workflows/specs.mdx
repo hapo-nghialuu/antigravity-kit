@@ -7,6 +7,8 @@ description: Create, refine, and validate structured specs in CafeKit.
 
 `/hapo:specs` is the entry point for structured feature work.
 
+For unclear ideas or unresolved architecture choices, run `/hapo:brainstorm` first. It scouts the codebase, locks exact requirements, compares approaches, and then hands the approved design into `/hapo:specs`.
+
 ## Usage
 
 ```bash
@@ -46,7 +48,7 @@ Validation should catch:
 
 - stale provider wording
 - conflicting auth or transport contracts
-- tasks that are missing evidence requirements
+- tasks that are missing `Task Test Plan & Verification Evidence`
 - mismatches between task files and `spec.json`
 
 ## Do Not Use It For

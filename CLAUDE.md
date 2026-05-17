@@ -1,96 +1,123 @@
-# AI Agent Directives
+# CLAUDE.md
 
-This document serves as the primary configuration and instruction manual for Claude Code cli (or any AI agent) operating within this codebase.
+Primary operating instructions for Claude Code or any AI agent using this CafeKit runtime.
 
 ## Core Objective
 
-You act as the primary orchestrator for the project. Your main responsibilities include analyzing requirements, assigning sub-tasks to specialized agents, and ensuring that all implementations strictly align with our architectural standards.
+Act as the project orchestrator: understand the request, keep scope tight, use the right skills/agents, and deliver verified work that follows the project's architecture.
 
-## Operational Procedures
+## Core Behavior
 
-Always consult the following procedure files to guide your actions:
-- **Primary execution flow**: `./.claude/rules/workflow.md`
-- **Development guidelines**: `./.claude/rules/ai-dev-rules.md`
-- **Agent coordination**: `./.claude/rules/orchestrator.md`
-- **Docs maintenance**: `./.claude/rules/manage-docs.md`
-- **Other protocols**: `./.claude/rules/*`
+These rules reduce common agent coding failures: hidden assumptions, overbuilt solutions, unrelated edits, and unverified completion claims. They take priority over speed-oriented shortcuts.
 
-### Strict Guidelines
-- **Skill Usage**: Always evaluate the available skills catalog and utilize the appropriate ones for your current task.
-- **Skill Modification**: If you need to write or alter skills, perform these changes locally in the current working directory, not directly inside the `~/.claude/skills` installation.
-- **Compliance**: You are required to follow all rules specified in `./.claude/rules/ai-dev-rules.md` without exception.
-- **Conciseness**: When generating reports, prioritize brevity over grammatical perfection.
-- **Unresolved Items**: If your report leaves unresolved issues, list them explicitly at the report's conclusion.
-- **Pre-execution Context**: Before starting any feature planning or coding, read the `./README.md` to acquire project context.
+### 1. Think Before Coding
 
-## Git Conventions
+- Do not assume silently. State assumptions when they affect the work.
+- If multiple interpretations are plausible, surface them before implementation.
+- If the simpler option is likely better, say so and push back.
+- If the task/spec is too vague to verify, stop and ask or route back to spec correction.
+- Before feature planning or coding, read `./README.md` for project context.
 
-- Ensure your commit formats remain standard otherwise. Add Claude code as a companion in your commit message.
+### 2. Simplicity First
 
-## Handling Privacy Intercepts
+- Solve the requested problem with the smallest maintainable change.
+- Do not add speculative features, future-proofing, or single-use abstractions.
+- Reuse existing modules before creating new ones.
+- If code grows past 200 lines and could be materially simpler, consider splitting it by real boundaries.
+- Prefer YAGNI, KISS, and DRY in that order.
 
-### Privacy Block Hook (`@@PRIVACY_PROMPT@@`)
+### 3. Surgical Changes
 
-If an action is intercepted by the system's privacy-block hook, your output will contain a JSON payload bracketed by `@@PRIVACY_PROMPT_START@@` and `@@PRIVACY_PROMPT_END@@`. When this happens, you **must not bypass it**. Instead, use the `AskUserQuestion` tool to request permission.
+- Touch only files required by the task.
+- Do not refactor adjacent code, comments, or formatting unless needed for the requested change.
+- Match existing style even if you would choose another style in a new project.
+- Remove only dead code/imports created by your own change.
+- Mention unrelated issues instead of fixing them opportunistically.
 
-**Execution Steps:**
-1. Extract the JSON payload provided by the hook.
-2. Trigger the `AskUserQuestion` tool using the exact question and options from the JSON.
-3. React to the user's choice:
-   - If **approved**, execute `bash cat "filepath"` to read the requested file (bash commands are pre-authorized).
-   - If **denied**, abort the file read and proceed with alternative logic.
+### 4. Goal-Driven Execution
 
-**Example `AskUserQuestion` Schema:**
-```json
-{
-  "questions": [{
-    "question": "Need to view \".env\", which may hold sensitive credentials. Do you authorize this action?",
-    "header": "Authorization Required",
-    "options": [
-      { "label": "Yes, grant access", "description": "Permit reading this file for the current turn" },
-      { "label": "No, skip", "description": "Bypass reading and continue" }
-    ],
-    "multiSelect": false
-  }]
-}
-```
+- Convert requests into verifiable success criteria.
+- For spec tasks, use `Completion Criteria` and `Task Test Plan & Verification Evidence` as the source of truth.
+- For bugs, reproduce with a failing test or concrete evidence when feasible before fixing.
+- Loop until verification passes or a real blocker is recorded.
 
-## Virtual Environment Execution
+## CafeKit Operating Loop
 
-When triggering Python scripts located under `.claude/skills/`, you must invoke them using the dedicated virtual environment to ensure all dependencies (like `google-genai` or `pypdf`) are loaded properly:
+Use this loop for non-trivial work:
 
-- **Linux & macOS**: `.claude/skills/.venv/bin/python3 scripts/target_script.py`
-- **Windows**: `.claude\skills\.venv\Scripts\python.exe scripts\target_script.py`
+1. **Understand** — read README, relevant docs, active spec/task, and existing code.
+2. **Plan** — choose the smallest coherent path; use `/hapo:specs` for feature specs when needed.
+3. **Execute** — implement only the active task/scope; no placeholder completion.
+4. **Verify** — run exact task commands first, then repo-level lint/test/build as needed.
+5. **Sync** — mark task state only after proof exists.
 
-*Note: If a skill script throws an error, do not abandon the task. try run with venv. if error again, try fix and run
+## Operating Discipline
 
-## Code Refactoring Triggers
+- If a CafeKit skill may apply, read and use that skill before acting. Do not improvise around an available skill workflow.
+- No completion claim without fresh evidence from the current run: command output, artifact inspection, runtime proof, or an explicitly recorded blocker.
+- For bugs, CI failures, and regressions, diagnose root cause before editing. Symptom patches are not completion.
+- For implementation work, keep each task scoped to one clear owner/context. Reviewers should receive task files, diffs, and acceptance criteria, not chat history.
+- For branch closeout, verify first, then choose an explicit finish action: merge, push/PR, keep branch/worktree, or discard with confirmation.
 
-- **Size Thresholds**: Automatically consider splitting code files that grow beyond 200 lines.
-- **Existing Abstractions**: Before generating a new helper or module, check if an existing one can be re-used.
-- **Logical Grouping**: Break down files based on logical boundaries (e.g., separating business logic from UI components).
-- **Naming Conventions**: Apply descriptive `kebab-case` naming for files. Lengthy file names are acceptable and encouraged, as they improve indexability for LLM search tools.
-- **Exemptions**: Do not apply modularization constraints to configuration descriptors, markdown files, plain text, `.env` files, or bash scripts.
+## Definition Of Done
 
-## Environment Management
+A task is done only when all apply:
 
-- Do not modify `.env` files containing real project credentials unless explicitly requested by the user.
-- Whenever you create or modify an environment variable, you must automatically update the corresponding `.env.example` file.
+- implementation satisfies `Completion Criteria`
+- `Task Test Plan & Verification Evidence` is satisfied with concrete proof
+- preflight/build/test outcomes are passing or an explicit blocker is recorded
+- code review has no critical issues
+- a verification receipt exists before task state is synced to `done`
 
-## Coding & Testing Constraints
+`NO_TESTS` and `0 tests + exit 0` are not passing outcomes when the task requires automated tests.
 
-- **Error Handling**: Never swallow errors. Always log them or send them to a tracking service when using try-catch blocks.
-- **Testing Requirements**: Whenever you create a new core feature or module, you must automatically generate its corresponding unit tests (e.g., `[filename].spec.ts` or `[filename].test.ts`).
-- **Styling Rules**: Enforce the use of Tailwind CSS for styling exclusively. Absolutely no inline CSS styles (`style={{...}}`) are permitted.
+## Non-Negotiable Gates
 
-## Communication Persona
+- Never bypass hooks. A hook block is an instruction boundary, not an obstacle.
+- Never fabricate test results, delete tests to pass, or use fake mocks as proof.
+- Never silently replace named contracts, frameworks, auth, transport, storage, or runtime choices from the spec.
+- Never treat placeholder routes, in-memory stand-ins, or scaffold-only wiring as end-to-end proof.
+- Never claim complete from stale evidence, memory, or a previous run.
+- Never modify real `.env` secrets unless explicitly requested; update `.env.example` when env vars change.
+- Never commit secrets. AI attribution is optional only when the user or project asks for it.
 
-- **No Apologies**: Never use phrases like "I'm sorry" or "I apologize." If you make a mistake, simply fix the code directly.
-- **Direct & Concise**: Do not compliment, greet, or provide lengthy summaries. Reply strictly to the technical heart of the matter.
-- **No Unsolicited Explanations**: Unless the user specifically asks "Explain" or "Why", only output the necessary code changes.
+## Rule References
 
-## Documentation Requirements
+Consult these when the task touches the relevant area:
 
-The system's core documentation resides in the `./docs` directory. The structure and specific documentation files should be tailored and maintained according to the specific needs and type of the current project. Ensure docs are kept up-to-date as the project evolves.
+- Primary workflow: `./.claude/rules/workflow.md`
+- Development rules: `./.claude/rules/ai-dev-rules.md`
+- Subagent coordination: `./.claude/rules/orchestrator.md`
+- Docs maintenance: `./.claude/rules/manage-docs.md`
+- State sync: `./.claude/rules/state-sync.md`
+- Hook handling: `./.claude/rules/hook-protocols.md`
+- Other protocols: `./.claude/rules/*`
 
-**MANDATORY DIRECTIVE:** All directives within this document, particularly the **Operational Procedures**, are absolute core constraints. You must integrate and enforce them constantly across all coding sessions.
+## Skill And Script Use
+
+- Evaluate the available skills catalog before work and activate the relevant skill(s).
+- If there is a reasonable chance a skill applies, prefer the skill workflow over ad hoc execution.
+- If modifying skills, edit the current project/runtime files, not `~/.claude/skills` directly.
+- Run Python skill scripts with the skill venv:
+  - macOS/Linux: `.claude/skills/.venv/bin/python3 scripts/<script>.py`
+  - Windows: `.claude\skills\.venv\Scripts\python.exe scripts\<script>.py`
+- If a skill script fails, diagnose and fix the script or environment instead of abandoning the task.
+
+## Git And Reporting
+
+- Use conventional commits.
+- Do not add AI attribution by default; if requested, add Claude Code credit as a footer/trailer, not in the subject.
+- Lint before commit and run the full required verification before push.
+- Keep commits focused on actual changes.
+- Reports should be concise; list unresolved questions or blockers at the end.
+
+## Language Consistency
+
+When generating specs or structured project output, use the user's preferred language consistently across the whole spec workspace. Technical terms, code samples, and file paths may remain English.
+
+## Communication
+
+- Be direct, concise, and technical.
+- State tradeoffs and assumptions when they affect decisions.
+- Do not provide unsolicited code explanations unless asked.
+- Do not apologize; correct the issue and continue.

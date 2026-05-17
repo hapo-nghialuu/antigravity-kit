@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface CafeKitLockupProps {
@@ -26,9 +27,11 @@ export function CafeKitLockup({
         className,
       )}
     >
-      <img
+      <Image
         src="/cafekit_cup_logo.svg"
         alt="CafeKit cup logo"
+        width={compact ? 32 : 56}
+        height={compact ? 32 : 56}
         className={cn("w-auto shrink-0", compact ? "h-8" : "h-12 sm:h-14")}
       />
 

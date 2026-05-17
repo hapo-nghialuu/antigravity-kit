@@ -106,9 +106,9 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Reject tasks outside `scope_lock.in_scope`
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
 - Apply `(P)` parallel markers when applicable (load `{{SKILLS_DIR}}/specs/rules/tasks-parallel-analysis.md`)
-- Every task MUST include `Verification & Evidence` with exact commands, artifacts/runtime surfaces, and negative-path checks.
+- Every task MUST include `Task Test Plan & Verification Evidence` with exact commands, artifacts/runtime surfaces, and negative-path checks.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
-- Validation decisions that affect implementation MUST be written into implementation-facing sections (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Verification & Evidence`) rather than only `Risk Assessment`.
+- Validation decisions that affect implementation MUST be written into implementation-facing sections (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`) rather than only `Risk Assessment`.
 
 ### Sub-Task Detail Requirements (MANDATORY)
 Each task file MUST contain granular sub-tasks with the following structure:

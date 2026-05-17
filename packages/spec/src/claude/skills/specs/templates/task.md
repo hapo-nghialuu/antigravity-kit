@@ -58,7 +58,9 @@
 - [ ] {{Criteria 2 — measurable behavior or negative-path outcome}}
 - [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md and can be proven below}}
 
-## Verification & Evidence
+## Task Test Plan & Verification Evidence
+
+This section is the task-level test plan. It names the exact commands, observable runtime/artifact proof, and negative-path checks required before this task can be marked done.
 
 - [ ] Automated verification
   - Command(s): `{{TYPECHECK / TEST / BUILD COMMANDS OR N/A}}`
@@ -82,4 +84,4 @@
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
 > **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
-> **Verification rule**: No `## Verification & Evidence` section = invalid task file.
+> **Verification rule**: No `## Task Test Plan & Verification Evidence` section = invalid task file. Existing specs may use legacy `## Verification & Evidence`; agents must support both headings.

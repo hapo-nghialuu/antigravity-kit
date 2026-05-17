@@ -136,11 +136,11 @@ Every task file MUST contain the Risk Assessment table, even if no risks are ide
 - Never mark implementation work or integration-critical verification as optional—reserve `*` for auxiliary/deferrable test coverage that can be revisited post-MVP.
 - Never mark auth, permissions, privacy, data deletion, migration, schema, or contract verification work as optional.
 
-### Mandatory Verification & Evidence
+### Mandatory Task Test Plan & Verification Evidence
 
-Every task file MUST include a `## Verification & Evidence` section.
+Every new task file MUST include a `## Task Test Plan & Verification Evidence` section. Existing specs may still use the legacy `## Verification & Evidence` heading; readers and sync tools must support both.
 
-That section MUST contain:
+That section is the task-level test plan and MUST contain:
 1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`
 2. **Artifact/runtime proof** — exact files, routes, UI surfaces, generated outputs, or persisted state to inspect
 3. **Contract/negative-path proof** — at least one contract-preserving check for unauthorized, invalid, missing-permission, rollback, or failure-path behavior when relevant

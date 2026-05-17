@@ -77,11 +77,6 @@ export function InteractiveRuntimeTerminal() {
   useEffect(() => {
     timersRef.current.forEach((timer) => window.clearTimeout(timer));
     timersRef.current = [];
-    setVisibleLines([]);
-    setTypingLine(null);
-    setTypedChars(0);
-    setActiveStep(0);
-    setCompletedStep(-1);
 
     const schedule = (callback: () => void, delay: number) => {
       const timer = window.setTimeout(callback, delay);
@@ -139,7 +134,14 @@ export function InteractiveRuntimeTerminal() {
       schedule(typeNextChar, 120);
     };
 
-    runStep(0);
+    schedule(() => {
+      setVisibleLines([]);
+      setTypingLine(null);
+      setTypedChars(0);
+      setActiveStep(0);
+      setCompletedStep(-1);
+      runStep(0);
+    }, 0);
 
     return () => {
       timersRef.current.forEach((timer) => window.clearTimeout(timer));

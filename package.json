@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --if-present test",
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "repository": {

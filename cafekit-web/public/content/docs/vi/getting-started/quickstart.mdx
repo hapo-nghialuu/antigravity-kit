@@ -8,7 +8,7 @@ description: Chạy workflow end-to-end đầu tiên của CafeKit với command
 Quickstart này dùng runtime surface hiện tại của CafeKit:
 
 ```text
-/hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+/hapo:brainstorm (nếu chưa rõ) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
 ## 1. Cài CafeKit
@@ -17,7 +17,17 @@ Quickstart này dùng runtime surface hiện tại của CafeKit:
 npx @haposoft/cafekit
 ```
 
-## 2. Tạo spec
+## 2. Làm rõ ý tưởng khi cần
+
+Với feature hoặc lựa chọn kiến trúc còn mơ hồ, chạy brainstorm theo hướng scout-first:
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+Bỏ qua bước này khi scope và requirements đã rõ.
+
+## 3. Tạo spec
 
 Mô tả feature bằng ngôn ngữ tự nhiên:
 
@@ -39,7 +49,7 @@ specs/meet-transcript-mvp/
     └── ...
 ```
 
-## 3. Validate spec
+## 4. Validate spec
 
 Trước khi code, chạy spec validation:
 
@@ -53,7 +63,7 @@ Trước khi code, chạy spec validation:
 - contracts đã đủ tường minh chưa
 - spec đã sẵn sàng cho implementation chưa
 
-## 4. Triển khai một task
+## 5. Triển khai một task
 
 Pattern an toàn nhất là làm task-by-task:
 
@@ -69,7 +79,7 @@ CafeKit sẽ:
 4. chỉ sync task state sau khi verification pass
 5. chạy docs checkpoint ở cấp task
 
-## 5. Chạy verification
+## 6. Chạy verification
 
 ```bash
 /hapo:test --full
@@ -87,7 +97,7 @@ CafeKit trả về structured verdict như:
 - `NO_TESTS` **không** đồng nghĩa với thành công
 - preflight failure phải chặn completion
 
-## 6. Chạy review
+## 7. Chạy review
 
 ```bash
 /hapo:code-review --pending
@@ -95,7 +105,7 @@ CafeKit trả về structured verdict như:
 
 Dùng bước này để kiểm tra correctness, regressions và security sau khi implement.
 
-## 7. Audit task state khi cần
+## 8. Audit task state khi cần
 
 ```bash
 /hapo:sync audit meet-transcript-mvp
@@ -112,7 +122,7 @@ Dùng sync audit khi:
 Với hầu hết feature:
 
 ```text
-spec -> validate -> develop one task -> test -> review -> next task
+brainstorm khi chưa rõ -> spec -> validate -> develop one task -> test -> review -> next task
 ```
 
 Pattern này giúp task state, evidence và docs luôn đi cùng nhau.
