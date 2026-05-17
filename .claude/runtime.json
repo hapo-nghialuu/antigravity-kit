@@ -1,0 +1,32 @@
+{
+  "privacyBlock": true,
+  "inspect": {
+    "enabled": true
+  },
+  "gemini": {
+    "model": "gemma-4-31b-it"
+  },
+  "statusline": "full",
+  "statuslineColors": true,
+  "docs": {
+    "maxLoc": 800
+  },
+  "paths": {
+    "docs": "docs",
+    "specs": "specs"
+  },
+  "locale": {
+    "thinkingLanguage": null,
+    "responseLanguage": null
+  },
+  "skills": {
+    "research": {
+      "useGemini": true
+    }
+  },
+  "usage": {
+    "enabled": true
+  },
+  "hooks": {},
+  "assertions": []
+}

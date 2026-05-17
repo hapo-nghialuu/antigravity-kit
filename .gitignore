@@ -98,3 +98,7 @@ worktrees/
 apps/go-gateway/main
 
 .claude_cc/
+
+# CafeKit / Ecosystem
+plans/
+!plans/templates/
