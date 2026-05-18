@@ -37,7 +37,7 @@ Instead of rejecting, use a **2-phase approach**: first run a lightweight Struct
 
 Spawn **one dedicated scout agent** to map the top-level structure before any work is divided:
 
-1. **Discover top-level layout** - Use `Glob` / `LS` to list immediate children of the scope root:
+1. **Discover top-level layout** - Use `Glob` or `Bash` `ls` to list immediate children of the scope root:
    - Top-level directories (src/, apps/, backend/, frontend/, packages/, etc.)
    - Key config files (README.md, package.json, tsconfig.json, pyproject.toml, go.mod, etc.)
    - Monorepo markers (packages/*, apps/*, lerna.json, pnpm-workspace.yaml, turbo.json)
@@ -113,7 +113,7 @@ Follow-up: "Want to investigate deeper? Choose: backend API | frontend component
 
 ## Configuration
 
-Read from `packages/spec/src/claude/runtime.json`:
+Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {

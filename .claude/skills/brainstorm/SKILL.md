@@ -93,7 +93,7 @@ flowchart TD
     N -->|No| I
     N -->|Yes| O["Write Design Doc / Summary Report"]
     O --> P["Invoke /hapo:specs with report context"]
-    P --> Q["Optional /hapo:journal"]
+    P --> Q["Optional project notes update"]
 ```
 
 ## Tactical Execution Rules
@@ -156,7 +156,7 @@ Upon the user's explicit final approval of the sanitized design document:
 1. Generate the final **Design Doc / Summary Report**.
 2. Include: problem statement, exact requirements, evaluated approaches, recommended solution, risks, validation criteria, and next steps.
 3. Invoke `/hapo:specs` with the report context to hand off into CafeKit's structured specification phase.
-4. Optionally invoke `/hapo:journal` if the project context should be persisted for future developer memory.
+4. Optionally update an existing project notes, docs, or report file if the approved design context should be persisted for future work.
 
 ## Completion Bar
 

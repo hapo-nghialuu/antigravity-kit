@@ -35,11 +35,11 @@ START_LOOP:
   ---------------------------------------------------------------
   PARALLEL GATE: Spawn BOTH agents simultaneously
   ---------------------------------------------------------------
-  → Task(subagent_type="test-runner",
+  → Agent(subagent_type="test-runner",
         prompt="Run task-aware verification for the recently implemented code. Read the active task file(s) and execute the exact verification commands named there first, in order. Preflight compile/typecheck/build failures must be reported as PRECHECK_FAIL and take precedence over NO_TESTS. After that, run any additional repo-level typecheck/test/build checks needed for confidence. Inspect named artifacts/runtime outputs. For multi-service tasks, verify the flow does not rely on process-local stand-ins masquerading as shared state. Return PASS only if automated checks and task evidence both pass. Mark anything unexecuted as UNVERIFIED. Treat NO_TESTS as non-passing unless the task did not require a dedicated test suite.",
         description="Test [feature]")
 
-  → Task(subagent_type="code-auditor",
+  → Agent(subagent_type="code-auditor",
         prompt="Review all recently written code against the active task file(s), referenced requirements, and design contracts. Missing deliverables, placeholder-only wiring, missing runtime entrypoints, overscope edits outside the task packet, silent replacement of named technologies/contracts, or fake cross-service proof via process-local state are Critical even if build/tests pass. Check security, logic, architecture, YAGNI/KISS/DRY. Return score (X/10), critical count, warning list, and evidence gaps.",
         description="Review [feature]")
 
@@ -73,7 +73,7 @@ REVIEW_ONLY:
   ---------------------------------------------------------------
   Re-run ONLY code-auditor (tests already passed and no new evidence-producing code changed)
   ---------------------------------------------------------------
-  → Task(subagent_type="code-auditor", ...)
+  → Agent(subagent_type="code-auditor", ...)
 
   IF Score >= 9.5 AND Critical = 0 → PASS!
   IF Score < 9.5 OR Critical > 0:

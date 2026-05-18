@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,6 +51,39 @@ function parsePythonUnittestCount(output) {
   return match ? Number(match[1]) : 0;
 }
 
+async function runStaticSemanticTests() {
+  const checks = [
+    {
+      label: "hapo:specs handoff block points to hapo:develop",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("📌 Next step — run:\n   /hapo:develop <feature>"),
+    },
+    {
+      label: "hapo:specs forbids legacy work handoff",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) => content.includes("Never suggest `/work`"),
+    },
+    {
+      label: "spec-maker forbids legacy work handoff",
+      file: "src/claude/agents/spec-maker.md",
+      assert: (content) => content.includes("Never suggest `/work`"),
+    },
+  ];
+
+  console.log("\n[skill-test] static semantic checks");
+  for (const check of checks) {
+    const content = await readFile(join(packageRoot, check.file), "utf8");
+    if (!check.assert(content)) {
+      console.error(`[FAIL] ${check.label}: ${check.file}`);
+      process.exit(1);
+    }
+    console.log(`✔ ${check.label}`);
+  }
+
+  return checks.length;
+}
+
 async function main() {
   const chromeTestsDir = join(
     packageRoot,
@@ -91,7 +124,7 @@ async function main() {
     process.exit(1);
   }
 
-  let totalTests = 0;
+  let totalTests = await runStaticSemanticTests();
   for (const suite of testSuites) {
     console.log(`\n[skill-test] ${suite.label}`);
     const result = await runCommand(suite);

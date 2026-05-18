@@ -2,6 +2,7 @@
 name: test-runner
 description: "QA execution engine. Runs unit/integration/e2e test suites, generates coverage reports, validates build integrity, and checks task-level test plan evidence. Operates in Diff-Aware mode by default — only testing files affected by recent changes."
 model: haiku
+tools: Glob, Grep, Read, Bash
 ---
 
 # Test Runner — Quality Gate

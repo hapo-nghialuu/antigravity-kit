@@ -37,7 +37,7 @@ The scout must be narrow and question-driven. Do not scan the whole repo just be
 2. **The "Blind Flight" Halt:** If ALL 4 mandatory docs are missing in a non-empty repository:
    - **DO NOT** blindly use `inspector` to scan the whole repo.
    - **HALT** the spec process immediately.
-   - Ask the User: *"No codebase documentation found. Exploring blind will drain tokens and produce inaccurate specs. Shall I trigger `docs-keeper` or `/hapo:docs` to generate a baseline `codebase-summary.md` first?"*
+   - Ask the User: *"No codebase documentation found. Exploring blind will drain tokens and produce inaccurate specs. Shall I call the `docs-keeper` agent to generate a baseline `codebase-summary.md` first?"*
 
 ## Scout Output Contract
 

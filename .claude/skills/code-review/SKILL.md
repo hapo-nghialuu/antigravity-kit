@@ -51,7 +51,7 @@ Does the code match what was requested?
 
 ### Stage 3 — Adversarial Review (Red-Team)
 Actively try to break the code.
-- **Edge Case Scouting:** If the Pull Request modifies >= 5 files, invoke the `inspect` agent to scout the codebase to see where modified functions/components are imported and if boundary errors exist before finishing the review.
+- **Edge Case Scouting:** If the Pull Request modifies >= 5 files, activate `hapo:inspect` or call the `inspector` agent to scout where modified functions/components are imported and whether boundary errors exist before finishing the review.
 - Find security holes (XSS, SQL Injection, Hardcoded tokens, Exposed Secrets).
 - Find false assumptions, resource exhaustion loops, and race conditions.
 - Find unhandled edge cases (e.g. empty strings, null pointers, negative integers). 

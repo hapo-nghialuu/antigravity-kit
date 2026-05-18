@@ -94,7 +94,7 @@ flowchart TD
 - Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory:** Call agent `Task(subagent_type="inspector", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones.
+- **Mandatory:** Call agent `Agent(subagent_type="inspector", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones. Use the legacy `Task` tool only in runtimes that have not renamed the subagent tool yet.
 
 ### Step 3: Implement Code
 - Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.

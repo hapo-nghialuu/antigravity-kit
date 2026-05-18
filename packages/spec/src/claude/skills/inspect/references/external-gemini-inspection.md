@@ -11,7 +11,7 @@ SCALE ≥ 6   → Use internal discovery instead
 
 ## Configuration
 
-Read from `packages/spec/src/claude/runtime.json`:
+Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {
@@ -62,17 +62,17 @@ If not installed, ask user:
 1. **Yes** - Provide installation instructions (may need manual auth steps)
 2. **No** - Fall back to internal discovery (`internal-inspection.md`)
 
-## Spawning Parallel Bash Agents
+## Running Parallel Gemini Commands
 
-Use `Agent` tool with `subagent_type: "Bash"` to spawn parallel agents:
+Use the `Bash` tool for each scoped Gemini command. Run them in the same tool turn when the runtime supports parallel tool calls; otherwise run them sequentially. Do not use `Agent` with `subagent_type: "Bash"` — `Bash` is a tool, not a subagent.
 
 ```
-Agent 1: subagent_type="Bash", prompt="Run: gemini -y -m gemini-3-flash-preview '[prompt1]'"
-Agent 2: subagent_type="Bash", prompt="Run: gemini -y -m gemini-3-flash-preview '[prompt2]'"
-Agent 3: subagent_type="Bash", prompt="Run: gemini -y -m gemini-3-flash-preview '[prompt3]'"
+Bash: gemini -y -m gemini-3-flash-preview '[prompt1]'
+Bash: gemini -y -m gemini-3-flash-preview '[prompt2]'
+Bash: gemini -y -m gemini-3-flash-preview '[prompt3]'
 ```
 
-Spawn all in single message for parallel execution.
+Group by independent scopes so each command can return a focused report.
 
 ## Prompt Guidelines
 
@@ -107,11 +107,11 @@ Do not expand beyond the provided scope.
 
 User: "Find database migration files" with `ext`
 
-Spawn 3 parallel Bash agents via Agent tool:
+Run 3 scoped Gemini CLI commands:
 ```
-Agent 1 (Bash): "Run: gemini -y -m gemini-3-flash-preview 'Search db/, migrations/ for migration files'"
-Agent 2 (Bash): "Run: gemini -y -m gemini-3-flash-preview 'Search lib/, src/ for database schema files'"
-Agent 3 (Bash): "Run: gemini -y -m gemini-3-flash-preview 'Search config/ for database configuration'"
+Bash: gemini -y -m gemini-3-flash-preview 'Search db/, migrations/ for migration files'
+Bash: gemini -y -m gemini-3-flash-preview 'Search lib/, src/ for database schema files'
+Bash: gemini -y -m gemini-3-flash-preview 'Search config/ for database configuration'
 ```
 
 ## Reading File Content

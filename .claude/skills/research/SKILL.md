@@ -19,7 +19,7 @@ Before delegating, briefly assess the `[topic]`.
 - If solid, proceed.
 
 ### Phase 2: Agent Delegation
-Call the `TaskCreate` tool to spin up the `researcher` subagent.
+Call the `Agent` tool to invoke the `researcher` subagent. Use `TaskCreate` only for task-list tracking when the workflow needs persistent task state.
 **Instructions to pass to Researcher:**
 ```text
 Conduct comprehensive research on: [topic]

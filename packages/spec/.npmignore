@@ -2,3 +2,9 @@ node_modules
 .DS_Store
 *.log
 .env
+.coverage
+**/.coverage
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc

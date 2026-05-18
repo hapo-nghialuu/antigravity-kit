@@ -5,6 +5,26 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-05-18
+
+### Fixed
+- `hapo:specs` now explicitly locks its completion handoff to `/hapo:develop <feature>` and forbids legacy `/work` or `/code` next-step suggestions.
+- `spec-maker` now reinforces the same CafeKit-native handoff when reporting generated specs.
+- Skill self-tests now include static semantic checks for the `hapo:specs` implementation handoff.
+
+## [0.8.3] - 2026-05-18
+
+### Changed
+- Claude Code subagent guidance now uses the current `Agent` invocation shape while retaining legacy `Task` compatibility notes.
+- `spec-maker` now reads installed `.claude/skills/...` paths directly and avoids nested subagent orchestration from inside a subagent.
+- Research, develop, test, hotfix, and inspect workflow references now distinguish subagent invocation, task-list tracking, and Bash command execution more clearly.
+
+### Fixed
+- Agent `tools:` allowlists no longer include unsupported tool names or nested subagent declarations.
+- `hapo:research` now uses `Agent` for researcher delegation and reserves `TaskCreate` for task tracking.
+- `hapo:inspect` now points runtime configuration at `.claude/runtime.json` in installed projects.
+- State hooks now listen for current `Agent` tool usage in addition to legacy task/state tools.
+
 ## [0.8.1] - 2026-05-18
 
 ### Changed

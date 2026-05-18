@@ -1,6 +1,6 @@
 {
   "name": "@haposoft/cafekit",
-  "version": "0.8.2",
+  "version": "0.8.4",
   "description": "Claude Code-first spec-driven workflow for AI coding assistants. Bundles CafeKit hapo: skills, runtime hooks, agents, and installer scaffolding.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
@@ -14,7 +14,10 @@
   "files": [
     "bin",
     "src",
-    "README.md"
+    "README.md",
+    "!src/**/.coverage",
+    "!src/**/__pycache__",
+    "!src/**/*.pyc"
   ],
   "repository": {
     "type": "git",

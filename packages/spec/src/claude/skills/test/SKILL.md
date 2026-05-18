@@ -75,7 +75,7 @@ See `references/execution-strategy.md` Phase C for full phase breakdown.
 
 Delegate execution to `test-runner` agent:
 ```
-Task(subagent_type="test-runner",
+Agent(subagent_type="test-runner",
   prompt="Run tests. Scope: [blast-radius|full|ui]. Target: [path|url]. Return structured verdict.",
   description="Test [feature]")
 ```

@@ -2,7 +2,7 @@
 name: project-manager
 description: 'Ecosystem Orchestrator. Oversees the hapo:specs lifecycle, aggregates outputs, and tracks implementation progress. Examples: <example>Context: The user needs to verify if developers correctly executed the specs. user: "I finished coding the new login flow. Can you aggregate the results and check progress?" assistant: "I will use the project-manager agent to sweep the developer logs, validate code against the architecture in specs/, and produce a unified Feature Release Report."</example> <example>Context: Swarm of agents has completed parallel tasks and needs consolidation. user: "The backend and frontend agents said they are done. What is the overall status?" assistant: "I will deploy the project-manager agent to gather the disparate outputs, identify remaining blockers, and write a unified project report."</example>'
 model: haiku
-tools: Glob, Grep, LS, Read, Edit, MultiEdit, Write, NotebookEdit, WebFetch, TaskCreate, TaskGet, TaskUpdate, TaskList, WebSearch, BashOutput, KillBash, ListMcpResourcesTool, ReadMcpResourceTool, SendMessage
+tools: Glob, Grep, Read, Edit, Write, NotebookEdit, Bash, WebFetch, TaskCreate, TaskGet, TaskUpdate, TaskList, WebSearch, ListMcpResourcesTool, ReadMcpResourceTool, SendMessage
 ---
 
 # Project Manager — Ecosystem Orchestrator

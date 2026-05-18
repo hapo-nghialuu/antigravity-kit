@@ -58,6 +58,7 @@ Use this loop for non-trivial work:
 - For bugs, CI failures, and regressions, diagnose root cause before editing. Symptom patches are not completion.
 - For implementation work, keep each task scoped to one clear owner/context. Reviewers should receive task files, diffs, and acceptance criteria, not chat history.
 - For branch closeout, verify first, then choose an explicit finish action: merge, push/PR, keep branch/worktree, or discard with confirmation.
+- If workflow tools such as `Agent` (legacy `Task`), `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `AskUserQuestion`, `SendMessage`, or `TodoWrite` are unavailable in the current runtime, do not fail the workflow. Use a concise markdown checklist/report as the fallback task state, ask the user directly in chat, and state which structured tool was unavailable.
 
 ## Definition Of Done
 

@@ -15,11 +15,11 @@ The project maintains these core documents in `./docs`:
 
 - Before updating any doc, check its last modified date
 - If a doc hasn't been updated in >2 weeks while development is active, flag it for review
-- The `hapo:docs-keeper` should proactively scan for stale docs during weekly reviews
+- The `docs-keeper` agent should proactively scan for stale docs during weekly reviews
 
 ## When to Update
 
-The `hapo:docs-keeper` agent is responsible for keeping these documents current. Trigger an update whenever:
+The `docs-keeper` agent is responsible for keeping these documents current. Trigger an update whenever:
 
 - A development phase transitions (e.g., "In Progress" → "Complete")
 - A verified task completion changes user-facing behavior, architecture, API contracts, operational flow, or project status enough that docs should be refreshed

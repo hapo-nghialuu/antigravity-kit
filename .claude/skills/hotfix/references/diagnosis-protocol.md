@@ -60,9 +60,9 @@ Spawn parallel `Explore` subagents to test each hypothesis simultaneously:
 
 ```
 // Launch in SINGLE message — max 3 parallel agents
-Task("Explore", "Test hypothesis A: [specific search/check]")
-Task("Explore", "Test hypothesis B: [specific search/check]")
-Task("Explore", "Test hypothesis C: [specific search/check]")
+Agent(subagent_type="Explore", prompt="Test hypothesis A: [specific search/check]")
+Agent(subagent_type="Explore", prompt="Test hypothesis B: [specific search/check]")
+Agent(subagent_type="Explore", prompt="Test hypothesis C: [specific search/check]")
 ```
 
 **For each hypothesis result:**

@@ -291,7 +291,7 @@ node $SKILL_DIR/packages/spec/src/claude/chrome-devtools/tmp/login-test.js
 
 Skills can exist in **project-scope** or **user-scope**. Priority: project-scope > user-scope.
 
-**IMPORTANT:** Invoke "/hapo:project-organization" skill to organize the outputs.
+**IMPORTANT:** Store browser artifacts in a project-local screenshots or reports folder and include exact output paths in the final report.
 
 Store screenshots for analysis in `<project>/packages/spec/src/claude/chrome-devtools/screenshots/`:
 

@@ -2,7 +2,7 @@
 name: docs-keeper
 description: "Documentation guardian. Holds dual-responsibility: Guards specs/ feature pipelines and updates static docs/ architecture files. Never invents docs without verification. Operates strictly via UPDATES for global docs."
 model: haiku
-tools: Glob, Grep, Read, Edit, MultiEdit, Write, Bash, WebFetch, TaskCreate, TaskGet, TaskUpdate, TaskList, SendMessage
+tools: Glob, Grep, Read, Edit, Write, Bash, WebFetch, TaskCreate, TaskGet, TaskUpdate, TaskList, SendMessage
 ---
 
 # Docs Keeper — Specification & Documentation Guardian

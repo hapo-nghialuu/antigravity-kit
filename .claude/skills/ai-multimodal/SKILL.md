@@ -83,7 +83,7 @@ Load for detailed guidance:
 
 ## Outputs
 
-**IMPORTANT:** Invoke "/hapo:project-organization" skill to organize the outputs.
+**IMPORTANT:** Save extracted outputs next to the active task/spec report or under an obvious project artifact folder. Include exact output paths in the final report.
 
 ## Resources
 

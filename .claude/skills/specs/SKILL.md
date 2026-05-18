@@ -159,12 +159,12 @@ flowchart TD
   - the request has 2-3 viable architectures and no user-approved direction
   - the feature spans 3+ independent subsystems and needs decomposition
   - the user is explicitly asking to explore, compare, debate, or decide
-- **Multimodal & Document Auto-Ingestion (MANDATORY)**: If the input includes file paths or URLs pointing to images, audio, video, or Office documents, you MUST spawn the matching subagent to extract content BEFORE proceeding:
-  - `.mp3`, `.wav`, `.mp4`, `.mov`, `.jpg`, `.png`, `.webp` → `Task(subagent_type="hapo:ai-multimodal", prompt="Transcribe/Analyze [path]")`
-  - `.pdf` → `Task(subagent_type="hapo:pdf", prompt="Extract text and tables from [path]")`
-  - `.docx` → `Task(subagent_type="hapo:docx", prompt="Extract content from [path]")`
-  - `.pptx` → `Task(subagent_type="hapo:pptx", prompt="Extract slide content from [path]")`
-  - `.xlsx`, `.csv` → `Task(subagent_type="hapo:xlsx", prompt="Extract data from [path]")`
+- **Multimodal & Document Auto-Ingestion (MANDATORY)**: If the input includes file paths or URLs pointing to images, audio, video, or Office documents, activate the matching skill workflow to extract content BEFORE proceeding:
+  - `.mp3`, `.wav`, `.mp4`, `.mov`, `.jpg`, `.png`, `.webp` → use `hapo:ai-multimodal` to transcribe/analyze the file
+  - `.pdf` → use `hapo:pdf` to extract text and tables
+  - `.docx` → use `hapo:docx` to extract document content
+  - `.pptx` → use `hapo:pptx` to extract slide content
+  - `.xlsx`, `.csv` → use `hapo:xlsx` to extract data
   - *Append the extracted findings into your working memory as the enriched "description".*
 - If description < 20 words or lacks concrete nouns → ask 1-2 clarifying questions
 - If task is too simple → warn user that a spec may not be needed
@@ -345,6 +345,8 @@ Load: `references/review.md` + `rules/design-review.md`
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
 After completing the spec, output a short summary of what was generated, then you MUST output the following block EXACTLY as written. DO NOT use awkward translations like "Điểm đã phản ánh đúng quyết định của bạn", keep it professional or just output the block directly:
+
+**Command integrity:** The implementation handoff command is always `/hapo:develop <feature>`. Never suggest `/work`, `/code`, or any non-CafeKit alias as the next step for this workflow.
 
 ```
 ✅ Spec complete: specs/<feature>/

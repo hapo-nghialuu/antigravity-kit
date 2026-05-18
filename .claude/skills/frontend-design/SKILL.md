@@ -85,7 +85,7 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 
 **Remember:** Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
 
-**Assets**: Generate images with `hapo:ai-multimodal`, process with `hapo:media-processing`
+**Assets**: Analyze supplied visual assets with `hapo:ai-multimodal`; generate or process implementation assets with the project's existing image/CSS/build tooling and document output paths in the task report.
 
 ## Asset & Analysis References
 

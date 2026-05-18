@@ -18,9 +18,9 @@ When you need to understand multiple areas of the codebase before diagnosing:
 
 ```
 // Spawn in a SINGLE message — agents run concurrently
-Task("Explore", "Scan src/auth/ for token validation logic and recent changes")
-Task("Explore", "Scan src/middleware/ for request interceptors that touch headers")
-Task("Explore", "Find all test files matching *auth*.test.* and check coverage")
+Agent(subagent_type="Explore", prompt="Scan src/auth/ for token validation logic and recent changes")
+Agent(subagent_type="Explore", prompt="Scan src/middleware/ for request interceptors that touch headers")
+Agent(subagent_type="Explore", prompt="Find all test files matching *auth*.test.* and check coverage")
 ```
 
 Wait for all agents to return. Merge their findings into a unified context map before proceeding to diagnosis.
@@ -30,9 +30,9 @@ Wait for all agents to return. Merge their findings into a unified context map b
 After forming 2-3 hypotheses in Step 2 (Diagnose), test them concurrently:
 
 ```
-Task("Explore", "Verify hypothesis: cache returns stale data — check TTL config in src/cache/")
-Task("Explore", "Verify hypothesis: race condition in login flow — trace async calls in src/auth/login.ts")
-Task("Explore", "Verify hypothesis: env var missing in production — check .env.example vs deployed config")
+Agent(subagent_type="Explore", prompt="Verify hypothesis: cache returns stale data — check TTL config in src/cache/")
+Agent(subagent_type="Explore", prompt="Verify hypothesis: race condition in login flow — trace async calls in src/auth/login.ts")
+Agent(subagent_type="Explore", prompt="Verify hypothesis: env var missing in production — check .env.example vs deployed config")
 ```
 
 Each agent returns CONFIRMED, REFUTED, or INCONCLUSIVE with evidence.
@@ -42,10 +42,10 @@ Each agent returns CONFIRMED, REFUTED, or INCONCLUSIVE with evidence.
 After implementing a fix, validate from every angle simultaneously:
 
 ```
-Task("Bash", "npx tsc --noEmit")           // Typecheck
-Task("Bash", "npx eslint src/ --quiet")     // Lint
-Task("Bash", "npm run build")               // Build
-Task("Bash", "npm test -- --bail")           // Tests
+Bash: npx tsc --noEmit              // Typecheck
+Bash: npx eslint src/ --quiet        // Lint
+Bash: npm run build                  // Build
+Bash: npm test -- --bail             // Tests
 ```
 
 All four must pass. If any fails, investigate that specific failure before re-attempting.
@@ -79,10 +79,10 @@ In complex bugs (Deep workflow), Steps 1+2+3 should run **concurrently** to save
 
 ```
 // All three launch simultaneously:
-Task("Explore", "Scout: map affected files, dependencies, and test coverage")
+Agent(subagent_type="Explore", prompt="Scout: map affected files, dependencies, and test coverage")
 // Meanwhile, main agent starts diagnosis using available error context
 // Meanwhile:
-Task("researcher", "Research: find latest docs and known issues for [library/framework]")
+Agent(subagent_type="researcher", prompt="Research: find latest docs and known issues for [library/framework]")
 ```
 
 The main agent begins hypothesis formation (Step 2) immediately using the error message and stack trace. Scout results enrich the diagnosis when they arrive. Research results inform the fix approach.
@@ -98,6 +98,6 @@ The main agent begins hypothesis formation (Step 2) immediately using the error 
 
 ## Fallback: When Task Tools Are Unavailable
 
-`TaskCreate`/`TaskUpdate` are CLI-only — they error in some IDE extensions. If they fail:
+`TaskCreate`/`TaskUpdate` are task-list tools and can be unavailable in some runtimes. If they fail:
 - Track progress manually using markdown checklists
 - The fix workflow itself remains fully functional — Tasks add visibility, not core logic

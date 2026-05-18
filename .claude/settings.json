@@ -71,7 +71,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Task|TaskCreate|TaskUpdate|TodoWrite",
+        "matcher": "Agent|Task|TaskCreate|TaskUpdate|TodoWrite",
         "hooks": [
           {
             "type": "command",
