@@ -6,7 +6,7 @@
   "license": "MIT",
   "private": false,
   "bin": {
-    "cafekit": "./bin/install.js"
+    "cafekit": "bin/install.js"
   },
   "scripts": {
     "test": "node scripts/run-skill-self-tests.mjs"
