@@ -18,6 +18,8 @@ Designed to work **after `hapo:develop`**. Standalone `/hapo:test` uses the same
 /hapo:test                    # Blast-radius mode: only tests affected by recent changes
 /hapo:test --full             # Run full test suite regardless of changes
 /hapo:test <scope>            # Test a specific module or path
+/hapo:test <feature-name>     # Spec-aware test: load specs/<feature-name> and verify scope/task evidence
+/hapo:test specs/<feature>    # Spec-aware test by spec directory
 /hapo:test --ui <url>         # UI verification via chrome-devtools (public pages)
 /hapo:test --ui-auth <url>    # UI verification with auth injection (protected pages)
 /hapo:test --ui-flow <url>    # UI testing with User Journey (form fill/submit simulation)
@@ -30,6 +32,13 @@ If no test command is detected, report NO_TESTS — do not fabricate results.
 If a test command exits 0 but runs 0 tests, report NO_TESTS — this is a green lie, not a PASS.
 If tests fail, list every failure explicitly — do not summarize failures away.
 </HARD-GATE>
+
+<SCOPE-GATE>
+When a feature name or `specs/<feature>` path is supplied, testing is spec-aware.
+Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and Task Test Plan evidence.
+The verdict MUST compare executed/reachable behavior against `scope_lock`, requirements, design contracts, task Completion Criteria, and runtime reachability obligations.
+Build/typecheck success without scoped runtime proof is not PASS.
+</SCOPE-GATE>
 
 ## 4-Phase Execution
 
@@ -61,6 +70,12 @@ Auto-detect the test runner from project files:
 Unless `--full` is specified: apply **Blast Radius scoping** to run only tests
 affected by recent file changes. See `references/execution-strategy.md` Phase A.
 
+If the argument resolves to `specs/<feature>` or a feature directory under `specs/`, enter **Spec-Aware Mode**:
+- Load `spec.json`, `requirements.md`, `design.md`, and task files referenced by `task_registry`
+- Identify tasks marked `done`, `in_progress`, or recently changed
+- Extract exact commands, runtime/artifact proof, runtime reachability proof, and negative-path checks
+- Scope test selection by affected task files, but do not skip any mandatory task evidence
+
 ### Phase 2 — Execute
 
 **Code testing (default):**
@@ -68,6 +83,7 @@ affected by recent file changes. See `references/execution-strategy.md` Phase A.
 2. Execute test command with coverage flags
 3. Collect test counts, coverage percentages, and fail stack traces
 4. Treat 0 executed tests as `NO_TESTS`, even if the command exits 0
+5. In Spec-Aware Mode, inspect runtime reachability from declared entrypoints/callers and fail if scoped surfaces are missing or orphaned
 
 **UI verification (`--ui` / `--ui-auth` / `--ui-flow`):**
 Execute multi-page discovery, then spawn **Parallel UI Subagents** (test-runner instances) to handle Smoke, Core-Vitals, Accessibility, SEO, Security, and User Flows simultaneously.
@@ -76,7 +92,7 @@ See `references/execution-strategy.md` Phase C for full phase breakdown.
 Delegate execution to `test-runner` agent:
 ```
 Agent(subagent_type="test-runner",
-  prompt="Run tests. Scope: [blast-radius|full|ui]. Target: [path|url]. Return structured verdict.",
+  prompt="Run tests. Scope: [blast-radius|full|ui|spec-aware]. Target: [path|url|feature]. Load specs when target is a feature. Return structured verdict with scope/spec coverage and runtime reachability.",
   description="Test [feature]")
 ```
 
@@ -110,6 +126,12 @@ Return a **structured verdict** (required format — not free-form prose):
 - Performance: LCP Xms | CLS X | FCP Xms
 - Accessibility issues: N found | none
 - Screenshots: [paths]
+
+### Scope / Spec Coverage (if feature scope)
+- Requirements covered: N/N
+- Task evidence checks: PASS | FAIL | UNVERIFIED
+- Runtime reachability: PASS | FAIL | UNVERIFIED
+- Out-of-scope behavior detected: none | [list]
 
 ### Test Regression Check
 - **Comparison:** Compare current test count and assertion depth against previous runs.

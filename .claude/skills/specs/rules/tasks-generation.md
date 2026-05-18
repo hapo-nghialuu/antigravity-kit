@@ -28,6 +28,7 @@ Detail bullets must include:
 **Every task must**:
 - Build on previous outputs (no orphaned code)
 - Connect to the overall system (no hanging features)
+- Stay inside the approved `scope_lock` and requirement IDs; do not add unapproved features or silently drop scoped behavior
 - Progress incrementally (no big jumps in complexity)
 - Validate core functionality early in sequence
 - Respect architecture boundaries defined in design.md (Architecture Pattern & Boundary Map)
@@ -37,6 +38,8 @@ Detail bullets must include:
 - Use major task summaries sparingly—omit detail bullets if the work is fully captured by child tasks.
 
 **End with integration tasks** to wire everything together.
+- For UI/app/runtime workflows, the final integration task MUST name the real entrypoint (`App.tsx`, route, command, worker, extension manifest, API route, etc.) and verify every user-visible surface from the requirements is reachable from that entrypoint.
+- Components, services, routes, commands, workers, providers, and data loaders created by earlier tasks MUST be consumed by a later integration task or explicitly marked as internal support in `design.md`; orphaned deliverables are invalid.
 
 ### 3. Flexible Task Sizing
 
@@ -80,6 +83,7 @@ Grouping tasks vertically by requirement carries the risk of "siloed" or fragmen
 1. **Foundation First (The R0 Concept)**: Extract shared infrastructure, core database migrations, authentication wrappers, and base UI layouts into foundational tasks running before feature work. If these aren't explicitly in requirements, classify them as `task-R0-XX-foundation.md` or map them to the most logical architectural requirement. All parallel feature tasks MUST depend on these foundation tasks.
 2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
 3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
+4. **Final Runtime Integration**: For any feature that has a user-facing screen, public route, CLI command, background worker, browser extension surface, or API flow, create a final integration task (or a final integration section in the last dependent task) that proves the whole scoped feature works from its runtime entrypoint. This task MUST fail if prior-task outputs exist but are not imported, mounted, registered, or invoked.
 
 ### 3d. Spike Tasks for Complex/Uncertain Areas (MANDATORY)
 
@@ -144,10 +148,12 @@ That section is the task-level test plan and MUST contain:
 1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`
 2. **Artifact/runtime proof** — exact files, routes, UI surfaces, generated outputs, or persisted state to inspect
 3. **Contract/negative-path proof** — at least one contract-preserving check for unauthorized, invalid, missing-permission, rollback, or failure-path behavior when relevant
+4. **Reachability proof** — when the task creates a runtime-facing artifact, name the upstream entrypoint or caller that reaches it; if reachability is deferred, name the exact later integration task responsible
 
 Rules:
 - If the task produces a build artifact or generated file, name the exact artifact path to inspect.
 - If the task wires entrypoints (popup, content script, route, worker, CLI command), name the exact runtime surface that must exist after implementation.
+- If the task creates a UI component, service, hook, reducer, route handler, worker, command, or data loader, the evidence MUST prove it is either reachable from the declared runtime surface or intentionally internal support for a named later task.
 - If verification depends on environment or manual setup, document the blocker explicitly instead of implying success.
 - Build success alone is NEVER enough evidence for a completed task.
 - For provider-sensitive work, use provider-neutral wording unless the scope lock explicitly names a vendor.

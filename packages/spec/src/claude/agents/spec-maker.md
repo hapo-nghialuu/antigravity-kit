@@ -125,8 +125,10 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Reject tasks outside `scope_lock.in_scope`
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
 - Apply `(P)` parallel markers when applicable (load `.claude/skills/specs/rules/tasks-parallel-analysis.md`)
-- Every task MUST include `Task Test Plan & Verification Evidence` with exact commands, artifacts/runtime surfaces, and negative-path checks.
+- Every task MUST include `Task Test Plan & Verification Evidence` with exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
+- UI/app/runtime workflows MUST include a final integration/reachability task or final integration section that names the real entrypoint and proves all scoped user-facing surfaces are wired.
+- Do not allow orphan task outputs: components, services, hooks, routes, commands, workers, providers, reducers, data loaders, and generated artifacts must be reachable now or assigned to a named later integration task.
 - Validation decisions that affect implementation MUST be written into implementation-facing sections (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`) rather than only `Risk Assessment`.
 
 ### Sub-Task Detail Requirements (MANDATORY)
@@ -140,6 +142,7 @@ Each task file MUST contain granular sub-tasks with the following structure:
 4. **Requirement mapping** (`_Requirements: X.X_`) at the end of EVERY sub-task — no exceptions
 5. **Test coverage section** as the last major step in every task, with unit + integration sub-tasks
 6. **Completion criteria** must be observable and testable — not subjective
+7. **Scope/reachability criteria** must prove the task implements scoped behavior without out-of-scope additions and without unreachable runtime-facing outputs
 
 **FORBIDDEN**: Task files with only 3-5 top-level checkboxes and no sub-task breakdown. This level of detail is INSUFFICIENT for implementation.
 

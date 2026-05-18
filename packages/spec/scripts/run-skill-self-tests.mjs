@@ -113,7 +113,8 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
         content.includes("Validation output MUST use `/hapo:develop <feature>`") &&
-        content.includes("📌 Next step: /hapo:develop <feature>"),
+        content.includes("📌 Next step: /hapo:develop <feature>") &&
+        content.includes("/specs <feature> --approve"),
     },
     {
       label: "hapo:specs validate enforces CafeKit task filenames",
@@ -141,6 +142,46 @@ async function runStaticSemanticTests() {
         content.includes("templates/spec-state.json") &&
         content.includes("/hapo:specs resume <feature-name>") &&
         !content.includes("Command block showing `/spec-requirements"),
+    },
+    {
+      label: "hapo:specs task rules require runtime reachability proof",
+      file: "src/claude/skills/specs/rules/tasks-generation.md",
+      assert: (content) =>
+        content.includes("**Final Runtime Integration**") &&
+        content.includes("**Reachability proof**") &&
+        content.includes("orphaned deliverables are invalid"),
+    },
+    {
+      label: "hapo:develop scouts every task and enforces scope fidelity",
+      file: "src/claude/skills/develop/SKILL.md",
+      assert: (content) =>
+        content.includes("<SCOPE-FIDELITY>") &&
+        content.includes("Mandatory per task") &&
+        content.includes("Final Integration Scout"),
+    },
+    {
+      label: "hapo:develop quality gate separates spec compliance and code quality",
+      file: "src/claude/skills/develop/references/quality-gate.md",
+      assert: (content) =>
+        content.includes("Spec compliance review") &&
+        content.includes("CODE QUALITY REVIEW (only after spec compliance passes)") &&
+        content.includes("Reachability Failure"),
+    },
+    {
+      label: "test-runner performs scope and runtime reachability audits",
+      file: "src/claude/agents/test-runner.md",
+      assert: (content) =>
+        content.includes("Runtime Reachability Audit") &&
+        content.includes("Scope Coverage Audit") &&
+        content.includes("Runtime Reachability Missing = FAIL"),
+    },
+    {
+      label: "hapo:test supports spec-aware feature testing",
+      file: "src/claude/skills/test/SKILL.md",
+      assert: (content) =>
+        content.includes("<SCOPE-GATE>") &&
+        content.includes("/hapo:test <feature-name>") &&
+        content.includes("Spec-Aware Mode"),
     },
   ];
 

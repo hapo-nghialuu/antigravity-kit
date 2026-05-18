@@ -264,6 +264,8 @@ Load: `references/scope-inquiry.md`
 - Each task file follows template `templates/task.md`
 - `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
 - Each task file MUST include `Completion Criteria` and `Task Test Plan & Verification Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
+- Every task MUST preserve the approved `scope_lock`: implement all scoped acceptance criteria for its requirement, avoid out-of-scope features, and record any intentional deferral as a named later task rather than implicit omission.
+- For UI/app/runtime features, generate a final integration/reachability task or final section that names the real runtime entrypoint and proves prior task outputs are imported, mounted, registered, invoked, or otherwise reachable.
 - Build `spec.json.task_registry` alongside `task_files`. For each task file, register at minimum:
   - `id`
   - `title`
@@ -324,6 +326,7 @@ Each task file MUST be **self-contained and implementation-ready** — detailed 
 4. **Related Files** — Table with exact paths, action type, and descriptions
 5. **Completion Criteria** — Observable, testable criteria (checkbox format)
 6. **Risk Assessment** — Table with risk, severity, mitigation
+7. **Runtime reachability** — For any created component, service, route, command, worker, provider, or data loader, state where it is reached from or which named later task wires it
 
 **Parallel markers:** Append `(P)` to tasks that can run concurrently (no data dependency, no shared files, no prerequisite approval from another task). Tasks serving DIFFERENT requirements are often parallelizable.
 
@@ -359,6 +362,8 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if a newly generated non-trivial spec lacks a `research.md` Evidence Summary with codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, and downstream task/test implications.
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
 - FAIL if a task lacks `Completion Criteria` or `Task Test Plan & Verification Evidence` (legacy `Verification & Evidence` is accepted only for pre-existing task files)
+- FAIL if a task creates runtime-facing artifacts but neither proves reachability from an entrypoint/caller nor names a later integration task responsible for wiring them.
+- FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or final integration section.
 - FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`, canonical contracts, or requirements text).
 - FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:

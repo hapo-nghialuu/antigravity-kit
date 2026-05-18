@@ -53,6 +53,11 @@ If the spec/task explicitly names a framework, auth system, datastore, transport
 You MUST NOT silently replace it with a simpler custom substitute ("for MVP", "placeholder", "temporary auth", "in-memory until later") unless the spec itself is updated first.
 </CONTRACT-FIDELITY>
 
+<SCOPE-FIDELITY>
+The approved `scope_lock`, requirements, design contracts, and active task packet are the implementation contract.
+You MUST implement all scoped behavior for the active task, MUST NOT add out-of-scope behavior, and MUST NOT mark work done while required surfaces exist only as orphaned files, unmounted UI, unregistered routes, uncalled loaders, or placeholder wiring.
+</SCOPE-FIDELITY>
+
 ## Anti-Rationalization Protocol
 
 | Thought (Excuse) | Reality (Rule) |
@@ -66,12 +71,14 @@ You MUST NOT silently replace it with a simpler custom substitute ("for MVP", "p
 flowchart TD
     A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
     B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Scout Codebase (inspector)]
+    B -->|Ready| C[Step 2: Task-Aware Scout (inspector)]
     C --> D[Step 3: Implement Code (god-developer)]
-    D --> E[Step 4: Quality Gate: Test + Review + Evidence]
-    E -->|Fail (code-auditor)| D
+    D --> E[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
+    E -->|Fail| D
     E -->|Pass| F[Step 5: State Sync + Incremental Docs Sync]
-    F --> G[Report Completion]
+    F --> H{More tasks?}
+    H -->|Yes| B
+    H -->|No| G[Final Integration Scout + Report Completion]
 ```
 
 ### Step 1: Initialize & Load Spec
@@ -94,11 +101,26 @@ flowchart TD
 - Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory:** Call agent `Agent(subagent_type="inspector", ...)` to scan the overall codebase structure (e.g., where components live, where utils are). Avoid wandering into forbidden zones. Use the legacy `Task` tool only in runtimes that have not renamed the subagent tool yet.
+- **Mandatory per task:** Call agent `Agent(subagent_type="inspector", ...)` before implementing EVERY active task. This is task-aware scouting, not a one-time global scan.
+- The inspector prompt MUST include:
+  - Active task file path and extracted task packet
+  - Requirement IDs and `scope_lock`
+  - Relevant `design.md` contracts/invariants
+  - Prior completed task outputs from `spec.json.task_registry`
+  - Related Files from the active task
+- Inspector MUST report:
+  - Real runtime entrypoints/callers affected by the task (`App.tsx`, routes, CLI command, worker registration, manifest, API consumer, etc.)
+  - Existing integration points and adjacent code patterns to follow
+  - Prior task outputs this task must consume or preserve
+  - Blast-radius touchpoints and dependent files that can regress
+  - Reachability risks: orphan components, unmounted UI, unregistered routes, uncalled services/loaders, unused providers, disconnected reducers/actions
+  - Exact files likely safe to modify and any files outside `Related Files` that require a justified scope escape
+- If the inspector cannot identify the entrypoint/caller for a runtime-facing task, STOP and route back to spec correction or ask the user. Do not guess.
 
 ### Step 3: Implement Code
 - Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
+- You MUST use the Step 2 scout report as implementation context. If code reality contradicts the task packet, stop and reconcile the spec before coding.
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress. Do NOT mark `[x]` before Step 4 passes.
 - **Task Boundary Protocol (CRITICAL):**
   - Default editable scope is `Related Files` from the task packet.
@@ -112,18 +134,22 @@ flowchart TD
 - **Named Technology Rule:** If the task/spec explicitly requires a named dependency or runtime choice (for example Better Auth, Hono, Next.js proxy routes, Redis, Drizzle, S3), you MUST implement that choice or stop. Do not swap it for a custom/in-memory/local substitute and still call the task complete.
 - **Cross-Service Reality Rule:** If a task spans multiple processes or runtimes (web ↔ API, worker ↔ DB, extension ↔ backend), you MUST prove the integration uses shared real state or a real contract boundary. Process-local placeholders on both sides do not count as completion.
 - **Placeholder Completion Rule:** You MAY scaffold future files only when the active task truly needs them to compile, but placeholder route handlers, in-memory stores, or fake adapters MUST NOT be used as evidence that the current task's behavior works end-to-end.
+- **Reachability Rule:** Runtime-facing work is incomplete until it is reachable from the real entrypoint/caller named in the task evidence or Step 2 scout report. Creating a component/service/route/provider/reducer without importing, mounting, registering, or invoking it is not implementation.
+- **Prior Output Consumption Rule:** If this task depends on previous task outputs, verify those outputs are consumed through real code paths. If a prior output is unused and this task is responsible for wiring it, wire it now; if a later task owns the wiring, keep the current task pending unless that deferral is named in the active task evidence.
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
-**Mantra:** All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
+**Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
 - Passing Step 4 requires ALL of the following:
   1. Automated verification passes, including preflight compile/typecheck/build health and every exact command named in the task's `Task Test Plan & Verification Evidence` section (or legacy `Verification & Evidence`)
-  2. Code review passes
-  3. Task evidence passes (artifacts/runtime surfaces/negative-path checks from the task file are proven)
+  2. Spec compliance review passes: every scoped requirement and active task criterion is implemented, with no extras and no omissions
+  3. Code quality review passes
+  4. Task evidence passes (artifacts/runtime surfaces/reachability/negative-path checks from the task file are proven)
 - `PRECHECK_FAIL` outranks `NO_TESTS`. If compile/typecheck/build fails, the task is FAIL even when no test suite exists yet.
 - `NO_TESTS` is NOT equivalent to PASS. If the task explicitly requires a test command or automated test proof, `NO_TESTS` is a FAIL or BLOCKED outcome until the requirement is satisfied or the spec is corrected.
 - If build/test passes but task evidence is missing, the task is still FAIL.
+- If runtime-facing work is orphaned, unmounted, unregistered, uncalled, or unreachable from the declared entrypoint/caller, the task is still FAIL.
 - If the implementation silently replaced a named contract choice or relies on cross-service process-local stand-ins, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
@@ -147,6 +173,11 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 - Task-level docs sync happens after every verified completed task, but actual edits still depend on `Docs impact`.
 - In **Specific-Task Mode**, STOP after sync and report the result.
 - In **Full-Spec Mode**, only after sync may you re-read `task_registry`, pick the next unblocked pending task, and repeat from Step 1 for that task.
+- When no pending tasks remain, run a **Final Integration Scout** before reporting completion:
+  - Trace runtime entrypoints from `main`/route/CLI/worker/manifest/API consumer through the scoped feature surfaces.
+  - Compare reachable behavior against `scope_lock`, `requirements.md`, `design.md`, and all task Completion Criteria.
+  - FAIL completion if any scoped surface is missing, any created runtime-facing artifact is orphaned, or spec progress/registry says done while evidence is missing.
+  - Only then set top-level progress to `code_done` / next phase.
 
 ---
 ## Attached References

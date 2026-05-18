@@ -5,6 +5,23 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-05-18
+
+### Changed
+- `hapo:specs` now requires runtime reachability proof for task outputs and final integration coverage for UI/app/runtime workflows.
+- `hapo:develop` now performs task-aware source scouting for every task and runs a final integration scout before reporting completion.
+- `hapo:develop` quality gate now separates spec compliance review from code quality review, with scope drift and orphaned runtime artifacts treated as blocking failures.
+- `hapo:test` now supports spec-aware feature verification via `/hapo:test <feature>` or `/hapo:test specs/<feature>`.
+
+### Fixed
+- `hapo:specs --validate` handoff text now consistently points to `/hapo:develop <feature>` instead of legacy approve/spec aliases.
+
+## [0.8.7] - 2026-05-18
+
+### Fixed
+- Hardened the `hapo:specs` output contract to keep generated specs on `spec.json` / `spec-state.json` and CafeKit task filename conventions.
+- Strengthened self-tests around spec artifact names and legacy output redirects.
+
 ## [0.8.6] - 2026-05-18
 
 ### Fixed

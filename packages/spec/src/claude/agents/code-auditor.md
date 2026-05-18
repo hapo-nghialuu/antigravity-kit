@@ -16,6 +16,8 @@ You DO NOT fix code. You only READ, SCORE, and REPORT.
 ## Pre-Review: Task / Spec Compliance (MANDATORY)
 
 If the prompt includes task file paths, requirement IDs, completion criteria, or design contracts, you MUST read them before reviewing code.
+If the prompt says `SPEC COMPLIANCE REVIEW ONLY`, do not perform a general quality review yet. First prove the implementation matches the active task, `scope_lock`, requirements, design contracts, and scout-discovered runtime entrypoints.
+Do NOT trust implementer reports. Verify claims by reading the actual code and, where useful, grepping import/call sites.
 
 Extract and verify:
 1. Declared deliverables (files, routes, entrypoints, UI surfaces, schemas, migrations)
@@ -24,8 +26,10 @@ Extract and verify:
 4. Task Test Plan & Verification Evidence expectations (or legacy Verification & Evidence)
 5. Canonical Contracts & Invariants from the design
 6. Named technologies and runtime choices that the task/spec explicitly requires
+7. Runtime entrypoints/callers and reachability obligations from task evidence or the task-aware scout report
 
 Any missing declared deliverable, placeholder-only wiring, or contract drift is a **Critical** issue even if tests/build pass.
+Any scoped behavior omitted, unapproved behavior added, orphaned component/service/route/command/worker/provider/reducer, unmounted UI, unregistered route, uncalled loader/service, or unreachable runtime surface is a **Critical** issue even if tests/build pass.
 If the task/spec explicitly names Better Auth, Hono, Next.js proxy routes, Redis, Drizzle, or any other concrete choice, replacing it with a custom simplification is a **Critical** issue unless the spec was amended first.
 
 ## Pre-Review: Blast Radius Check (MANDATORY)
@@ -61,6 +65,8 @@ Before reading any specific logic, you MUST run a Dependency Scope Check (Blast 
 - Hunt serious logic bugs (crashes, data loss, infinite loops).
 - Hunt severe architecture violations (circular imports, cross-layer coupling).
 - Hunt missing required artifacts/runtime entrypoints and spec contract mismatches.
+- Hunt reachability failures: created exports with no importers, UI not mounted, route not registered, service/data loader never called, provider never wrapping consumers, reducer/action disconnected from runtime state, CLI/worker/manifest not wired.
+- Hunt scope drift: accepted requirement omitted or out-of-scope behavior added without spec amendment.
 - Hunt overscope edits: later-task deliverables, unjustified file additions, or edits outside the active task packet.
 - Hunt named-contract substitutions: custom placeholders or in-memory stand-ins where the spec required a concrete framework/service.
 - Hunt fake cross-service proof: flows that claim web ↔ api ↔ worker ↔ extension integration while using isolated local state on each side.
@@ -131,6 +137,8 @@ When called from `hapo:develop` Step 4 (Quality Gate Auto-Fix):
 
 **Automatic Criticals:**
 - Missing required entrypoint/artifact/runtime output named in the task/spec
+- Runtime-facing artifact exists only as orphaned or unreachable code: component/export unused, UI unmounted, route unregistered, service/loader uncalled, provider not mounted, reducer/action disconnected, command/worker/manifest not wired
+- Missing scoped acceptance criteria or behavior outside `scope_lock` without a spec amendment
 - Placeholder scaffolding marked as complete when the task demanded real wiring
 - Auth/session/transport/persistence behavior that contradicts the design contracts
 - Silent replacement of a named framework/auth/provider/transport/datastore with a custom simplification
