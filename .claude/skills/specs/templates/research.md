@@ -17,6 +17,52 @@
   - Finding 2
   - Finding 3
 
+## Evidence Summary
+This section is mandatory for non-trivial specs. It must be written before finalizing requirements, design, or tasks.
+
+- **Codebase Scout**: Required / Skipped
+  - Result or skip rationale:
+  - Relevant files/modules:
+  - Existing patterns/contracts:
+  - Tests or checks affected:
+- **External / Current Research**: Required / Skipped
+  - Result or skip rationale:
+  - Primary sources:
+  - Current constraints or best practices:
+- **Selected Decision**:
+  - Decision:
+  - Why it fits the current codebase:
+  - Why it fits current external constraints:
+- **Rejected Alternatives**:
+  - Alternative 1 — rejection reason
+  - Alternative 2 — rejection reason
+- **Remaining Gaps / Questions**:
+  - Gap 1
+  - Gap 2
+- **Downstream Task & Test Implications**:
+  - Task implication:
+  - Test/verification implication:
+
+## Codebase Scout
+Capture only useful repo evidence, not raw file dumps.
+
+| Area | Finding | Evidence / Path | Implication |
+|------|---------|-----------------|-------------|
+| Project surface | | | |
+| Relevant files/modules | | | |
+| Existing patterns | | | |
+| Contracts | | | |
+| Tests and verification | | | |
+| Blast radius | | | |
+| Staleness / conflicts | | | |
+
+## External / Current Research
+Use official docs, standards, package repos, release notes, or maintained upstream references first.
+
+| Question | Source | Finding | Decision Impact |
+|----------|--------|---------|-----------------|
+| | | | |
+
 ## Research Log
 Document notable investigation steps and their outcomes. Group entries by topic for readability.
 

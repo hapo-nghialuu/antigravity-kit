@@ -11,10 +11,10 @@ argument-hint: "<feature-description> | status | resume | --validate | archive"
 
 ## Overview
 
-This skill provides a 10-step workflow to transform ideas into specs:
+This skill provides a 10-step workflow to transform ideas into evidence-backed specs:
 
 ```
-Analyze → Dependency Scan → Complexity Assessment → Init → Requirements → Design → Tasks → Hydration → Review → Completion
+Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate + Requirements → Design → Tasks → Hydration → Review → Completion
 ```
 
 **CRITICAL:** Before starting, the system MUST:
@@ -46,6 +46,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Requirements 
 - `task_files` in `spec.json` MUST exactly match the real files under `tasks/` after Step 7.
 - `task_registry` in `spec.json` MUST exist once task files are generated and MUST contain one entry per task file, keyed by relative path.
 - `ready_for_implementation` is a hard gate, not a convenience flag. Never set it before the finalization audit passes.
+- Non-trivial specs MUST have an evidence trail in `research.md` before requirements, design, or tasks are finalized. Evidence can be codebase scout findings, external/current research, or an explicit skip rationale.
 
 ### Output Criteria
 - Never implement code — only create spec documents
@@ -89,6 +90,7 @@ System auto-analyzes the description:
 - If the idea has unresolved architecture choices, unclear acceptance criteria, unclear scope boundaries, or multiple plausible approaches → stop and route to `/hapo:brainstorm <idea>` before creating spec artifacts
 - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
 - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
+- For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
 
 ### When called WITH `--validate` argument
 
@@ -128,11 +130,11 @@ flowchart TD
     H3 -->|No| K["Keep default scope"]
     J --> L["Step 4: Init — create specs/<feature>/"]
     K --> L
-    L --> M["Step 5: Requirements — write EARS"]
-    M --> N{Need deep research?}
-    N -->|Yes| O["Research: researchers + inspector + docs"]
-    O --> P["Write research.md"]
-    N -->|No| P
+    L --> M["Step 5A: Evidence Gate — scout + research"]
+    M --> N{Evidence sufficient?}
+    N -->|No| O["Ask user / run targeted scout / external research"]
+    O --> M
+    N -->|Yes| P["Step 5B: Requirements — write EARS"]
     P --> Q["Step 6: Design — pick discovery mode"]
     Q --> R["Write design.md"]
     R --> S["Step 7: Tasks — split into individual files"]
@@ -194,12 +196,19 @@ Load: `references/scope-inquiry.md`
   - `expansion_policy`: `requires-user-approval`
 - Do NOT generate requirements, design, or tasks at this step
 
-### Step 5: Requirements & Research
+### Step 5: Evidence Gate, Requirements & Research
 - Read `spec.json` — stop if init hasn't completed
 - Stop if requirements already exist, unless user wants to regenerate
 - Respect `scope_lock` — keep new requirements within `in_scope`
-- Analyze existing codebase if this is an enhancement (not greenfield)
-- **MANDATORY Research:** Spawn `researcher` subagent to gather best practices, documentation, and technical foundation before detailing requirements. Use `Task(subagent_type="researcher", prompt="Research [feature]", description="Research")`.
+- Load `references/research-strategy.md` and `references/codebase-analysis.md`
+- Classify evidence needs before writing requirements:
+  - **Targeted codebase scout is mandatory** when the spec changes existing behavior, touches an API/CLI/package export/schema/auth/session/permission/config/hook/runtime contract, lacks exact file paths, may invalidate tests, resumes an older spec, or crosses monorepo/package/runtime boundaries.
+  - **External/current research is mandatory** when the spec depends on third-party APIs, libraries, platform policies, AI providers/models/tooling, security/auth/payment/privacy/delete-data rules, performance/accessibility/SEO/security standards, or the user asks for "best", "optimal", "latest", "recommended", or equivalent.
+  - **Skip evidence gathering only** for trivial one-file edits, internal text/docs changes, isolated new files with no integration points, or decisions already backed by a recent user-provided report. Record the skip rationale in `research.md`.
+- Codebase scout must be targeted, not a blind full-repo crawl. Identify relevant files/modules, current patterns, existing tests, contracts, and likely blast radius.
+- External/current research must prefer official docs, standards, primary sources, or maintained upstream references. Record source links and the date/context of the finding.
+- Write `research.md` before final requirements. It MUST include an Evidence Summary with: codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, remaining gaps, and downstream task/test implications.
+- If evidence exposes unresolved architecture choices, unclear acceptance criteria, or multiple viable approaches with no obvious winner, stop and route to `/hapo:brainstorm` instead of forcing a spec.
 - Write requirements in **EARS** format (see `rules/ears-format.md`)
 - **Feasibility Check:** Cross-check each requirement against known technical constraints from `research.md`.
 - Each requirement gets a unique numeric ID
@@ -217,6 +226,7 @@ Load: `references/scope-inquiry.md`
   - **full**: integration, security, schema, or performance
 - Record findings in `research.md` before finalizing design
 - Write `design.md` from template `templates/design.md` (see `rules/design-principles.md`)
+- Design decisions MUST trace back to `research.md` evidence. If a design choice lacks evidence and is not a user-approved constraint, gather more evidence or ask the user before finalizing.
 - Add diagrams only when design has multi-step or cross-boundary flows
 - For auth/session, transport/entrypoint, persistence/schema, generated-artifact, or runtime-sensitive work, the design MUST fill the `Canonical Contracts & Invariants` section and tasks MUST inherit the same decisions verbatim.
 - Update `spec.json` phase, timestamps, discovery mode
@@ -227,6 +237,7 @@ Load: `references/scope-inquiry.md`
 - Load `rules/tasks-generation.md` for core principles
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
+- `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
 - Each task file MUST include `Completion Criteria` and `Task Test Plan & Verification Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
 - Build `spec.json.task_registry` alongside `task_files`. For each task file, register at minimum:
   - `id`
@@ -319,6 +330,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if any path in `task_files` does not exist on disk
 - FAIL if any task file exists on disk but is missing from `task_registry`
 - FAIL if any path in `task_registry` does not exist on disk
+- FAIL if a newly generated non-trivial spec lacks a `research.md` Evidence Summary with codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, and downstream task/test implications.
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
 - FAIL if a task lacks `Completion Criteria` or `Task Test Plan & Verification Evidence` (legacy `Verification & Evidence` is accepted only for pre-existing task files)
 - FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`, canonical contracts, or requirements text).
@@ -449,6 +461,7 @@ specs/
 ### Pre-Finalization Checklist
 Before finalizing any specification, assert all the following:
 - [ ] **scope_lock** initialized and respected throughout all phases
+- [ ] **Evidence Summary** exists in `research.md` with codebase scout, external research or skip rationale, selected decision, rejected alternatives, and task/test implications
 - [ ] **EARS format** applied to all acceptance criteria in requirements.md
 - [ ] **Numeric requirement IDs** assigned to every requirement
 - [ ] **Discovery mode** selected and recorded in spec.json.design_context

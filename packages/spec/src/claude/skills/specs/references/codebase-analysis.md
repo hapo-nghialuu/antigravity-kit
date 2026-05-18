@@ -2,11 +2,26 @@
 
 ## Purpose
 
-Understand the current codebase before designing solutions — ensure the new spec aligns with existing architecture, patterns, and conventions.
+Understand the current codebase before designing solutions — ensure the new spec aligns with existing architecture, patterns, contracts, tests, and runtime boundaries.
 
 ## Skip Conditions
 
 - Already provided with inspector reports → skip, use directly
+- Greenfield artifact that does not integrate with existing code → record skip rationale in `research.md`
+- Internal docs/text-only spec with no runtime behavior → record skip rationale in `research.md`
+
+## Targeted Codebase Scout Gate
+
+Run a targeted scout before requirements when any of these are true:
+
+- The feature modifies existing behavior, UI, API, CLI, data flow, runtime config, hooks, settings, generated artifacts, or package exports.
+- The feature touches database schemas, migrations, auth/session, permissions, external integrations, or shared contracts.
+- The task may break existing tests, snapshots, build scripts, type checks, e2e flows, or docs generation.
+- The spec crosses monorepo boundaries such as source package → installed `.claude/`, library package → docs app, package manifest → publish/install runtime.
+- `Related Files` cannot be named precisely yet.
+- A resumed or validated spec may be stale because files, tests, dependencies, or contracts changed since the spec was created.
+
+The scout must be narrow and question-driven. Do not scan the whole repo just because the repo is available.
 
 ## 4 Mandatory Files to Read First
 
@@ -24,6 +39,19 @@ Understand the current codebase before designing solutions — ensure the new sp
    - **HALT** the spec process immediately.
    - Ask the User: *"No codebase documentation found. Exploring blind will drain tokens and produce inaccurate specs. Shall I trigger `docs-keeper` or `/hapo:docs` to generate a baseline `codebase-summary.md` first?"*
 
+## Scout Output Contract
+
+Record the concise findings in `research.md`; if inspector agents are used, save detailed output to `reports/inspect-report.md`.
+
+Required output:
+- **Project surface:** project type, package/workspace boundaries, languages, frameworks, and relevant commands.
+- **Relevant files/modules:** exact paths likely to be created, modified, deleted, or read.
+- **Existing patterns:** naming, architecture, state/data flow, error handling, testing, and docs conventions that tasks must follow.
+- **Contracts:** API/CLI/schema/auth/config/runtime/package/export contracts affected by the spec.
+- **Tests and verification:** existing tests/checks likely to pass, fail, or require updates.
+- **Blast radius:** affected modules, consumers, generated artifacts, publish/install paths, and rollback considerations.
+- **Staleness check:** docs or prior specs that conflict with source code or manifests.
+
 ## Analysis Activities
 
 ### 1. Environment Analysis
@@ -38,7 +66,7 @@ Before designing any logic, you must identify and read the existing schemas:
 - Identify Global State setups (Redux stores, Zustand, React Context).
 - Output the relational impact: How will the new feature alter existing tables or state structures?
 
-### 2. Pattern Recognition
+### 3. Pattern Recognition
 - Study existing patterns in codebase
 - Identify conventions and architectural decisions
 - Note consistency in implementation approaches
@@ -61,6 +89,7 @@ Write a "Collateral Damage" section in your `research.md`:
 - Each inspector targets a specific aspect of the task
 - Wait for all inspectors to report before analysis
 - Save results to `reports/inspect-report.md`
+- If the scout cannot name exact paths/tests after inspection, stop and ask a grounded question instead of generating vague tasks
 
 ## Best Practices
 
@@ -69,3 +98,5 @@ Write a "Collateral Damage" section in your `research.md`:
 - Document patterns found for consistency
 - Note any inconsistencies or technical debt
 - Consider impact on existing features
+- Use `rg`/targeted search terms or inspector agents before broad traversal
+- Pass exact file and test findings downstream into `design.md` and task `Related Files`
