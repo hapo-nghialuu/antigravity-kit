@@ -5,6 +5,13 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-05-18
+
+### Fixed
+- `hapo:specs --validate` now explicitly forbids stale `/sdd:execute-spec` handoff text and keeps the approved next step on `/hapo:develop <feature>`.
+- Validation now treats non-CafeKit task filenames such as `tasks/R0-1-...` as invalid and requires `tasks/task-R0-01-...` style task paths.
+- Removed the remaining `/sdd:spec-requirements` marker from the requirements template.
+
 ## [0.8.4] - 2026-05-18
 
 ### Fixed

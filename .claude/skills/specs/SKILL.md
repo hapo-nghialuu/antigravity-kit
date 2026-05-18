@@ -330,6 +330,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if any path in `task_files` does not exist on disk
 - FAIL if any task file exists on disk but is missing from `task_registry`
 - FAIL if any path in `task_registry` does not exist on disk
+- FAIL if any task file path does not match `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`)
 - FAIL if a newly generated non-trivial spec lacks a `research.md` Evidence Summary with codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, and downstream task/test implications.
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
 - FAIL if a task lacks `Completion Criteria` or `Task Test Plan & Verification Evidence` (legacy `Verification & Evidence` is accepted only for pre-existing task files)
@@ -390,6 +391,7 @@ When user calls `hapo:specs`, system checks `specs/`:
 - When running a **single phase**: set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
 
 **Task inventory:** `task_files` MUST be present and MUST list every real task file exactly once using relative paths like `tasks/task-R1-01-example.md`.
+Task paths that omit the `task-` prefix or use non-padded sequence numbers (for example `tasks/R1-1-example.md`) are invalid for new CafeKit specs.
 
 **Task machine-state:** `task_registry` MUST be present after Step 7. Each key is a relative task path, and each value MUST contain `id`, `title`, `status`, `dependencies`, `blocker`, `started_at`, `completed_at`, and `last_updated_at`.
 

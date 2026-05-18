@@ -69,6 +69,25 @@ async function runStaticSemanticTests() {
       file: "src/claude/agents/spec-maker.md",
       assert: (content) => content.includes("Never suggest `/work`"),
     },
+    {
+      label: "hapo:specs validate forbids SDD handoff",
+      file: "src/claude/skills/specs/references/review.md",
+      assert: (content) =>
+        content.includes("Never mention `/sdd:execute-spec`") &&
+        content.includes("📌 Next step: /hapo:develop <feature>"),
+    },
+    {
+      label: "hapo:specs validate enforces CafeKit task filenames",
+      file: "src/claude/skills/specs/references/review.md",
+      assert: (content) =>
+        content.includes("tasks/task-R{N}-{SEQ}-<slug>.md") &&
+        content.includes("tasks/R0-1-project-scaffolding.md"),
+    },
+    {
+      label: "hapo:specs requirements template has no SDD phase marker",
+      file: "src/claude/skills/specs/templates/requirements-init.md",
+      assert: (content) => !content.includes("/sdd:"),
+    },
   ];
 
   console.log("\n[skill-test] static semantic checks");

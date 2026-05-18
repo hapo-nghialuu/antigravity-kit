@@ -152,12 +152,13 @@ Before marking the spec ready:
 3. Fail if any on-disk task file is missing from `task_files`
 4. Fail if any path in `task_files` does not exist
 5. Fail if any on-disk task file is missing from `task_registry` or any registry path does not exist
-6. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
-7. If the spec scope switched away from Claude/Anthropic, fail if `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider strings like `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` may mention old providers only as historical comparison.
-8. For delete/privacy specs, fail if requirements/design/tasks mix multiple deletion policies (for example `email_hash` in one place and `deleted-<uuid>` in another) without one canonical design decision.
-9. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
-10. Reject task files that use legacy non-numeric mappings like `NFR-1`
-11. If validation decisions were accepted, fail unless they are reflected in implementation-facing sections of affected artifacts and `spec.json.updated_at` / review timestamps reflect the reviewed state
+6. Fail if any task file path does not match `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`)
+7. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
+8. If the spec scope switched away from Claude/Anthropic, fail if `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider strings like `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` may mention old providers only as historical comparison.
+9. For delete/privacy specs, fail if requirements/design/tasks mix multiple deletion policies (for example `email_hash` in one place and `deleted-<uuid>` in another) without one canonical design decision.
+10. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
+11. Reject task files that use legacy non-numeric mappings like `NFR-1`
+12. If validation decisions were accepted, fail unless they are reflected in implementation-facing sections of affected artifacts and `spec.json.updated_at` / review timestamps reflect the reviewed state
 
 ## Execution Workflow Summary
 

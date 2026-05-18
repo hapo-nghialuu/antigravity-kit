@@ -4,6 +4,5 @@
 {{PROJECT_DESCRIPTION}}
 
 ## Requirements
-<!-- Will be generated in /sdd:spec-requirements phase -->
-
+<!-- Will be generated during the hapo:specs requirements phase -->
 
