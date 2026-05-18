@@ -56,6 +56,31 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate
 - Insert code samples/pseudocode when needed to clarify flow
 - Comply with `./docs/development-rules.md` if it exists
 
+### Hard Output Contract
+For a normal `/hapo:specs <feature-description>` run, the persistent spec artifacts MUST use this shape:
+
+```
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+├── tasks/
+│   ├── task-R0-01-<slug>.md
+│   ├── task-R1-01-<slug>.md
+│   └── ...
+└── reports/
+    └── <optional-review-or-research-report>.md
+```
+
+Forbidden generated artifacts:
+- Do NOT create `specs/<feature>/init.json`.
+- Do NOT create `specs/<feature>/spec-state.json`.
+- Do NOT create `specs/<feature>/hydration.md`.
+- Do NOT create shorthand task files such as `tasks/task-R0-1.md`, `tasks/task-R1-1.md`, or `tasks/R0-1-<slug>.md`.
+- The template file name is never the output file name. `templates/spec-state.json` is only the schema source for generated `spec.json`.
+- Task hydration is session/task-state synchronization only; it MUST NOT be written as a markdown artifact.
+
 ### Writing Style
 - Concise, prefer bullet lists
 - Get straight to the point, no fluff
@@ -190,7 +215,7 @@ Load: `references/scope-inquiry.md`
 ### Step 4: Init
 - Check for duplicate slugs in `specs/` via Glob
 - Create directory `specs/<feature-name>/`
-- Create `spec.json` from template `templates/init.json`
+- Create `spec.json` from template `templates/spec-state.json`. The output file name MUST be `spec.json`; never write the template filename into the spec directory.
 - Create empty `requirements.md` from template `templates/requirements-init.md`
 - Initialize `scope_lock` in `spec.json`:
   - `source`: original description
@@ -502,7 +527,7 @@ Before finalizing any specification, assert all the following:
 ## Resources
 
 ### Templates (`templates/`)
-- `init.json` — Metadata schema for spec.json
+- `spec-state.json` — Metadata/state schema used to create `spec.json`
 - `requirements-init.md` — Empty requirements template
 - `requirements.md` — Full requirements template
 - `design.md` — Design document template

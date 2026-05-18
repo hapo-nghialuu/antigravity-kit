@@ -52,7 +52,46 @@ function parsePythonUnittestCount(output) {
 }
 
 async function runStaticSemanticTests() {
+  const specTemplateFiles = await readdir(
+    join(packageRoot, "src/claude/skills/specs/templates"),
+  );
+
+  if (!specTemplateFiles.includes("spec-state.json")) {
+    console.error("[FAIL] hapo:specs spec-state template is missing");
+    process.exit(1);
+  }
+
+  if (specTemplateFiles.includes("init.json")) {
+    console.error("[FAIL] legacy hapo:specs init.json template must not be packaged");
+    process.exit(1);
+  }
+
   const checks = [
+    {
+      label: "hapo:specs hard output contract forbids wrong artifacts",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("### Hard Output Contract") &&
+        content.includes("Do NOT create `specs/<feature>/init.json`.") &&
+        content.includes("Do NOT create `specs/<feature>/hydration.md`.") &&
+        content.includes("tasks/task-R0-1.md"),
+    },
+    {
+      label: "spec-maker artifact contract forbids init and hydration artifacts",
+      file: "src/claude/agents/spec-maker.md",
+      assert: (content) =>
+        content.includes("## Artifact Contract (MANDATORY)") &&
+        content.includes("never write `init.json` or `spec-state.json`") &&
+        content.includes("Do NOT write `hydration.md`"),
+    },
+    {
+      label: "installer syncs spec-state template and drops init template",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("'spec-state.json'") &&
+        content.includes("Removed legacy template") &&
+        !content.includes("'init.json',"),
+    },
     {
       label: "hapo:specs handoff block points to hapo:develop",
       file: "src/claude/skills/specs/SKILL.md",
@@ -99,6 +138,7 @@ async function runStaticSemanticTests() {
       label: "legacy spec-init redirects to hapo specs resume",
       file: "src/claude/archive-command/spec-init.md",
       assert: (content) =>
+        content.includes("templates/spec-state.json") &&
         content.includes("/hapo:specs resume <feature-name>") &&
         !content.includes("Command block showing `/spec-requirements"),
     },

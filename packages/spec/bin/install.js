@@ -424,8 +424,15 @@ function copyPlatformFiles(platformKey, results, options = {}) {
 
     // Keep templates in sync for claude command runtime copies under .claude/skills/specs
     if (platformKey === 'claude') {
+      const legacyInitTemplate = path.join(platform.skillsDir, 'specs', 'templates', 'init.json');
+      if (fs.existsSync(legacyInitTemplate)) {
+        fs.rmSync(legacyInitTemplate, { force: true });
+        console.log(`  ↻ Removed legacy template: ${legacyInitTemplate}`);
+        results.updated++;
+      }
+
       const specTemplates = [
-        'init.json',
+        'spec-state.json',
         'requirements-init.md',
         'requirements.md',
         'design.md',

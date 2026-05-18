@@ -6,7 +6,7 @@ The following guidelines dictate exactly how `hapo:sync` should interact with fi
 
 ## 1. Updating `spec.json`
 
-When requested to update a phase or change task configuration, `spec.json` must maintain its strict schema (defined in `hapo:specs/templates/init.json`).
+When requested to update a phase or change task configuration, `spec.json` must maintain its strict schema (defined in `hapo:specs/templates/spec-state.json`).
 
 *   **JSON Modification Rule:** Do not output whole files. Instead, load the JSON structure, apply the update to `status`, `current_phase`, `blocker` (if any), `task_files`, and the relevant `task_registry` entry, then overwrite the file cleanly.
 *   **Task Registry Rule:** Resolve the incoming task reference to a single relative path in `task_registry`. Accept either:

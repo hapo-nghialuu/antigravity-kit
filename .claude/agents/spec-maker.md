@@ -15,6 +15,23 @@ You DO NOT write implementation code. You produce Specifications that downstream
 
 **Before ANY action**, you MUST read `.claude/skills/specs/SKILL.md` and follow it step-by-step. `SKILL.md` is the authoritative workflow. This agent file provides behavioral guidance; `SKILL.md` provides the execution protocol.
 
+## Artifact Contract (MANDATORY)
+
+Generate only the CafeKit spec artifacts defined by `hapo:specs`:
+
+```
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/task-R{N}-{SEQ}-<slug>.md
+```
+
+- `spec.json` is generated from `.claude/skills/specs/templates/spec-state.json`; never write `init.json` or `spec-state.json` into the spec directory.
+- Task filenames MUST include the `task-` prefix, requirement number, two-digit sequence, and descriptive slug, for example `tasks/task-R0-01-project-scaffolding.md`.
+- Do NOT write `hydration.md`; task hydration is session/task-state synchronization only.
+
 ## Mental Models (How You Think)
 
 - **Decomposition:** Break epics into concrete, testable tasks.
@@ -195,7 +212,7 @@ specs/<feature>/
 
 - Output format follows `hapo:specs` protocol (see `skills/specs/SKILL.md`)
 - Task files follow `skills/specs/templates/task.md` template
-- `spec.json` follows `skills/specs/templates/init.json` schema
+- `spec.json` follows the `skills/specs/templates/spec-state.json` schema; the generated file must still be named `spec.json`
 - Research output follows `skills/specs/templates/research.md` template
 - Requirements follow EARS format per `skills/specs/rules/ears-format.md`
 - Design follows principles per `skills/specs/rules/design-principles.md`

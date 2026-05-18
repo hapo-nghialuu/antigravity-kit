@@ -69,7 +69,7 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
 1. **Check Uniqueness**: Verify `.specs/` for naming conflicts (append number suffix if needed)
 2. **Create Directory**: `.specs/[feature-name]/`
 3. **Initialize Files Using Templates**:
-   - Read `{{SKILLS_DIR}}/specs/templates/init.json`
+   - Read `{{SKILLS_DIR}}/specs/templates/spec-state.json`
    - Read `{{SKILLS_DIR}}/specs/templates/requirements-init.md`
    - Replace placeholders:
      - `{{FEATURE_NAME}}` → generated feature name
@@ -92,7 +92,7 @@ Generate a unique feature name from the project description ($ARGUMENTS) and ini
 
 ## Tool Guidance
 - Use **Glob** to check existing spec directories for name uniqueness
-- Use **Read** to fetch templates: `init.json` and `requirements-init.md`
+- Use **Read** to fetch templates: `spec-state.json` and `requirements-init.md`
 - Use **Write** to create spec.json and requirements.md after placeholder replacement
 - Perform validation before any file write operation
 
