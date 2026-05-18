@@ -5,6 +5,13 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-05-18
+
+### Fixed
+- `hapo:specs <feature-description>` now explicitly continues past Init into requirements, design, tasks, and finalization.
+- Legacy `spec-init` output now redirects to `/hapo:specs resume <feature>`.
+- Skill self-tests now cover the init-continuation and legacy-command redirect semantics.
+
 ## [0.8.5] - 2026-05-18
 
 ### Fixed

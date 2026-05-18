@@ -70,10 +70,10 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes("Never suggest `/work`"),
     },
     {
-      label: "hapo:specs validate forbids SDD handoff",
+      label: "hapo:specs validate uses hapo develop handoff",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
-        content.includes("Never mention `/sdd:execute-spec`") &&
+        content.includes("Validation output MUST use `/hapo:develop <feature>`") &&
         content.includes("📌 Next step: /hapo:develop <feature>"),
     },
     {
@@ -87,6 +87,20 @@ async function runStaticSemanticTests() {
       label: "hapo:specs requirements template has no SDD phase marker",
       file: "src/claude/skills/specs/templates/requirements-init.md",
       assert: (content) => !content.includes("/sdd:"),
+    },
+    {
+      label: "hapo:specs feature-description flow continues past init",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("After user confirms scope, continue through Init") &&
+        content.includes("Do not stop after Init unless the user explicitly asks for init-only behavior."),
+    },
+    {
+      label: "legacy spec-init redirects to hapo specs resume",
+      file: "src/claude/archive-command/spec-init.md",
+      assert: (content) =>
+        content.includes("/hapo:specs resume <feature-name>") &&
+        !content.includes("Command block showing `/spec-requirements"),
     },
   ];
 

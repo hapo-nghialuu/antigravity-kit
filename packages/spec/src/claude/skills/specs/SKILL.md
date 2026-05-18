@@ -34,6 +34,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate
 - Each phase (Init → Requirements → Design → Tasks) must complete before the next begins
 - No skipping — don't write design without requirements
 - Exception: simple tasks may merge requirements + design into one step
+- A normal `/hapo:specs <feature-description>` run is an end-to-end spec creation workflow. Do not stop after Init unless the user explicitly asks for init-only behavior.
 
 ### Scope Rules
 - Respect `scope_lock` absolutely once user has confirmed
@@ -91,6 +92,8 @@ System auto-analyzes the description:
 - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
 - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
 - For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
+- After user confirms scope, continue through Init → Evidence/Requirements → Design → Tasks → Finalization in the same workflow unless the user explicitly asks for "init only" or "pause after init".
+- If the workflow must pause for manual approval, the continuation command is `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
 
 ### When called WITH `--validate` argument
 
@@ -194,7 +197,7 @@ Load: `references/scope-inquiry.md`
   - `in_scope`: confirmed scope items
   - `out_of_scope`: excluded items
   - `expansion_policy`: `requires-user-approval`
-- Do NOT generate requirements, design, or tasks at this step
+- Step 4 itself only initializes files. In a normal `/hapo:specs <feature-description>` run, immediately continue to Step 5 after Init. Stop here only when the user explicitly requested init-only behavior.
 
 ### Step 5: Evidence Gate, Requirements & Research
 - Read `spec.json` — stop if init hasn't completed

@@ -41,6 +41,8 @@ Init → Requirements → Design → Tasks
 ### Auto-Approval Behavior
 - When running the full pipeline end-to-end, follow the auto-approval rules defined in `SKILL.md`.
 - When running a single phase, stop and report status after completion.
+- Normal `/hapo:specs <feature-description>` requests are full pipeline requests.
+- If a pause is required after user review, tell the user to continue with `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
 
 ## Scope Lock Protocol (MANDATORY)
 
