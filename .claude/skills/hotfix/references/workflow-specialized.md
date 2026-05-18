@@ -27,6 +27,7 @@ When unit/integration/e2e tests are failing:
 2. **Check for pollution:** Does it pass alone but fail in suite? → Test order dependency or shared state leaking
 3. **Check for staleness:** Did the implementation change but the test assertions were not updated?
 4. **Snapshot drift:** If snapshot tests fail, review the diff carefully — is it an intentional change or a regression?
+5. **Flaky async:** Replace arbitrary sleeps with condition-based waits. See `references/debugger/condition-based-waiting.md`.
 
 ---
 
@@ -51,7 +52,8 @@ When the interface is broken, misaligned, or not rendering:
 1. **Capture visual evidence:** Use `pushd skills/chrome-devtools/scripts && node screenshot.js --url <url> && popd`
 2. **Check ARIA structure:** `pushd skills/chrome-devtools/scripts && node aria-snapshot.js --url <url> && popd` — reveals hidden overlays, z-index battles
 3. **Check console errors:** `pushd skills/chrome-devtools/scripts && node console.js --url <url> && popd` — catches JS crashes preventing render
-4. **Common traps:**
+4. **Run frontend verification:** Follow `references/debugger/frontend-verification.md` for screenshot, console, network, accessibility, responsive, and interaction evidence.
+5. **Common traps:**
    - CSS specificity wars (use browser DevTools or ARIA snapshot to verify computed styles)
    - Hydration mismatch in SSR frameworks (server HTML differs from client render)
    - Missing responsive breakpoints (test at multiple viewport widths)

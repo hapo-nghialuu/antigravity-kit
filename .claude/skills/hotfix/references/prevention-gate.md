@@ -1,6 +1,6 @@
 # Prevention Gate
 
-After a fix is verified, apply defense-in-depth to prevent the same bug class from recurring.
+After a fix is verified, apply defense-in-depth to prevent the same bug class from recurring. Prevention is not the same as side-effect safety; run `references/debugger/side-effect-gate.md` before claiming completion.
 
 ## Mandatory Prevention Checklist
 
@@ -28,6 +28,13 @@ If the bug could recur silently:
 - Add logging at the critical junction point
 - Include structured context (IDs, timestamps, relevant state)
 - Ensure the log level is appropriate (warn for recoverable, error for critical)
+
+### 5. Layered Defense Guard
+If the same invalid state could enter through multiple paths:
+- Validate at the entry point where data first crosses a trust boundary
+- Validate in business logic where invariants must hold
+- Add environment/config guards when deployment conditions matter
+- Add diagnostic logging only at decision points that help future debugging
 
 ## Quick Mode Prevention
 

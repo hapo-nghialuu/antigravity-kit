@@ -14,6 +14,7 @@ CafeKit installs a working runtime bundle for Claude Code:
 - `hapo:brainstorm` for scout-first ideation before a spec is ready
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation from approved specs
+- `hapo:debug` and `hapo:hotfix` for evidence-first diagnosis and safe bug fixes
 - `hapo:test` and `hapo:code-review` for verification
 - `hapo:generate-graph` for technical diagrams
 - supporting hooks, agents, rules, and statusline runtime

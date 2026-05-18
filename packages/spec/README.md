@@ -69,6 +69,8 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
+- `/hapo:debug <issue>`: diagnose bugs, incidents, CI failures, flaky tests, UI regressions, and performance issues before fixing
+- `/hapo:hotfix <issue>`: fix diagnosed bugs with root-cause, verification, prevention, and side-effect gates
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
 - `/hapo:generate-graph <diagram request>`: generate technical SVG/PNG diagrams

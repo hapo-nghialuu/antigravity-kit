@@ -1,11 +1,11 @@
 ---
 name: hapo:hotfix
-description: "ALWAYS activate this skill before fixing ANY bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Structured 6-step bug-killing workflow with intelligent routing."
-argument-hint: "[issue] --quick|--parallel"
+description: "ALWAYS activate this skill when you are asked to FIX a bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Uses hapo:debug for evidence-first diagnosis before any code change."
+argument-hint: "[issue] --quick|--parallel|--from-debug"
 version: "1.0.0"
 ---
 
-# Hotfix — Structured Bug Elimination
+# Hotfix - Structured Bug Elimination
 
 Kill bugs systematically. No guessing. Evidence first, fix second.
 
@@ -13,12 +13,15 @@ Kill bugs systematically. No guessing. Evidence first, fix second.
 
 - `--quick` - Fast track for trivial issues (lint, type errors, syntax)
 - `--parallel` - Spawn multiple `god-developer` agents for independent issues
+- `--from-debug` - Start from an existing `hapo:debug` report and validate its root-cause contract
 
 Default: Autonomous mode — auto-approve when confidence is high.
 
 <HARD-GATE>
-Do NOT propose or implement fixes before completing Steps 1-2 (Scout + Diagnose).
+Do NOT propose or implement fixes before completing Steps 1-2 (Scout + `hapo:debug` diagnosis).
 Symptom fixes are FAILURE. Find the root cause first.
+The exact root-cause contract is mandatory: symptom, reproduction, expected/actual, root cause file:line or config/env source, why now, evidence chain, blast radius.
+The side-effect gate is mandatory before completion.
 If 3+ fix attempts fail → STOP. Question the architecture. Discuss with user.
 Exception: `--quick` mode allows abbreviated scout→diagnose→fix for trivial issues.
 </HARD-GATE>
@@ -38,7 +41,7 @@ Exception: `--quick` mode allows abbreviated scout→diagnose→fix for trivial 
 ```mermaid
 flowchart TD
     A[Issue Input] --> B[Step 1: Scout via hapo:inspect]
-    B --> C[Step 2: Diagnose - Root Cause Analysis]
+    B --> C[Step 2: Diagnose via hapo:debug]
     C --> D[Step 3: Classify Complexity]
     D -->|Trivial| E[Quick Fix]
     D -->|Standard| F[Standard Fix]
@@ -49,7 +52,9 @@ flowchart TD
     G --> I
     H --> I
     I --> J[Step 5: Verify + Prevent]
-    J -->|Pass| K[Step 6: Finalize]
+    J --> N[Side-Effect Gate]
+    N -->|Pass| K[Step 6: Finalize]
+    N -->|Regression Risk| C
     J -->|Fail, <3 attempts| C
     J -->|Fail, 3+ attempts| L[Question Architecture → Discuss with User]
     K --> M[Report + Commit]
@@ -81,11 +86,11 @@ flowchart TD
 
 ---
 
-## Step 2: Diagnose (MANDATORY — never skip)
+## Step 2: Diagnose via `hapo:debug` (MANDATORY — never skip)
 
 **Purpose:** Evidence-based root cause analysis. NO guessing.
 
-See `references/diagnosis-protocol.md` for full methodology.
+Use `hapo:debug` or validate an existing debug report when `--from-debug` is provided. See `references/diagnosis-protocol.md` for full methodology.
 
 **Mandatory chain:**
 1. **Capture pre-fix state:** Record exact error messages, failing test output, stack traces. This is your baseline for Step 5.
@@ -100,6 +105,15 @@ See `references/diagnosis-protocol.md` for full methodology.
 4. **Test:** Use `Grep`, `Read`, or spawn parallel `Explore` subagents to validate each hypothesis against codebase evidence.
 5. **Trace root cause:** Follow the chain backward — symptom → immediate cause → contributing factor → **ROOT CAUSE**.
 6. **Escalate:** If 2+ hypotheses fail, apply Inversion Thinking (see `references/escalation-tactics.md`).
+
+**Exact root-cause contract:**
+- Symptom: exact observable failure
+- Reproduction: command, user flow, CI job, log trigger, or route
+- Expected vs actual behavior
+- Root cause: file:line, config, environment, dependency, or data source
+- Why now: recent change, dependency drift, data state, environment, timing, or load
+- Evidence chain: observations proving the cause
+- Blast radius: affected files, modules, tests, users, workflows, or release paths
 
 **Output:** `✓ Step 2: Diagnosed — Root cause: [summary], Evidence: [brief], Scope: [N files]`
 
@@ -139,7 +153,7 @@ See `references/diagnosis-protocol.md` for full methodology.
 3. Run full test suite
 
 ### Deep Workflow
-1. **Parallel investigation:** Launch Steps 1+2+3 concurrently — Scout (`hapo:inspect`), Diagnose (from error context), and Research (`researcher` subagent) all run simultaneously. See `references/parallel-patterns.md` Pattern E.
+1. **Parallel investigation:** After initial scope is known, gather evidence in parallel — Scout (`hapo:inspect`), Diagnose (`hapo:debug`), and Research (`researcher` subagent) can run concurrently. See `references/parallel-patterns.md` Pattern E.
 2. Synthesize findings from all three into a unified fix approach
 3. Plan the fix (consider writing to `references/` for future use)
 4. Implement in stages, verifying each stage
@@ -164,7 +178,8 @@ See `references/diagnosis-protocol.md` for full methodology.
 2. **Regression test:** The test MUST fail without the fix and pass with it.
 3. **Parallel verification:** Run typecheck + lint + build + test simultaneously via `Bash`. See `references/parallel-patterns.md` Pattern C.
 4. **Prevention guard (Standard+ only):** See `references/prevention-gate.md`.
-5. **Code review:** Trigger `hapo:code-review` and handle results per `references/review-cycle.md` (autonomous auto-approve loop or HITL depending on fix criticality).
+5. **Side-effect gate:** Run the sweep in `references/debugger/side-effect-gate.md`.
+6. **Code review:** Trigger `hapo:code-review` and handle results per `references/review-cycle.md` (autonomous auto-approve loop or HITL depending on fix criticality).
 
 **If verification fails:**
 - < 3 attempts → Loop back to Step 2 (re-diagnose with new evidence)
@@ -201,6 +216,7 @@ Unified step markers (emit after each step):
 
 | Subagent | When |
 |----------|------|
+| `hapo:debug` | Mandatory diagnosis gate before code edits (Step 2) |
 | `debugger` | Root cause unclear, need deep systematic investigation (Step 2) |
 | `Explore` (parallel) | Scout multiple areas (Step 1), test hypotheses (Step 2) |
 | `Bash` (parallel) | Verify: typecheck + lint + build + test (Step 5) |
@@ -220,3 +236,7 @@ Load as needed:
 - `references/review-cycle.md` — Autonomous approval loop + HITL review handling
 - `references/parallel-patterns.md` — Parallel Explore/Bash/Task coordination with code templates
 - `references/workflow-specialized.md` — CI/CD, test, TypeScript, UI-specific workflows
+- `references/debugger/frontend-verification.md` — Browser/UI evidence and visual verification
+- `references/debugger/performance-diagnostics.md` — Baseline-driven performance diagnosis
+- `references/debugger/condition-based-waiting.md` — Flaky async test diagnosis
+- `references/debugger/side-effect-gate.md` — Regression and blast-radius sweep

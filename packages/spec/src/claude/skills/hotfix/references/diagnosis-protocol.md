@@ -1,10 +1,12 @@
 # Diagnosis Protocol
 
-Structured root cause analysis methodology. Replaces ad-hoc guessing with evidence-based investigation.
+Structured root cause analysis methodology. Replaces ad-hoc guessing with evidence-based investigation. Prefer running `hapo:debug` directly; use this file as the hotfix-local checklist.
 
 ## Core Principle
 
 **NEVER guess root causes.** Form hypotheses through structured reasoning and test them against evidence.
+
+**NO FIXES IN DIAGNOSIS.** Product-code changes start only after the exact root-cause contract is complete.
 
 ## Pre-Diagnosis: Capture State (MANDATORY)
 
@@ -81,6 +83,19 @@ Symptom (where error appears)
 
 **Rule:** NEVER fix where the error appears. Trace back to the source.
 
+## Exact Root-Cause Contract (MANDATORY)
+
+Before Step 4 implementation in `hapo:hotfix`, record:
+
+- Symptom: exact observable failure
+- Reproduction: command, user flow, CI job, log trigger, or route
+- Expected: intended behavior
+- Actual: observed behavior
+- Root cause: file:line, config, environment, dependency, or data source
+- Why now: recent change, data state, dependency drift, environment, timing, or load factor
+- Evidence chain: observations proving this cause
+- Blast radius: affected files, modules, tests, users, workflows, or release paths
+
 ### Phase 5: Escalate — When hypotheses fail
 
 If 2+ hypotheses are REFUTED → see `escalation-tactics.md`.
@@ -95,6 +110,15 @@ If 2+ hypotheses are REFUTED → see `escalation-tactics.md`.
 
 ### Root Cause
 [Clear explanation traced back to origin]
+
+### Exact Root-Cause Contract
+- Symptom:
+- Reproduction:
+- Expected:
+- Actual:
+- Root cause:
+- Why now:
+- Blast radius:
 
 ### Evidence Chain
 1. [Observation] → led to hypothesis [X]
