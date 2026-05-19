@@ -27,6 +27,7 @@ Required behavior:
 4. The final report MUST include the validator command and the final PASS/FAIL result.
 5. If the validator exits non-zero, final verdict is **FAIL / BLOCKED**, `validation.status` MUST NOT become `completed`, `ready_for_implementation` MUST remain `false`, and the output MUST NOT suggest `/hapo:develop`.
 6. A markdown checklist, manual QA table, or "all required sections present" claim cannot override validator failure.
+7. For specs with 5+ task files, a pre-review validator PASS only proves artifact shape. It does not mean implementation can start until Red Team + Validate finish, accepted fixes are propagated, and `spec.json.validation.status` is written as `completed`.
 
 ## Auto-Decision: When to Red Team vs Validate
 
@@ -261,6 +262,8 @@ Before declaring validation complete:
 
 #### Step 8: Final Status Write-Back
 - Update `spec.json.updated_at` to the reconciliation time
+- On final PASS, set `spec.json.validation.status = "completed"`, `spec.json.timestamps.validation_done`, and, when Red Team ran, `spec.json.timestamps.review_done`
+- On final PASS, set `spec.json.ready_for_implementation = true` only after the deterministic validator passes on the final physical artifacts
 - Ensure `red-team-report.md` and `validate-log.md` do not contradict `spec.json`
 - If reconciliation or deterministic validation fails, keep `validation.status` as `not-run` or `in_progress`, keep `ready_for_implementation = false`, list blockers explicitly, and do not provide an implementation handoff.
 

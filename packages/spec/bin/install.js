@@ -751,7 +751,8 @@ function copyClaudeRuntimeFiles(platformKey, results, options = {}) {
 
   manifest.runtime.files.forEach(relPath => {
     const srcPath = path.join(srcBase, relPath);
-    const targetPath = path.join(targetBase, relPath);
+    const targetRelPath = relPath === 'gitignore' ? '.gitignore' : relPath;
+    const targetPath = path.join(targetBase, targetRelPath);
 
     if (!fs.existsSync(srcPath)) {
       console.log(`  ⚠ Runtime file not found: ${relPath}`);
@@ -767,10 +768,10 @@ function copyClaudeRuntimeFiles(platformKey, results, options = {}) {
       fs.copyFileSync(srcPath, targetPath);
 
       if (targetExists) {
-        console.log(`  ↻ Runtime updated: ${relPath}`);
+        console.log(`  ↻ Runtime updated: ${targetRelPath}`);
         results.updated++;
       } else {
-        console.log(`  ✓ Runtime installed: ${relPath}`);
+        console.log(`  ✓ Runtime installed: ${targetRelPath}`);
         results.copied++;
       }
     } else {

@@ -104,6 +104,25 @@ async function runStaticSemanticTests() {
         content.includes("const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`"),
     },
     {
+      label: "installer maps Claude gitignore template to dotfile",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("relPath === 'gitignore' ? '.gitignore' : relPath"),
+    },
+    {
+      label: "Claude migration manifest includes gitignore template",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => content.includes('"gitignore"'),
+    },
+    {
+      label: "Claude gitignore template ignores generated session state",
+      file: "src/claude/gitignore",
+      assert: (content) =>
+        content.includes("session-state/") &&
+        content.includes("hooks/.logs/") &&
+        content.includes("skills/**/node_modules/"),
+    },
+    {
       label: "hapo:specs handoff block points to hapo:develop",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
@@ -185,12 +204,41 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/specs/templates/task.md",
       assert: (content) =>
         content.includes("## Context") &&
+        content.includes("## Constraints") &&
         content.includes("## Steps") &&
         content.includes("## Requirements") &&
+        content.includes("## Related Files") &&
+        content.includes("## Completion Criteria") &&
         content.includes("## Evidence") &&
+        content.includes("## Risk Assessment") &&
         content.includes("Runtime reachability verification") &&
         content.includes("Logic/data/validator task") &&
         content.includes("Layout/theme/responsive task"),
+    },
+    {
+      label: "hapo:specs forbids reduced task template shape",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("Template fidelity is mandatory") &&
+        content.includes("Do NOT rename `## Context` to `## Objective`") &&
+        content.includes("missing sections are invalid"),
+    },
+    {
+      label: "spec validator rejects reduced task template sections",
+      file: "src/claude/scripts/validate-spec-output.cjs",
+      assert: (content) =>
+        content.includes("missing Related Files") &&
+        content.includes("missing Completion Criteria") &&
+        content.includes("missing Risk Assessment") &&
+        content.includes("missing Runtime reachability verification"),
+    },
+    {
+      label: "spec validator blocks complex ready state before validation",
+      file: "src/claude/scripts/validate-spec-output.cjs",
+      assert: (content) =>
+        content.includes("design_context.validation_recommended") &&
+        content.includes("5+ task files") &&
+        content.includes("validation.status is not completed"),
     },
     {
       label: "hapo:specs finalization runs deterministic validator",
@@ -317,7 +365,7 @@ async function createValidSpecFixture(root) {
   await writeText(join(specDir, "design.md"), "# Design\n\nUse existing admin route.\n");
   await writeText(
     join(specDir, taskPath),
-    `# Task R1-01: User permission control\n\n## Context\n- Why: Admins need to control workspace creation.\n- Current state: Existing admin route.\n- Target outcome: Permission can be toggled.\n\n## Steps\n- [ ] 1. Update admin route\n  - Business intent: allow admin permission control.\n  - Code detail: PATCH /admin/users/{id}/permissions.\n  - _Requirements: 1.1_\n\n## Requirements\n- 1.1 — Persist user permission state.\n\n## Related Files\n| Path | Action | Description |\n|---|---|---|\n| \`backend/app/api/v1/admin.py\` | Modify | Permission endpoint |\n\n## Completion Criteria\n- [ ] Admin can toggle permission.\n- [ ] Invalid user returns 404.\n\n## Evidence\n- [ ] Automated verification\n  - Command(s): \`pytest backend/tests/test_admin_permissions.py\`\n  - Expected proof: tests pass\n- [ ] Artifact / runtime verification\n  - Inspect: \`PATCH /admin/users/{id}/permissions\`\n  - Expect: response contains updated permission\n- [ ] Runtime reachability verification\n  - Entrypoint/caller: \`backend/app/api/v1/admin.py\`\n  - Expect: route is registered in admin router\n- [ ] Contract / negative-path verification\n  - Check: missing user id\n  - Expect: 404\n\n## Risk Assessment\n| Risk | Severity | Mitigation |\n|---|---|---|\n| None identified | - | - |\n`,
+    `# Task R1-01: User permission control\n\n## Context\n- Why: Admins need to control workspace creation.\n- Current state: Existing admin route.\n- Target outcome: Permission can be toggled.\n\n## Constraints\n- MUST: Preserve existing admin auth checks.\n- SHOULD: Reuse existing route patterns.\n- MUST NOT: Add a new auth system.\n- SCOPE: Permission toggle only.\n\n## Steps\n- [ ] 1. Update admin route\n  - Business intent: allow admin permission control.\n  - Code detail: PATCH /admin/users/{id}/permissions.\n  - _Requirements: 1.1_\n\n## Requirements\n- 1.1 — Persist user permission state.\n\n## Related Files\n| Path | Action | Description |\n|---|---|---|\n| \`backend/app/api/v1/admin.py\` | Modify | Permission endpoint |\n\n## Completion Criteria\n- [ ] Admin can toggle permission.\n- [ ] Invalid user returns 404.\n\n## Evidence\n- [ ] Automated verification\n  - Command(s): \`pytest backend/tests/test_admin_permissions.py\`\n  - Expected proof: tests pass\n- [ ] Artifact / runtime verification\n  - Inspect: \`PATCH /admin/users/{id}/permissions\`\n  - Expect: response contains updated permission\n- [ ] Runtime reachability verification\n  - Entrypoint/caller: \`backend/app/api/v1/admin.py\`\n  - Expect: route is registered in admin router\n- [ ] Contract / negative-path verification\n  - Check: missing user id\n  - Expect: 404\n\n## Risk Assessment\n| Risk | Severity | Mitigation |\n|---|---|---|\n| None identified | - | - |\n`,
   );
   return specDir;
 }
@@ -328,6 +376,8 @@ async function createInvalidSpecFixture(root) {
     "tasks/task-R0-01-project-setup.md",
     "tasks/task-R0-02-ticket-list.md",
     "tasks/task-R0-03-filtering.md",
+    "tasks/task-R0-04-ticket-detail.md",
+    "tasks/task-R0-05-status-update.md",
   ];
   await writeText(
     join(specDir, "spec.json"),
@@ -382,10 +432,15 @@ async function runSpecValidatorFixtureTests() {
       "scope_lock",
       "task_files",
       "task_registry",
+      "design_context.validation_recommended",
+      "validation.status is not completed",
       "research.md",
       "entirely R0",
       "missing Requirements mapping",
       "missing Evidence",
+      "missing Related Files",
+      "missing Completion Criteria",
+      "missing Risk Assessment",
     ];
 
     if (invalid.status === 0) {

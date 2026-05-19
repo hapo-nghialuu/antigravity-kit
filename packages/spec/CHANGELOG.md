@@ -5,6 +5,13 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11] - 2026-05-19
+
+### Changed
+- Hardened `hapo:specs` task validation so generated tasks must keep the full CafeKit task shape: `Context`, `Constraints`, `Related Files`, `Completion Criteria`, `Evidence`, runtime reachability proof, and `Risk Assessment`.
+- Prevented complex specs with 5+ tasks from becoming implementation-ready until `/hapo:specs --validate` completes Red Team + Validate and persists validation state.
+- Installed `.claude/.gitignore` from the Claude runtime bundle so generated session state, hook logs, caches, local env files, and skill dependencies stay out of commits.
+
 ## [0.8.10] - 2026-05-19
 
 ### Added

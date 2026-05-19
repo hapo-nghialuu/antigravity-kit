@@ -68,6 +68,7 @@
   },
   "runtime": {
     "files": [
+      "gitignore",
       "runtime.json",
       "status.cjs",
       "hooks/session.cjs",

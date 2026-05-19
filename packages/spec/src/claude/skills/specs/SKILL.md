@@ -322,12 +322,15 @@ Each task file MUST be **self-contained and implementation-ready** — detailed 
 
 **Structure per task file:**
 1. **Context** — why this task exists, current state, target outcome, relevant exact files.
-2. **Steps** — concise implementation checklist with business intent and code-level detail.
-3. **Requirements** — list requirement IDs and acceptance criteria covered by this task.
-4. **Related Files** — table with exact paths, action type, and descriptions when paths are known; otherwise run scout first.
-5. **Completion Criteria** — observable, testable criteria.
-6. **Evidence** — automated command(s), artifact/runtime proof, negative-path proof, and runtime reachability proof.
-7. **Risk Assessment** — table with risk, severity, mitigation.
+2. **Constraints** — MUST / SHOULD / MUST NOT / SCOPE guardrails.
+3. **Steps** — concise implementation checklist with business intent and code-level detail.
+4. **Requirements** — list requirement IDs and acceptance criteria covered by this task.
+5. **Related Files** — table with exact paths, action type, and descriptions when paths are known; otherwise run scout first.
+6. **Completion Criteria** — observable, testable criteria.
+7. **Evidence** — automated command(s), artifact/runtime proof, negative-path proof, and runtime reachability proof.
+8. **Risk Assessment** — table with risk, severity, mitigation.
+
+**Template fidelity is mandatory:** preserve the task template headings exactly. Do NOT rename `## Context` to `## Objective`, do NOT replace `## Completion Criteria` with prose, do NOT remove `## Related Files`, `## Constraints`, or `## Risk Assessment`, and do NOT collapse `## Evidence` into generic QA scenarios. Compact wording is fine; missing sections are invalid.
 
 **Parallel markers:** Append `(P)` to tasks that can run concurrently (no data dependency, no shared files, no prerequisite approval from another task). Tasks serving DIFFERENT requirements are often parallelizable.
 
@@ -368,6 +371,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if a task creates runtime-facing artifacts but neither proves reachability from an entrypoint/caller nor names a later integration task responsible for wiring them.
 - FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or final integration section.
 - FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`, canonical contracts, or requirements text).
+- FAIL if any generated task replaces the required task template with a reduced `Objective` / `Steps` / `Evidence` shape. `Context`, `Constraints`, `Related Files`, `Completion Criteria`, `Evidence`, and `Risk Assessment` must all remain present.
 - FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
   1. hard-delete with no re-registration lock, or
@@ -439,7 +443,7 @@ Task paths that omit the `task-` prefix or use non-padded sequence numbers (for 
 6. `task_registry` matches the real filesystem and does not omit any task file
 7. If `design_context.validation_recommended = true`, `validation.status = "completed"` (or another explicit user-accepted risk state that is recorded)
 
-If any approval is `false`, `ready_for_implementation` MUST remain `false`.
+If any approval is `false`, `ready_for_implementation` MUST remain `false`. If the spec has 5+ task files, `ready_for_implementation` MUST remain `false` until `/hapo:specs <feature> --validate` completes Red Team + Validate and writes `validation.status = "completed"`.
 
 ## Output Structure
 
