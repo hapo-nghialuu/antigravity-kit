@@ -10,6 +10,24 @@ Review a spec before implementation. The system auto-decides the review depth ba
 2. If not → check active spec (spec with `in_progress` status; accept legacy `in-progress` when reading existing files)
 3. If nothing found → ask user to specify path
 
+## Deterministic Validator Gate (MANDATORY)
+
+This gate is the hard source of truth for `hapo:specs --validate`. LLM red-team tables and markdown validation reports are advisory until this script passes.
+
+After resolving the spec path, run:
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+```
+
+Required behavior:
+1. Run the validator once before the final PASS decision. If it fails, copy the exact failing categories into the validation findings/blockers and fix the physical spec artifacts.
+2. Red Team and Validate may continue while fixing issues, but they cannot approve the spec while validator errors remain.
+3. Run the validator again after every accepted Red Team / Validate fix set and before any final verdict.
+4. The final report MUST include the validator command and the final PASS/FAIL result.
+5. If the validator exits non-zero, final verdict is **FAIL / BLOCKED**, `validation.status` MUST NOT become `completed`, `ready_for_implementation` MUST remain `false`, and the output MUST NOT suggest `/hapo:develop`.
+6. A markdown checklist, manual QA table, or "all required sections present" claim cannot override validator failure.
+
 ## Auto-Decision: When to Red Team vs Validate
 
 The system evaluates the spec and picks the appropriate review mode:
@@ -45,6 +63,7 @@ These rules override any self-reasoning or optimization the system may attempt:
 7. **Implementation-facing propagation is mandatory.** A decision that affects implementation is NOT considered applied if it only appears in `Risk Assessment`, `validate-log.md`, or `red-team-report.md`. It must update at least one of: `requirements.md`, `Canonical Contracts & Invariants`, `Context`, `Steps`, `Requirements`, `Completion Criteria`, or `Evidence`.
 8. **CafeKit command dialect only.** Validation output MUST use `/hapo:develop <feature>` as the implementation handoff. Never mention `/sdd:execute-spec`, `/sdd:*`, `/work`, `/code`, `/specs <feature> --approve`, `/hapo:specs <feature> --approve`, or non-CafeKit aliases.
 9. **CafeKit task filename convention only.** Task files MUST use `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`). Files like `tasks/R0-1-project-scaffolding.md` are legacy/foreign format; rename them and update `spec.json.task_files`, `spec.json.task_registry`, and dependency references before passing validation.
+10. **Deterministic validator is mandatory.** The final validation verdict MUST be derived from `node .claude/scripts/validate-spec-output.cjs specs/<feature>`. If that command fails, report FAIL/BLOCKED and list the script output. Do NOT report PASS.
 
 ---
 
@@ -226,13 +245,15 @@ Save to `reports/validate-log.md`:
 Before declaring validation complete:
 1. Re-read `spec.json`, `requirements.md`, `design.md`, and all `tasks/task-*.md`
 2. Verify every accepted red-team finding and every validation action item is reflected in the correct physical file(s)
-3. Fail the audit if:
+3. Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and keep the raw result visible
+4. Fail the audit if:
    - a report says "applied" but the file still contains the old text
    - stale provider strings remain after a provider change
    - delete-data/privacy artifacts mix multiple canonical policies
    - any task path fails the CafeKit `tasks/task-R{N}-{SEQ}-<slug>.md` naming convention
    - `spec.json.updated_at`, `timestamps.review_done`, or `timestamps.validation_done` do not reflect the final reviewed state
-4. Only after the audit passes may you:
+   - deterministic validator exits non-zero
+5. Only after the audit passes may you:
    - set `spec.json.validation.status = "completed"`
    - set `spec.json.timestamps.validation_done`
    - set `spec.json.timestamps.review_done`
@@ -241,7 +262,7 @@ Before declaring validation complete:
 #### Step 8: Final Status Write-Back
 - Update `spec.json.updated_at` to the reconciliation time
 - Ensure `red-team-report.md` and `validate-log.md` do not contradict `spec.json`
-- If reconciliation fails, keep `validation.status` as `not-run` or `in_progress` and list blockers explicitly
+- If reconciliation or deterministic validation fails, keep `validation.status` as `not-run` or `in_progress`, keep `ready_for_implementation = false`, list blockers explicitly, and do not provide an implementation handoff.
 
 ---
 
@@ -256,6 +277,7 @@ Red Team: {N} findings ({A} accepted, {R} rejected)
 Validate: {Q} questions asked, {D} decisions confirmed
 
 Files modified: {list}
+Deterministic validator: PASS via `node .claude/scripts/validate-spec-output.cjs specs/<feature>`
 
 📌 Next step: /hapo:develop <feature>    (ONLY if reconciliation audit passed)
 ```

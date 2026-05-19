@@ -137,6 +137,7 @@ The system MUST NOT execute Steps 1-8. Instead, load `references/review.md` and 
 5. **MUST NOT create implementation code files** (`.ts`, `.js`, `.py`, etc.). The validate workflow produces ONLY markdown spec documents and reports. If a fix requires a new shared module, describe it in the relevant task file instead of creating the actual code file.
 6. **MUST NOT over-engineer fixes.** Apply YAGNI — if user says "configure later", add an abstraction note to the task, do NOT generate 4 concrete provider implementations.
 7. **MUST follow auto-decision table exactly.** Count task files + scan for keywords → pick mode. No self-justification to override the table result.
+8. **MUST run deterministic validator.** Before reporting validation PASS, run `node .claude/scripts/validate-spec-output.cjs specs/<feature>`. If it exits non-zero, validation is FAIL/BLOCKED, `ready_for_implementation` remains `false`, and output MUST NOT suggest `/hapo:develop`.
 
 ## Workflow Diagram
 
@@ -350,6 +351,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
 - **Reconciliation Rule:** `validation.status = "completed"` is forbidden until all accepted findings and validation decisions are physically propagated into `requirements.md`, `design.md`, `tasks/*.md`, and `spec.json` where applicable.
+- **Deterministic Gate:** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` after all fixes and before final output. Script failure overrides any LLM checklist result and blocks `ready_for_implementation = true`.
 
 ### Step 9.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)

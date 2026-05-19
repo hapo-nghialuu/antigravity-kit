@@ -94,6 +94,16 @@ async function runStaticSemanticTests() {
         !content.includes("'init.json',"),
     },
     {
+      label: "installer writes CafeKit version metadata",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("cafekit.json") &&
+        content.includes("writePlatformVersionMetadata") &&
+        content.includes("previousVersion") &&
+        content.includes("CafeKit Version") &&
+        content.includes("const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`"),
+    },
+    {
       label: "hapo:specs handoff block points to hapo:develop",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
@@ -116,6 +126,23 @@ async function runStaticSemanticTests() {
         content.includes("Validation output MUST use `/hapo:develop <feature>`") &&
         content.includes("📌 Next step: /hapo:develop <feature>") &&
         content.includes("/specs <feature> --approve"),
+    },
+    {
+      label: "hapo:specs validate hard-gates on deterministic validator",
+      file: "src/claude/skills/specs/references/review.md",
+      assert: (content) =>
+        content.includes("## Deterministic Validator Gate (MANDATORY)") &&
+        content.includes("node .claude/scripts/validate-spec-output.cjs specs/<feature>") &&
+        content.includes("If the validator exits non-zero, final verdict is **FAIL / BLOCKED**") &&
+        content.includes("Do NOT report PASS"),
+    },
+    {
+      label: "hapo:specs validate guardrail blocks develop handoff on validator failure",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("**MUST run deterministic validator.**") &&
+        content.includes("Script failure overrides any LLM checklist result") &&
+        content.includes("output MUST NOT suggest `/hapo:develop`"),
     },
     {
       label: "hapo:specs validate enforces CafeKit task filenames",
@@ -357,6 +384,7 @@ async function runSpecValidatorFixtureTests() {
       "task_registry",
       "research.md",
       "entirely R0",
+      "missing Requirements mapping",
       "missing Evidence",
     ];
 

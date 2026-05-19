@@ -93,7 +93,7 @@ function validateTaskSections(taskPath, content, errors) {
   const hasSteps =
     hasHeading(content, 'Steps') || hasHeading(content, 'Implementation Steps');
   const hasRequirements =
-    hasHeading(content, 'Requirements') || /^\*\*Requirement:\*\*/m.test(content);
+    hasHeading(content, 'Requirements') || /_Requirements:\s*[^_\n]+_/i.test(content);
   const hasEvidence =
     hasHeading(content, 'Evidence') ||
     hasHeading(content, 'Task Test Plan & Verification Evidence') ||

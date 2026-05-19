@@ -20,6 +20,7 @@ const os = require('os');
 const readline = require('readline');
 const { execSync } = require('child_process');
 const packageJson = require('../package.json');
+const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
 function validateManifestV2(manifest) {
   if (!manifest || manifest.version !== 2) return false;
@@ -337,6 +338,55 @@ function ensureWorkflowDependencies(platformKey, platform, results, options = {}
     const targetPath = path.join(platform.agentsDir, fileName);
     ensureDependencyFile(targetPath, content, results, path.join(platform.agentsDir, fileName), options);
   });
+}
+
+function readJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writePlatformVersionMetadata(platformKey, results) {
+  const platform = PLATFORMS[platformKey];
+  const targetPath = path.join(platform.folder, 'cafekit.json');
+  const targetExists = fs.existsSync(targetPath);
+  const existingMetadata = readJsonFile(targetPath);
+  const now = new Date().toISOString();
+  const previousVersion = typeof existingMetadata.version === 'string'
+    ? existingMetadata.version
+    : null;
+
+  const metadata = {
+    schemaVersion: 1,
+    packageName: packageJson.name,
+    version: packageJson.version,
+    platform: platform.id,
+    platformName: platform.name,
+    installedAt: existingMetadata.installedAt || now,
+    lastInstalledAt: now,
+    installCommand: INSTALL_COMMAND
+  };
+
+  if (previousVersion && previousVersion !== packageJson.version) {
+    metadata.previousVersion = previousVersion;
+  }
+
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
+
+  if (targetExists) {
+    console.log(`  ↻ Version metadata updated: ${targetPath}`);
+    results.updated++;
+  } else {
+    console.log(`  ✓ Version metadata installed: ${targetPath}`);
+    results.copied++;
+  }
 }
 
 function getPlatformSpecFiles(platformKey) {
@@ -1065,6 +1115,8 @@ async function main() {
         copyGeminiFile(platformKey, results, installerOptions);
       }
 
+      writePlatformVersionMetadata(platformKey, results);
+
       results.targets.push(platform.commandsDir);
       console.log();
     }
@@ -1085,6 +1137,7 @@ async function main() {
     console.log();
     console.log(`  Copied Files:       ${results.copied}`);
     console.log(`  Updated Files:      ${results.updated}`);
+    console.log(`  CafeKit Version:    ${packageJson.version}`);
     console.log(`  Skipped Files:      ${results.skipped}`);
     console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
     console.log(`  Dependency Checks:  ${results.dependencyChecks}`);

@@ -8,6 +8,8 @@
 npx @haposoft/cafekit
 ```
 
+The installer records the installed package version in `.claude/cafekit.json` for Claude Code projects.
+
 ## What It Is
 
 CafeKit installs a working runtime bundle for Claude Code:

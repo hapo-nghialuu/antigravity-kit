@@ -5,6 +5,14 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10] - 2026-05-19
+
+### Added
+- Added installed CafeKit version tracking in `.claude/cafekit.json` / `.agent/cafekit.json`, including current version, previous version, install timestamps, platform metadata, and reproducible `npx @haposoft/cafekit@<version>` install command.
+
+### Changed
+- Strengthened `hapo:specs --validate` so deterministic validator failure blocks PASS, `ready_for_implementation`, and `/hapo:develop` handoff.
+
 ## [0.8.9] - 2026-05-19
 
 ### Added
