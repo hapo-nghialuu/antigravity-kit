@@ -15,11 +15,12 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 - For non-trivial features, use `/hapo:specs` to create or validate the spec.
 - For approved specs, work one task file at a time.
 - Extract from the active task:
-  - `Objective`
-  - `Constraints`
+  - `Context`
+  - `Steps`
+  - `Requirements`
   - `Related Files`
   - `Completion Criteria`
-  - `Task Test Plan & Verification Evidence`
+  - `Evidence`
 - If these are missing or too vague to verify, route back to spec correction.
 
 ## 3. Execute
@@ -31,7 +32,7 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
 ## 4. Verify
 
-- Run exact commands from `Task Test Plan & Verification Evidence` first.
+- Run exact commands from `Evidence` first.
 - Then run repo-level lint/test/build as needed for confidence.
 - Use only fresh verification from the current run when claiming completion.
 - `PRECHECK_FAIL` outranks `NO_TESTS`.

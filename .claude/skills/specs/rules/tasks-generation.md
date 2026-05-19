@@ -40,6 +40,8 @@ Detail bullets must include:
 **End with integration tasks** to wire everything together.
 - For UI/app/runtime workflows, the final integration task MUST name the real entrypoint (`App.tsx`, route, command, worker, extension manifest, API route, etc.) and verify every user-visible surface from the requirements is reachable from that entrypoint.
 - Components, services, routes, commands, workers, providers, and data loaders created by earlier tasks MUST be consumed by a later integration task or explicitly marked as internal support in `design.md`; orphaned deliverables are invalid.
+- Prefer compact, implementation-ready task prose over large boilerplate. The golden shape is: `Context` -> `Steps` -> `Requirements` -> `Related Files` -> `Completion Criteria` -> `Evidence` -> `Risk Assessment`.
+- A compact task is valid when it names exact files/contracts, maps requirements, and gives executable evidence. Do not expand it into nested filler just to satisfy a template.
 
 ### 3. Flexible Task Sizing
 
@@ -140,11 +142,11 @@ Every task file MUST contain the Risk Assessment table, even if no risks are ide
 - Never mark implementation work or integration-critical verification as optional—reserve `*` for auxiliary/deferrable test coverage that can be revisited post-MVP.
 - Never mark auth, permissions, privacy, data deletion, migration, schema, or contract verification work as optional.
 
-### Mandatory Task Test Plan & Verification Evidence
+### Mandatory Evidence Section
 
-Every new task file MUST include a `## Task Test Plan & Verification Evidence` section. Existing specs may still use the legacy `## Verification & Evidence` heading; readers and sync tools must support both.
+Every new task file MUST include a `## Evidence` section. Existing specs may still use the v0.8 heading `## Task Test Plan & Verification Evidence` or the legacy `## Verification & Evidence` heading; readers and sync tools must support all three.
 
-That section is the task-level test plan and MUST contain:
+That section is the task-level test plan and proof checklist. It MUST contain:
 1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`
 2. **Artifact/runtime proof** — exact files, routes, UI surfaces, generated outputs, or persisted state to inspect
 3. **Contract/negative-path proof** — at least one contract-preserving check for unauthorized, invalid, missing-permission, rollback, or failure-path behavior when relevant
@@ -159,14 +161,32 @@ Rules:
 - For provider-sensitive work, use provider-neutral wording unless the scope lock explicitly names a vendor.
 - For delete-data/privacy work, task text MUST match the single deletion/retention policy chosen in `design.md`. Mixed policies are invalid.
 
+### Test Type Selection
+
+Choose verification by task risk and touched surface. Do not force every task to include every test type, but do not omit the test type that proves the task's actual behavior.
+
+| Task kind | Required / expected proof |
+|---|---|
+| Pure logic, data transform, parser, sorting, filtering, validator | Unit test plus negative-path case |
+| Stateful UI component or user interaction | Component test or integration test; add runtime UI check if the component must be mounted |
+| Cross-module state, API, persistence, provider, or service boundary | Integration test that proves real contract/state handoff |
+| User-facing workflow across screens/components | E2E or UI flow verification after the vertical slice exists |
+| Layout, theme, responsive, visual style | Runtime/visual viewport checks; screenshot proof when practical |
+| Keyboard/focus/form/modal/table interaction | Accessibility check for focus, labels, roles, and keyboard behavior |
+| Scaffolding/config/release plumbing | Smoke checks: typecheck/build/test/dev-server or equivalent |
+| Bug fix/regression | Regression test reproducing the old failure, then passing |
+| Performance/security-sensitive requirement or touched surface | Performance/security check only when specified by requirements, design risk, or changed boundary |
+
+`hapo:specs` writes the expected proof into each task. `hapo:develop` executes the task-local proof before marking the task done. `hapo:test` runs the broader system pass after implementation or for a requested feature scope.
+
 ## Task Hierarchy Rules
 
 ### Maximum 2 Levels
-- **Level 1**: Major tasks (1, 2, 3, 4...)
-- **Level 2**: Sub-tasks (1.1, 1.2, 2.1, 2.2...)
-- **No deeper nesting** (no 1.1.1)
-- If a major task would contain only a single actionable item, collapse the structure and promote the sub-task to the major level (e.g., replace `1.1` with `1.`).
-- When a major task exists purely as a container, keep the checkbox description concise and avoid duplicating detailed bullets—reserve specifics for its sub-tasks.
+- Prefer one actionable checkbox per real implementation step.
+- Use sub-tasks (`1.1`, `1.2`) only when a step has multiple separately verifiable units.
+- **No deeper nesting** (no `1.1.1`).
+- If a major task would contain only a single actionable item, collapse the structure and promote the sub-task to the major level.
+- When a major task exists purely as a container, keep the checkbox description concise and avoid duplicating detailed bullets.
 
 ### Sequential Numbering
 - Major tasks MUST increment: 1, 2, 3, 4, 5...
@@ -216,6 +236,6 @@ Rules:
 - If gaps found: Return to requirements or design phase
 - No requirement should be left without corresponding tasks
 
-Use `N.M`-style numeric requirement IDs where `N` is the top-level requirement number from requirements.md (for example, Requirement 1 → 1.1, 1.2; Requirement 2 → 2.1, 2.2), and `M` is a local index within that requirement group.
+Use the requirement ID style already present in `requirements.md` (`R1`, `REQ-01`, or `N.M`). The task filename cluster (`task-R1-01-*`) does not have to mirror every requirement ID exactly, but every requirement MUST be listed in at least one task's `## Requirements` section.
 
 Document any intentionally deferred requirements with rationale.

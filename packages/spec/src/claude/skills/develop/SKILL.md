@@ -45,7 +45,7 @@ DO NOT write implementation code until an approved spec exists.
 
 <DEFINITION-OF-DONE>
 A task is NOT done because code compiles or a placeholder renders.
-A task is done only when the task file's Completion Criteria AND Task Test Plan & Verification Evidence section are satisfied with real execution proof. Existing specs may use legacy `Verification & Evidence`; treat that as the same contract.
+A task is done only when the task file's Completion Criteria AND Evidence section are satisfied with real execution proof. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`; treat those as the same contract.
 </DEFINITION-OF-DONE>
 
 <CONTRACT-FIDELITY>
@@ -92,7 +92,7 @@ flowchart TD
   - Objective + Constraints
   - Related Files
   - Completion Criteria
-  - Task Test Plan & Verification Evidence (or legacy Verification & Evidence)
+  - Evidence (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`)
   - Exact executable verification commands named in the task
   - Requirement IDs referenced by the task
   - Named technologies, frameworks, protocols, and data stores that the task/spec explicitly requires
@@ -142,7 +142,7 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 **Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
 - Passing Step 4 requires ALL of the following:
-  1. Automated verification passes, including preflight compile/typecheck/build health and every exact command named in the task's `Task Test Plan & Verification Evidence` section (or legacy `Verification & Evidence`)
+  1. Automated verification passes, including preflight compile/typecheck/build health and every exact command named in the task's `Evidence` section (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`)
   2. Spec compliance review passes: every scoped requirement and active task criterion is implemented, with no extras and no omissions
   3. Code quality review passes
   4. Task evidence passes (artifacts/runtime surfaces/reachability/negative-path checks from the task file are proven)
@@ -161,7 +161,7 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
   - `spec.json.task_registry[path].status = "done"`
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
-  - a human-readable verification receipt inside the task's `Task Test Plan & Verification Evidence` section showing which commands ran, their outcomes, and what proof was observed
+  - a human-readable verification receipt inside the task's `Evidence` section showing which commands ran, their outcomes, and what proof was observed
 - Verification receipts with `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation intentionally simplified a named contract MUST NOT be synchronized as `done`.
 - After syncing the active task, run a **Task Closeout Docs Checkpoint**
 - Task Closeout Docs Checkpoint:

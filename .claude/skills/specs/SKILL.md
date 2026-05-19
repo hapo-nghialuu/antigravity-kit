@@ -34,6 +34,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate
 - Each phase (Init → Requirements → Design → Tasks) must complete before the next begins
 - No skipping — don't write design without requirements
 - Exception: simple tasks may merge requirements + design into one step
+- A normal `/hapo:specs <feature-description>` run is an end-to-end spec creation workflow. Do not stop after Init unless the user explicitly asks for init-only behavior.
 
 ### Scope Rules
 - Respect `scope_lock` absolutely once user has confirmed
@@ -79,6 +80,9 @@ Forbidden generated artifacts:
 - Do NOT create shorthand task files such as `tasks/task-R0-1.md`, `tasks/task-R1-1.md`, or `tasks/R0-1-<slug>.md`.
 - The template file name is never the output file name. `templates/spec-state.json` is only the schema source for generated `spec.json`.
 - Task hydration is session/task-state synchronization only; it MUST NOT be written as a markdown artifact.
+- Before marking a spec ready, run the deterministic validator:
+  - `node .claude/scripts/validate-spec-output.cjs specs/<feature>`
+  - Any validator failure blocks `ready_for_implementation = true`.
 
 ### Writing Style
 - Concise, prefer bullet lists
@@ -116,6 +120,8 @@ System auto-analyzes the description:
 - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
 - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
 - For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
+- After user confirms scope, continue through Init → Evidence/Requirements → Design → Tasks → Finalization in the same workflow unless the user explicitly asks for "init only" or "pause after init".
+- If the workflow must pause for manual approval, the continuation command is `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
 
 ### When called WITH `--validate` argument
 
@@ -219,7 +225,7 @@ Load: `references/scope-inquiry.md`
   - `in_scope`: confirmed scope items
   - `out_of_scope`: excluded items
   - `expansion_policy`: `requires-user-approval`
-- Do NOT generate requirements, design, or tasks at this step
+- Step 4 itself only initializes files. In a normal `/hapo:specs <feature-description>` run, immediately continue to Step 5 after Init. Stop here only when the user explicitly requested init-only behavior.
 
 ### Step 5: Evidence Gate, Requirements & Research
 - Read `spec.json` — stop if init hasn't completed
@@ -263,7 +269,8 @@ Load: `references/scope-inquiry.md`
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
 - `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
-- Each task file MUST include `Completion Criteria` and `Task Test Plan & Verification Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done.
+- Each task file MUST include `Completion Criteria` and `Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
+- Each task's `Evidence` MUST choose the right proof type for the touched surface: unit for pure logic, component/integration for UI or state wiring, E2E/UI flow for complete user workflows, visual/responsive checks for style/layout work, accessibility checks for interactive UI, smoke checks for scaffold/config, regression checks for bug fixes, and performance/security checks only when the requirement or risk calls for them.
 - Every task MUST preserve the approved `scope_lock`: implement all scoped acceptance criteria for its requirement, avoid out-of-scope features, and record any intentional deferral as a named later task rather than implicit omission.
 - For UI/app/runtime features, generate a final integration/reachability task or final section that names the real runtime entrypoint and proves prior task outputs are imported, mounted, registered, invoked, or otherwise reachable.
 - Build `spec.json.task_registry` alongside `task_files`. For each task file, register at minimum:
@@ -277,11 +284,11 @@ Load: `references/scope-inquiry.md`
   - `last_updated_at`
 - Update `spec.json` phase + task metadata
 
-#### Requirement-Driven Task Grouping (MANDATORY)
-Tasks MUST be organized **by requirement**, NOT by technical concern. Each requirement from `requirements.md` gets its own cluster of task files.
+#### Requirement-Covered Task Grouping (MANDATORY)
+Tasks MUST be organized by implementation flow while preserving explicit requirement coverage. Foundation work uses `R0`; feature work uses `R1+`.
 
 **Naming convention:** `tasks/task-R{N}-{SEQ}-<slug>.md`
-- `R{N}` = requirement number (e.g., R1, R2, R3...)
+- `R{N}` = foundation or implementation cluster (R0 foundation, R1+ feature work)
 - `{SEQ}` = sequential number within that requirement (01, 02, 03...)
 - `<slug>` = descriptive kebab-case name
 
@@ -300,11 +307,11 @@ tasks/
 ```
 
 **Splitting rules:**
-- Each requirement → 1 or more task files (split by sub-scope within the requirement)
-- A task file MUST serve exactly 1 primary requirement (cross-cutting references allowed as secondary)
-- If a requirement has only 1 natural task, create 1 file (no forced splitting)
-- If a requirement has many acceptance criteria spanning different concerns → split into multiple task files
-- After generating all tasks: verify **every requirement ID** appears as primary in at least one task file — gaps = failure
+- Split by real implementation dependency chain first: model/schema -> service -> API -> UI -> integration.
+- A task file MAY cover multiple requirement IDs when one code change naturally satisfies them.
+- A requirement MAY be covered by multiple task files when it spans layers.
+- Do not create all tasks under `R0`; `R0` is only shared foundation/setup.
+- After generating all tasks: verify **every requirement ID** appears in at least one task file's `## Requirements` section — gaps = failure.
 - **Legacy Protection:** If the `research.md` identified existing codebase files or tests that will be broken (Blast Radius), you MUST generate explicitly tasked files (e.g., `task-R5-01-update-legacy-tests.md`) to fix those breakages. Do not leave broken tests out of scope.
 
 **Dependency ordering:** Tasks within the same requirement are ordered by natural implementation flow. Cross-requirement dependencies use `Dependencies:` field referencing other task file names.
@@ -313,24 +320,17 @@ tasks/
 Each task file MUST be **self-contained and implementation-ready** — detailed enough for a junior developer or AI coding agent to execute without guessing.
 
 **Structure per task file:**
-1. **Objective** — 1-2 sentence objective (WHAT, not HOW)
-2. **Implementation Steps** — Hierarchical breakdown:
-   - Major steps (`- [ ] 1. ...`) group by cohesion
-   - Sub-tasks (`- [ ] 1.1 ...`) are specific actionable items (1-3 hours each)
-   - Detail bullets under each sub-task describe:
-     - Business logic and behavior to implement
-     - Edge cases and constraints
-     - Validation rules
-   - `_Requirements: X.X_` at the END of every sub-task — **no exceptions**
-3. **Test coverage** — Last major step in every task must cover unit + integration tests
-4. **Related Files** — Table with exact paths, action type, and descriptions
-5. **Completion Criteria** — Observable, testable criteria (checkbox format)
-6. **Risk Assessment** — Table with risk, severity, mitigation
-7. **Runtime reachability** — For any created component, service, route, command, worker, provider, or data loader, state where it is reached from or which named later task wires it
+1. **Context** — why this task exists, current state, target outcome, relevant exact files.
+2. **Steps** — concise implementation checklist with business intent and code-level detail.
+3. **Requirements** — list requirement IDs and acceptance criteria covered by this task.
+4. **Related Files** — table with exact paths, action type, and descriptions when paths are known; otherwise run scout first.
+5. **Completion Criteria** — observable, testable criteria.
+6. **Evidence** — automated command(s), artifact/runtime proof, negative-path proof, and runtime reachability proof.
+7. **Risk Assessment** — table with risk, severity, mitigation.
 
 **Parallel markers:** Append `(P)` to tasks that can run concurrently (no data dependency, no shared files, no prerequisite approval from another task). Tasks serving DIFFERENT requirements are often parallelizable.
 
-**FORBIDDEN:** Task files with only 3-5 top-level checkboxes and no sub-task breakdown. This level of detail is INSUFFICIENT for implementation.
+**FORBIDDEN:** Task files with only vague checkboxes and no exact files, requirements, or evidence. Compact is good; vague is invalid.
 
 ### Step 8: Task Hydration
 Load: `references/task-hydration.md`
@@ -354,6 +354,7 @@ Load: `references/review.md` + `rules/design-review.md`
 ### Step 9.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)
 - Rebuild `spec.json.task_registry` from the real filesystem if it is missing, stale, or missing keys. Preserve task status fields when the path still matches.
+- Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
 - FAIL if any task file exists on disk but is missing from `task_files`
 - FAIL if any path in `task_files` does not exist on disk
 - FAIL if any task file exists on disk but is missing from `task_registry`
@@ -361,10 +362,10 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if any task file path does not match `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`)
 - FAIL if a newly generated non-trivial spec lacks a `research.md` Evidence Summary with codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, and downstream task/test implications.
 - FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
-- FAIL if a task lacks `Completion Criteria` or `Task Test Plan & Verification Evidence` (legacy `Verification & Evidence` is accepted only for pre-existing task files)
+- FAIL if a task lacks `Completion Criteria` or `Evidence` (existing `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence` is accepted)
 - FAIL if a task creates runtime-facing artifacts but neither proves reachability from an entrypoint/caller nor names a later integration task responsible for wiring them.
 - FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or final integration section.
-- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`, canonical contracts, or requirements text).
+- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`, canonical contracts, or requirements text).
 - FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
   1. hard-delete with no re-registration lock, or
@@ -447,7 +448,7 @@ specs/
     ├── requirements.md        # Technical requirements (EARS format)
     ├── research.md            # Research notes
     ├── design.md              # Architectural design
-    ├── tasks/                 # Grouped by requirement (R1, R2, R3...)
+    ├── tasks/                 # Foundation + implementation clusters (R0, R1, R2...)
     │   ├── task-R0-01-foundation.md
     │   ├── task-R1-01-<slug>.md
     │   ├── task-R1-02-<slug>.md
@@ -502,13 +503,14 @@ Before finalizing any specification, assert all the following:
 - [ ] **Requirements traceability** matrix present in design.md
 - [ ] **Canonical Contracts & Invariants** filled for auth/transport/persistence/artifact-sensitive work
 - [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
-- [ ] **Every task file** includes `Task Test Plan & Verification Evidence` with executable or inspectable proof
+- [ ] **Every task file** includes `Evidence` with executable or inspectable proof
 - [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
 - [ ] **Dependency graph complete**: no task can start before its blockers are listed
 - [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
 - [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
 - [ ] **task_files inventory synced**: no missing or orphaned task references
 - [ ] **task_registry synced**: every task file has exactly one machine-state entry with valid status + dependencies
+- [ ] **deterministic validator passed**: `node .claude/scripts/validate-spec-output.cjs specs/<feature>`
 - [ ] **Validation gate consistent**: validation_recommended and validation.status agree with spec risk
 - [ ] **Provider wording clean**: no stale vendor/provider strings outside allowed research context
 - [ ] **spec.json fully updated**: phase, current_phase, progress, timestamps, approvals, design_context
@@ -535,6 +537,7 @@ Before finalizing any specification, assert all the following:
 - `design.md` — Design document template
 - `research.md` — Research log template
 - `task.md` — Template for individual task file
+- `.claude/scripts/validate-spec-output.cjs` — Deterministic validator for generated spec artifacts
 
 ### Rules (`rules/`)
 - `ears-format.md` — EARS requirements standard

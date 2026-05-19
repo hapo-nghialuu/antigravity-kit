@@ -24,7 +24,7 @@ Do not attempt a standard text-based review if the project includes Visual Specs
 3. If NO (Markdown Spec only): Read the spec directly and extract:
    - requirement bullets
    - task `Completion Criteria`
-   - task `Task Test Plan & Verification Evidence` (or legacy `Verification & Evidence`)
+   - task `Evidence` (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`)
    - canonical contracts/invariants from `design.md`
    Then verify the changed files against those concrete obligations.
 

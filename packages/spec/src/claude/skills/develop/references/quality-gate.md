@@ -10,11 +10,12 @@ Green tests are NOT enough. The gate requires four proofs:
 
 ## Automation Semantics
 
-- If the task names exact commands in `Task Test Plan & Verification Evidence` (or legacy `Verification & Evidence`), those exact commands are mandatory and must run before any fallback repo defaults.
+- If the task names exact commands in `Evidence` (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`), those exact commands are mandatory and must run before any fallback repo defaults.
 - Preflight compile/typecheck/build health is mandatory. If compile/typecheck/build fails before tests are meaningful, the gate result is `PRECHECK_FAIL`, not `NO_TESTS`.
 - `NO_TESTS` is never an automatic PASS.
 - `NO_TESTS` is acceptable only when the task does **not** require a dedicated test suite command and every other required automated command/evidence item passes.
 - If the task explicitly requires tests and the repo has no such test command or suite, the task is FAIL or BLOCKED, not done.
+- If the task kind implies a concrete test type, the gate must enforce it: unit tests for logic/regression, component or integration tests for stateful UI or cross-module wiring, E2E/UI-flow checks for complete user workflows, visual/responsive checks for layout/theme work, accessibility checks for interactive UI, and smoke checks for scaffold/config. Performance/security checks are mandatory only when specified by requirement/risk/boundary.
 - Named frameworks, auth systems, transports, datastores, and runtime boundaries in the task/spec are contractual. Silent substitutions are review failures, not acceptable implementation trade-offs.
 - Multi-process or multi-runtime flows must prove shared real state or a real boundary contract. Matching in-memory placeholders on both sides do not count as working integration.
 - Scope fidelity is mandatory: missing scoped behavior, extra unapproved behavior, or task output that exists only as orphaned/unreachable code is a review failure even when build/tests pass.
@@ -29,7 +30,7 @@ Variable: retry_count = 0
 
 Before START_LOOP:
   - Read the active task file(s)
-  - Extract Related Files, Completion Criteria, Task Test Plan & Verification Evidence (or legacy Verification & Evidence)
+  - Extract Related Files, Completion Criteria, Evidence (or Task Test Plan & Verification Evidence / legacy Verification & Evidence)
   - Extract the exact executable verification commands in declaration order
   - Extract relevant design contracts/invariants for the touched area
   - Extract scope_lock, requirement IDs, runtime entrypoints/callers, and reachability proof obligations

@@ -94,7 +94,8 @@ try {
   lines.push(`> Bạn PHẢI sử dụng công cụ Edit để cập nhật trạng thái vật lý sau khi đã có bằng chứng verify thật (build/test/runtime/artifact), không phải chỉ vì code đã viết xong.`);
   lines.push(`> 1. Sửa file \`spec.json\` (status, phase/current_phase, timestamps, \`task_files\`, \`task_registry\`, validation state nếu có thay đổi).`);
   lines.push(`> 2. Chỉ khi verify xong mới sửa file \`tasks/task-*.md\` (status + tick '[x]' các sub-task và completion criteria liên quan).`);
-  lines.push(`> 3. NẾU VỪA HOÀN THÀNH 1 TASK CÓ SỬA SOURCE CODE, BẮT BUỘC cập nhật ngay tài liệu trong \`docs/\` (\`system-architecture.md\` hoặc Changelog) cho đồng bộ.`);
+  lines.push(`> 3. Trước khi set \`ready_for_implementation = true\`, PHẢI chạy \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` và sửa mọi lỗi.`);
+  lines.push(`> 4. NẾU VỪA HOÀN THÀNH 1 TASK CÓ SỬA SOURCE CODE, BẮT BUỘC cập nhật ngay tài liệu trong \`docs/\` (\`system-architecture.md\` hoặc Changelog) cho đồng bộ.`);
   lines.push(`> CẤM VI PHẠM LUẬT TOLLGATE NÀY NHẰM ĐẢM BẢO TÍNH ĐỒNG BỘ CỦA HỆ THỐNG.`);
   lines.push('');
 

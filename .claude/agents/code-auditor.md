@@ -23,7 +23,7 @@ Extract and verify:
 1. Declared deliverables (files, routes, entrypoints, UI surfaces, schemas, migrations)
 2. Declared task scope (`Related Files` and direct support files that are clearly justified)
 3. Completion Criteria
-4. Task Test Plan & Verification Evidence expectations (or legacy Verification & Evidence)
+4. Task Evidence expectations (or Task Test Plan & Verification Evidence / legacy Verification & Evidence)
 5. Canonical Contracts & Invariants from the design
 6. Named technologies and runtime choices that the task/spec explicitly requires
 7. Runtime entrypoints/callers and reachability obligations from task evidence or the task-aware scout report

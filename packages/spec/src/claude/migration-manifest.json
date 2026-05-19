@@ -56,7 +56,8 @@
   "scripts": {
     "required": [
       "validate-docs.cjs",
-      "browser-tool.cjs"
+      "browser-tool.cjs",
+      "validate-spec-output.cjs"
     ]
   },
   "agentReferences": {

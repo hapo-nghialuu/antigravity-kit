@@ -5,6 +5,18 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-05-19
+
+### Added
+- Added a deterministic `validate-spec-output.cjs` validator for generated `hapo:specs` artifacts. It blocks boolean `scope_lock`, stale `tasks` arrays, stale or incomplete `task_registry`, missing `research.md` evidence summaries, all-`R0` feature task sets, and task files without evidence.
+- Added self-test fixtures that prove a compact valid spec passes and a triage-dashboard-like invalid spec fails.
+
+### Changed
+- Simplified the task template toward the v0.7.29 super-admin style: `Context`, `Steps`, `Requirements`, `Related Files`, `Completion Criteria`, `Evidence`, and `Risk Assessment`.
+- Relaxed task grouping so task IDs follow implementation flow while requirement coverage remains explicit in each task, avoiding over-fragmentation by requirement number.
+- Updated specs, develop, test, and review guidance to treat `Evidence` as the primary task proof section while still accepting `Task Test Plan & Verification Evidence` and legacy `Verification & Evidence`.
+- Added task-level test type guidance so unit, component, integration, E2E/UI, visual, accessibility, smoke, regression, performance, and security checks are applied only when the task risk/surface requires them.
+
 ## [0.8.8] - 2026-05-18
 
 ### Changed

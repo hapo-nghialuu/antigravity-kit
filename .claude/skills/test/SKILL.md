@@ -35,7 +35,7 @@ If tests fail, list every failure explicitly — do not summarize failures away.
 
 <SCOPE-GATE>
 When a feature name or `specs/<feature>` path is supplied, testing is spec-aware.
-Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and Task Test Plan evidence.
+Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and task `Evidence` / test-plan proof.
 The verdict MUST compare executed/reachable behavior against `scope_lock`, requirements, design contracts, task Completion Criteria, and runtime reachability obligations.
 Build/typecheck success without scoped runtime proof is not PASS.
 </SCOPE-GATE>
@@ -84,6 +84,15 @@ If the argument resolves to `specs/<feature>` or a feature directory under `spec
 3. Collect test counts, coverage percentages, and fail stack traces
 4. Treat 0 executed tests as `NO_TESTS`, even if the command exits 0
 5. In Spec-Aware Mode, inspect runtime reachability from declared entrypoints/callers and fail if scoped surfaces are missing or orphaned
+
+**Spec-aware test type escalation:**
+- Unit tests are mandatory when task evidence covers pure logic, transforms, validators, sorting/filtering, or regressions.
+- Component/integration tests are expected when task evidence covers stateful UI, context/store wiring, API/service boundaries, or persistence.
+- E2E/UI flow tests are expected once a complete user-facing workflow exists, not for isolated foundation tasks.
+- Visual/responsive checks are expected for layout, theme, dashboard, and style tasks.
+- Accessibility checks are expected for interactive UI surfaces where focus, roles, labels, keyboard navigation, or ARIA can regress.
+- Smoke checks are enough for scaffold/config tasks unless the task requires deeper proof.
+- Performance/security checks are only mandatory when the requirement, design risk, or touched runtime boundary calls for them.
 
 **UI verification (`--ui` / `--ui-auth` / `--ui-flow`):**
 Execute multi-page discovery, then spawn **Parallel UI Subagents** (test-runner instances) to handle Smoke, Core-Vitals, Accessibility, SEO, Security, and User Flows simultaneously.

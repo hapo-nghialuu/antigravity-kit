@@ -31,6 +31,7 @@ specs/<feature>/
 - `spec.json` is generated from `.claude/skills/specs/templates/spec-state.json`; never write `init.json` or `spec-state.json` into the spec directory.
 - Task filenames MUST include the `task-` prefix, requirement number, two-digit sequence, and descriptive slug, for example `tasks/task-R0-01-project-scaffolding.md`.
 - Do NOT write `hydration.md`; task hydration is session/task-state synchronization only.
+- Before setting `ready_for_implementation = true`, run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and fix every failure.
 
 ## Mental Models (How You Think)
 
@@ -58,6 +59,8 @@ Init → Requirements → Design → Tasks
 ### Auto-Approval Behavior
 - When running the full pipeline end-to-end, follow the auto-approval rules defined in `SKILL.md`.
 - When running a single phase, stop and report status after completion.
+- Normal `/hapo:specs <feature-description>` requests are full pipeline requests.
+- If a pause is required after user review, tell the user to continue with `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
 
 ## Scope Lock Protocol (MANDATORY)
 
@@ -123,26 +126,24 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Reject tasks outside `scope_lock.in_scope`
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
 - Apply `(P)` parallel markers when applicable (load `.claude/skills/specs/rules/tasks-parallel-analysis.md`)
-- Every task MUST include `Task Test Plan & Verification Evidence` with exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks.
+- Every task MUST use the compact implementation-ready shape: `Context`, `Steps`, `Requirements`, `Related Files`, `Completion Criteria`, `Evidence`, `Risk Assessment`.
+- `Evidence` MUST include exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
 - UI/app/runtime workflows MUST include a final integration/reachability task or final integration section that names the real entrypoint and proves all scoped user-facing surfaces are wired.
 - Do not allow orphan task outputs: components, services, hooks, routes, commands, workers, providers, reducers, data loaders, and generated artifacts must be reachable now or assigned to a named later integration task.
-- Validation decisions that affect implementation MUST be written into implementation-facing sections (`Objective`, `Constraints`, `Implementation Steps`, `Completion Criteria`, `Task Test Plan & Verification Evidence`) rather than only `Risk Assessment`.
+- Validation decisions that affect implementation MUST be written into implementation-facing sections (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`) rather than only `Risk Assessment`.
 
-### Sub-Task Detail Requirements (MANDATORY)
-Each task file MUST contain granular sub-tasks with the following structure:
-1. **Major steps** (`- [ ] 1. ...`) group related work by cohesion
-2. **Sub-tasks** (`- [ ] 1.1 ...`) describe specific actionable items (1-3 hours each)
-3. **Detail bullets** under each sub-task describe:
-   - Business logic and behavior to implement
-   - Edge cases and constraints
-   - Validation rules
-4. **Requirement mapping** (`_Requirements: X.X_`) at the end of EVERY sub-task — no exceptions
-5. **Test coverage section** as the last major step in every task, with unit + integration sub-tasks
-6. **Completion criteria** must be observable and testable — not subjective
-7. **Scope/reachability criteria** must prove the task implements scoped behavior without out-of-scope additions and without unreachable runtime-facing outputs
+### Task Detail Requirements (MANDATORY)
+Each task file MUST be compact but implementation-ready:
+1. `Context` explains why the task exists, current state, target outcome, and exact relevant files.
+2. `Steps` lists actionable implementation steps with business intent and code-level detail.
+3. `Requirements` lists the requirement IDs covered by this task.
+4. `Related Files` names exact paths and action type when known.
+5. `Completion Criteria` is observable and testable.
+6. `Evidence` names commands, artifact/runtime proof, negative-path proof, and reachability proof.
+7. `Risk Assessment` states real risks or `None identified`.
 
-**FORBIDDEN**: Task files with only 3-5 top-level checkboxes and no sub-task breakdown. This level of detail is INSUFFICIENT for implementation.
+**FORBIDDEN**: Vague task files with no exact files, no requirement mapping, or no evidence. Compact is good; vague is invalid.
 
 ## Research Phase
 
@@ -173,12 +174,14 @@ Before marking the spec ready:
 4. Fail if any path in `task_files` does not exist
 5. Fail if any on-disk task file is missing from `task_registry` or any registry path does not exist
 6. Fail if any task file path does not match `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`)
-7. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
-8. If the spec scope switched away from Claude/Anthropic, fail if `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider strings like `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` may mention old providers only as historical comparison.
-9. For delete/privacy specs, fail if requirements/design/tasks mix multiple deletion policies (for example `email_hash` in one place and `deleted-<uuid>` in another) without one canonical design decision.
-10. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
-11. Reject task files that use legacy non-numeric mappings like `NFR-1`
-12. If validation decisions were accepted, fail unless they are reflected in implementation-facing sections of affected artifacts and `spec.json.updated_at` / review timestamps reflect the reviewed state
+7. Fail if all task files are `R0` when the spec has more than two tasks
+8. Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat non-zero exit as blocking
+9. Infer `design_context.validation_recommended = true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs
+10. If the spec scope switched away from Claude/Anthropic, fail if `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider strings like `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` may mention old providers only as historical comparison.
+11. For delete/privacy specs, fail if requirements/design/tasks mix multiple deletion policies (for example `email_hash` in one place and `deleted-<uuid>` in another) without one canonical design decision.
+12. If `validation_recommended = true` and validation has not completed (or the user did not explicitly accept risk), keep `ready_for_implementation = false`
+13. Reject task files that use legacy non-numeric mappings like `NFR-1`
+14. If validation decisions were accepted, fail unless they are reflected in implementation-facing sections of affected artifacts and `spec.json.updated_at` / review timestamps reflect the reviewed state
 
 ## Execution Workflow Summary
 

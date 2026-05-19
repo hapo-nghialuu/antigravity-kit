@@ -37,7 +37,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 ### 4. Goal-Driven Execution
 
 - Convert requests into verifiable success criteria.
-- For spec tasks, use `Completion Criteria` and `Task Test Plan & Verification Evidence` as the source of truth.
+- For spec tasks, use `Completion Criteria` and `Evidence` as the source of truth. Existing task files may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
 - For bugs, reproduce with a failing test or concrete evidence when feasible before fixing.
 - Loop until verification passes or a real blocker is recorded.
 
@@ -65,7 +65,7 @@ Use this loop for non-trivial work:
 A task is done only when all apply:
 
 - implementation satisfies `Completion Criteria`
-- `Task Test Plan & Verification Evidence` is satisfied with concrete proof
+- `Evidence` is satisfied with concrete proof
 - preflight/build/test outcomes are passing or an explicit blocker is recorded
 - code review has no critical issues
 - a verification receipt exists before task state is synced to `done`

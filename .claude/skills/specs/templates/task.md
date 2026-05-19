@@ -7,9 +7,11 @@
 **Dependencies:** {{DEPENDENCIES}}
 **Spec:** specs/{{FEATURE_NAME}}/
 
-## Objective
+## Context
 
-{{Brief 1-2 sentence objective detailing WHAT to accomplish, not HOW. Must relate directly to requirement R{{REQ_NUMBER}}.}}
+- **Why**: {{Business/user reason this task exists}}
+- **Current state**: {{Relevant existing files, route, model, API, screen, or "greenfield"}}
+- **Target outcome**: {{Observable behavior after this task is done}}
 
 ## Constraints
 
@@ -18,33 +20,26 @@
 - **MUST NOT**: {{Explicitly forbidden action or approach}}
 - **SCOPE**: Implement only the behavior mapped to R{{REQ_NUMBER}} and the approved `scope_lock`; do not add out-of-scope features or leave scoped acceptance criteria unwired.
 
-## Implementation Steps
+## Steps
 
-- [ ] 1. {{MAJOR_STEP_1}}
-  - [ ] 1.1 {{Sub-task describing specific behavior/action}}
-    - {{Detail: business logic, behavior, target validation}}
-    - {{Detail: edge case or constraint}}
-    - _Requirements: {{REQ_NUMBER}}.{{X}}_
-  - [ ] 1.2 {{Next sub-task}}
-    - {{Detail items}}
-    - _Requirements: {{REQ_NUMBER}}.{{Y}}_
+- [ ] 1. {{Actionable step with exact file/path/contract}}
+  - {{Business intent: what user/system behavior this enables}}
+  - {{Code detail: schema/API/component/function/route and validation rules}}
+  - _Requirements: {{REQ_NUMBER}}.{{X}}_
 
-- [ ] 2. {{MAJOR_STEP_2}}
-  - [ ] 2.1 {{Sub-task}}
-    - {{Details}}
-    - _Requirements: {{REQ_NUMBER}}.{{Z}}_
-  - [ ] 2.2 {{Sub-task}}
-    - {{Details}}
-    - _Requirements: {{REQ_NUMBER}}.{{W}}_
+- [ ] 2. {{Next actionable step}}
+  - {{Business intent}}
+  - {{Code detail, edge case, or integration contract}}
+  - _Requirements: {{REQ_NUMBER}}.{{Y}}_
 
-- [ ] 3. Test coverage for R{{REQ_NUMBER}}
-  - [ ] 3.1 Unit tests
-    - {{Test case 1: target behavior to verify}}
-    - {{Test case 2: edge case / error case}}
-    - _Requirements: {{REQ_NUMBER}}_
-  - [ ]* 3.2 Integration tests (optional for MVP)
-    - {{Describe end-to-end flow to verify}}
-    - _Requirements: {{REQ_NUMBER}}_
+- [ ] 3. Verification implementation
+  - {{Unit/integration/e2e test or explicit manual verification hook}}
+  - _Requirements: {{REQ_NUMBER}}_
+
+## Requirements
+
+- {{REQ_NUMBER}}.{{X}} — {{Acceptance criterion or requirement covered}}
+- {{REQ_NUMBER}}.{{Y}} — {{Acceptance criterion or requirement covered}}
 
 ## Related Files
 
@@ -60,11 +55,21 @@
 - [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md and can be proven below}}
 - [ ] {{Criteria 4 — no orphaned component/service/route/command; created runtime-facing work is reachable from the declared entrypoint or explicitly deferred to a named integration task}}
 
-## Task Test Plan & Verification Evidence
+## Evidence
 
-This section is the task-level test plan. It names the exact commands, observable runtime/artifact proof, and negative-path checks required before this task can be marked done.
+This section is both the task-level test plan and the proof checklist. Keep it short, exact, and executable.
+Select the proof by task risk; do not run every test type for every task.
 
-- [ ] Automated verification
+- Logic/data/validator task: include unit tests.
+- Stateful UI/component task: include component or integration tests.
+- Cross-module/API/state flow task: include integration tests.
+- User-facing end-to-end workflow: include E2E/UI flow verification.
+- Layout/theme/responsive task: include visual/runtime viewport checks.
+- Interactive UI task: include accessibility checks when keyboard, focus, labels, or ARIA can regress.
+- Scaffold/release task: include smoke build/test/dev-server checks.
+- Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
+
+- [ ] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `{{TYPECHECK / TEST / BUILD COMMANDS OR N/A}}`
   - Expected proof: {{What output, exit code, or report proves success}}
 - [ ] Artifact / runtime verification
@@ -89,4 +94,4 @@ This section is the task-level test plan. It names the exact commands, observabl
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
 > **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
-> **Verification rule**: No `## Task Test Plan & Verification Evidence` section = invalid task file. Existing specs may use legacy `## Verification & Evidence`; agents must support both headings.
+> **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.
