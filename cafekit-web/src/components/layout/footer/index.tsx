@@ -145,7 +145,7 @@ export default function Footer() {
               href={haposoftUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-foreground hover:underline"
+              className="font-medium text-[#006242] hover:text-[#114734] hover:underline transition-colors"
             >
               Haposoft
             </a>
