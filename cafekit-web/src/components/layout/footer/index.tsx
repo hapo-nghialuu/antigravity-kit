@@ -38,9 +38,16 @@ function FooterLink({
   );
 }
 
+const HAPOSOFT_URLS = {
+  en: "https://haposoft.com/en",
+  ja: "https://haposoft.com/ja",
+  vi: "https://haposoft.com/vi",
+};
+
 export default function Footer() {
   const locale = useLocale();
   const t = getSiteShellTranslations(locale).footer;
+  const haposoftUrl = HAPOSOFT_URLS[locale] || HAPOSOFT_URLS.en;
 
   const productLinks = [
     { href: localizeHref(locale, "/docs"), label: t.documentation },
@@ -135,7 +142,7 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()} CafeKit by{" "}
             <a
-              href="https://github.com/haposoft"
+              href={haposoftUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-foreground hover:underline"
