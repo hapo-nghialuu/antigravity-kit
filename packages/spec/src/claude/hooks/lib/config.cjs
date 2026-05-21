@@ -65,6 +65,7 @@ const DEFAULT_CONFIG = {
     'session-init': true,
     'subagent-init': true,
     'dev-rules-reminder': true,
+    'skill-router': true,
     'usage': true,
     'context-tracking': true,
     'scout-block': true,

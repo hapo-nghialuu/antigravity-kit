@@ -2,7 +2,7 @@
 
 How to handle code review results after a fix is implemented. Ensures quality without unnecessary friction.
 
-## Autonomous Mode (Default)
+## Default Review Handling
 
 The agent reviews its own fix using `hapo:code-review` and decides automatically:
 
@@ -32,9 +32,9 @@ LOOP:
        → Proceed to Step 6
 ```
 
-## Human-in-the-Loop Mode
+## Required User Pause
 
-When the fix touches production-critical code or the user explicitly requests review control:
+When the fix touches production-critical code, changes public contracts, introduces a behavior change, or the user explicitly requests review control:
 
 1. Run `hapo:code-review` → collect score + findings
 2. Present a structured summary to user:
@@ -52,15 +52,15 @@ When the fix touches production-critical code or the user explicitly requests re
    - If no critical issues → "Approve" | "Address warnings" | "Abort"
 4. Execute user's choice. Max 3 remediation cycles.
 
-## When to Use HITL vs Autonomous
+## When To Pause vs Continue
 
 | Situation | Mode |
 |-----------|------|
-| Type errors, lint, syntax fixes | Autonomous (always) |
-| Single-file logic bugs | Autonomous |
-| Multi-file changes touching auth/payments/data | HITL recommended |
-| Architecture-impacting changes | HITL required |
-| User said "review with me" or similar | HITL |
+| Type errors, lint, syntax fixes | Continue after passing verification |
+| Single-file logic bugs | Continue after passing verification |
+| Multi-file changes touching auth/payments/data | Pause recommended |
+| Architecture-impacting changes | Pause required |
+| User said "review with me" or similar | Pause required |
 
 ## Blocking Issues (Never Auto-Approve)
 

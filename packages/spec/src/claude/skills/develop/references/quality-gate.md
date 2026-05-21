@@ -8,6 +8,8 @@ Green tests are NOT enough. The gate requires four proofs:
 3. Code quality review
 4. Task evidence (completion criteria + runtime/artifact/reachability proof from the task file)
 
+`--flash` is the explicit fast path. It bypasses this full gate and uses the Flash Gate defined below.
+
 ## Automation Semantics
 
 - If the task names exact commands in `Evidence` (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`), those exact commands are mandatory and must run before any fallback repo defaults.
@@ -20,6 +22,29 @@ Green tests are NOT enough. The gate requires four proofs:
 - Multi-process or multi-runtime flows must prove shared real state or a real boundary contract. Matching in-memory placeholders on both sides do not count as working integration.
 - Scope fidelity is mandatory: missing scoped behavior, extra unapproved behavior, or task output that exists only as orphaned/unreachable code is a review failure even when build/tests pass.
 - Runtime-facing artifacts must be reachable from the real entrypoint/caller named by the task or the task-aware scout report.
+
+## Flash Gate (`--flash`)
+
+Use this only when `/hapo:develop ... --flash` is present.
+
+- Skip dedicated test commands, E2E/browser/manual QA, full task evidence execution, test-runner delegation, and code-auditor retry loops.
+- Do not report `Test PASS`, `Evidence PASS`, `Auto-Approved`, or `production-ready`.
+- Still perform a scope sanity check against active task Completion Criteria.
+- Still perform a reachability sanity check for runtime-facing files: imported, mounted, registered, routed, or invoked where applicable.
+- Run a cheap compile/syntax/typecheck/build command only when available and expected to complete quickly without dependency install or external services.
+- If the cheap preflight fails, return to implementation; do not sync.
+- If the cheap preflight is unavailable or too slow, record `Preflight: skipped in --flash mode`.
+- Sync only with receipt fields:
+  - `Mode: --flash`
+  - `Tests: skipped by user request`
+  - `Evidence: FLASH_UNVERIFIED`
+  - `Next verification: /hapo:test <feature>`
+
+Terminal log:
+
+```text
+⚡ Step 4 Flash Gate: tests skipped by --flash; preflight=<pass|skipped>; evidence=FLASH_UNVERIFIED
+```
 
 ## Quality Cycle
 

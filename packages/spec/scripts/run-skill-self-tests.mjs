@@ -5,8 +5,10 @@ import { spawn, spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 
 async function listFiles(directory, predicate) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -263,12 +265,60 @@ async function runStaticSemanticTests() {
         content.includes("Final Integration Scout"),
     },
     {
+      label: "hapo:develop supports explicit flash mode",
+      file: "src/claude/skills/develop/SKILL.md",
+      assert: (content) =>
+        content.includes("[--flash]") &&
+        content.includes("### 3. Flash Mode") &&
+        content.includes("Skip dedicated test suites") &&
+        content.includes("FLASH_UNVERIFIED") &&
+        content.includes("Next verification: /hapo:test <feature>") &&
+        content.includes("Flash output MUST NOT say `Test PASS`"),
+    },
+    {
+      label: "hapo:develop maintains visual implementation notes",
+      file: "src/claude/skills/develop/SKILL.md",
+      assert: (content) =>
+        content.includes("implementation-notes.html") &&
+        content.includes("[--no-notes]") &&
+        content.includes("references/implementation-notes-template.html") &&
+        content.includes("Claude Code-like blocks") &&
+        content.includes("scope-escape") &&
+        content.includes("codebase-reality") &&
+        content.includes("No spec gaps, tradeoffs, scope escapes, or deferred risks recorded for this task"),
+    },
+    {
+      label: "hapo:develop implementation notes template is self-contained and block-based",
+      file: "src/claude/skills/develop/references/implementation-notes-template.html",
+      assert: (content) =>
+        content.includes("<style>") &&
+        content.includes("CafeKit Implementation Notes") &&
+        content.includes("TASK_TOC_START") &&
+        content.includes("NOTES_START") &&
+        content.includes("task-block") &&
+        content.includes("note.decision") &&
+        content.includes("scope-escape") &&
+        !content.includes("<script") &&
+        !content.includes("https://") &&
+        !content.includes("http://"),
+    },
+    {
       label: "hapo:develop quality gate separates spec compliance and code quality",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
         content.includes("Spec compliance review") &&
         content.includes("CODE QUALITY REVIEW (only after spec compliance passes)") &&
         content.includes("Reachability Failure"),
+    },
+    {
+      label: "hapo:develop quality gate has flash bypass semantics",
+      file: "src/claude/skills/develop/references/quality-gate.md",
+      assert: (content) =>
+        content.includes("## Flash Gate (`--flash`)") &&
+        content.includes("Tests: skipped by user request") &&
+        content.includes("Evidence: FLASH_UNVERIFIED") &&
+        content.includes("Do not report `Test PASS`") &&
+        content.includes("preflight=<pass|skipped>"),
     },
     {
       label: "test-runner performs scope and runtime reachability audits",
@@ -286,6 +336,119 @@ async function runStaticSemanticTests() {
         content.includes("/hapo:test <feature-name>") &&
         content.includes("Spec-Aware Mode"),
     },
+    {
+      label: "hapo:hotfix is deterministic scout-first without mode selection",
+      file: "src/claude/skills/hotfix/SKILL.md",
+      assert: (content) =>
+        content.includes("Default: deterministic scout-first hotfix") &&
+        content.includes("There is no initial mode selection step") &&
+        content.includes("<HARD-GATE-SCOUT-FIRST>") &&
+        !content.includes("Default: Autonomous mode"),
+    },
+    {
+      label: "hapo:hotfix quick path never skips scout or diagnosis",
+      file: "src/claude/skills/hotfix/SKILL.md",
+      assert: (content) =>
+        content.includes("it never skips scout, pre-fix evidence, diagnosis, or before/after verification") &&
+        content.includes("Quick mode only reduces depth") &&
+        content.includes("Do not ask generic questions before this step"),
+    },
+    {
+      label: "hapo:hotfix enforces no-side-effect gate with user options",
+      file: "src/claude/skills/hotfix/SKILL.md",
+      assert: (content) =>
+        content.includes("<HARD-GATE-NO-SIDE-EFFECTS>") &&
+        content.includes("Public contracts are unchanged") &&
+        content.includes("Revert this fix and try a different root-cause angle") &&
+        content.includes("Do not silently patch around the regression"),
+    },
+    {
+      label: "hapo:hotfix references are local and not stale debugger paths",
+      file: "src/claude/skills/hotfix/SKILL.md",
+      assert: (content) => !content.includes("references/debugger/"),
+    },
+    {
+      label: "hapo:hotfix prevention gate points back to side-effect sweep",
+      file: "src/claude/skills/hotfix/references/prevention-gate.md",
+      assert: (content) =>
+        content.includes("Step 5 side-effect sweep") &&
+        !content.includes("references/debugger/"),
+    },
+    {
+      label: "hapo:hotfix review cycle uses pause conditions not mode selection",
+      file: "src/claude/skills/hotfix/references/review-cycle.md",
+      assert: (content) =>
+        content.includes("## Default Review Handling") &&
+        content.includes("## Required User Pause") &&
+        content.includes("## When To Pause vs Continue") &&
+        !content.includes("## Autonomous Mode") &&
+        !content.includes("## Human-in-the-Loop Mode"),
+    },
+    {
+      label: "hapo:debug is diagnosis-only and read-only for product code",
+      file: "src/claude/skills/debug/SKILL.md",
+      assert: (content) =>
+        content.includes("<DIAGNOSTIC-ONLY-GATE>") &&
+        content.includes("`hapo:debug` is read-only for product code") &&
+        content.includes("Do NOT edit product code") &&
+        content.includes("Temporary instrumentation is allowed only") &&
+        content.includes("Temporary instrumentation: removed"),
+    },
+    {
+      label: "hapo:debug enforces scout-first before hypotheses",
+      file: "src/claude/skills/debug/SKILL.md",
+      assert: (content) =>
+        content.includes("<HARD-GATE-SCOUT-FIRST>") &&
+        content.includes("Before hypotheses, inspect the actual codebase context") &&
+        content.includes("project type, language, framework, runtime, and test runner") &&
+        content.includes("3-6 bullet codebase-context summary"),
+    },
+    {
+      label: "hapo:debug blocks hotfix handoff when root cause is unknown",
+      file: "src/claude/skills/debug/SKILL.md",
+      assert: (content) =>
+        content.includes("<ROOT-CAUSE-GATE>") &&
+        content.includes("Root cause: unknown") &&
+        content.includes("Missing Evidence") &&
+        content.includes("Next Diagnostic Action") &&
+        content.includes("do not hand off to `hapo:hotfix` as ready"),
+    },
+    {
+      label: "hapo:debug references installed debugger manuals",
+      file: "src/claude/skills/debug/SKILL.md",
+      assert: (content) =>
+        content.includes("`.claude/references/debugger/core-philosophy.md`") &&
+        content.includes("`.claude/references/debugger/side-effect-gate.md`") &&
+        !content.includes("`references/debugger/"),
+    },
+    {
+      label: "CafeKit skill router hook is packaged by manifest",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) =>
+        content.includes('"hooks/skill-router.cjs"') &&
+        content.includes('"hooks/lib/skill-router-routes.cjs"'),
+    },
+    {
+      label: "CafeKit skill router hook is installed on user prompts",
+      file: "src/claude/settings/settings.json",
+      assert: (content) =>
+        content.includes('hooks/skill-router.cjs') &&
+        content.indexOf('hooks/rules.cjs') < content.indexOf('hooks/skill-router.cjs') &&
+        content.indexOf('hooks/skill-router.cjs') < content.indexOf('hooks/spec-state.cjs'),
+    },
+    {
+      label: "CafeKit skill router can be disabled from hook config",
+      file: "src/claude/hooks/lib/config.cjs",
+      assert: (content) => content.includes("'skill-router': true"),
+    },
+    {
+      label: "CafeKit skill router skips explicit slash commands",
+      file: "src/claude/hooks/skill-router.cjs",
+      assert: (content) =>
+        content.includes("isExplicitCommand") &&
+        content.includes("trimmed.startsWith('/')") &&
+        content.includes("hapo:[a-z-]+"),
+    },
   ];
 
   console.log("\n[skill-test] static semantic checks");
@@ -299,6 +462,118 @@ async function runStaticSemanticTests() {
   }
 
   return checks.length;
+}
+
+function runSkillRouterUnitTests() {
+  const { findRoute, normalize, scoreRoute } = require(
+    join(packageRoot, "src/claude/hooks/lib/skill-router-routes.cjs"),
+  );
+  const hookPath = join(packageRoot, "src/claude/hooks/skill-router.cjs");
+
+  const cases = [
+    ["Build a support dashboard spec with requirements", "hapo:specs"],
+    ["hãy sửa lỗi production đang fail", "hapo:hotfix"],
+    ["fix bug đăng nhập giúp tôi", "hapo:hotfix"],
+    ["sửa lỗi build đang fail", "hapo:hotfix"],
+    ["commit và push giúp tôi", "hapo:git"],
+    ["thiết kế giao diện và màu sắc cho dashboard", "hapo:frontend-design"],
+    ["tạo slide pptx cho seminar", "hapo:pptx"],
+    ["biến ý tưởng này thành vài phương án triển khai", "hapo:brainstorm"],
+    ["phân tích ảnh hưởng trước khi sửa module auth", "hapo:impact-analysis"],
+    ["đưa chức năng đã approved spec vào code", "hapo:develop"],
+    ["kiểm thử end to end sau khi làm xong", "hapo:test"],
+    ["xem source vì sao CI fail", "hapo:debug"],
+    ["xem source code và cấu trúc project", "hapo:inspect"],
+    ["find files for auth flow", "hapo:inspect"],
+    ["review React best practices for this Next.js page", "hapo:react-best-practices"],
+    ["tối ưu rerender React component", "hapo:react-best-practices"],
+    ["use agent-browser to open website and click login", "hapo:agent-browser"],
+    ["tự động thao tác trình duyệt để kiểm tra form", "hapo:agent-browser"],
+    ["tạo sơ đồ luồng dữ liệu", "hapo:generate-graph"],
+    ["sửa endpoint API và schema database", "hapo:backend-development"],
+    ["xem screenshot này giúp tôi", "hapo:ai-multimodal"],
+    ["仕様を作って、要件とタスクに分けて", "hapo:specs"],
+    ["本番バグを至急修正して", "hapo:hotfix"],
+    ["この不具合を修正して", "hapo:hotfix"],
+    ["なぜCIが失敗するか原因調査して", "hapo:debug"],
+    ["承認済み仕様に沿って実装して", "hapo:develop"],
+    ["テストして動作確認して", "hapo:test"],
+    ["コミットしてプッシュして", "hapo:git"],
+    ["コード構造を確認して", "hapo:inspect"],
+    ["Reactの再レンダー最適化を確認して", "hapo:react-best-practices"],
+    ["ブラウザ自動化でログインフォームを操作して", "hapo:agent-browser"],
+    ["画面デザインと配色を調整して", "hapo:frontend-design"],
+    ["スライド資料を作って", "hapo:pptx"],
+    ["画像を見て説明して", "hapo:ai-multimodal"],
+  ];
+
+  for (const [prompt, expectedSkill] of cases) {
+    const actual = findRoute(prompt)?.skill;
+    if (actual !== expectedSkill) {
+      console.error(`[FAIL] skill router: ${prompt} -> ${actual}, expected ${expectedSkill}`);
+      process.exit(1);
+    }
+  }
+
+  if (normalize("lỗi kiểm thử") !== "loi kiem thu") {
+    console.error("[FAIL] skill router: Vietnamese diacritic normalization failed");
+    process.exit(1);
+  }
+
+  if (normalize("ｺﾐｯﾄしてﾌﾟｯｼｭして") !== "コミットしてプッシュして") {
+    console.error("[FAIL] skill router: Japanese width normalization failed");
+    process.exit(1);
+  }
+
+  if (findRoute("hello") !== null) {
+    console.error("[FAIL] skill router: low-signal prompt should not route");
+    process.exit(1);
+  }
+
+  const scored = scoreRoute("commit và push giúp tôi", {
+    skill: "hapo:git",
+    reason: "test",
+    priority: 1,
+    signals: { strong: ["commit", "push"], medium: [], weak: [], negative: [] },
+  });
+  if (scored.score < 12 || scored.confidence !== "high") {
+    console.error("[FAIL] skill router: weighted scoring did not produce high confidence");
+    process.exit(1);
+  }
+
+  const routed = spawnSync(process.execPath, [hookPath], {
+    cwd: packageRoot,
+    input: JSON.stringify({ prompt: "commit và push giúp tôi", cwd: packageRoot }),
+    encoding: "utf8",
+  });
+  if (
+    routed.status !== 0 ||
+    !routed.stdout.includes("Suggested skill: `hapo:git`") ||
+    !routed.stdout.includes("Confidence:")
+  ) {
+    console.error(routed.stdout);
+    console.error(routed.stderr);
+    console.error("[FAIL] skill router hook did not emit expected suggestion");
+    process.exit(1);
+  }
+
+  const explicit = spawnSync(process.execPath, [hookPath], {
+    cwd: packageRoot,
+    input: JSON.stringify({ prompt: "/hapo:specs Build dashboard", cwd: packageRoot }),
+    encoding: "utf8",
+  });
+  if (explicit.status !== 0 || explicit.stdout.trim() !== "") {
+    console.error(explicit.stdout);
+    console.error(explicit.stderr);
+    console.error("[FAIL] skill router hook did not skip explicit slash command");
+    process.exit(1);
+  }
+
+  console.log("✔ skill router maps natural-language prompts");
+  console.log("✔ skill router uses weighted scoring and confidence");
+  console.log("✔ skill router normalizes Vietnamese diacritics and Japanese width");
+  console.log("✔ skill router hook emits suggestions and skips slash commands");
+  return cases.length + 5;
 }
 
 async function writeText(filePath, content) {
@@ -505,6 +780,8 @@ async function main() {
   }
 
   let totalTests = await runStaticSemanticTests();
+  console.log("\n[skill-test] skill router unit checks");
+  totalTests += runSkillRouterUnitTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
   totalTests += await runSpecValidatorFixtureTests();
   for (const suite of testSuites) {

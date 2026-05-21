@@ -78,6 +78,7 @@
       "hooks/privacy-block.cjs",
       "hooks/inspect-block.cjs",
       "hooks/rules.cjs",
+      "hooks/skill-router.cjs",
       "hooks/spec-state.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
@@ -86,7 +87,8 @@
       "hooks/lib/git.cjs",
       "hooks/lib/config.cjs",
       "hooks/lib/context.cjs",
-      "hooks/lib/detect.cjs"
+      "hooks/lib/detect.cjs",
+      "hooks/lib/skill-router-routes.cjs"
     ]
   },
   "settings": {
