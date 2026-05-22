@@ -102,3 +102,4 @@ apps/go-gateway/main
 # CafeKit / Ecosystem
 plans/
 !plans/templates/
+.env*.local

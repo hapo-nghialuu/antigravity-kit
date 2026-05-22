@@ -1,0 +1,10 @@
+# Local install artifacts
+package-lock.json
+node_modules
+
+# Local Next.js build/cache output
+.next
+out
+
+# Local/editor files
+.DS_Store

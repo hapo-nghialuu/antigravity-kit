@@ -5,6 +5,16 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13] - 2026-05-22
+
+### Changed
+- Unified CafeKit runtime configuration on `.claude/runtime.json` for Claude Code projects and removed the remaining `.ck.json` dependency from shared hook config loading.
+- `hapo:skill-router`, statusline rendering, docs sync, and usage tracking now read project runtime settings consistently from the installed runtime bundle.
+
+### Fixed
+- `hapo:skill-router` now respects `hooks.skill-router` from `.claude/runtime.json` instead of relying on hidden legacy config paths.
+- `docs-sync` now honors `paths.docs`, `usage` resolves runtime config from hook `cwd`, and `statuslineColors` now actually controls statusline color output.
+
 ## [0.8.11] - 2026-05-19
 
 ### Changed
