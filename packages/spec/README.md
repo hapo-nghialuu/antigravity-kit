@@ -80,6 +80,7 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
 - `/hapo:debug <issue>`: diagnose bugs, incidents, CI failures, flaky tests, UI regressions, and performance issues before fixing
 - `/hapo:hotfix <issue>`: fix diagnosed bugs with root-cause, verification, prevention, and side-effect gates
+- `/hapo:docs [init|update|summarize|reconstruct]`: create project docs or reconstruct as-is system documentation from source code
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
 - `/hapo:generate-graph <diagram request>`: generate technical SVG/PNG diagrams
@@ -124,6 +125,14 @@ Generate a diagram:
 ```bash
 /hapo:generate-graph Draw a sequence diagram for auth flow between browser, API, and database
 ```
+
+Reconstruct current-state docs for an existing or legacy system:
+
+```bash
+/hapo:docs reconstruct apps/legacy-admin
+```
+
+The reconstruct bundle includes as-is markdown/JSON evidence and a self-contained `overview.html` review dashboard before the approved docs are handed to `/hapo:specs`.
 
 ## Spec Artifacts
 

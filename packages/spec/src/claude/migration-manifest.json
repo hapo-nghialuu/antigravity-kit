@@ -15,6 +15,7 @@
       "debug",
       "develop",
       "devops",
+      "docs",
       "docx",
       "frontend-design",
       "frontend-development",
@@ -56,6 +57,7 @@
   "scripts": {
     "required": [
       "validate-docs.cjs",
+      "validate-docs-reconstruct.cjs",
       "browser-tool.cjs",
       "validate-spec-output.cjs"
     ]

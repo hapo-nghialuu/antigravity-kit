@@ -18,7 +18,7 @@ const ROUTES = [
     strong: ['spec', 'specs', 'requirements', 'acceptance criteria', 'task breakdown', 'đặc tả', 'dac ta', '仕様', '仕様書', '要件', '受け入れ条件', 'タスク分解', '仕様を作って', '仕様を作成'],
     medium: ['requirement', 'ears', 'design doc', 'scope', '--validate', 'yêu cầu', 'yeu cau', 'phạm vi', 'pham vi', 'validate spec', 'kiểm tra spec', 'kiem tra spec', '要求', '設計書', 'スコープ', '検証', '仕様を確認'],
     weak: ['tính năng mới', 'tinh nang moi', 'feature idea', 'user story', 'criteria', 'task list', '新機能', 'ユーザーストーリー', '基準', 'タスクリスト'],
-    negative: ['commit', 'push', 'bug', 'error', 'production', 'pptx', 'pdf'],
+    negative: ['commit', 'push', 'bug', 'error', 'production', 'pptx', 'pdf', 'reconstruct requirements', 'as-is requirements', 'legacy system documentation', 'documentation from source code', 'docs from source code', 'ソースコードから'],
   }),
   route('hapo:develop', 'implementation from an approved spec or task list', 75, {
     strong: ['develop', 'implement', 'implementation', 'theo spec', 'theo specs', 'approved spec', 'làm theo spec', 'lam theo spec', '実装', '開発', '仕様に沿って', '仕様どおり', '承認済み仕様'],
@@ -97,6 +97,12 @@ const ROUTES = [
     medium: ['biểu đồ', 'bieu do', 'visualize', 'sequence diagram', 'data flow', '可視化', 'シーケンス図', 'データフロー'],
     weak: ['mind map', 'dependency map', 'system map', 'マインドマップ', '依存関係図', 'システム図'],
     negative: ['pptx', 'slide deck'],
+  }),
+  route('hapo:docs', 'project documentation, codebase docs, or source-backed as-is reconstruction', 51, {
+    strong: ['hapo:docs', 'project docs', 'system docs', 'codebase docs', 'codebase documentation', 'documentation from source code', 'docs from source code', 'generate docs from codebase', 'dựng tài liệu từ source code', 'dung tai lieu tu source code', 'tài liệu hệ thống', 'tai lieu he thong', 'tài liệu hiện trạng', 'tai lieu hien trang', 'tạo tài liệu project', 'tao tai lieu project', 'legacy documentation', 'legacy system documentation', 'as-is documentation', 'as-is requirements', 'requirement reconstruction', 'reconstruct requirements', 'reconstruct requirements from legacy system', 'ソースコードから仕様書', 'ソースコードから仕様書を作成', 'ソースコードからドキュメント', '既存システムのドキュメント', '現行仕様書', 'as-isドキュメント'],
+    medium: ['create docs', 'update docs', 'refresh docs', 'summarize codebase', 'system documentation', 'source to docs', 'reverse documentation', 'current-state docs', 'existing system docs', 'legacy docs', 'legacy system', 'dựng docs', 'dung docs', 'tạo docs', 'tao docs', 'cập nhật docs', 'cap nhat docs', 'tóm tắt codebase', 'tom tat codebase', 'dựng lại tài liệu', 'dung lai tai lieu', '仕様書を作成', 'ドキュメント作成', 'ドキュメント更新', 'コードベース要約', '既存システム', 'レガシーシステム'],
+    weak: ['docs', 'documentation', 'document project', 'document codebase', 'as-is', 'reconstruct', 'hiện trạng', 'hien trang', 'tài liệu', 'tai lieu', 'ドキュメント', '資料化', '仕様化', '現状'],
+    negative: ['official docs', 'latest docs', 'library docs', 'framework docs', 'api docs lookup', 'context7', 'best practice', 'research', 'pptx', 'slide'],
   }),
   route('hapo:brainstorm', 'early ideation or unclear solution direction', 50, {
     strong: ['brainstorm', 'ý tưởng', 'y tuong', 'phương án', 'phuong an', 'gợi ý', 'goi y', 'ブレスト', 'アイデア', '案', '提案して', '相談'],

@@ -429,6 +429,115 @@ async function runStaticSemanticTests() {
         content.includes('"hooks/lib/skill-router-routes.cjs"'),
     },
     {
+      label: "hapo:docs skill is packaged and supports reconstruct mode",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => content.includes('"docs"'),
+    },
+    {
+      label: "hapo:docs reconstruct keeps as-is evidence contract",
+      file: "src/claude/skills/docs/SKILL.md",
+      assert: (content) =>
+        content.includes("name: hapo:docs") &&
+        content.includes("/hapo:docs reconstruct <scope>") &&
+        content.includes("docs/as-is/<scope-slug>/") &&
+        content.includes("Observed | Inferred | Unknown") &&
+        content.includes("Confidence: High | Medium | Low") &&
+        content.includes("MUST NOT") &&
+        content.includes("/hapo:specs <change request based on approved as-is docs>"),
+    },
+    {
+      label: "hapo:docs reconstruct reference defines output and human review gate",
+      file: "src/claude/skills/docs/references/reconstruct-workflow.md",
+      assert: (content) =>
+        content.includes("docs/as-is/<scope-slug>/") &&
+        content.includes("overview.html") &&
+        content.includes("requirements-as-is.md") &&
+        content.includes("evidence-map.md") &&
+        content.includes("unknowns-and-assumptions.md") &&
+        content.includes("validate-docs-reconstruct.cjs") &&
+        content.includes("Human Review Gate") &&
+        content.includes("Do not recommend `/hapo:develop`"),
+    },
+    {
+      label: "hapo:docs reconstruct templates keep evidence and overview starters",
+      file: "src/claude/skills/docs/templates/reconstruction.json",
+      assert: (content) =>
+        content.includes('"source_revision"') &&
+        content.includes('"review_status": "pending"') &&
+        content.includes('"approved_for_specs": false') &&
+        content.includes('"overview.html"') &&
+        content.includes('"constraints-risks-and-decisions.md"') &&
+        content.includes('"glossary.md"'),
+    },
+    {
+      label: "hapo:docs reconstruct overview template is self-contained",
+      file: "src/claude/skills/docs/templates/reconstruct-overview.html",
+      assert: (content) =>
+        content.includes("data-reconstruct-overview") &&
+        content.includes("SYSTEM_OVERVIEW_START") &&
+        content.includes("REQUIREMENTS_START") &&
+        content.includes("UNKNOWNS_START") &&
+        !content.includes("<script") &&
+        !content.includes("https://") &&
+        !content.includes("http://"),
+    },
+    {
+      label: "hapo:docs normal docs references keep init update summarize phases",
+      file: "src/claude/skills/docs/SKILL.md",
+      assert: (content) =>
+        content.includes("references/init-workflow.md") &&
+        content.includes("references/update-workflow.md") &&
+        content.includes("references/summarize-workflow.md") &&
+        content.includes("CafeKit ships `docs-keeper` instead"),
+    },
+    {
+      label: "hapo:docs init reference keeps scout author validate discipline",
+      file: "src/claude/skills/docs/references/init-workflow.md",
+      assert: (content) =>
+        content.includes("Structure Scout") &&
+        content.includes("Evidence Scout") &&
+        content.includes("docs-keeper") &&
+        content.includes("validate-docs.cjs <docs-root>"),
+    },
+    {
+      label: "hapo:docs update reference reads existing docs before surgical updates",
+      file: "src/claude/skills/docs/references/update-workflow.md",
+      assert: (content) =>
+        content.includes("Existing Docs Read") &&
+        content.includes("Surgical Docs Update") &&
+        content.includes("docs.maxLoc") &&
+        content.includes(".sync_hash"),
+    },
+    {
+      label: "hapo:docs summarize reference avoids broad codebase scans by default",
+      file: "src/claude/skills/docs/references/summarize-workflow.md",
+      assert: (content) =>
+        content.includes("Do not scan the entire codebase") &&
+        content.includes("codebase-summary.md") &&
+        content.includes("Update only `codebase-summary.md`"),
+    },
+    {
+      label: "docs validator accepts configured docs root argument",
+      file: "src/claude/scripts/validate-docs.cjs",
+      assert: (content) =>
+        content.includes("process.argv[2] || 'docs'") &&
+        content.includes("path.resolve(process.cwd(), docsArg)"),
+    },
+    {
+      label: "reconstruct validator is packaged and enforces evidence IDs",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => content.includes('"validate-docs-reconstruct.cjs"'),
+    },
+    {
+      label: "reconstruct validator requires overview and bundle registry",
+      file: "src/claude/scripts/validate-docs-reconstruct.cjs",
+      assert: (content) =>
+        content.includes("'overview.html'") &&
+        content.includes("must exactly list the as-is document bundle") &&
+        content.includes("must reference evidence IDs") &&
+        content.includes("data-reconstruct-overview"),
+    },
+    {
       label: "CafeKit skill router hook is installed on user prompts",
       file: "src/claude/settings/settings.json",
       assert: (content) =>
@@ -522,6 +631,10 @@ function runSkillRouterUnitTests() {
     ["use agent-browser to open website and click login", "hapo:agent-browser"],
     ["tự động thao tác trình duyệt để kiểm tra form", "hapo:agent-browser"],
     ["tạo sơ đồ luồng dữ liệu", "hapo:generate-graph"],
+    ["dựng tài liệu từ source code hệ thống cũ", "hapo:docs"],
+    ["generate docs from codebase", "hapo:docs"],
+    ["reconstruct requirements from legacy system", "hapo:docs"],
+    ["tạo tài liệu hệ thống hiện trạng", "hapo:docs"],
     ["sửa endpoint API và schema database", "hapo:backend-development"],
     ["xem screenshot này giúp tôi", "hapo:ai-multimodal"],
     ["仕様を作って、要件とタスクに分けて", "hapo:specs"],
@@ -536,6 +649,8 @@ function runSkillRouterUnitTests() {
     ["ブラウザ自動化でログインフォームを操作して", "hapo:agent-browser"],
     ["ブラウザでフォーム入力を自動化して", "hapo:agent-browser"],
     ["画面デザインと配色を調整して", "hapo:frontend-design"],
+    ["ソースコードから仕様書を作成して", "hapo:docs"],
+    ["既存システムのドキュメント化をして", "hapo:docs"],
     ["スライド資料を作って", "hapo:pptx"],
     ["画像を見て説明して", "hapo:ai-multimodal"],
   ];
@@ -669,6 +784,14 @@ async function writeText(filePath, content) {
 function runSpecValidator(specDir) {
   const validator = join(packageRoot, "src/claude/scripts/validate-spec-output.cjs");
   return spawnSync(process.execPath, [validator, specDir], {
+    cwd: packageRoot,
+    encoding: "utf8",
+  });
+}
+
+function runReconstructValidator(bundleDir) {
+  const validator = join(packageRoot, "src/claude/scripts/validate-docs-reconstruct.cjs");
+  return spawnSync(process.execPath, [validator, bundleDir], {
     cwd: packageRoot,
     encoding: "utf8",
   });
@@ -824,6 +947,126 @@ async function runSpecValidatorFixtureTests() {
   }
 }
 
+const reconstructDocuments = [
+  "overview.html",
+  "system-overview.md",
+  "requirements-as-is.md",
+  "roles-and-permissions.md",
+  "entities-and-statuses.md",
+  "business-rules.md",
+  "integrations.md",
+  "architecture-c4.md",
+  "constraints-risks-and-decisions.md",
+  "glossary.md",
+  "evidence-map.md",
+  "unknowns-and-assumptions.md",
+];
+
+async function writeReconstructFiles(bundleDir, overrides = {}) {
+  for (const file of reconstructDocuments) {
+    const defaultContent = file.endsWith(".html")
+      ? "<!doctype html><html data-reconstruct-overview><body>overview</body></html>\n"
+      : `# ${file}\n\nSource-backed current-state content.\n`;
+    await writeText(join(bundleDir, file), overrides[file] ?? defaultContent);
+  }
+}
+
+async function createValidReconstructFixture(root) {
+  const bundleDir = join(root, "valid-reconstruct");
+  await writeReconstructFiles(bundleDir, {
+    "requirements-as-is.md":
+      "# Requirements\n\n## R-ASIS-001: View ticket\n\n- Type: Observed\n- Confidence: High\n- Evidence:\n  - E-API-001 - `src/api/tickets.ts:listTickets`\n- Actors:\n  - Support agent\n- Trigger:\n  - GET /tickets\n- Current outcome:\n  - Ticket list returned.\n",
+    "evidence-map.md":
+      "# Evidence Map\n\n| ID | Source | Observation |\n|---|---|---|\n| E-API-001 | `src/api/tickets.ts:listTickets` | Ticket list route returns tickets. |\n",
+  });
+  await writeText(
+    join(bundleDir, "reconstruction.json"),
+    JSON.stringify(
+      {
+        scope: "valid-reconstruct",
+        generated_at: "2026-05-22T00:00:00.000Z",
+        status: "draft",
+        docs_root: "docs/as-is/valid-reconstruct",
+        source_revision: "abc123",
+        source_branch: "main",
+        evidence_policy: "observed-inferred-unknown",
+        review_gate: "human_review_required",
+        review_status: "pending",
+        approved_for_specs: false,
+        documents: reconstructDocuments,
+        counts: { requirements: 1, evidence_items: 1, observed: 1, inferred: 0, unknown: 0 },
+        next_recommended_step: "human_review",
+      },
+      null,
+      2,
+    ),
+  );
+  return bundleDir;
+}
+
+async function createInvalidReconstructFixture(root) {
+  const bundleDir = join(root, "invalid-reconstruct");
+  await writeReconstructFiles(bundleDir, {
+    "overview.html": "<!doctype html><html><body>missing marker</body></html>\n",
+    "requirements-as-is.md": "# Requirements\n\n## R-ASIS-001: View ticket\n\n- Current outcome: ticket list.\n",
+    "evidence-map.md": "# Evidence Map\n\nNo evidence IDs.\n",
+  });
+  await writeText(
+    join(bundleDir, "reconstruction.json"),
+    JSON.stringify(
+      {
+        scope: "invalid-reconstruct",
+        generated_at: "2026-05-22T00:00:00.000Z",
+        status: "draft",
+        docs_root: "docs/as-is/invalid-reconstruct",
+        documents: ["requirements-as-is.md"],
+        counts: {},
+        next_recommended_step: "human_review",
+      },
+      null,
+      2,
+    ),
+  );
+  return bundleDir;
+}
+
+async function runReconstructValidatorFixtureTests() {
+  const root = await mkdtemp(join(tmpdir(), "cafekit-reconstruct-validator-"));
+  try {
+    const valid = runReconstructValidator(await createValidReconstructFixture(root));
+    if (valid.status !== 0) {
+      console.error(valid.stdout);
+      console.error(valid.stderr);
+      console.error("[FAIL] reconstruct validator rejected valid fixture");
+      process.exit(1);
+    }
+
+    const invalid = runReconstructValidator(await createInvalidReconstructFixture(root));
+    const invalidOutput = `${invalid.stdout}\n${invalid.stderr}`;
+    for (const expected of [
+      "source_revision",
+      "review_status",
+      "approved_for_specs",
+      "must exactly list",
+      "missing Type",
+      "must reference evidence IDs",
+      "overview.html",
+    ]) {
+      if (invalid.status === 0 || !invalidOutput.includes(expected)) {
+        console.error(invalidOutput);
+        console.error(`[FAIL] reconstruct validator did not report ${expected}`);
+        process.exit(1);
+      }
+    }
+
+    console.log("✔ reconstruct validator accepts valid fixture");
+    console.log("✔ reconstruct validator rejects incomplete evidence bundle");
+    return 2;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   const chromeTestsDir = join(
     packageRoot,
@@ -869,6 +1112,8 @@ async function main() {
   totalTests += runSkillRouterUnitTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
   totalTests += await runSpecValidatorFixtureTests();
+  console.log("\n[skill-test] reconstruct docs validator fixtures");
+  totalTests += await runReconstructValidatorFixtureTests();
   for (const suite of testSuites) {
     console.log(`\n[skill-test] ${suite.label}`);
     const result = await runCommand(suite);

@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ghi chú thiết kế hapo:docs</title>
+  <style>
+    :root {
+      --bg: #f6f8f7;
+      --panel: #ffffff;
+      --ink: #17211d;
+      --muted: #5d6b64;
+      --line: #dce5df;
+      --green: #0f766e;
+      --green-soft: #e6f4f1;
+      --sky: #0369a1;
+      --sky-soft: #e0f2fe;
+      --amber: #b45309;
+      --amber-soft: #fff7ed;
+      --red: #b91c1c;
+      --red-soft: #fef2f2;
+      --code: #10201b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    header {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #ffffff 0%, #eefaf6 55%, #e0f2fe 100%);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    p { margin: 8px 0; }
+    .subtitle { color: var(--muted); max-width: 760px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .block {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      margin: 16px 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .decision { border-left: 5px solid var(--green); }
+    .risk { border-left: 5px solid var(--amber); }
+    .guardrail { border-left: 5px solid var(--red); }
+    .output { border-left: 5px solid var(--sky); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+      margin-bottom: 10px;
+    }
+    .tag.green { background: var(--green-soft); color: var(--green); }
+    .tag.sky { background: var(--sky-soft); color: var(--sky); }
+    .tag.amber { background: var(--amber-soft); color: var(--amber); }
+    .tag.red { background: var(--red-soft); color: var(--red); }
+    ul { margin: 8px 0 0 20px; padding: 0; }
+    li { margin: 4px 0; }
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    pre {
+      overflow: auto;
+      background: var(--code);
+      color: #e8fff6;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 8px;
+    }
+    th { color: var(--muted); font-weight: 700; }
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      header { padding: 22px; }
+      h1 { font-size: 25px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ghi chú thiết kế: <code>hapo:docs</code> và <code>reconstruct</code></h1>
+    <p class="subtitle">File này ghi lại quyết định và suy nghĩ khi triển khai workflow tài liệu trong CafeKit. Phần trọng tâm là dựng tài liệu hệ thống hiện trạng từ source code, đồng thời không làm sơ sài ba nhánh docs chuẩn <code>init</code>, <code>update</code>, <code>summarize</code>.</p>
+  </header>
+
+  <section class="block decision">
+    <span class="tag green">Quyết định chính</span>
+    <h2>Dùng <code>hapo:docs reconstruct</code>, không tạo skill riêng <code>hapo:reconstruct</code></h2>
+    <p>Lý do: yêu cầu hiện đã rộng hơn requirement reconstruction. Người dùng muốn dựng tài liệu hệ thống/project docs từ source code, trong đó reconstruct là một mode đặc biệt cho hệ thống hiện hữu hoặc legacy.</p>
+    <ul>
+      <li><code>hapo:docs</code> là namespace đúng cho tài liệu.</li>
+      <li><code>reconstruct</code> giữ nghĩa as-is/current-state rõ ràng.</li>
+      <li>Sau này có thể thêm <code>init</code>, <code>update</code>, <code>summarize</code> mà không tạo nhiều skill rời rạc.</li>
+    </ul>
+  </section>
+
+  <section class="block decision">
+    <span class="tag green">Đối chiếu Research</span>
+    <h2>Nội dung được kéo từ <code>~/Research/.claude/skills/docs</code></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Nguồn tham chiếu</th>
+          <th>Điểm giữ lại</th>
+          <th>Điều chỉnh cho CafeKit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>init-workflow.md</code></td>
+          <td>Scout source theo directory thật, tạo baseline docs, kiểm tra LOC sau khi sinh.</td>
+          <td>Đọc docs root từ <code>.claude/runtime.json</code>, dùng <code>hapo:inspect</code> và <code>docs-keeper</code>.</td>
+        </tr>
+        <tr>
+          <td><code>update-workflow.md</code></td>
+          <td>Scout source change, đọc docs hiện có trước khi sửa, validation sau update.</td>
+          <td>Nhấn mạnh surgical update, giữ <code>.sync_hash</code> chỉ khi docs đã sync thật.</td>
+        </tr>
+        <tr>
+          <td><code>summarize-workflow.md</code></td>
+          <td>Chỉ cập nhật <code>codebase-summary.md</code>, không quét cả repo nếu user không yêu cầu.</td>
+          <td>Giữ focused scout theo module/path để giảm nhiễu và giảm hallucination.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Bản Research gọi agent <code>docs-manager</code>. Package CafeKit hiện ship agent <code>docs-keeper</code>, nên skill dùng agent đó nhưng giữ nguyên kỷ luật verify-before-write, size check và docs validation.</p>
+  </section>
+
+  <section class="grid">
+    <article class="block output">
+      <span class="tag sky">Command contract</span>
+      <h2>Các lệnh được hỗ trợ</h2>
+      <pre>/hapo:docs
+/hapo:docs init
+/hapo:docs update
+/hapo:docs summarize
+/hapo:docs reconstruct &lt;scope&gt;</pre>
+      <p>Nếu không có <code>reconstruct</code>, skill xử lý docs bình thường. Nếu prompt có ý legacy/as-is/source-to-docs thì tự chọn reconstruct.</p>
+    </article>
+
+    <article class="block output">
+      <span class="tag sky">Output</span>
+      <h2>Vị trí tài liệu</h2>
+      <pre>docs/as-is/&lt;scope-slug&gt;/
+├── reconstruction.json
+├── system-overview.md
+├── requirements-as-is.md
+├── roles-and-permissions.md
+├── entities-and-statuses.md
+├── business-rules.md
+├── integrations.md
+├── architecture-c4.md
+├── evidence-map.md
+└── unknowns-and-assumptions.md</pre>
+      <p>Dùng <code>.claude/runtime.json</code> để lấy <code>paths.docs</code>; mặc định là <code>docs</code>.</p>
+    </article>
+  </section>
+
+  <section class="block output">
+    <span class="tag sky">Normal docs</span>
+    <h2>Ba nhánh docs chuẩn không bị gộp sơ sài</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Phase chính</th>
+          <th>Output chính</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>init</code></td>
+          <td>Preflight → structure scout → evidence scout → docs authoring → size check → validate/sync.</td>
+          <td>Baseline docs như PDR, codebase summary, architecture, standards, roadmap.</td>
+        </tr>
+        <tr>
+          <td><code>update</code></td>
+          <td>Map source change → đọc docs cũ → surgical edit → size check → validate/sync.</td>
+          <td>Chỉ phần docs bị ảnh hưởng, giữ human-written context còn đúng.</td>
+        </tr>
+        <tr>
+          <td><code>summarize</code></td>
+          <td>Đọc summary cũ → focused scout → viết summary → validate.</td>
+          <td><code>codebase-summary.md</code>; không biến thành full documentation run.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="block guardrail">
+    <span class="tag red">Guardrails</span>
+    <h2>Những điều reconstruct không được làm</h2>
+    <ul>
+      <li>Không thiết kế tương lai.</li>
+      <li>Không thêm requirement mới.</li>
+      <li>Không tạo task hoặc code.</li>
+      <li>Không tạo <code>specs/&lt;feature&gt;</code>.</li>
+      <li>Không claim hiểu đủ business intent chỉ từ code.</li>
+      <li>Không biến phần suy luận thành phần đã quan sát được.</li>
+    </ul>
+  </section>
+
+  <section class="block decision">
+    <span class="tag green">Evidence policy</span>
+    <h2>Phân loại finding</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Loại</th>
+          <th>Ý nghĩa</th>
+          <th>Khi dùng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Observed</code></td>
+          <td>Thấy trực tiếp trong code/test/schema/config.</td>
+          <td>Route, controller, UI flow, enum, validation, test chứng minh rõ.</td>
+        </tr>
+        <tr>
+          <td><code>Inferred</code></td>
+          <td>Suy luận hợp lý từ nhiều tín hiệu nhưng chưa có bằng chứng end-to-end.</td>
+          <td>Tên file, service, partial flow, integration chưa thấy trigger đầy đủ.</td>
+        </tr>
+        <tr>
+          <td><code>Unknown</code></td>
+          <td>Chưa đủ bằng chứng.</td>
+          <td>Business intent, manual process, runtime data, external system, code chết.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="block decision">
+    <span class="tag green">Reconstruct phases</span>
+    <h2>Luồng reconstruct chi tiết</h2>
+    <ol>
+      <li><strong>Scope gate:</strong> từ chối kiểu âm thầm dựng cả monolith thành một file; broad scope phải structure scout trước.</li>
+      <li><strong>Source scout:</strong> tìm entry points, UI/routes, schemas, auth checks, jobs, integrations, tests, config.</li>
+      <li><strong>Evidence ledger:</strong> lập từng evidence ID theo surface UI/API/data/auth/job/integration/test/config.</li>
+      <li><strong>Behavior trace:</strong> nối actor, trigger, input, validation, state write, output, errors.</li>
+      <li><strong>As-is extraction:</strong> viết requirement hiện trạng có type, confidence, evidence, exception/gap.</li>
+      <li><strong>Supporting docs:</strong> vai trò, entity/status, business rules, integrations, architecture và unknowns.</li>
+      <li><strong>Consistency review:</strong> đối chiếu requirement với evidence, actors, statuses, integrations và kiến trúc.</li>
+      <li><strong>Human review gate:</strong> chưa approve nếu inferred/unknown quan trọng chưa được người hiểu domain xác nhận.</li>
+    </ol>
+  </section>
+
+  <section class="block decision">
+    <span class="tag green">Best practices áp dụng</span>
+    <h2>Cơ sở thiết kế</h2>
+    <ul>
+      <li><strong>Docs as Code:</strong> tài liệu nằm trong repo và review như code.</li>
+      <li><strong>C4:</strong> dùng cho system context/container/component khi cần mô tả kiến trúc.</li>
+      <li><strong>arc42:</strong> giữ context, building blocks, runtime behavior, risk, decision.</li>
+      <li><strong>Diataxis:</strong> tách explanation/reference/how-to thay vì một file dài.</li>
+      <li><strong>ADR discipline:</strong> nếu code hé lộ decision quan trọng thì ghi decision note có evidence, không đoán.</li>
+    </ul>
+  </section>
+
+  <section class="block risk">
+    <span class="tag amber">Rủi ro còn lại</span>
+    <h2>Điểm cần kiểm tra khi dùng thực tế</h2>
+    <ul>
+      <li>Repo legacy lớn cần chia scope. Không nên demo full monolith trong một lượt.</li>
+      <li>Code có thể chứa flow cũ không còn dùng. Human review vẫn bắt buộc.</li>
+      <li>Business rule ngoài code như Excel, email, manual operation sẽ rơi vào <code>Unknown</code>.</li>
+      <li>Nếu muốn sinh diagram đẹp, có thể nối thêm <code>hapo:generate-graph</code> sau khi reconstruct.</li>
+    </ul>
+  </section>
+
+  <section class="block output">
+    <span class="tag sky">Các file đã tác động</span>
+    <h2>Implementation map để double-check</h2>
+    <ul>
+      <li><code>skills/docs/SKILL.md</code>: route mode, output contract, evidence rules, agent/tool fit.</li>
+      <li><code>references/init-workflow.md</code>: baseline docs creation chi tiết.</li>
+      <li><code>references/update-workflow.md</code>: update docs có source scout, docs-read, surgical edits.</li>
+      <li><code>references/summarize-workflow.md</code>: summary mode nhỏ và focused.</li>
+      <li><code>references/reconstruct-workflow.md</code>: evidence ledger và as-is bundle.</li>
+      <li><code>templates/reconstruction.json</code> và markdown templates: registry, evidence, unknowns có shape rõ.</li>
+      <li><code>templates/reconstruct-overview.html</code>: review dashboard self-contained cho human mở trực tiếp.</li>
+      <li><code>validate-docs.cjs</code>: validator docs thường nhận docs root argument để hợp với <code>paths.docs</code>.</li>
+      <li><code>validate-docs-reconstruct.cjs</code>: validator riêng cho bundle as-is, evidence ID, registry và overview marker.</li>
+      <li><code>run-skill-self-tests.mjs</code>: test static cho các contract trên.</li>
+    </ul>
+  </section>
+
+  <section class="block decision">
+    <span class="tag green">Review follow-up</span>
+    <h2>Những gap sau self-review đã xử lý</h2>
+    <ul>
+      <li><strong>Output lỏng:</strong> thêm template cho JSON, requirement, evidence, unknowns và HTML overview.</li>
+      <li><strong>Không có deterministic gate:</strong> thêm <code>validate-docs-reconstruct.cjs</code> và fixture test valid/invalid.</li>
+      <li><strong>Không có source snapshot:</strong> thêm <code>source_revision</code>, <code>source_branch</code>.</li>
+      <li><strong>Không có review state:</strong> thêm <code>review_status</code>, <code>reviewed_by</code>, <code>reviewed_at</code>, <code>approved_for_specs</code>.</li>
+      <li><strong>arc42/ADR cover chưa đủ:</strong> thêm artifact cho constraints/risks/decisions và glossary.</li>
+    </ul>
+  </section>
+
+  <section class="block output">
+    <span class="tag sky">Handoff</span>
+    <h2>Flow sản phẩm đề xuất</h2>
+    <pre>/hapo:docs reconstruct &lt;scope&gt;
+→ human review docs/as-is/&lt;scope&gt;
+→ /hapo:specs &lt;modernization/change request based on approved as-is docs&gt;
+→ /hapo:develop &lt;feature&gt;</pre>
+    <p>Đây là flow bám sát mục tiêu ban đầu: đọc source hệ thống cũ, dựng tài liệu hiện trạng, review, rồi mới tạo spec nâng cấp.</p>
+  </section>
+</main>
+</body>
+</html>

@@ -17,6 +17,7 @@ CafeKit installs a working runtime bundle for Claude Code:
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation from approved specs
 - `hapo:debug` and `hapo:hotfix` for evidence-first diagnosis and safe bug fixes
+- `hapo:docs` for project documentation and source-backed as-is reconstruction
 - `hapo:test` and `hapo:code-review` for verification
 - `hapo:generate-graph` for technical diagrams
 - supporting hooks, agents, rules, and statusline runtime
@@ -40,6 +41,15 @@ Idea -> /hapo:brainstorm (if unclear) -> /hapo:specs -> /hapo:develop -> /hapo:t
 /hapo:test --full
 /hapo:code-review --pending
 ```
+
+For existing or legacy systems without reliable documentation:
+
+```bash
+/hapo:docs reconstruct apps/legacy-admin
+/hapo:specs Modernize the approved as-is docs with CSV export and split admin/operator permissions
+```
+
+The reconstruct run writes an evidence-backed as-is docs bundle plus a self-contained HTML overview for human review before specs begin.
 
 Specs are stored under:
 

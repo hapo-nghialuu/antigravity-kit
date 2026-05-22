@@ -5,6 +5,14 @@ All notable changes to @haposoft/cafekit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added `hapo:docs` for project documentation workflows, including `reconstruct` mode for source-backed as-is system documentation with evidence, confidence, and unknown tracking.
+- Expanded `hapo:docs` normal-docs workflow into detailed `init`, `update`, and `summarize` phases with source scouting, docs reading, size checks, docs validation, and runtime docs-root support.
+- Added reconstruct templates, a self-contained `overview.html` review dashboard, source snapshot/review metadata, and a deterministic as-is bundle validator.
+- Added skill-router coverage for project docs, legacy/as-is documentation, and source-code-to-docs prompts in Vietnamese, English, and Japanese.
+
 ## [0.8.13] - 2026-05-22
 
 ### Changed
