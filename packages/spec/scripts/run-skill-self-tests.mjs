@@ -437,9 +437,35 @@ async function runStaticSemanticTests() {
         content.indexOf('hooks/skill-router.cjs') < content.indexOf('hooks/spec-state.cjs'),
     },
     {
-      label: "CafeKit skill router can be disabled from hook config",
+      label: "CafeKit runtime config drives shared hook config",
       file: "src/claude/hooks/lib/config.cjs",
-      assert: (content) => content.includes("'skill-router': true"),
+      assert: (content) =>
+        content.includes("RUNTIME_CONFIG_PATH = '.claude/runtime.json'") &&
+        content.includes("const CONFIG_PATH = RUNTIME_CONFIG_PATH") &&
+        content.includes("if (runtimeConfig) merged = deepMerge(merged, runtimeConfig)") &&
+        content.includes("'skill-router': true"),
+    },
+    {
+      label: "docs sync respects runtime docs path",
+      file: "src/claude/hooks/docs-sync.cjs",
+      assert: (content) =>
+        content.includes("loadConfig({ cwd") &&
+        content.includes("config.paths?.docs || 'docs'"),
+    },
+    {
+      label: "usage hook reads runtime config from hook cwd",
+      file: "src/claude/hooks/usage.cjs",
+      assert: (content) =>
+        content.includes("function readRuntime(cwd)") &&
+        content.includes("const cwd = input.cwd || process.cwd()") &&
+        content.includes("runtime.usage?.enabled === false"),
+    },
+    {
+      label: "statusline colors respect runtime config",
+      file: "src/claude/status.cjs",
+      assert: (content) =>
+        content.includes("colors.setColorEnabled(config.statuslineColors !== false)") &&
+        content.includes("colors.shouldUseColor"),
     },
     {
       label: "CafeKit skill router skips explicit slash commands",
@@ -468,6 +494,9 @@ function runSkillRouterUnitTests() {
   const { findRoute, normalize, scoreRoute } = require(
     join(packageRoot, "src/claude/hooks/lib/skill-router-routes.cjs"),
   );
+  const { loadConfig, isHookEnabled } = require(
+    join(packageRoot, "src/claude/hooks/lib/config.cjs"),
+  );
   const hookPath = join(packageRoot, "src/claude/hooks/skill-router.cjs");
 
   const cases = [
@@ -482,11 +511,14 @@ function runSkillRouterUnitTests() {
     ["phân tích ảnh hưởng trước khi sửa module auth", "hapo:impact-analysis"],
     ["đưa chức năng đã approved spec vào code", "hapo:develop"],
     ["kiểm thử end to end sau khi làm xong", "hapo:test"],
+    ["test toàn bộ feature này", "hapo:test"],
     ["xem source vì sao CI fail", "hapo:debug"],
     ["xem source code và cấu trúc project", "hapo:inspect"],
+    ["kiểm tra source code phần auth nằm đâu", "hapo:inspect"],
     ["find files for auth flow", "hapo:inspect"],
     ["review React best practices for this Next.js page", "hapo:react-best-practices"],
     ["tối ưu rerender React component", "hapo:react-best-practices"],
+    ["React app bị rerender nhiều, tối ưu giúp tôi", "hapo:react-best-practices"],
     ["use agent-browser to open website and click login", "hapo:agent-browser"],
     ["tự động thao tác trình duyệt để kiểm tra form", "hapo:agent-browser"],
     ["tạo sơ đồ luồng dữ liệu", "hapo:generate-graph"],
@@ -502,6 +534,7 @@ function runSkillRouterUnitTests() {
     ["コード構造を確認して", "hapo:inspect"],
     ["Reactの再レンダー最適化を確認して", "hapo:react-best-practices"],
     ["ブラウザ自動化でログインフォームを操作して", "hapo:agent-browser"],
+    ["ブラウザでフォーム入力を自動化して", "hapo:agent-browser"],
     ["画面デザインと配色を調整して", "hapo:frontend-design"],
     ["スライド資料を作って", "hapo:pptx"],
     ["画像を見て説明して", "hapo:ai-multimodal"],
@@ -557,6 +590,58 @@ function runSkillRouterUnitTests() {
     process.exit(1);
   }
 
+  const fsSync = require("node:fs");
+  const os = require("node:os");
+  const tempProject = fsSync.mkdtempSync(join(os.tmpdir(), "cafekit-runtime-config-"));
+  try {
+    fsSync.mkdirSync(join(tempProject, ".claude"), { recursive: true });
+    fsSync.writeFileSync(
+      join(tempProject, ".claude", "runtime.json"),
+      JSON.stringify({
+        hooks: { "skill-router": false },
+        paths: { docs: "knowledge", specs: "specifications" },
+        statusline: "minimal",
+        statuslineColors: false,
+      }),
+    );
+
+    const runtimeConfig = loadConfig({
+      cwd: tempProject,
+      includeProject: false,
+      includeAssertions: false,
+      includeLocale: false,
+    });
+    if (
+      runtimeConfig.hooks["skill-router"] !== false ||
+      runtimeConfig.paths.docs !== "knowledge" ||
+      runtimeConfig.statusline !== "minimal" ||
+      runtimeConfig.statuslineColors !== false
+    ) {
+      console.error(runtimeConfig);
+      console.error("[FAIL] runtime.json did not drive shared hook config");
+      process.exit(1);
+    }
+
+    if (isHookEnabled("skill-router", { cwd: tempProject }) !== false) {
+      console.error("[FAIL] isHookEnabled ignored runtime.json skill-router=false");
+      process.exit(1);
+    }
+
+    const disabled = spawnSync(process.execPath, [hookPath], {
+      cwd: tempProject,
+      input: JSON.stringify({ prompt: "commit và push giúp tôi", cwd: tempProject }),
+      encoding: "utf8",
+    });
+    if (disabled.status !== 0 || disabled.stdout.trim() !== "") {
+      console.error(disabled.stdout);
+      console.error(disabled.stderr);
+      console.error("[FAIL] skill router hook ignored runtime.json disable flag");
+      process.exit(1);
+    }
+  } finally {
+    fsSync.rmSync(tempProject, { recursive: true, force: true });
+  }
+
   const explicit = spawnSync(process.execPath, [hookPath], {
     cwd: packageRoot,
     input: JSON.stringify({ prompt: "/hapo:specs Build dashboard", cwd: packageRoot }),
@@ -572,8 +657,8 @@ function runSkillRouterUnitTests() {
   console.log("✔ skill router maps natural-language prompts");
   console.log("✔ skill router uses weighted scoring and confidence");
   console.log("✔ skill router normalizes Vietnamese diacritics and Japanese width");
-  console.log("✔ skill router hook emits suggestions and skips slash commands");
-  return cases.length + 5;
+  console.log("✔ skill router hook emits suggestions, reads runtime config, and skips slash commands");
+  return cases.length + 6;
 }
 
 async function writeText(filePath, content) {

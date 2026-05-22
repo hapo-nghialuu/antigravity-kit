@@ -21,14 +21,15 @@ try {
   const os = require("os");
   const { execSync } = require("child_process");
 
-  // Check if usage tracking is disabled in runtime.json
-  try {
-    const runtimePath = path.join(process.cwd(), '.claude', 'runtime.json');
-    if (fs.existsSync(runtimePath)) {
-      const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
-      if (runtime.usage?.enabled === false) process.exit(0);
-    }
-  } catch { /* fail-open */ }
+  function readRuntime(cwd) {
+    try {
+      const runtimePath = path.join(cwd, '.claude', 'runtime.json');
+      if (fs.existsSync(runtimePath)) {
+        return JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
+      }
+    } catch { /* fail-open */ }
+    return {};
+  }
 
 // Cache configuration
 const USAGE_CACHE_FILE = path.join(os.tmpdir(), "ck-usage-limits-cache.json");
@@ -151,6 +152,12 @@ async function main() {
 		} catch {}
 
 		const input = JSON.parse(inputStr || "{}");
+		const cwd = input.cwd || process.cwd();
+		const runtime = readRuntime(cwd);
+		if (runtime.usage?.enabled === false) {
+			console.log(JSON.stringify(result));
+			return;
+		}
 
 		// Detect hook type
 		const isUserPrompt = typeof input.prompt === "string";

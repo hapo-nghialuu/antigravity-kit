@@ -38,13 +38,13 @@ try {
     return trimmed.startsWith('/') || /^hapo:[a-z-]+/i.test(trimmed);
   }
 
-  if (!isHookEnabled('skill-router')) process.exit(0);
-
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
   const payload = JSON.parse(stdin);
+  const cwd = payload.cwd || process.cwd();
   const prompt = payload.prompt || '';
+  if (!isHookEnabled('skill-router', { cwd })) process.exit(0);
   if (!prompt || isExplicitCommand(prompt)) process.exit(0);
 
   const route = findRoute(prompt);

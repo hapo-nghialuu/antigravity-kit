@@ -15,13 +15,15 @@ try {
   const fs = require('fs');
   const path = require('path');
   const { execSync } = require('child_process');
+  const { loadConfig } = require('./lib/config.cjs');
 
   // Đọc stdin theo chuẩn hook
   const stdin = fs.readFileSync(0, 'utf8').trim();
   const payload = stdin ? JSON.parse(stdin) : {};
   const cwd = payload.cwd || process.cwd();
+  const config = loadConfig({ cwd, includeProject: false, includeAssertions: false, includeLocale: false });
 
-  const docsDir = path.join(cwd, 'docs');
+  const docsDir = path.join(cwd, config.paths?.docs || 'docs');
   
   // Xác định dự án đã có cốt lõi code hay chưa?
   const hasCode = fs.existsSync(path.join(cwd, 'src')) ||

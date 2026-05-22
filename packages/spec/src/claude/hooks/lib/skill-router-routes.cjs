@@ -27,8 +27,8 @@ const ROUTES = [
     negative: ['bug', 'debug', 'review', 'test only', 'commit'],
   }),
   route('hapo:test', 'test, verification, QA, or runtime validation', 70, {
-    strong: ['unit test', 'integration test', 'e2e', 'playwright', 'coverage', 'kiểm thử', 'kiem thu', '単体テスト', '結合テスト', 'カバレッジ', 'テストして'],
-    medium: ['test', 'tests', 'testing', 'qa', 'verify', 'verification', 'kiểm tra chạy', 'kiem tra chay', 'xác minh', 'xac minh', 'テスト', '検証', '確認', '動作確認'],
+    strong: ['unit test', 'integration test', 'e2e', 'playwright', 'coverage', 'test all', 'run all tests', 'test toàn bộ', 'test toan bo', 'kiểm thử', 'kiem thu', 'kiểm tra toàn bộ', 'kiem tra toan bo', '単体テスト', '結合テスト', '全体テスト', 'カバレッジ', 'テストして'],
+    medium: ['test', 'tests', 'testing', 'qa', 'verify', 'verification', 'kiểm tra chạy', 'kiem tra chay', 'xác minh', 'xac minh', 'テスト', '検証', '確認', '動作確認', '全体確認'],
     weak: ['assert', 'runtime proof', 'manual qa', 'end to end', 'smoke test', 'アサート', 'スモークテスト'],
     negative: ['spec', 'requirements', 'commit', 'push'],
   }),
@@ -45,8 +45,8 @@ const ROUTES = [
     negative: ['deploy', 'test', 'review only'],
   }),
   route('hapo:inspect', 'codebase discovery, file search, structure scan, or locating implementation areas', 64, {
-    strong: ['inspect', 'codebase scan', 'scan codebase', 'scan source', 'file discovery', 'find files', 'locate files', 'xem source', 'xem codebase', 'quét source', 'quet source', 'quét codebase', 'quet codebase', 'kiểm tra cấu trúc', 'kiem tra cau truc', 'コード構造', 'ソース確認', 'コードベース確認', 'ファイル探索', '構造を確認'],
-    medium: ['search files', 'find where', 'where is', 'project structure', 'code structure', 'repo structure', 'tìm file', 'tim file', 'tìm trong source', 'tim trong source', 'cấu trúc project', 'cau truc project', 'ở đâu', 'o dau', '関連ファイル', 'どこにある', 'プロジェクト構造', 'リポジトリ構造', '探して'],
+    strong: ['inspect', 'codebase scan', 'scan codebase', 'scan source', 'file discovery', 'find files', 'locate files', 'xem source', 'xem codebase', 'kiểm tra source', 'kiem tra source', 'kiểm tra source code', 'kiem tra source code', 'quét source', 'quet source', 'quét codebase', 'quet codebase', 'kiểm tra cấu trúc', 'kiem tra cau truc', 'コード構造', 'ソース確認', 'コードベース確認', 'ファイル探索', '構造を確認'],
+    medium: ['search files', 'find where', 'where is', 'project structure', 'code structure', 'repo structure', 'source code', 'tìm file', 'tim file', 'tìm trong source', 'tim trong source', 'cấu trúc project', 'cau truc project', 'ở đâu', 'o dau', 'nằm đâu', 'nam dau', '関連ファイル', 'どこにある', 'プロジェクト構造', 'リポジトリ構造', '探して'],
     weak: ['scan', 'inspect code', 'explore code', 'xem qua', 'xem giúp', '調べて', '確認して'],
     negative: ['bug', 'error', 'lỗi', 'loi', 'fail', 'failure', 'production', 'hotfix', 'fix', 'sửa', 'sua', 'debug', 'develop', 'implement', 'test', 'commit', 'push', 'slide', 'pptx'],
   }),
@@ -63,8 +63,8 @@ const ROUTES = [
     negative: ['backend', 'api', 'database'],
   }),
   route('hapo:react-best-practices', 'React and Next.js performance patterns, rerender optimization, and Vercel best practices', 60, {
-    strong: ['react best practices', 'next.js best practices', 'vercel react best practices', 'react performance', 'next.js performance', 'optimize react', 'optimize next.js', 'tối ưu react', 'toi uu react', 'tối ưu next.js', 'toi uu next.js', 'reactベストプラクティス', 'next.jsベストプラクティス', 'react最適化', 'next.js最適化', 'react性能'],
-    medium: ['bundle optimization', 'bundle size', 'rerender optimization', 're-render optimization', 'data fetching', 'server component', 'client component', 'suspense', 'hydration', 'waterfall', 'usememo', 'usecallback', 'react cache', 'tối ưu rerender', 'toi uu rerender', 'tối ưu bundle', 'toi uu bundle', 'バンドル最適化', '再レンダー最適化', 'データ取得', 'サーバーコンポーネント', 'クライアントコンポーネント', 'ハイドレーション'],
+    strong: ['react best practices', 'next.js best practices', 'vercel react best practices', 'react performance', 'next.js performance', 'optimize react', 'optimize next.js', 'rerender nhiều', 'rerender nhieu', 'nhiều rerender', 'nhieu rerender', 'tối ưu react', 'toi uu react', 'tối ưu next.js', 'toi uu next.js', 'reactベストプラクティス', 'next.jsベストプラクティス', 'react最適化', 'next.js最適化', 'react性能'],
+    medium: ['bundle optimization', 'bundle size', 'rerender optimization', 're-render optimization', 'data fetching', 'server component', 'client component', 'suspense', 'hydration', 'waterfall', 'usememo', 'usecallback', 'react cache', 'optimize', 'optimization', 'tối ưu', 'toi uu', 'tối ưu rerender', 'toi uu rerender', 'tối ưu bundle', 'toi uu bundle', 'バンドル最適化', '再レンダー最適化', '最適化', 'データ取得', 'サーバーコンポーネント', 'クライアントコンポーネント', 'ハイドレーション'],
     weak: ['react', 'next.js', 'memo', 'rerender', 're-render', 'render performance', 'component performance', 'waterfalls', 'lazy state', 'dynamic import', 'react pattern', 'next.js pattern', 'レンダー性能', 'コンポーネント性能', '動的インポート'],
     negative: ['backend', 'api', 'database', 'slide', 'pptx', 'commit', 'push'],
   }),
@@ -118,7 +118,7 @@ const ROUTES = [
   }),
   route('hapo:agent-browser', 'browser automation with snapshot refs, web interaction, recording, or Browserbase cloud browser workflows', 45, {
     strong: ['agent-browser', 'browser automation', 'web automation', 'browserbase', 'cloud browser', 'snapshot refs', 'browser snapshot', 'automate browser', 'tự động trình duyệt', 'tu dong trinh duyet', 'tự động thao tác trình duyệt', 'tu dong thao tac trinh duyet', 'ブラウザ自動化', 'クラウドブラウザ', 'ブラウザ操作', 'ブラウザスナップショット'],
-    medium: ['open url', 'navigate site', 'click in browser', 'fill form in browser', 'record browser', 'browser session', 'multi tab', 'browser test session', 'mở website', 'mo website', 'truy cập website', 'truy cap website', 'click trên web', 'click tren web', 'điền form web', 'dien form web', 'サイトを開く', 'ブラウザで開く', 'フォーム入力', 'クリック操作', '録画'],
+    medium: ['open url', 'navigate site', 'click in browser', 'fill form in browser', 'record browser', 'browser session', 'multi tab', 'browser test session', 'mở website', 'mo website', 'truy cập website', 'truy cap website', 'click trên web', 'click tren web', 'điền form web', 'dien form web', 'サイトを開く', 'ブラウザで開く', 'ブラウザで', 'フォーム入力', 'フォーム入力を自動化', '自動化して', 'クリック操作', '録画'],
     weak: ['click button', 'fill form', 'open site', 'web session', 'browser ref', 'viewport', 'cookies', 'localstorage', 'ボタンをクリック', 'ビューポート', 'クッキー'],
     negative: ['attached screenshot', 'ảnh đính kèm', 'anh dinh kem', '画像添付', 'source code', 'codebase', 'commit', 'push', 'pptx', 'pdf'],
   }),
