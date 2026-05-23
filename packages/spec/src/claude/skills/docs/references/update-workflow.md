@@ -1,6 +1,6 @@
 # Update Workflow
 
-Use with `/hapo:docs update`.
+Use with `/hapo:docs --update`.
 
 ## Goal
 

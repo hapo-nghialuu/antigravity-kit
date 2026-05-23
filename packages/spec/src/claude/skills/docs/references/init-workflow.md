@@ -1,6 +1,6 @@
 # Init Workflow
 
-Use with `/hapo:docs init`.
+Use with `/hapo:docs --init`.
 
 ## Goal
 
@@ -45,7 +45,7 @@ Do not create a large document solely to fill the table. If a core file cannot b
 
 1. Read repo instructions and runtime docs root.
 2. Detect whether docs already exist.
-3. If user specifically asked `init` and docs exist, preserve existing content:
+3. If user specifically asked `--init` and docs exist, preserve existing content:
    - read it first
    - merge or add missing baseline sections
    - do not overwrite human-written docs blind
@@ -126,7 +126,7 @@ Report:
 Recommended next command:
 
 ```text
-/hapo:docs update
+/hapo:docs --update
 ```
 
 after meaningful source changes.

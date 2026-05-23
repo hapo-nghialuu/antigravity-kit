@@ -126,7 +126,7 @@
 
   <section class="block decision">
     <span class="tag green">Quyết định chính</span>
-    <h2>Dùng <code>hapo:docs reconstruct</code>, không tạo skill riêng <code>hapo:reconstruct</code></h2>
+    <h2>Dùng <code>hapo:docs --reconstruct</code>, không tạo skill riêng <code>hapo:reconstruct</code></h2>
     <p>Lý do: yêu cầu hiện đã rộng hơn requirement reconstruction. Người dùng muốn dựng tài liệu hệ thống/project docs từ source code, trong đó reconstruct là một mode đặc biệt cho hệ thống hiện hữu hoặc legacy.</p>
     <ul>
       <li><code>hapo:docs</code> là namespace đúng cho tài liệu.</li>
@@ -172,10 +172,10 @@
       <span class="tag sky">Command contract</span>
       <h2>Các lệnh được hỗ trợ</h2>
       <pre>/hapo:docs
-/hapo:docs init
-/hapo:docs update
-/hapo:docs summarize
-/hapo:docs reconstruct &lt;scope&gt;</pre>
+/hapo:docs --init
+/hapo:docs --update
+/hapo:docs --summarize
+/hapo:docs --reconstruct &lt;scope&gt;</pre>
       <p>Nếu không có <code>reconstruct</code>, skill xử lý docs bình thường. Nếu prompt có ý legacy/as-is/source-to-docs thì tự chọn reconstruct.</p>
     </article>
 
@@ -342,7 +342,7 @@
   <section class="block output">
     <span class="tag sky">Handoff</span>
     <h2>Flow sản phẩm đề xuất</h2>
-    <pre>/hapo:docs reconstruct &lt;scope&gt;
+    <pre>/hapo:docs --reconstruct &lt;scope&gt;
 → human review docs/as-is/&lt;scope&gt;
 → /hapo:specs &lt;modernization/change request based on approved as-is docs&gt;
 → /hapo:develop &lt;feature&gt;</pre>

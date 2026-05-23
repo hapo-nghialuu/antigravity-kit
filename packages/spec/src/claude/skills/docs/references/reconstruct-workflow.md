@@ -1,6 +1,6 @@
 # Reconstruct Workflow
 
-Use this reference for `/hapo:docs reconstruct <scope>`.
+Use this reference for `/hapo:docs --reconstruct <scope>`.
 
 ## Goal
 

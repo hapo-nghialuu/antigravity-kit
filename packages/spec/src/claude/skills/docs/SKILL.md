@@ -2,7 +2,7 @@
 name: hapo:docs
 description: "Create, update, summarize, or reconstruct project/system documentation from source code. Use reconstruct mode for as-is documentation of existing or legacy systems with evidence and uncertainty tracking."
 version: 1.0.0
-argument-hint: "[init|update|summarize|reconstruct] [scope]"
+argument-hint: "[--init|--update|--summarize|--reconstruct] [scope]"
 ---
 
 # Docs
@@ -18,11 +18,13 @@ Project documentation workflow for CafeKit.
 
 ```text
 /hapo:docs
-/hapo:docs init
-/hapo:docs update
-/hapo:docs summarize
-/hapo:docs reconstruct <scope>
+/hapo:docs --init
+/hapo:docs --update
+/hapo:docs --summarize
+/hapo:docs --reconstruct <scope>
 ```
+
+Mode flags are exclusive. When one is present, use it as the selected mode before interpreting any natural-language scope or instructions.
 
 ## Default Behavior
 
@@ -90,9 +92,9 @@ docs/as-is/<scope-slug>/
 └── unknowns-and-assumptions.md
 ```
 
-## Subcommands
+## Mode Flags
 
-### `init`
+### `--init`
 
 Create the standard project docs set from the current source code.
 
@@ -105,7 +107,7 @@ Load:
 - `references/standard-docs-workflow.md`
 - `references/init-workflow.md`
 
-### `update`
+### `--update`
 
 Refresh existing docs after code changes.
 
@@ -118,7 +120,7 @@ Load:
 - `references/standard-docs-workflow.md`
 - `references/update-workflow.md`
 
-### `summarize`
+### `--summarize`
 
 Create or update only `codebase-summary.md`.
 
@@ -130,7 +132,7 @@ Load:
 - `references/standard-docs-workflow.md`
 - `references/summarize-workflow.md`
 
-### `reconstruct`
+### `--reconstruct`
 
 Rebuild current-state, as-is system documentation from source code.
 
@@ -153,7 +155,7 @@ Load:
 
 ## Reconstruction Is Not Specs
 
-`hapo:docs reconstruct` MUST NOT:
+`hapo:docs --reconstruct` MUST NOT:
 
 - design future behavior
 - add new requirements
@@ -165,7 +167,7 @@ Load:
 Correct handoff:
 
 ```text
-/hapo:docs reconstruct <scope>
+/hapo:docs --reconstruct <scope>
 -> human review of as-is docs
 -> /hapo:specs <modernization or change request>
 -> /hapo:develop <feature>
@@ -202,9 +204,9 @@ For broad inputs such as `.`, `/`, `whole repo`, or `entire system`:
 Prefer:
 
 ```text
-/hapo:docs reconstruct apps/admin
-/hapo:docs reconstruct modules/expense-approval
-/hapo:docs reconstruct src/features/order
+/hapo:docs --reconstruct apps/admin
+/hapo:docs --reconstruct modules/expense-approval
+/hapo:docs --reconstruct src/features/order
 ```
 
 Avoid reconstructing a large monolith in one pass unless the user explicitly accepts lower precision.

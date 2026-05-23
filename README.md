@@ -45,7 +45,7 @@ Idea -> /hapo:brainstorm (if unclear) -> /hapo:specs -> /hapo:develop -> /hapo:t
 For existing or legacy systems without reliable documentation:
 
 ```bash
-/hapo:docs reconstruct apps/legacy-admin
+/hapo:docs --reconstruct apps/legacy-admin
 /hapo:specs Modernize the approved as-is docs with CSV export and split admin/operator permissions
 ```
 

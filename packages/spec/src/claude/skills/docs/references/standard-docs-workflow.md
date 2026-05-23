@@ -1,6 +1,6 @@
 # Standard Docs Workflow
 
-Use this shared contract for `/hapo:docs init`, `/hapo:docs update`, and `/hapo:docs summarize`.
+Use this shared contract for `/hapo:docs --init`, `/hapo:docs --update`, and `/hapo:docs --summarize`.
 
 Then load the mode-specific reference:
 

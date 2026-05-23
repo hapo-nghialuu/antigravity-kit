@@ -434,11 +434,12 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes('"docs"'),
     },
     {
-      label: "hapo:docs reconstruct keeps as-is evidence contract",
+      label: "hapo:docs --reconstruct keeps as-is evidence contract",
       file: "src/claude/skills/docs/SKILL.md",
       assert: (content) =>
         content.includes("name: hapo:docs") &&
-        content.includes("/hapo:docs reconstruct <scope>") &&
+        content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("Mode flags are exclusive") &&
         content.includes("docs/as-is/<scope-slug>/") &&
         content.includes("Observed | Inferred | Unknown") &&
         content.includes("Confidence: High | Medium | Low") &&
@@ -446,7 +447,7 @@ async function runStaticSemanticTests() {
         content.includes("/hapo:specs <change request based on approved as-is docs>"),
     },
     {
-      label: "hapo:docs reconstruct reference defines output and human review gate",
+      label: "hapo:docs --reconstruct reference defines output and human review gate",
       file: "src/claude/skills/docs/references/reconstruct-workflow.md",
       assert: (content) =>
         content.includes("docs/as-is/<scope-slug>/") &&
@@ -459,7 +460,7 @@ async function runStaticSemanticTests() {
         content.includes("Do not recommend `/hapo:develop`"),
     },
     {
-      label: "hapo:docs reconstruct templates keep evidence and overview starters",
+      label: "hapo:docs --reconstruct templates keep evidence and overview starters",
       file: "src/claude/skills/docs/templates/reconstruction.json",
       assert: (content) =>
         content.includes('"source_revision"') &&
@@ -470,7 +471,7 @@ async function runStaticSemanticTests() {
         content.includes('"glossary.md"'),
     },
     {
-      label: "hapo:docs reconstruct overview template is self-contained",
+      label: "hapo:docs --reconstruct overview template is self-contained",
       file: "src/claude/skills/docs/templates/reconstruct-overview.html",
       assert: (content) =>
         content.includes("data-reconstruct-overview") &&
@@ -491,7 +492,7 @@ async function runStaticSemanticTests() {
         content.includes("CafeKit ships `docs-keeper` instead"),
     },
     {
-      label: "hapo:docs init reference keeps scout author validate discipline",
+      label: "hapo:docs --init reference keeps scout author validate discipline",
       file: "src/claude/skills/docs/references/init-workflow.md",
       assert: (content) =>
         content.includes("Structure Scout") &&
@@ -500,7 +501,7 @@ async function runStaticSemanticTests() {
         content.includes("validate-docs.cjs <docs-root>"),
     },
     {
-      label: "hapo:docs update reference reads existing docs before surgical updates",
+      label: "hapo:docs --update reference reads existing docs before surgical updates",
       file: "src/claude/skills/docs/references/update-workflow.md",
       assert: (content) =>
         content.includes("Existing Docs Read") &&
@@ -509,7 +510,7 @@ async function runStaticSemanticTests() {
         content.includes(".sync_hash"),
     },
     {
-      label: "hapo:docs summarize reference avoids broad codebase scans by default",
+      label: "hapo:docs --summarize reference avoids broad codebase scans by default",
       file: "src/claude/skills/docs/references/summarize-workflow.md",
       assert: (content) =>
         content.includes("Do not scan the entire codebase") &&

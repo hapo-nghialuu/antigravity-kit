@@ -1,6 +1,6 @@
 # Summarize Workflow
 
-Use with `/hapo:docs summarize`.
+Use with `/hapo:docs --summarize`.
 
 ## Goal
 
