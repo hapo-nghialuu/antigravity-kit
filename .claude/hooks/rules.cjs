@@ -91,6 +91,13 @@ try {
   lines.push('- Ensure token efficiency while maintaining high quality.');
   lines.push('');
 
+  // Skill routing: advisory rule docs, no automatic prompt router.
+  lines.push('## Skill Routing');
+  lines.push('- Choose skills from intent using `.claude/rules/skill-workflow-routing.md` and `.claude/rules/skill-domain-routing.md`.');
+  lines.push('- If needed, run `node .claude/scripts/generate-skill-catalog.cjs --skills` to inspect installed skills.');
+  lines.push('- Explicit user commands and direct-answer requests override routing suggestions.');
+  lines.push('');
+
   // Modularization
   lines.push('## [IMPORTANT] Consider Modularization:');
   lines.push('- If a file exceeds 200 lines, consider splitting it');

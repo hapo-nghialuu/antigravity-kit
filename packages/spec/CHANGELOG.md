@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.16] - 2026-05-25
+
+### Changed
+- Replaced the automatic scoring-based `skill-router` hook with Research-style workflow/domain routing rules and a generated skill catalog script.
+- Installer upgrades now remove obsolete `skill-router` runtime files and settings hooks from existing projects.
+
+### Removed
+- Removed `hooks/skill-router.cjs` and `hooks/lib/skill-router-routes.cjs` from the Claude runtime bundle.
+
 ## [0.8.15] - 2026-05-23
 
 ### Added

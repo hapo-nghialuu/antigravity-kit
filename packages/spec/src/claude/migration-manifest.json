@@ -58,6 +58,7 @@
     "required": [
       "validate-docs.cjs",
       "validate-docs-reconstruct.cjs",
+      "generate-skill-catalog.cjs",
       "browser-tool.cjs",
       "validate-spec-output.cjs"
     ]
@@ -67,6 +68,15 @@
   },
   "hooks": {
     "assumed": []
+  },
+  "obsolete": {
+    "runtimeFiles": [
+      "hooks/skill-router.cjs",
+      "hooks/lib/skill-router-routes.cjs"
+    ],
+    "settingsHookCommandSubstrings": [
+      "hooks/skill-router.cjs"
+    ]
   },
   "runtime": {
     "files": [
@@ -80,7 +90,6 @@
       "hooks/privacy-block.cjs",
       "hooks/inspect-block.cjs",
       "hooks/rules.cjs",
-      "hooks/skill-router.cjs",
       "hooks/spec-state.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
@@ -89,8 +98,7 @@
       "hooks/lib/git.cjs",
       "hooks/lib/config.cjs",
       "hooks/lib/context.cjs",
-      "hooks/lib/detect.cjs",
-      "hooks/lib/skill-router-routes.cjs"
+      "hooks/lib/detect.cjs"
     ]
   },
   "settings": {

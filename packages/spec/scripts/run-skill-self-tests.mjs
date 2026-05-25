@@ -5,10 +5,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const require = createRequire(import.meta.url);
 
 async function listFiles(directory, predicate) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -422,11 +420,32 @@ async function runStaticSemanticTests() {
         !content.includes("`references/debugger/"),
     },
     {
-      label: "CafeKit skill router hook is packaged by manifest",
-      file: "src/claude/migration-manifest.json",
+      label: "CafeKit uses Research-style skill routing rules",
+      file: "src/claude/CLAUDE.md",
       assert: (content) =>
-        content.includes('"hooks/skill-router.cjs"') &&
-        content.includes('"hooks/lib/skill-router-routes.cjs"'),
+        content.includes("skill-workflow-routing.md") &&
+        content.includes("skill-domain-routing.md") &&
+        content.includes("does not auto-route prompts through a scoring hook") &&
+        content.includes("generate-skill-catalog.cjs --skills"),
+    },
+    {
+      label: "CafeKit skill routing workflow rule maps core flows",
+      file: "src/claude/rules/skill-workflow-routing.md",
+      assert: (content) =>
+        content.includes("/hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("/hapo:debug -> /hapo:hotfix") &&
+        content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("Do not inject or force a skill"),
+    },
+    {
+      label: "CafeKit skill routing domain rule maps installed skills",
+      file: "src/claude/rules/skill-domain-routing.md",
+      assert: (content) =>
+        content.includes("/hapo:frontend-development") &&
+        content.includes("/hapo:react-best-practices") &&
+        content.includes("/hapo:backend-development") &&
+        content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("/hapo:agent-browser"),
     },
     {
       label: "hapo:docs skill is packaged and supports reconstruct mode",
@@ -539,12 +558,12 @@ async function runStaticSemanticTests() {
         content.includes("data-reconstruct-overview"),
     },
     {
-      label: "CafeKit skill router hook is installed on user prompts",
+      label: "CafeKit no longer installs automatic skill router hook",
       file: "src/claude/settings/settings.json",
       assert: (content) =>
-        content.includes('hooks/skill-router.cjs') &&
-        content.indexOf('hooks/rules.cjs') < content.indexOf('hooks/skill-router.cjs') &&
-        content.indexOf('hooks/skill-router.cjs') < content.indexOf('hooks/spec-state.cjs'),
+        content.includes('hooks/rules.cjs') &&
+        content.includes('hooks/spec-state.cjs') &&
+        !content.includes('hooks/skill-router.cjs'),
     },
     {
       label: "CafeKit runtime config drives shared hook config",
@@ -553,7 +572,41 @@ async function runStaticSemanticTests() {
         content.includes("RUNTIME_CONFIG_PATH = '.claude/runtime.json'") &&
         content.includes("const CONFIG_PATH = RUNTIME_CONFIG_PATH") &&
         content.includes("if (runtimeConfig) merged = deepMerge(merged, runtimeConfig)") &&
-        content.includes("'skill-router': true"),
+        !content.includes("'skill-router': true"),
+    },
+    {
+      label: "CafeKit migration manifest excludes removed skill router files",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => {
+        const manifest = JSON.parse(content);
+        return (
+          manifest.scripts.required.includes("generate-skill-catalog.cjs") &&
+          !manifest.runtime.files.includes("hooks/skill-router.cjs") &&
+          !manifest.runtime.files.includes("hooks/lib/skill-router-routes.cjs") &&
+          manifest.obsolete.runtimeFiles.includes("hooks/skill-router.cjs") &&
+          manifest.obsolete.runtimeFiles.includes("hooks/lib/skill-router-routes.cjs") &&
+          manifest.obsolete.settingsHookCommandSubstrings.includes("hooks/skill-router.cjs")
+        );
+      },
+    },
+    {
+      label: "CafeKit installer cleans obsolete skill router runtime and settings hooks",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("function removeObsoleteClaudeRuntimeFiles") &&
+        content.includes("function pruneObsoleteSettingsHooks") &&
+        content.includes("settingsHookCommandSubstrings") &&
+        content.includes("fs.rmSync(targetPath, { force: true })") &&
+        content.includes("removeObsoleteClaudeRuntimeFiles(platformKey, results)"),
+    },
+    {
+      label: "CafeKit rules hook injects routing rule references",
+      file: "src/claude/hooks/rules.cjs",
+      assert: (content) =>
+        content.includes("## Skill Routing") &&
+        content.includes("skill-workflow-routing.md") &&
+        content.includes("skill-domain-routing.md") &&
+        content.includes("generate-skill-catalog.cjs --skills"),
     },
     {
       label: "docs sync respects runtime docs path",
@@ -577,14 +630,6 @@ async function runStaticSemanticTests() {
         content.includes("colors.setColorEnabled(config.statuslineColors !== false)") &&
         content.includes("colors.shouldUseColor"),
     },
-    {
-      label: "CafeKit skill router skips explicit slash commands",
-      file: "src/claude/hooks/skill-router.cjs",
-      assert: (content) =>
-        content.includes("isExplicitCommand") &&
-        content.includes("trimmed.startsWith('/')") &&
-        content.includes("hapo:[a-z-]+"),
-    },
   ];
 
   console.log("\n[skill-test] static semantic checks");
@@ -600,181 +645,142 @@ async function runStaticSemanticTests() {
   return checks.length;
 }
 
-function runSkillRouterUnitTests() {
-  const { findRoute, normalize, scoreRoute } = require(
-    join(packageRoot, "src/claude/hooks/lib/skill-router-routes.cjs"),
-  );
-  const { loadConfig, isHookEnabled } = require(
-    join(packageRoot, "src/claude/hooks/lib/config.cjs"),
-  );
-  const hookPath = join(packageRoot, "src/claude/hooks/skill-router.cjs");
-
-  const cases = [
-    ["Build a support dashboard spec with requirements", "hapo:specs"],
-    ["hãy sửa lỗi production đang fail", "hapo:hotfix"],
-    ["fix bug đăng nhập giúp tôi", "hapo:hotfix"],
-    ["sửa lỗi build đang fail", "hapo:hotfix"],
-    ["commit và push giúp tôi", "hapo:git"],
-    ["thiết kế giao diện và màu sắc cho dashboard", "hapo:frontend-design"],
-    ["tạo slide pptx cho seminar", "hapo:pptx"],
-    ["biến ý tưởng này thành vài phương án triển khai", "hapo:brainstorm"],
-    ["phân tích ảnh hưởng trước khi sửa module auth", "hapo:impact-analysis"],
-    ["đưa chức năng đã approved spec vào code", "hapo:develop"],
-    ["kiểm thử end to end sau khi làm xong", "hapo:test"],
-    ["test toàn bộ feature này", "hapo:test"],
-    ["xem source vì sao CI fail", "hapo:debug"],
-    ["xem source code và cấu trúc project", "hapo:inspect"],
-    ["kiểm tra source code phần auth nằm đâu", "hapo:inspect"],
-    ["find files for auth flow", "hapo:inspect"],
-    ["review React best practices for this Next.js page", "hapo:react-best-practices"],
-    ["tối ưu rerender React component", "hapo:react-best-practices"],
-    ["React app bị rerender nhiều, tối ưu giúp tôi", "hapo:react-best-practices"],
-    ["use agent-browser to open website and click login", "hapo:agent-browser"],
-    ["tự động thao tác trình duyệt để kiểm tra form", "hapo:agent-browser"],
-    ["tạo sơ đồ luồng dữ liệu", "hapo:generate-graph"],
-    ["dựng tài liệu từ source code hệ thống cũ", "hapo:docs"],
-    ["generate docs from codebase", "hapo:docs"],
-    ["reconstruct requirements from legacy system", "hapo:docs"],
-    ["tạo tài liệu hệ thống hiện trạng", "hapo:docs"],
-    ["sửa endpoint API và schema database", "hapo:backend-development"],
-    ["xem screenshot này giúp tôi", "hapo:ai-multimodal"],
-    ["仕様を作って、要件とタスクに分けて", "hapo:specs"],
-    ["本番バグを至急修正して", "hapo:hotfix"],
-    ["この不具合を修正して", "hapo:hotfix"],
-    ["なぜCIが失敗するか原因調査して", "hapo:debug"],
-    ["承認済み仕様に沿って実装して", "hapo:develop"],
-    ["テストして動作確認して", "hapo:test"],
-    ["コミットしてプッシュして", "hapo:git"],
-    ["コード構造を確認して", "hapo:inspect"],
-    ["Reactの再レンダー最適化を確認して", "hapo:react-best-practices"],
-    ["ブラウザ自動化でログインフォームを操作して", "hapo:agent-browser"],
-    ["ブラウザでフォーム入力を自動化して", "hapo:agent-browser"],
-    ["画面デザインと配色を調整して", "hapo:frontend-design"],
-    ["ソースコードから仕様書を作成して", "hapo:docs"],
-    ["既存システムのドキュメント化をして", "hapo:docs"],
-    ["スライド資料を作って", "hapo:pptx"],
-    ["画像を見て説明して", "hapo:ai-multimodal"],
-  ];
-
-  for (const [prompt, expectedSkill] of cases) {
-    const actual = findRoute(prompt)?.skill;
-    if (actual !== expectedSkill) {
-      console.error(`[FAIL] skill router: ${prompt} -> ${actual}, expected ${expectedSkill}`);
+function runSkillCatalogTests() {
+  const scriptPath = join(packageRoot, "src/claude/scripts/generate-skill-catalog.cjs");
+  const result = spawnSync(process.execPath, [scriptPath, "--skills"], {
+    cwd: packageRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    console.error(result.stdout);
+    console.error(result.stderr);
+    console.error("[FAIL] skill catalog script failed");
+    process.exit(1);
+  }
+  for (const expected of [
+    "CafeKit Skills Catalog",
+    "`hapo:specs`",
+    "`hapo:develop`",
+    "`hapo:docs`",
+    "`hapo:debug`",
+    "`hapo:hotfix`",
+    "`hapo:react-best-practices`",
+  ]) {
+    if (!result.stdout.includes(expected)) {
+      console.error(result.stdout);
+      console.error(`[FAIL] skill catalog missing ${expected}`);
       process.exit(1);
     }
   }
 
-  if (normalize("lỗi kiểm thử") !== "loi kiem thu") {
-    console.error("[FAIL] skill router: Vietnamese diacritic normalization failed");
-    process.exit(1);
-  }
-
-  if (normalize("ｺﾐｯﾄしてﾌﾟｯｼｭして") !== "コミットしてプッシュして") {
-    console.error("[FAIL] skill router: Japanese width normalization failed");
-    process.exit(1);
-  }
-
-  if (findRoute("hello") !== null) {
-    console.error("[FAIL] skill router: low-signal prompt should not route");
-    process.exit(1);
-  }
-
-  const scored = scoreRoute("commit và push giúp tôi", {
-    skill: "hapo:git",
-    reason: "test",
-    priority: 1,
-    signals: { strong: ["commit", "push"], medium: [], weak: [], negative: [] },
-  });
-  if (scored.score < 12 || scored.confidence !== "high") {
-    console.error("[FAIL] skill router: weighted scoring did not produce high confidence");
-    process.exit(1);
-  }
-
-  const routed = spawnSync(process.execPath, [hookPath], {
+  const json = spawnSync(process.execPath, [scriptPath, "--json"], {
     cwd: packageRoot,
-    input: JSON.stringify({ prompt: "commit và push giúp tôi", cwd: packageRoot }),
     encoding: "utf8",
   });
-  if (
-    routed.status !== 0 ||
-    !routed.stdout.includes("Suggested skill: `hapo:git`") ||
-    !routed.stdout.includes("Confidence:")
-  ) {
-    console.error(routed.stdout);
-    console.error(routed.stderr);
-    console.error("[FAIL] skill router hook did not emit expected suggestion");
+  if (json.status !== 0) {
+    console.error(json.stdout);
+    console.error(json.stderr);
+    console.error("[FAIL] skill catalog JSON mode failed");
+    process.exit(1);
+  }
+  const parsed = JSON.parse(json.stdout);
+  if (!Array.isArray(parsed.skills) || parsed.skills.length < 20) {
+    console.error(json.stdout);
+    console.error("[FAIL] skill catalog JSON has too few skills");
     process.exit(1);
   }
 
-  const fsSync = require("node:fs");
-  const os = require("node:os");
-  const tempProject = fsSync.mkdtempSync(join(os.tmpdir(), "cafekit-runtime-config-"));
+  console.log("✔ skill catalog script lists installed CafeKit skills");
+  console.log("✔ skill catalog JSON mode is machine-readable");
+  return 2;
+}
+
+async function fileExists(filePath) {
   try {
-    fsSync.mkdirSync(join(tempProject, ".claude"), { recursive: true });
-    fsSync.writeFileSync(
-      join(tempProject, ".claude", "runtime.json"),
-      JSON.stringify({
-        hooks: { "skill-router": false },
-        paths: { docs: "knowledge", specs: "specifications" },
-        statusline: "minimal",
-        statuslineColors: false,
-      }),
+    await readFile(filePath, "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runInstallerMigrationFixtureTests() {
+  const root = await mkdtemp(join(tmpdir(), "cafekit-installer-migration-"));
+
+  try {
+    await mkdir(join(root, ".claude", "hooks", "lib"), { recursive: true });
+    await writeFile(join(root, ".claude", "hooks", "skill-router.cjs"), "old router");
+    await writeFile(join(root, ".claude", "hooks", "lib", "skill-router-routes.cjs"), "old routes");
+    await writeFile(
+      join(root, ".claude", "settings.json"),
+      JSON.stringify(
+        {
+          hooks: {
+            UserPromptSubmit: [
+              {
+                matcher: "*",
+                hooks: [
+                  {
+                    type: "command",
+                    command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router.cjs"',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
     );
 
-    const runtimeConfig = loadConfig({
-      cwd: tempProject,
-      includeProject: false,
-      includeAssertions: false,
-      includeLocale: false,
-    });
-    if (
-      runtimeConfig.hooks["skill-router"] !== false ||
-      runtimeConfig.paths.docs !== "knowledge" ||
-      runtimeConfig.statusline !== "minimal" ||
-      runtimeConfig.statuslineColors !== false
-    ) {
-      console.error(runtimeConfig);
-      console.error("[FAIL] runtime.json did not drive shared hook config");
-      process.exit(1);
-    }
-
-    if (isHookEnabled("skill-router", { cwd: tempProject }) !== false) {
-      console.error("[FAIL] isHookEnabled ignored runtime.json skill-router=false");
-      process.exit(1);
-    }
-
-    const disabled = spawnSync(process.execPath, [hookPath], {
-      cwd: tempProject,
-      input: JSON.stringify({ prompt: "commit và push giúp tôi", cwd: tempProject }),
+    const result = spawnSync(process.execPath, [join(packageRoot, "bin", "install.js")], {
+      cwd: root,
+      input: "n\n\n",
       encoding: "utf8",
+      env: { ...process.env, PATH: "/usr/bin:/bin" },
     });
-    if (disabled.status !== 0 || disabled.stdout.trim() !== "") {
-      console.error(disabled.stdout);
-      console.error(disabled.stderr);
-      console.error("[FAIL] skill router hook ignored runtime.json disable flag");
+
+    if (result.status !== 0) {
+      console.error(result.stdout);
+      console.error(result.stderr);
+      console.error("[FAIL] installer migration fixture failed");
       process.exit(1);
     }
+
+    const settings = JSON.parse(await readFile(join(root, ".claude", "settings.json"), "utf8"));
+    const serializedHooks = JSON.stringify(settings.hooks || {});
+    const failures = [];
+
+    if (await fileExists(join(root, ".claude", "hooks", "skill-router.cjs"))) {
+      failures.push("obsolete skill-router hook file still exists");
+    }
+    if (await fileExists(join(root, ".claude", "hooks", "lib", "skill-router-routes.cjs"))) {
+      failures.push("obsolete skill-router route file still exists");
+    }
+    if (serializedHooks.includes("hooks/skill-router.cjs")) {
+      failures.push("obsolete skill-router settings hook still exists");
+    }
+    if (!(await fileExists(join(root, ".claude", "rules", "skill-workflow-routing.md")))) {
+      failures.push("skill workflow routing rule was not installed");
+    }
+    if (!(await fileExists(join(root, ".claude", "scripts", "generate-skill-catalog.cjs")))) {
+      failures.push("skill catalog script was not installed");
+    }
+    if (!(await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md")))) {
+      failures.push("hapo:docs skill was not installed");
+    }
+
+    if (failures.length > 0) {
+      console.error(failures.join("\n"));
+      process.exit(1);
+    }
+
+    console.log("✔ installer migrates old skill-router runtime to rule-based routing");
+    return 1;
   } finally {
-    fsSync.rmSync(tempProject, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
   }
-
-  const explicit = spawnSync(process.execPath, [hookPath], {
-    cwd: packageRoot,
-    input: JSON.stringify({ prompt: "/hapo:specs Build dashboard", cwd: packageRoot }),
-    encoding: "utf8",
-  });
-  if (explicit.status !== 0 || explicit.stdout.trim() !== "") {
-    console.error(explicit.stdout);
-    console.error(explicit.stderr);
-    console.error("[FAIL] skill router hook did not skip explicit slash command");
-    process.exit(1);
-  }
-
-  console.log("✔ skill router maps natural-language prompts");
-  console.log("✔ skill router uses weighted scoring and confidence");
-  console.log("✔ skill router normalizes Vietnamese diacritics and Japanese width");
-  console.log("✔ skill router hook emits suggestions, reads runtime config, and skips slash commands");
-  return cases.length + 6;
 }
 
 async function writeText(filePath, content) {
@@ -1109,8 +1115,10 @@ async function main() {
   }
 
   let totalTests = await runStaticSemanticTests();
-  console.log("\n[skill-test] skill router unit checks");
-  totalTests += runSkillRouterUnitTests();
+  console.log("\n[skill-test] skill catalog checks");
+  totalTests += runSkillCatalogTests();
+  console.log("\n[skill-test] installer migration fixtures");
+  totalTests += await runInstallerMigrationFixtureTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
   totalTests += await runSpecValidatorFixtureTests();
   console.log("\n[skill-test] reconstruct docs validator fixtures");

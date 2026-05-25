@@ -22,9 +22,9 @@ CafeKit installs a working runtime bundle for Claude Code:
 - `hapo:generate-graph` for technical diagrams
 - supporting hooks, agents, rules, and statusline runtime
 
-CafeKit also installs a lightweight scoring-based skill-router hook. Natural-language
-prompts can trigger a suggested `hapo:*` skill, while explicit slash commands
-such as `/hapo:specs` always remain authoritative.
+CafeKit uses rule-based skill routing guidance and an installed skill catalog.
+Agents choose the right `hapo:*` skill from workflow/domain rules instead of
+using an automatic prompt-scoring hook.
 
 Core flow:
 

@@ -780,6 +780,79 @@ function copyClaudeRuntimeFiles(platformKey, results, options = {}) {
   });
 }
 
+function removeObsoleteClaudeRuntimeFiles(platformKey, results) {
+  if (platformKey !== 'claude') return;
+
+  const obsoleteFiles = CLAUDE_MIGRATION_MANIFEST?.obsolete?.runtimeFiles || [];
+  const targetBase = path.join(PLATFORMS.claude.folder);
+
+  obsoleteFiles.forEach(relPath => {
+    const targetPath = path.join(targetBase, relPath);
+
+    if (!fs.existsSync(targetPath)) {
+      return;
+    }
+
+    fs.rmSync(targetPath, { force: true });
+    console.log(`  ↻ Removed obsolete runtime: ${relPath}`);
+    results.updated++;
+  });
+}
+
+function pruneObsoleteSettingsHooks(settings, results) {
+  const obsoleteSubstrings = CLAUDE_MIGRATION_MANIFEST?.obsolete?.settingsHookCommandSubstrings || [];
+
+  if (!settings.hooks || obsoleteSubstrings.length === 0) {
+    return settings;
+  }
+
+  let removedCount = 0;
+  const prunedHooks = {};
+
+  Object.entries(settings.hooks).forEach(([eventName, matcherEntries]) => {
+    if (!Array.isArray(matcherEntries)) {
+      prunedHooks[eventName] = matcherEntries;
+      return;
+    }
+
+    const prunedEntries = [];
+
+    matcherEntries.forEach(entry => {
+      if (!Array.isArray(entry?.hooks)) {
+        prunedEntries.push(entry);
+        return;
+      }
+
+      const remainingHooks = entry.hooks.filter(hook => {
+        const command = hook?.command || '';
+        const isObsolete = obsoleteSubstrings.some(substring => command.includes(substring));
+
+        if (isObsolete) {
+          removedCount++;
+        }
+
+        return !isObsolete;
+      });
+
+      if (remainingHooks.length > 0) {
+        prunedEntries.push({ ...entry, hooks: remainingHooks });
+      }
+    });
+
+    if (prunedEntries.length > 0) {
+      prunedHooks[eventName] = prunedEntries;
+    }
+  });
+
+  if (removedCount > 0) {
+    console.log(`  ↻ Settings: removed ${removedCount} obsolete hook(s)`);
+    results.updated++;
+    return { ...settings, hooks: prunedHooks };
+  }
+
+  return settings;
+}
+
 // Merge Claude settings.json
 function mergeClaudeSettings(platformKey, results, options = {}) {
   if (platformKey !== 'claude') return;
@@ -802,7 +875,7 @@ function mergeClaudeSettings(platformKey, results, options = {}) {
     existingSettings = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
   }
 
-  const mergedSettings = { ...existingSettings };
+  const mergedSettings = pruneObsoleteSettingsHooks({ ...existingSettings }, results);
 
   // Merge statusLine
   if (managedSettings.statusLine) {
@@ -1106,6 +1179,7 @@ async function main() {
       if (platformKey === 'claude') {
         copyRoutingFile(platformKey, results, installerOptions);
         copyClaudeRuntimeFiles(platformKey, results, installerOptions);
+        removeObsoleteClaudeRuntimeFiles(platformKey, results);
         mergeClaudeSettings(platformKey, results, installerOptions);
         copyClaudeMdFile(platformKey, results, installerOptions);
         copyRulesDirectory(platformKey, results, installerOptions);

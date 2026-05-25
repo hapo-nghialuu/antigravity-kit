@@ -88,6 +88,8 @@ Consult these when the task touches the relevant area:
 
 - Primary workflow: `./.claude/rules/workflow.md`
 - Development rules: `./.claude/rules/ai-dev-rules.md`
+- Skill workflow routing: `./.claude/rules/skill-workflow-routing.md`
+- Skill domain routing: `./.claude/rules/skill-domain-routing.md`
 - Subagent coordination: `./.claude/rules/orchestrator.md`
 - Docs maintenance: `./.claude/rules/manage-docs.md`
 - State sync: `./.claude/rules/state-sync.md`
@@ -97,6 +99,8 @@ Consult these when the task touches the relevant area:
 ## Skill And Script Use
 
 - Evaluate the available skills catalog before work and activate the relevant skill(s).
+- Use `./.claude/rules/skill-workflow-routing.md` and `./.claude/rules/skill-domain-routing.md` to choose skills. CafeKit does not auto-route prompts through a scoring hook.
+- When needed, run `node .claude/scripts/generate-skill-catalog.cjs --skills` to inspect the installed skill catalog.
 - If there is a reasonable chance a skill applies, prefer the skill workflow over ad hoc execution.
 - If modifying skills, edit the current project/runtime files, not `~/.claude/skills` directly.
 - Run Python skill scripts with the skill venv:

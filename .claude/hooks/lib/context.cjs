@@ -358,7 +358,7 @@ function buildRulesSection({ devRulesPath, catalogScript, skillsVenv, plansPath,
   lines.push(`- **IMPORTANT:** DO NOT create markdown files outside of "${plansRef}" or "${docsRef}" UNLESS the user explicitly requests it.`);
 
   if (catalogScript) {
-    lines.push(`- Activate skills: Run \`python ${catalogScript} --skills\` to generate a skills catalog and analyze it, then activate the relevant skills that are needed for the task during the process.`);
+    lines.push(`- Activate skills: Use \`.claude/rules/skill-workflow-routing.md\` and \`.claude/rules/skill-domain-routing.md\`; run \`node ${catalogScript} --skills\` when you need a generated skills catalog.`);
   }
 
   if (skillsVenv) {
@@ -525,7 +525,7 @@ function buildReminderContext({ sessionId, config, staticEnv, configDirName = '.
 
   // Resolve paths
   const devRulesPath = resolveRulesPath('ai-dev-rules.md', configDirName);
-  const catalogScript = resolveScriptPath('generate_catalogs.py', configDirName);
+  const catalogScript = resolveScriptPath('generate-skill-catalog.cjs', configDirName);
   const skillsVenv = resolveSkillsVenv(configDirName);
 
   // Build plan context
