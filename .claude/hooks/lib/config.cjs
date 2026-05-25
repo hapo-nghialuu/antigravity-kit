@@ -9,11 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const LOCAL_CONFIG_PATH = '.claude/.ck.json';
-const GLOBAL_CONFIG_PATH = path.join(os.homedir(), '.claude', '.ck.json');
+const RUNTIME_CONFIG_PATH = '.claude/runtime.json';
 
-// Legacy export for backward compatibility
-const CONFIG_PATH = LOCAL_CONFIG_PATH;
+const CONFIG_PATH = RUNTIME_CONFIG_PATH;
 
 const DEFAULT_CONFIG = {
   plan: {
@@ -61,10 +59,12 @@ const DEFAULT_CONFIG = {
   },
   assertions: [],
   statusline: 'full',
+  statuslineColors: true,
   hooks: {
     'session-init': true,
     'subagent-init': true,
     'dev-rules-reminder': true,
+    'skill-router': true,
     'usage': true,
     'context-tracking': true,
     'scout-block': true,
@@ -80,8 +80,8 @@ const DEFAULT_CONFIG = {
  * Arrays are replaced entirely (not concatenated) to avoid duplicate entries
  *
  * IMPORTANT: Empty objects {} are treated as "inherit from parent", not "replace with empty".
- * This allows global config to set hooks.foo: false and have it persist even when
- * local config has hooks: {} (empty = inherit, not reset to defaults).
+ * This allows runtime config to leave hooks as {} (inherit defaults)
+ * without resetting all default hook toggles.
  *
  * @param {Object} target - Base object
  * @param {Object} source - Object to merge (takes precedence)
@@ -463,36 +463,39 @@ function sanitizeConfig(config, projectRoot) {
 }
 
 /**
- * Load config with cascading resolution: DEFAULT → global → local
+ * Load config with cascading resolution: DEFAULT → runtime
  *
  * Resolution order (each layer overrides the previous):
  *   1. DEFAULT_CONFIG (hardcoded defaults)
- *   2. Global config (~/.claude/.ck.json) - user preferences
- *   3. Local config (./.claude/.ck.json) - project-specific overrides
+ *   2. Runtime config (./.claude/runtime.json) - installed CafeKit runtime config
  *
  * @param {Object} options - Options for config loading
  * @param {boolean} options.includeProject - Include project section (default: true)
  * @param {boolean} options.includeAssertions - Include assertions (default: true)
  * @param {boolean} options.includeLocale - Include locale section (default: true)
+ * @param {string} options.cwd - Project root for local config lookup (default: process.cwd())
  */
 function loadConfig(options = {}) {
-  const { includeProject = true, includeAssertions = true, includeLocale = true } = options;
-  const projectRoot = process.cwd();
+  const {
+    includeProject = true,
+    includeAssertions = true,
+    includeLocale = true,
+    cwd = process.cwd()
+  } = options;
+  const projectRoot = cwd;
 
-  // Load configs from both locations
-  const globalConfig = loadConfigFromPath(GLOBAL_CONFIG_PATH);
-  const localConfig = loadConfigFromPath(LOCAL_CONFIG_PATH);
+  // Load config from the installed CafeKit runtime config.
+  const runtimeConfig = loadConfigFromPath(path.join(projectRoot, RUNTIME_CONFIG_PATH));
 
   // No config files found - use defaults
-  if (!globalConfig && !localConfig) {
+  if (!runtimeConfig) {
     return getDefaultConfig(includeProject, includeAssertions, includeLocale);
   }
 
   try {
-    // Deep merge: DEFAULT → global → local (local wins)
+    // Deep merge: DEFAULT → runtime (runtime wins)
     let merged = deepMerge({}, DEFAULT_CONFIG);
-    if (globalConfig) merged = deepMerge(merged, globalConfig);
-    if (localConfig) merged = deepMerge(merged, localConfig);
+    if (runtimeConfig) merged = deepMerge(merged, runtimeConfig);
 
     // Build result with optional sections
     const result = {
@@ -522,6 +525,7 @@ function loadConfig(options = {}) {
     result.hooks = merged.hooks || DEFAULT_CONFIG.hooks;
     // Statusline mode
     result.statusline = merged.statusline || 'full';
+    result.statuslineColors = merged.statuslineColors !== false;
 
     return sanitizeConfig(result, projectRoot);
   } catch (e) {
@@ -540,7 +544,8 @@ function getDefaultConfig(includeProject = true, includeAssertions = true, inclu
     codingLevel: -1,  // Default: disabled (no injection, saves tokens)
     skills: { ...DEFAULT_CONFIG.skills },
     hooks: { ...DEFAULT_CONFIG.hooks },
-    statusline: 'full'
+    statusline: 'full',
+    statuslineColors: true
   };
   if (includeLocale) {
     result.locale = { ...DEFAULT_CONFIG.locale };
@@ -789,8 +794,13 @@ function extractTaskListId(resolved) {
  * @param {string} hookName - Hook name (script basename without .cjs)
  * @returns {boolean} Whether hook is enabled
  */
-function isHookEnabled(hookName) {
-  const config = loadConfig({ includeProject: false, includeAssertions: false, includeLocale: false });
+function isHookEnabled(hookName, options = {}) {
+  const config = loadConfig({
+    includeProject: false,
+    includeAssertions: false,
+    includeLocale: false,
+    cwd: options.cwd
+  });
   const hooks = config.hooks || {};
   // Return true if undefined (default enabled), otherwise return the boolean value
   return hooks[hookName] !== false;
@@ -798,8 +808,7 @@ function isHookEnabled(hookName) {
 
 module.exports = {
   CONFIG_PATH,
-  LOCAL_CONFIG_PATH,
-  GLOBAL_CONFIG_PATH,
+  RUNTIME_CONFIG_PATH,
   DEFAULT_CONFIG,
   INVALID_FILENAME_CHARS,
   deepMerge,
