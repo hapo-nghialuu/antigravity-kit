@@ -6,7 +6,7 @@
  *
  * Supported platforms:
  * - claude: Claude Code (.claude/)
- * - antigravity: Antigravity (.agent/)
+ * - opencode: OpenCode (.opencode/)
  *
  * To add a new platform:
  * 1. Add to PLATFORMS registry below
@@ -57,67 +57,99 @@ const CLAUDE_MIGRATION_MANIFEST = loadClaudeMigrationManifest();
 const DEPENDENCY_TEMPLATES = {
   commands: {
     claude: {},
-    antigravity: {
-      'code.md': `---
-description: Implement approved work from specification tasks and then hand off to test and hapo:code-review.
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash
-argument-hint: <feature-name>
----
-
-# /code
-
-Use this workflow after /spec-tasks.
-
-1. Read .specs/$ARGUMENTS/tasks.md and identify the next pending task.
-2. Implement only that task following project standards.
-3. Run /test.
-4. Run /hapo:code-review.
-
-Preferred flow: /spec-init -> /spec-requirements -> /spec-design -> /spec-tasks -> /code -> /test -> /hapo:code-review
-`,
-      'test.md': `---
-description: Run project tests and report failures concisely.
-allowed-tools: Bash, Read, Grep
-argument-hint: [scope]
----
-
-# /test
-
-Run the project's test command and report:
-- total passed/failed
-- failing test names
-- root cause hints
-- next fix action
-`,
-    }
+    opencode: {}
   },
   agents: {
     claude: {},
-    antigravity: {
-      'frontend-specialist.md': `---
-name: frontend-specialist
-description: Implement approved UI and interaction tasks from specifications.
----
-
-Implement UI tasks from approved specs with accessibility and responsive behavior.
-`,
-      'test-engineer.md': `---
-name: test-engineer
-description: Execute tests and report reliability issues.
----
-
-Run test suites, highlight failures, and propose precise fixes.
-`,
-      'code-archaeologist.md': `---
-name: code-archaeologist
-description: Review recent changes for regressions and hidden impacts.
----
-
-Inspect changed code paths, dependencies, and potential regressions.
-`
-    }
+    opencode: {}
   }
 };
+
+const OPENCODE_TOOL_MAP = {
+  Read: 'read',
+  Glob: 'glob',
+  Grep: 'grep',
+  Edit: 'edit',
+  Write: 'edit',
+  MultiEdit: 'edit',
+  Bash: 'bash',
+  WebFetch: 'webfetch',
+  WebSearch: 'websearch',
+  NotebookEdit: 'edit'
+};
+
+const OPENCODE_COMMAND_TEMPLATES = [
+  {
+    fileName: 'brainstorm.md',
+    skillName: 'brainstorm',
+    agent: 'brainstormer',
+    subtask: true,
+    description: 'Explore and narrow an idea before writing a CafeKit spec.'
+  },
+  {
+    fileName: 'specs.md',
+    skillName: 'specs',
+    agent: 'spec-maker',
+    subtask: true,
+    description: 'Create, update, validate, or approve a CafeKit specification.'
+  },
+  {
+    fileName: 'develop.md',
+    skillName: 'develop',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Implement approved CafeKit spec tasks with scope fidelity.'
+  },
+  {
+    fileName: 'test.md',
+    skillName: 'test',
+    agent: 'test-runner',
+    subtask: true,
+    description: 'Run CafeKit verification, QA, and evidence collection.'
+  },
+  {
+    fileName: 'code-review.md',
+    skillName: 'code-review',
+    agent: 'code-auditor',
+    subtask: true,
+    description: 'Review implementation against code quality and spec compliance.'
+  },
+  {
+    fileName: 'debug.md',
+    skillName: 'debug',
+    agent: 'debugger',
+    subtask: true,
+    description: 'Diagnose a bug or failure with evidence before fixing.'
+  },
+  {
+    fileName: 'hotfix.md',
+    skillName: 'hotfix',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Apply a scout-first, narrow production hotfix.'
+  },
+  {
+    fileName: 'docs.md',
+    skillName: 'docs',
+    agent: 'docs-keeper',
+    subtask: true,
+    description: 'Create, update, or reconstruct source-backed project documentation.'
+  },
+  {
+    fileName: 'inspect.md',
+    skillName: 'inspect',
+    agent: 'inspector',
+    subtask: true,
+    description: 'Inspect a codebase, artifact, or external context before planning.'
+  },
+  {
+    fileName: 'generate-graph.md',
+    skillName: 'generate-graph',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Generate technical diagrams from project context.'
+  }
+];
 
 // ═══════════════════════════════════════════════════════════
 // PLATFORM REGISTRY - Add new platforms here
@@ -136,18 +168,19 @@ const PLATFORMS = {
     sourceDir: 'claude',       // Maps to src/claude/
     sourceSubdir: 'commands'   // Source subfolder within src/claude/
   },
-  antigravity: {
-    id: 'antigravity',
-    name: 'Antigravity',
-    description: 'Google\'s Antigravity Kit',
-    folder: '.agent',
-    commandsDir: '.agent/workflows',  // Antigravity uses workflows/ not commands/
-    skillsDir: '.agent/skills',
-    agentsDir: '.agent/agents',
-    skillsRef: '.agent/skills',
+  opencode: {
+    id: 'opencode',
+    name: 'OpenCode',
+    description: 'OpenCode terminal AI coding agent',
+    folder: '.opencode',
+    detectFiles: ['.opencode', 'opencode.json', 'opencode.jsonc'],
+    commandsDir: '.opencode/commands',
+    skillsDir: '.claude/skills',
+    agentsDir: '.opencode/agents',
+    skillsRef: '.claude/skills',
     commandPrefix: '/',
-    sourceDir: 'antigravity',  // Maps to src/antigravity/
-    sourceSubdir: 'workflows'  // Source subfolder within src/antigravity/
+    sourceDir: 'claude',
+    sourceSubdir: 'archive-command'
   }
   // Add new platforms here:
   // cursor: {
@@ -169,7 +202,8 @@ function detectPlatforms() {
   const detected = [];
 
   for (const [key, config] of Object.entries(PLATFORMS)) {
-    if (fs.existsSync(config.folder)) {
+    const markers = Array.isArray(config.detectFiles) ? config.detectFiles : [config.folder];
+    if (markers.some(marker => fs.existsSync(marker))) {
       detected.push(key);
     }
   }
@@ -189,6 +223,18 @@ function getPlatformKeys() {
   return Object.keys(PLATFORMS);
 }
 
+function isClaudeCompatibleRuntime(platformKey) {
+  return platformKey === 'claude' || platformKey === 'opencode';
+}
+
+function getClaudeSupportTargetDir(platformKey, subdir) {
+  if (platformKey === 'opencode') {
+    return path.join('.claude', subdir);
+  }
+
+  return path.join(PLATFORMS[platformKey].folder, subdir);
+}
+
 function parseInstallerArgs(argv) {
   const args = {
     upgrade: false
@@ -203,6 +249,149 @@ function parseInstallerArgs(argv) {
   }
 
   return args;
+}
+
+function splitFrontmatter(content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+
+  if (!match) {
+    return {
+      frontmatter: {},
+      body: content
+    };
+  }
+
+  const frontmatter = {};
+  match[1].split(/\r?\n/).forEach(line => {
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex === -1) return;
+
+    const key = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (key) {
+      frontmatter[key] = value;
+    }
+  });
+
+  return {
+    frontmatter,
+    body: content.slice(match[0].length)
+  };
+}
+
+function formatOpenCodeValue(value) {
+  return JSON.stringify(String(value || ''));
+}
+
+function normalizeOpenCodeBody(content) {
+  return content
+    .replace(/\.claude\/agents\//g, '.opencode/agents/')
+    .replace(/CLAUDE\.md/g, 'AGENTS.md');
+}
+
+function getOpenCodeToolEntries(toolsValue) {
+  const toolNames = String(toolsValue || '')
+    .split(',')
+    .map(tool => tool.trim())
+    .filter(Boolean);
+
+  const mappedTools = new Set();
+
+  toolNames.forEach(toolName => {
+    const mapped = OPENCODE_TOOL_MAP[toolName];
+    if (mapped) {
+      mappedTools.add(mapped);
+    }
+  });
+
+  return Array.from(mappedTools).sort();
+}
+
+function convertOpenCodeAgentContent(content, fileName) {
+  const { frontmatter, body } = splitFrontmatter(content);
+  const agentName = frontmatter.name || path.basename(fileName, '.md');
+  const description = frontmatter.description || `CafeKit agent: ${agentName}`;
+  const mode = agentName === 'brainstormer' ? 'primary' : 'subagent';
+  const permissionEntries = new Set(getOpenCodeToolEntries(frontmatter.tools));
+  permissionEntries.add('skill');
+  permissionEntries.add('task');
+  const lines = [
+    '---',
+    `description: ${formatOpenCodeValue(description)}`,
+    `mode: ${mode}`
+  ];
+
+  if (permissionEntries.size > 0) {
+    lines.push('permission:');
+    Array.from(permissionEntries).sort().forEach(permissionName => {
+      lines.push(`  ${permissionName}: allow`);
+    });
+  }
+
+  lines.push('---', '');
+
+  return `${lines.join('\n')}${normalizeOpenCodeBody(body).trimStart()}`;
+}
+
+function convertOpenCodeCommandContent(content, fileName) {
+  const { frontmatter, body } = splitFrontmatter(content);
+  const commandName = path.basename(fileName, '.md');
+  const description = frontmatter.description || `CafeKit command: ${commandName}`;
+  const lines = [
+    '---',
+    `description: ${formatOpenCodeValue(description)}`
+  ];
+
+  if (frontmatter.agent) {
+    lines.push(`agent: ${formatOpenCodeValue(frontmatter.agent)}`);
+  }
+
+  lines.push('---', '');
+
+  return `${lines.join('\n')}${normalizeOpenCodeBody(body).trimStart()}`;
+}
+
+function createOpenCodeSkillCommandContent(command) {
+  const lines = [
+    '---',
+    `description: ${formatOpenCodeValue(command.description)}`
+  ];
+
+  if (command.agent) {
+    lines.push(`agent: ${formatOpenCodeValue(command.agent)}`);
+  }
+
+  if (typeof command.subtask === 'boolean') {
+    lines.push(`subtask: ${command.subtask ? 'true' : 'false'}`);
+  }
+
+  if (command.model) {
+    lines.push(`model: ${formatOpenCodeValue(command.model)}`);
+  }
+
+  lines.push(
+    '---',
+    '',
+    `Use the CafeKit skill at \`.claude/skills/${command.skillName}/SKILL.md\`.`,
+    '',
+    'Read that skill first, then execute its workflow with these arguments:',
+    '',
+    '$ARGUMENTS',
+    '',
+    'If the skill references supporting files, resolve them relative to the skill directory.',
+    'Keep the response aligned with the skill instructions and the current project context.',
+    ''
+  );
+
+  return lines.join('\n');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -409,18 +598,8 @@ function getPlatformSpecFiles(platformKey) {
     ];
   }
 
-  if (platformKey === 'antigravity') {
-    return [
-      'spec-init.md',
-      'spec-requirements.md',
-      'spec-design.md',
-      'spec-validate.md',
-      'spec-tasks.md',
-      'spec-status.md',
-      'impact-analysis.md',
-      'docs-init.md',
-      'docs-update.md'
-    ];
+  if (platformKey === 'opencode') {
+    return [];
   }
 
   return [];
@@ -525,11 +704,8 @@ function copyPlatformFiles(platformKey, results, options = {}) {
 
     // Copy additional required skills based on platform
     let requiredSkills = [];
-    if (platformKey === 'claude') {
+    if (isClaudeCompatibleRuntime(platformKey)) {
       requiredSkills = CLAUDE_MIGRATION_MANIFEST?.skills?.required || [];
-    } else if (platformKey === 'antigravity') {
-      // Antigravity also needs shared investigation and impact-analysis skills
-      requiredSkills = ['impact-analysis', 'debug', 'ai-multimodal', 'generate-graph'];
     }
 
     requiredSkills
@@ -557,7 +733,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
   }
 
   // Copy agents
-  if (platformKey === 'claude') {
+  if (isClaudeCompatibleRuntime(platformKey)) {
     if (fs.existsSync(agentsSourceDir)) {
       const requiredAgents = CLAUDE_MIGRATION_MANIFEST?.agents?.required || [
         'tester.md',
@@ -586,7 +762,12 @@ function copyPlatformFiles(platformKey, results, options = {}) {
         }
 
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.copyFileSync(source, dest);
+        if (platformKey === 'opencode') {
+          const content = fs.readFileSync(source, 'utf8');
+          fs.writeFileSync(dest, convertOpenCodeAgentContent(content, fileName), 'utf8');
+        } else {
+          fs.copyFileSync(source, dest);
+        }
         results.dependencyChecks++;
         results.installedDependencies++;
 
@@ -601,7 +782,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       // Copy agent reference manuals (debugger manuals, etc.) recursively
       const refsSource = path.join(__dirname, '../src', platform.sourceDir, 'references');
       if (fs.existsSync(refsSource)) {
-        const refsDest = path.join(platform.folder, 'references');
+        const refsDest = getClaudeSupportTargetDir(platformKey, 'references');
         const refsExisted = fs.existsSync(refsDest);
         copyRecursive(refsSource, refsDest, options);
 
@@ -622,7 +803,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
     // Copy native scripts (browser-tool, docs-fetch, validate-docs)
     const scriptsSourceDir = path.join(__dirname, '../src/claude/scripts');
     if (fs.existsSync(scriptsSourceDir)) {
-      const scriptsDest = path.join(platform.folder, 'scripts');
+      const scriptsDest = getClaudeSupportTargetDir(platformKey, 'scripts');
       const scriptsExisted = fs.existsSync(scriptsDest);
       copyRecursive(scriptsSourceDir, scriptsDest, options);
 
@@ -662,6 +843,9 @@ function copyPlatformFiles(platformKey, results, options = {}) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     let content = fs.readFileSync(source, 'utf8');
     content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+    if (platformKey === 'opencode') {
+      content = convertOpenCodeCommandContent(content, file);
+    }
     fs.writeFileSync(dest, content);
 
     if (destinationExists && shouldOverwriteManagedFiles) {
@@ -704,37 +888,99 @@ function copyRoutingFile(platformKey, results, options = {}) {
   }
 }
 
-// Copy GEMINI.md rule file to .agent/rules/ for Antigravity
-function copyGeminiFile(platformKey, results, options = {}) {
-  const platform = PLATFORMS[platformKey];
+function createOpenCodeAgentsContent(sourceContent) {
+  const adaptedContent = sourceContent
+    .replace(/^# CLAUDE\.md/m, '# AGENTS.md')
+    .replace(
+      'Primary operating instructions for Claude Code or any AI agent using this CafeKit runtime.',
+      'Primary operating instructions for OpenCode or any AI agent using this CafeKit runtime.'
+    )
+    .replace(/Claude Code/g, 'OpenCode')
+    .replace(/CLAUDE\.md/g, 'AGENTS.md');
+
+  const openCodeRuntimeBlock = [
+    '## OpenCode Runtime Mapping',
+    '',
+    '- OpenCode project instructions live in `AGENTS.md`.',
+    '- CafeKit commands live in `.opencode/commands/` and can be run as OpenCode slash commands.',
+    '- CafeKit subagents live in `.opencode/agents/` using OpenCode frontmatter.',
+    '- CafeKit skills intentionally live in `.claude/skills/` because OpenCode reads Claude-compatible skills natively.',
+    '- Shared CafeKit support files live in `.claude/rules/`, `.claude/scripts/`, `.claude/references/`, and `.claude/runtime.json`.',
+    '- OpenCode config is merged into `opencode.json`; keep project-specific model/provider choices there.',
+    ''
+  ].join('\n');
+
+  return adaptedContent.replace('## Core Objective', `${openCodeRuntimeBlock}\n## Core Objective`);
+}
+
+function upsertCafeKitAgentsBlock(existingContent, blockContent) {
+  const start = '<!-- CAFEKIT OPENCODE START -->';
+  const end = '<!-- CAFEKIT OPENCODE END -->';
+  const managedBlock = `${start}\n${blockContent.trim()}\n${end}`;
+  const blockPattern = new RegExp(`${start}[\\s\\S]*?${end}`);
+
+  if (blockPattern.test(existingContent)) {
+    return existingContent.replace(blockPattern, managedBlock);
+  }
+
+  const separator = existingContent.endsWith('\n') ? '\n' : '\n\n';
+  return `${existingContent}${separator}${managedBlock}\n`;
+}
+
+function getOpenCodeAgentsTemplateContent() {
+  const openCodeTemplate = path.join(__dirname, '../src/opencode/AGENTS.md');
+
+  if (fs.existsSync(openCodeTemplate)) {
+    return fs.readFileSync(openCodeTemplate, 'utf8');
+  }
+
+  const claudeTemplate = path.join(__dirname, '../src/claude/CLAUDE.md');
+  if (!fs.existsSync(claudeTemplate)) {
+    return null;
+  }
+
+  return createOpenCodeAgentsContent(fs.readFileSync(claudeTemplate, 'utf8'));
+}
+
+// Copy OpenCode project instructions to AGENTS.md at the project root.
+function copyOpenCodeAgentsMdFile(platformKey, results, options = {}) {
+  if (platformKey !== 'opencode') return;
+
   const shouldOverwriteManagedFiles = Boolean(options.upgrade);
-  const rulesDir = path.join(platform.folder, 'rules');
-  const source = path.join(__dirname, `../src/${platform.sourceDir}/GEMINI.md`);
-  const dest = path.join(rulesDir, 'GEMINI.md');
+  const dest = 'AGENTS.md';
+  const content = getOpenCodeAgentsTemplateContent();
 
-  if (fs.existsSync(source)) {
-    // Create rules directory if not exists
-    if (!fs.existsSync(rulesDir)) {
-      fs.mkdirSync(rulesDir, { recursive: true });
-    }
-
+  if (content) {
     const destinationExists = fs.existsSync(dest);
 
     if (destinationExists && !shouldOverwriteManagedFiles) {
-      console.log(`  → Skipped: rules/GEMINI.md (already exists)`);
-      results.skipped++;
+      const existingContent = fs.readFileSync(dest, 'utf8');
+      const nextContent = upsertCafeKitAgentsBlock(existingContent, content);
+
+      if (nextContent === existingContent) {
+        console.log(`  → Skipped: AGENTS.md (already up to date)`);
+        results.skipped++;
+        return;
+      }
+
+      fs.writeFileSync(dest, nextContent, 'utf8');
+      console.log(`  ↻ AGENTS.md merged`);
+      results.updated++;
       return;
     }
 
-    fs.copyFileSync(source, dest);
+    fs.writeFileSync(dest, content, 'utf8');
 
     if (destinationExists && shouldOverwriteManagedFiles) {
-      console.log(`  ↻ Updated: rules/GEMINI.md`);
+      console.log(`  ↻ AGENTS.md overwritten`);
       results.updated++;
     } else {
-      console.log(`  ✓ Copied: rules/GEMINI.md`);
+      console.log(`  ✓ AGENTS.md installed`);
       results.copied++;
     }
+  } else {
+    console.log(`  ⚠ AGENTS.md template source not found`);
+    results.missingDependencies++;
   }
 }
 
@@ -797,6 +1043,262 @@ function removeObsoleteClaudeRuntimeFiles(platformKey, results) {
     console.log(`  ↻ Removed obsolete runtime: ${relPath}`);
     results.updated++;
   });
+}
+
+function copyOpenCodeSharedRuntimeFiles(platformKey, results, options = {}) {
+  if (platformKey !== 'opencode') return;
+
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+  const srcBase = path.join(__dirname, '../src/claude');
+  const runtimeFiles = ['gitignore', 'runtime.json'];
+
+  runtimeFiles.forEach(relPath => {
+    const srcPath = path.join(srcBase, relPath);
+    const targetRelPath = relPath === 'gitignore' ? '.gitignore' : relPath;
+    const targetPath = path.join('.claude', targetRelPath);
+
+    if (!fs.existsSync(srcPath)) {
+      console.log(`  ⚠ Runtime file not found: ${relPath}`);
+      results.missingDependencies++;
+      return;
+    }
+
+    const targetExists = fs.existsSync(targetPath);
+    const shouldCopy = shouldOverwriteManagedFiles || !targetExists;
+
+    if (shouldCopy) {
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(srcPath, targetPath);
+
+      if (targetExists) {
+        console.log(`  ↻ Shared runtime updated: ${targetRelPath}`);
+        results.updated++;
+      } else {
+        console.log(`  ✓ Shared runtime installed: ${targetRelPath}`);
+        results.copied++;
+      }
+    } else {
+      results.skipped++;
+    }
+  });
+}
+
+function copyOpenCodeCommandTemplates(platformKey, results, options = {}) {
+  if (platformKey !== 'opencode') return;
+
+  const platform = PLATFORMS[platformKey];
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+
+  OPENCODE_COMMAND_TEMPLATES.forEach(command => {
+    const targetPath = path.join(platform.commandsDir, command.fileName);
+    const targetExists = fs.existsSync(targetPath);
+
+    if (targetExists && !shouldOverwriteManagedFiles) {
+      console.log(`  → OpenCode command exists: ${command.fileName}`);
+      results.skipped++;
+      return;
+    }
+
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, createOpenCodeSkillCommandContent(command), 'utf8');
+
+    if (targetExists) {
+      console.log(`  ↻ OpenCode command updated: ${command.fileName}`);
+      results.updated++;
+    } else {
+      console.log(`  ✓ OpenCode command installed: ${command.fileName}`);
+      results.copied++;
+    }
+  });
+}
+
+function readJsonWithComments(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+
+  const rawContent = fs.readFileSync(filePath, 'utf8');
+  const withoutBlockComments = rawContent.replace(/\/\*[\s\S]*?\*\//g, '');
+  const withoutLineComments = withoutBlockComments.replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  return JSON.parse(withoutLineComments);
+}
+
+function getOpenCodeConfigPath() {
+  const jsonPath = 'opencode.json';
+  const jsoncPath = 'opencode.jsonc';
+
+  if (fs.existsSync(jsonPath)) {
+    return jsonPath;
+  }
+
+  if (fs.existsSync(jsoncPath)) {
+    return jsoncPath;
+  }
+
+  return jsonPath;
+}
+
+function mergeOpenCodeConfig(platformKey, results) {
+  if (platformKey !== 'opencode') return;
+
+  const targetPath = getOpenCodeConfigPath();
+  const targetExists = fs.existsSync(targetPath);
+  let config = {};
+
+  try {
+    config = readJsonWithComments(targetPath);
+  } catch (error) {
+    console.log(`  ⚠ OpenCode config not merged: ${error.message}`);
+    results.errors++;
+    return;
+  }
+
+  const before = JSON.stringify(config);
+
+  if (!config.$schema) {
+    config.$schema = 'https://opencode.ai/config.json';
+  }
+
+  if (!Array.isArray(config.instructions)) {
+    config.instructions = [];
+  }
+
+  if (!config.instructions.includes('AGENTS.md')) {
+    config.instructions.push('AGENTS.md');
+  }
+
+  if (typeof config.permission === 'string') {
+    if (config.permission === 'allow') {
+      const afterStringPermission = JSON.stringify(config);
+      if (before === afterStringPermission && targetExists) {
+        console.log(`  → OpenCode config already up to date: ${targetPath}`);
+        results.skipped++;
+        return;
+      }
+
+      fs.writeFileSync(targetPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+      console.log(`  ↻ OpenCode config merged: ${targetPath}`);
+      results.updated++;
+      return;
+    }
+
+    console.log(`  ⚠ OpenCode config permission is "${config.permission}"; preserving user setting`);
+  } else if (!config.permission || typeof config.permission !== 'object' || Array.isArray(config.permission)) {
+    config.permission = {};
+  }
+
+  if (typeof config.permission === 'object' && !Array.isArray(config.permission)) {
+    if (!config.permission.skill || typeof config.permission.skill !== 'object' || Array.isArray(config.permission.skill)) {
+      config.permission.skill = {};
+    }
+
+    if (!config.permission.skill['*']) {
+      config.permission.skill['*'] = 'allow';
+    }
+
+    if (!config.permission.task || typeof config.permission.task !== 'object' || Array.isArray(config.permission.task)) {
+      config.permission.task = {};
+    }
+
+    if (!config.permission.task['*']) {
+      config.permission.task['*'] = 'allow';
+    }
+  }
+
+  const after = JSON.stringify(config);
+  if (before === after && targetExists) {
+    console.log(`  → OpenCode config already up to date: ${targetPath}`);
+    results.skipped++;
+    return;
+  }
+
+  fs.writeFileSync(targetPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+
+  if (targetExists) {
+    console.log(`  ↻ OpenCode config merged: ${targetPath}`);
+    results.updated++;
+  } else {
+    console.log(`  ✓ OpenCode config created: ${targetPath}`);
+    results.copied++;
+  }
+}
+
+function isValidOpenCodeModel(model) {
+  return typeof model === 'string' && /^[^/\s]+\/[^/\s]+$/.test(model.trim());
+}
+
+function writeOpenCodeModel(model, results, sourceLabel = 'user input') {
+  const targetPath = getOpenCodeConfigPath();
+  let config = {};
+
+  try {
+    config = readJsonWithComments(targetPath);
+  } catch (error) {
+    console.log(`  ⚠ OpenCode model not configured: ${error.message}`);
+    results.errors++;
+    return false;
+  }
+
+  if (typeof config.model === 'string' && config.model.trim()) {
+    console.log(`  → OpenCode model already configured: ${config.model}`);
+    results.skipped++;
+    return false;
+  }
+
+  config.model = model.trim();
+  fs.writeFileSync(targetPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+  console.log(`  ✓ OpenCode model configured from ${sourceLabel}: ${config.model}`);
+  results.updated++;
+  return true;
+}
+
+async function promptOpenCodeModel() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('\n📝 OpenCode Model Configuration');
+  console.log('  Optional but recommended for subagents.');
+  console.log('  Format: provider/model-id (example: anthropic/claude-sonnet-4-20250514)');
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('Enter OpenCode model (or press Enter to skip): ', (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function setupOpenCodeModel(platforms, results) {
+  if (!platforms.includes('opencode')) return;
+
+  const envModel = process.env.OPENCODE_MODEL || process.env.OPENCODE_DEFAULT_MODEL;
+  if (envModel) {
+    if (isValidOpenCodeModel(envModel)) {
+      writeOpenCodeModel(envModel, results, 'environment');
+      return;
+    }
+
+    console.log(`  ⚠ Ignoring invalid OpenCode model from environment: ${envModel}`);
+  }
+
+  const model = await promptOpenCodeModel();
+
+  if (!model) {
+    console.log('  ℹ Skipped OpenCode model configuration');
+    console.log('  Set later in opencode.json as: "model": "provider/model-id"');
+    return;
+  }
+
+  if (!isValidOpenCodeModel(model)) {
+    console.log('  ⚠ Invalid OpenCode model format. Expected provider/model-id. Skipped.');
+    return;
+  }
+
+  writeOpenCodeModel(model, results);
 }
 
 function pruneObsoleteSettingsHooks(settings, results) {
@@ -944,10 +1446,10 @@ function copyClaudeMdFile(platformKey, results, options = {}) {
 
 // Copy rules directory (always overwrite)
 function copyRulesDirectory(platformKey, results, options = {}) {
-  if (platformKey !== 'claude') return;
+  if (!isClaudeCompatibleRuntime(platformKey)) return;
 
   const source = path.join(__dirname, '../src/claude/rules');
-  const dest = path.join(PLATFORMS.claude.folder, 'rules');
+  const dest = getClaudeSupportTargetDir(platformKey, 'rules');
 
   if (fs.existsSync(source)) {
     copyRecursive(source, dest, { upgrade: true });
@@ -1185,9 +1687,12 @@ async function main() {
         copyRulesDirectory(platformKey, results, installerOptions);
       }
 
-      // Copy GEMINI.md for Antigravity platform
-      if (platformKey === 'antigravity') {
-        copyGeminiFile(platformKey, results, installerOptions);
+      if (platformKey === 'opencode') {
+        copyOpenCodeSharedRuntimeFiles(platformKey, results, installerOptions);
+        copyOpenCodeCommandTemplates(platformKey, results, installerOptions);
+        copyOpenCodeAgentsMdFile(platformKey, results, installerOptions);
+        copyRulesDirectory(platformKey, results, installerOptions);
+        mergeOpenCodeConfig(platformKey, results);
       }
 
       writePlatformVersionMetadata(platformKey, results);
@@ -1202,7 +1707,8 @@ async function main() {
     ensureGitignore(results, installerOptions);
     console.log();
 
-    // Setup Gemini CLI and API Key config
+    // Setup runtime-specific optional model/API configuration
+    await setupOpenCodeModel(platforms, results);
     await setupGeminiCLI(platforms);
 
     // Summary
@@ -1238,7 +1744,11 @@ async function main() {
       }
     }
 
-    console.log('\n  2. The AI will automatically sync docs/ (Continuous Documentation)');
+    if (platforms.includes('claude')) {
+      console.log('\n  2. Claude Code will automatically sync docs/ (Continuous Documentation)');
+    } else {
+      console.log('\n  2. CafeKit skills and AGENTS.md are installed for the selected runtime');
+    }
     console.log('  3. Project API Keys are now securely isolated in .claude/.env');
     if (!installerOptions.upgrade) {
       console.log('  4. To refresh managed templates later, run installer with --upgrade');

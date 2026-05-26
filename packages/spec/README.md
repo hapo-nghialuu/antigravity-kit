@@ -20,7 +20,7 @@ This package currently focuses on the Claude Code runtime:
 - installs runtime hooks, statusline, and managed settings
 - merges Claude settings safely on re-run
 
-Antigravity remains in the repository as a legacy path, but Claude Code is the primary supported runtime for this release.
+OpenCode install support installs command wrappers under `.opencode/commands/`, converted OpenCode agents under `.opencode/agents/`, root `AGENTS.md`, merged `opencode.json`, and CafeKit skills under `.claude/skills/` so OpenCode can read the Claude-compatible skill bundle. OpenCode command names intentionally omit the `hapo:` prefix.
 
 ## Install
 
@@ -38,7 +38,7 @@ npx @haposoft/cafekit --upgrade
 
 Requirements:
 - Node.js 18+
-- Claude Code project with a `.claude/` directory, or choose Claude when prompted
+- Claude Code project with a `.claude/` directory, OpenCode project with `.opencode/` or `opencode.json`, or choose a runtime when prompted
 
 ## What Gets Installed
 
@@ -57,18 +57,43 @@ Claude Code install targets:
 └── CLAUDE.md
 ```
 
+OpenCode install targets:
+
+```text
+.opencode/
+├── commands/
+├── agents/
+└── cafekit.json
+
+.claude/
+├── .gitignore
+├── skills/
+├── rules/
+├── scripts/
+└── runtime.json
+
+AGENTS.md
+opencode.json
+```
+
+OpenCode setup also:
+- binds generated commands to the matching CafeKit subagent with `agent` + `subtask`
+- configures `permission.skill` and `permission.task` for CafeKit skills/subtasks
+- optionally writes `model` to `opencode.json` from `OPENCODE_MODEL`, `OPENCODE_DEFAULT_MODEL`, or installer input
+
 Managed runtime features include:
 - Claude Code statusline
 - session and subagent hooks
 - rule/context injection
 - spec state awareness
 - safe settings merge on reinstall
-- installed CafeKit version tracking in `.claude/cafekit.json`
+- installed CafeKit version tracking in `.claude/cafekit.json` or `.opencode/cafekit.json`
 
 To check the installed CafeKit package version:
 
 ```bash
 cat .claude/cafekit.json
+cat .opencode/cafekit.json
 ```
 
 ## Core Skills
@@ -94,6 +119,14 @@ node .claude/scripts/generate-skill-catalog.cjs --skills
 ```
 
 ## Quick Start
+
+OpenCode uses the generated command names without the Claude `hapo:` prefix:
+
+```bash
+/specs Build a Google Meet transcript extension with AI summaries
+/develop meet-transcript-mvp
+/test --full
+```
 
 For unclear ideas, brainstorm first:
 

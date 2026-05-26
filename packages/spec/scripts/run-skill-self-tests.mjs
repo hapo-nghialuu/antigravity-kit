@@ -67,6 +67,14 @@ async function runStaticSemanticTests() {
     process.exit(1);
   }
 
+  const removedPlatformLower = "anti" + "gravity";
+  const removedPlatformTitle = "Anti" + "gravity";
+
+  if (await fileExists(join(packageRoot, "src", removedPlatformLower, "GEMINI.md"))) {
+    console.error("[FAIL] legacy secondary platform bundle must not be packaged");
+    process.exit(1);
+  }
+
   const checks = [
     {
       label: "hapo:specs hard output contract forbids wrong artifacts",
@@ -102,6 +110,51 @@ async function runStaticSemanticTests() {
         content.includes("previousVersion") &&
         content.includes("CafeKit Version") &&
         content.includes("const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`"),
+    },
+    {
+      label: "installer offers OpenCode as secondary runtime",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("id: 'opencode'") &&
+        content.includes("name: 'OpenCode'") &&
+        content.includes("folder: '.opencode'") &&
+        content.includes("opencode.json") &&
+        content.includes("OPENCODE_COMMAND_TEMPLATES") &&
+        content.includes("convertOpenCodeAgentContent") &&
+        content.includes("createOpenCodeSkillCommandContent") &&
+        content.includes("mergeOpenCodeConfig") &&
+        content.includes("setupOpenCodeModel") &&
+        content.includes("copyOpenCodeAgentsMdFile") &&
+        content.includes("copyOpenCodeSharedRuntimeFiles") &&
+        content.includes("AGENTS.md") &&
+        !content.includes(removedPlatformLower) &&
+        !content.includes(removedPlatformTitle) &&
+        !content.includes("folder: '.agent'"),
+    },
+    {
+      label: "OpenCode install reuses Claude-compatible skill support files",
+      file: "bin/install.js",
+      assert: (content) =>
+        content.includes("skillsDir: '.claude/skills'") &&
+        content.includes("getClaudeSupportTargetDir(platformKey, 'scripts')") &&
+        content.includes("getClaudeSupportTargetDir(platformKey, 'rules')") &&
+        content.includes("isClaudeCompatibleRuntime(platformKey)"),
+    },
+    {
+      label: "OpenCode has dedicated project instruction template",
+      file: "src/opencode/AGENTS.md",
+      assert: (content) =>
+        content.includes("OpenCode Runtime Mapping") &&
+        content.includes("without the `hapo:` prefix") &&
+        content.includes("/specs <feature-or-spec-command>") &&
+        content.includes("Claude Code hooks/statusline/settings do not run in OpenCode"),
+    },
+    {
+      label: "README platform status lists OpenCode",
+      file: "../../README.md",
+      assert: (content) =>
+        content.includes("OpenCode: supported project-local runtime install") &&
+        !content.includes(`${removedPlatformTitle}: coming soon`),
     },
     {
       label: "installer maps Claude gitignore template to dotfile",
@@ -783,6 +836,132 @@ async function runInstallerMigrationFixtureTests() {
   }
 }
 
+async function runOpenCodeInstallerFixtureTests() {
+  const root = await mkdtemp(join(tmpdir(), "cafekit-opencode-installer-"));
+
+  try {
+    await writeFile(join(root, "opencode.json"), "{}\n", "utf8");
+
+    const result = spawnSync(process.execPath, [join(packageRoot, "bin", "install.js")], {
+      cwd: root,
+      input: "n\n\n",
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: "/usr/bin:/bin",
+        OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514",
+        OPENCODE_DEFAULT_MODEL: "",
+      },
+    });
+
+    if (result.status !== 0) {
+      console.error(result.stdout);
+      console.error(result.stderr);
+      console.error("[FAIL] OpenCode installer fixture failed");
+      process.exit(1);
+    }
+
+    const metadata = JSON.parse(await readFile(join(root, ".opencode", "cafekit.json"), "utf8"));
+    const opencodeConfig = JSON.parse(await readFile(join(root, "opencode.json"), "utf8"));
+    const agentsMd = await readFile(join(root, "AGENTS.md"), "utf8");
+    const godDeveloperAgent = await readFile(
+      join(root, ".opencode", "agents", "god-developer.md"),
+      "utf8",
+    );
+    const specsCommand = await readFile(join(root, ".opencode", "commands", "specs.md"), "utf8");
+    const agentFrontmatter = godDeveloperAgent.split("---")[1] || "";
+    const commandFrontmatter = specsCommand.split("---")[1] || "";
+    const failures = [];
+
+    if (metadata.platform !== "opencode") {
+      failures.push("OpenCode cafekit.json metadata has wrong platform");
+    }
+    if (!(await fileExists(join(root, ".opencode", "agents", "god-developer.md")))) {
+      failures.push("OpenCode agent bundle was not installed");
+    }
+    if (!godDeveloperAgent.includes("mode: subagent")) {
+      failures.push("OpenCode agent was not converted to OpenCode mode frontmatter");
+    }
+    if (
+      !agentFrontmatter.includes("permission:") ||
+      !agentFrontmatter.includes("  read: allow") ||
+      !agentFrontmatter.includes("  skill: allow") ||
+      !agentFrontmatter.includes("  task: allow")
+    ) {
+      failures.push("OpenCode agent tools were not converted to OpenCode permission flags");
+    }
+    if (agentFrontmatter.includes("name: god-developer") || agentFrontmatter.includes("tools:")) {
+      failures.push("OpenCode agent still contains Claude-specific frontmatter");
+    }
+    if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {
+      failures.push("OpenCode skill command wrappers were not installed");
+    }
+    if (!specsCommand.includes(".claude/skills/specs/SKILL.md")) {
+      failures.push("OpenCode specs command does not route to the CafeKit specs skill");
+    }
+    if (!commandFrontmatter.includes('agent: "spec-maker"') || !commandFrontmatter.includes("subtask: true")) {
+      failures.push("OpenCode specs command is not bound to the spec-maker subagent");
+    }
+    if (specsCommand.includes("allowed-tools")) {
+      failures.push("OpenCode command still contains Claude command frontmatter");
+    }
+    if (opencodeConfig.$schema !== "https://opencode.ai/config.json") {
+      failures.push("OpenCode config schema was not merged");
+    }
+    if (!Array.isArray(opencodeConfig.instructions) || !opencodeConfig.instructions.includes("AGENTS.md")) {
+      failures.push("OpenCode config does not include AGENTS.md instructions");
+    }
+    if (opencodeConfig.permission?.skill?.["*"] !== "allow") {
+      failures.push("OpenCode config does not allow CafeKit skills");
+    }
+    if (opencodeConfig.permission?.task?.["*"] !== "allow") {
+      failures.push("OpenCode config does not allow CafeKit subtask agents");
+    }
+    if (opencodeConfig.model !== "anthropic/claude-sonnet-4-20250514") {
+      failures.push("OpenCode model prompt did not configure opencode.json");
+    }
+    if (!(await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md")))) {
+      failures.push("OpenCode install did not install Claude-compatible skills");
+    }
+    if (!(await fileExists(join(root, ".claude", "rules", "skill-workflow-routing.md")))) {
+      failures.push("OpenCode install did not install shared routing rules");
+    }
+    if (!(await fileExists(join(root, ".claude", "scripts", "generate-skill-catalog.cjs")))) {
+      failures.push("OpenCode install did not install shared scripts");
+    }
+    if (!(await fileExists(join(root, ".claude", "runtime.json")))) {
+      failures.push("OpenCode install did not install shared runtime.json");
+    }
+    if (!agentsMd.includes("Primary operating instructions for OpenCode")) {
+      failures.push("OpenCode AGENTS.md instructions were not written");
+    }
+    if (await fileExists(join(root, ".agent", "rules", "GEMINI.md"))) {
+      failures.push("legacy secondary platform files were installed");
+    }
+
+    const opencodeVersion = spawnSync("opencode", ["--version"], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, PATH: process.env.PATH },
+    });
+    if (opencodeVersion.status === 0) {
+      console.log("✔ OpenCode binary smoke check passed");
+    } else {
+      console.log("→ OpenCode binary unavailable; skipped binary smoke check");
+    }
+
+    if (failures.length > 0) {
+      console.error(failures.join("\n"));
+      process.exit(1);
+    }
+
+    console.log("✔ installer supports OpenCode runtime selection");
+    return 1;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function writeText(filePath, content) {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, "utf8");
@@ -1119,6 +1298,8 @@ async function main() {
   totalTests += runSkillCatalogTests();
   console.log("\n[skill-test] installer migration fixtures");
   totalTests += await runInstallerMigrationFixtureTests();
+  console.log("\n[skill-test] OpenCode installer fixtures");
+  totalTests += await runOpenCodeInstallerFixtureTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
   totalTests += await runSpecValidatorFixtureTests();
   console.log("\n[skill-test] reconstruct docs validator fixtures");

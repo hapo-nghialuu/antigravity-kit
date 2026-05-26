@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.17] - 2026-05-26
+
+### Changed
+- Replaced the secondary installer platform option from Antigravity to OpenCode.
+- OpenCode installs now write `.opencode/commands`, converted `.opencode/agents`, root `AGENTS.md`, merged `opencode.json`, shared `.claude/skills`, `.claude/rules`, and `.claude/scripts`.
+- OpenCode commands now use prefix-free command names, bind to matching CafeKit agents with `agent`/`subtask`, and use OpenCode `permission` frontmatter for skill/task access.
+- OpenCode setup now supports project-local model configuration through `OPENCODE_MODEL`, `OPENCODE_DEFAULT_MODEL`, or installer input.
+
+### Removed
+- Removed the legacy Antigravity source bundle from packaged install assets.
+
 ## [0.8.16] - 2026-05-25
 
 ### Changed

@@ -8,7 +8,7 @@
 npx @haposoft/cafekit
 ```
 
-The installer records the installed package version in `.claude/cafekit.json` for Claude Code projects.
+The installer records the installed package version in `.claude/cafekit.json` for Claude Code projects and `.opencode/cafekit.json` for OpenCode projects.
 
 ## What It Is
 
@@ -65,7 +65,7 @@ specs/<feature-name>/
 ## Platform Status
 
 - Claude Code: primary supported runtime
-- Antigravity: coming soon
+- OpenCode: supported project-local runtime install with prefix-free `.opencode/commands`, `.opencode/agents`, `AGENTS.md`, `opencode.json`, and Claude-compatible skills
 - Cursor: coming soon
 
 ## Documentation
