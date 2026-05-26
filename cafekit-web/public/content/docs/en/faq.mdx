@@ -1,43 +1,34 @@
 ---
 title: FAQ
-description: Frequently asked questions about CafeKit's current runtime and workflow model.
+description: Common questions about CafeKit's runtime and workflow.
 ---
 
-# FAQ
+<DocsHero
+  eyebrow="FAQ"
+  title="Answers before the workflow gets expensive."
+  description="Most CafeKit mistakes come from skipping scope, skipping validation, or treating chat as state. This page clarifies the common edge cases."
+/>
 
-## Is CafeKit multi-platform today?
+## Is OpenCode supported?
 
-Not yet. Current releases are **Claude Code-first**.
+Yes. The current installer supports OpenCode by generating `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, and merged `opencode.json`. Skills remain in `.claude/skills` because OpenCode reads Claude-compatible skills.
 
-Planned:
+## Should every task start with `/hapo:specs`?
 
-- Antigravity
-- Cursor
+No. Use specs for meaningful feature work. Use `/hapo:debug` and `/hapo:hotfix` for bugs. Tiny local fixes may not need a full spec.
 
-## Where do specs live?
+## Why does CafeKit care about task files?
 
-Under:
+Task files preserve scope, steps, completion criteria, and evidence. They are the bridge between human intent and machine-checkable state.
 
-```text
-specs/<feature-name>/
-```
+## Is `NO_TESTS` a pass?
 
-## Does CafeKit still use `.specs/` and `tasks.md`?
+No. `NO_TESTS` only means no real test suite ran. Build health, runtime proof, and task evidence still matter.
 
-No. The current workflow expects:
+## Can a task be marked `done` from chat?
 
-- `specs/<feature>/`
-- `spec.json`
-- `tasks/task-R*.md`
+No. `done` requires physical state sync in `spec.json` and task markdown after fresh verification.
 
-## Should I implement an entire feature in one run?
+## What should I use for production bugs?
 
-Usually no. Task-by-task execution is safer and keeps `task_registry` trustworthy.
-
-## Is `NO_TESTS` a successful verdict?
-
-No. It only means no test suite was executed. It does not replace real evidence or healthy preflight checks.
-
-## Do I need `/docs init` before `/hapo:specs`?
-
-No. `/docs init` is optional support infrastructure. The core CafeKit loop can start directly with `/hapo:specs`.
+Start with `/hapo:debug` when root cause is unknown. Use `/hapo:hotfix` after diagnosis or when the bug and target fix are already clear.

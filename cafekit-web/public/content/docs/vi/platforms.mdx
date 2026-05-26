@@ -1,0 +1,41 @@
+---
+title: Platforms
+description: Support runtime hiện tại cho Claude Code và OpenCode.
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code là primary. OpenCode đã supported."
+  description="Installer hiện tại có runtime files đầy đủ cho Claude Code và conversion command/agent cho OpenCode với shared Claude-compatible skills."
+/>
+
+<PlatformMatrix />
+
+## Claude Code
+
+Claude Code nhận full runtime:
+
+- `.claude/skills`
+- `.claude/agents`
+- `.claude/hooks`
+- `.claude/settings.json`
+- `.claude/runtime.json`
+- `.claude/status.cjs`
+- root `CLAUDE.md`
+
+## OpenCode
+
+OpenCode nhận:
+
+- `.opencode/commands`
+- `.opencode/agents`
+- `.opencode/cafekit.json`
+- root `AGENTS.md`
+- merged `opencode.json`
+- shared `.claude/skills`, `.claude/rules`, `.claude/scripts`, `.claude/references`, `.claude/runtime.json`
+
+OpenCode command cố ý bỏ `hapo:`.
+
+## Future platforms
+
+Cursor chưa phải runtime target trong installer hiện tại.

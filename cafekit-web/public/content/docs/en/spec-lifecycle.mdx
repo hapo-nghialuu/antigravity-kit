@@ -1,0 +1,52 @@
+---
+title: Spec lifecycle
+description: Follow a feature from brainstorm to validated implementation tasks.
+---
+
+<DocsHero
+  eyebrow="Specs"
+  title="A feature is a contract, not a chat memory."
+  description="CafeKit persists feature scope, requirements, design contracts, task packets, and verification expectations under specs/<feature>."
+/>
+
+## Artifact shape
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/
+    ├── task-R0-01-*.md
+    └── task-R1-01-*.md
+```
+
+Forbidden legacy artifacts:
+
+- `init.json`
+- `spec-state.json`
+- `hydration.md`
+
+## Phase gates
+
+| Phase | Required proof |
+|---|---|
+| Init | `spec.json` exists, status is `in_progress`, and `scope_lock` is an object. |
+| Requirements | Requirements use numeric IDs and acceptance criteria precise enough to verify. |
+| Design | Canonical contracts and traceability are documented. |
+| Tasks | Task files map to requirements and include completion criteria plus evidence. |
+| Validation | `validate-spec-output.cjs` passes before implementation readiness. |
+
+## Task registry
+
+`spec.json.task_registry` is keyed by task file path. Status values are:
+
+- `pending`
+- `in_progress`
+- `blocked`
+- `done`
+
+`done` is illegal without fresh verification evidence.
+
+<QualityGate />

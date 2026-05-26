@@ -1,0 +1,52 @@
+---
+title: Vòng đời spec
+description: Theo dõi feature từ brainstorm đến task đã validate.
+---
+
+<DocsHero
+  eyebrow="Specs"
+  title="Feature là contract, không phải trí nhớ trong chat."
+  description="CafeKit lưu scope, requirements, design contracts, task packets, và verification expectations dưới specs/<feature>."
+/>
+
+## Artifact shape
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/
+    ├── task-R0-01-*.md
+    └── task-R1-01-*.md
+```
+
+Artifact legacy bị cấm:
+
+- `init.json`
+- `spec-state.json`
+- `hydration.md`
+
+## Phase gates
+
+| Phase | Proof cần có |
+|---|---|
+| Init | `spec.json` tồn tại, status `in_progress`, và `scope_lock` là object. |
+| Requirements | Requirement dùng numeric IDs và acceptance criteria đủ rõ để verify. |
+| Design | Canonical contracts và traceability được ghi lại. |
+| Tasks | Task files map requirements và có completion criteria + evidence. |
+| Validation | `validate-spec-output.cjs` pass trước khi ready for implementation. |
+
+## Task registry
+
+Status values:
+
+- `pending`
+- `in_progress`
+- `blocked`
+- `done`
+
+`done` không hợp lệ nếu thiếu verification evidence mới.
+
+<QualityGate />

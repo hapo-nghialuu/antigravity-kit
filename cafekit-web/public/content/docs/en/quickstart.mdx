@@ -1,0 +1,72 @@
+---
+title: Quickstart
+description: Run a first CafeKit workflow from idea to reviewed implementation.
+---
+
+<DocsHero
+  eyebrow="First run"
+  title="Move one feature through the verified loop."
+  description="Start with a scout pass when the idea is unclear, generate a spec, validate it, implement one task packet, then test and review before syncing completion."
+/>
+
+## 1. Install CafeKit
+
+```bash
+npx @haposoft/cafekit
+```
+
+## 2. Brainstorm unclear ideas
+
+Use this when the idea needs scope, architecture, or tradeoff clarification.
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+Skip brainstorm only when requirements and acceptance criteria are already clear.
+
+## 3. Create a spec
+
+```bash
+/hapo:specs Build a meeting transcript extension with AI summaries
+```
+
+CafeKit creates:
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/task-R0-01-*.md
+```
+
+## 4. Validate before code
+
+```bash
+/hapo:specs --validate <feature>
+```
+
+Validation checks that requirements, design, task files, `task_files`, and `task_registry` agree.
+
+## 5. Implement one task packet
+
+```bash
+/hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
+```
+
+Task-by-task work is the safest default. It keeps diffs smaller and makes evidence easier to verify.
+
+## 6. Test and review
+
+```bash
+/hapo:test --full
+/hapo:code-review --pending
+```
+
+`NO_TESTS` is not success. A task should not become `done` until implementation, evidence, tests, review, and state sync all agree.
+
+Read [Core workflow](/docs/core-workflow) for the full reasoning behind each gate.
+
+<QualityGate />

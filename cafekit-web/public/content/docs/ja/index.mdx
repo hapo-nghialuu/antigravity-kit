@@ -1,96 +1,45 @@
 ---
-title: CafeKit ドキュメント
-description: CafeKit の spec-driven runtime、workflow、reference をまとめた Claude Code-first ドキュメントです。
+title: CafeKit Docs
+description: 現在の CafeKit runtime package の product documentation。
 ---
 
-# CafeKit ドキュメント
+<DocsHero
+  eyebrow="CafeKit 0.8.17"
+  title="実際の repo 向けの spec-driven AI coding runtime。"
+  description="CafeKit は skills、agents、hooks、state checks、quality gates を repo に入れ、assistant が ad-hoc prompt に流れず idea から verified implementation まで進めるようにします。"
+/>
 
-CafeKit は **Claude Code-first runtime bundle** です。spec-driven な開発フローに必要な workflow、agent、hook、runtime context を導入し、ad-hoc な prompting に頼らずに idea から verified implementation まで進められます。
+## CafeKit とは
 
-## 対象ユーザー
+CafeKit は AI coding assistants のための repo-local runtime bundle です。現在の package は `@haposoft/cafekit` で、`npx @haposoft/cafekit` で導入します。
 
-CafeKit は次のようなケースに向いています。
+Claude Code と OpenCode の上に構造化された workflow を追加します。
 
-- 単発の prompt ではなく、構造化された feature workflow が欲しい
-- spec artifact を project に残したい
-- task 単位で execution と verification を管理したい
-- done を宣言する前に review と docs checkpoint を通したい
+<CommandFlow />
 
-## コアループ
+## インストールされるもの
 
-```text
-Idea
-  -> /hapo:brainstorm (unclear な場合)
-  -> /hapo:specs
-  -> /hapo:develop
-  -> /hapo:test
-  -> /hapo:code-review
-```
+CafeKit は単なる文章テンプレートではなく、動作する runtime をインストールします。
 
-よく使う補助 command:
+<RuntimeBundle />
 
-- `/hapo:brainstorm <idea>` for scout-first ideation before a spec
-- `/hapo:specs --validate <feature>`
-- `/hapo:sync audit <feature>`
-- `/hapo:generate-graph <request>`
-- project documentation workflow 用の `/docs init` と `/docs update`
+現在の package には **29 skills**、**13 agents**、**Claude Code** と **OpenCode** の installer support、そして spec/docs bundle の deterministic validators が含まれます。
 
-## CafeKit が入れるもの
+## 読む順番
 
-インストール時に CafeKit は `.claude/` に runtime bundle を追加します。
+初めてならこの順番がおすすめです。
 
-```text
-.claude/
-├── skills/
-├── agents/
-├── hooks/
-├── settings.json
-├── runtime.json
-├── status.cjs
-└── CLAUDE.md
-```
+1. [インストール](/ja/docs/installation)
+2. [クイックスタート](/ja/docs/quickstart)
+3. [Core workflow](/ja/docs/core-workflow)
+4. [Runtime bundle](/ja/docs/runtime)
+5. [Spec lifecycle](/ja/docs/spec-lifecycle)
+6. [Workflows](/ja/docs/workflows)
 
-主な release surface:
+すでに workflow を理解している場合は [Skills](/ja/docs/skills)、[Agents](/ja/docs/agents)、[Reference](/ja/docs/reference) に進んでください。
 
-- `/hapo:brainstorm`
-- `/hapo:specs`
-- `/hapo:develop`
-- `/hapo:test`
-- `/hapo:code-review`
-- `/hapo:generate-graph`
+## コア方針
 
-## ドキュメントマップ
+CafeKit は process を削って速くするのではなく、source-backed context、明確な task boundary、fresh verification、adversarial review、state sync によって assistant を安全にします。
 
-### Getting Started
-
-- [インストール](/ja/docs/getting-started/installation)
-- [クイックスタート](/ja/docs/getting-started/quickstart)
-
-### Core Concepts
-
-- [Spec Lifecycle](/ja/docs/core-concepts/spec-lifecycle)
-- [Task Registry](/ja/docs/core-concepts/task-registry)
-
-### Workflows
-
-- [`/hapo:specs`](/ja/docs/workflows/specs)
-- [`/hapo:develop`](/ja/docs/workflows/develop)
-- [`/hapo:test + /hapo:code-review`](/ja/docs/workflows/test-review)
-- [`/hapo:sync`](/ja/docs/workflows/sync)
-- [`/hapo:generate-graph`](/ja/docs/workflows/generate-graph)
-
-### Reference
-
-- [ファイル構成](/ja/docs/reference/file-structure)
-- [コマンド早見表](/ja/docs/reference/commands)
-- [FAQ](/ja/docs/faq)
-
-## プロダクト状況
-
-- **Claude Code** は現在利用可能な runtime です。
-- **Antigravity** は今後対応予定です。
-- **Cursor** も今後対応予定です。
-
-## 次の一歩
-
-まず [インストール](/ja/docs/getting-started/installation) から始め、その後 [クイックスタート](/ja/docs/getting-started/quickstart) に進んでください。
+<QualityGate />

@@ -1,0 +1,68 @@
+---
+title: Installation
+description: Install, upgrade, and verify the current CafeKit package.
+---
+
+<DocsHero
+  eyebrow="Install"
+  title="Bootstrap the runtime into an existing repo."
+  description="The installer detects Claude Code and OpenCode projects, copies the managed runtime files, merges settings safely, and records the installed package version."
+/>
+
+## Requirements
+
+- Node.js `>=18`
+- A writable project root
+- Claude Code project, OpenCode project, or a selected runtime during install
+
+## Install
+
+```bash
+npx @haposoft/cafekit
+```
+
+The binary is exposed as `cafekit` from `packages/spec/bin/install.js`.
+
+## Upgrade
+
+```bash
+npx @haposoft/cafekit --upgrade
+```
+
+Upgrade mode refreshes managed files, removes obsolete runtime hooks, and keeps user-owned settings where possible.
+
+## Platform detection
+
+CafeKit detects:
+
+| Runtime | Detection | Installed shape |
+|---|---|---|
+| Claude Code | `.claude/` | `.claude/skills`, `.claude/agents`, `.claude/hooks`, `settings.json`, `status.cjs`, `CLAUDE.md` |
+| OpenCode | `.opencode/`, `opencode.json`, or `opencode.jsonc` | `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, shared `.claude/skills` |
+
+If no runtime marker exists, the installer asks which platform to install.
+
+## Verify
+
+Run one of these inside the target project:
+
+```bash
+/hapo:brainstorm Explore a small feature idea
+/hapo:specs Build a tiny verified feature
+```
+
+For OpenCode, generated command names omit the `hapo:` prefix:
+
+```bash
+/brainstorm Explore a small feature idea
+/specs Build a tiny verified feature
+```
+
+## Version tracking
+
+The installer writes package metadata to:
+
+- `.claude/cafekit.json`
+- `.opencode/cafekit.json`
+
+The metadata includes `packageName`, `version`, `platform`, install timestamps, previous version when available, and the exact install command.

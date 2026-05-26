@@ -1,0 +1,50 @@
+---
+title: Workflows
+description: Chọn đúng command CafeKit cho từng loại công việc.
+---
+
+<DocsHero
+  eyebrow="Command surface"
+  title="Dùng workflow khớp với mức rủi ro."
+  description="CafeKit không chỉ có happy path. Nó có ideation, implementation, debugging, hotfix, docs, review, sync, git, và diagram workflows."
+/>
+
+<CommandFlow />
+
+Luồng delivery chính được giải thích kỹ ở [Workflow chính](/vi/docs/core-workflow). Dùng trang này như command selector khi loại việc không phải feature path tiêu chuẩn.
+
+## Core feature workflow
+
+| Command | Dùng khi |
+|---|---|
+| `/hapo:brainstorm` | Ý tưởng chưa rõ, architecture còn mở, hoặc cần pressure-test scope. |
+| `/hapo:specs` | Cần requirements, research, design, tasks, validation. |
+| `/hapo:develop` | Spec hoặc task file đã approved và sẵn sàng implement. |
+| `/hapo:test` | Cần evidence từ commands, build, tests, UI checks, runtime reachability. |
+| `/hapo:code-review` | Cần adversarial review cho bugs, security, drift, missing proof. |
+| `/hapo:sync` | `spec.json` và task markdown lệch hoặc cần audit. |
+
+## Bug và incident
+
+| Command | Dùng khi |
+|---|---|
+| `/hapo:debug` | Chưa biết root cause. Diagnostic-first, cần evidence trước khi sửa code. |
+| `/hapo:hotfix` | Cần sửa bug đã diagnosis với change nhỏ và regression checks. |
+
+## Docs và artifacts
+
+| Command | Dùng khi |
+|---|---|
+| `/hapo:docs --init` | Project docs đang thiếu. |
+| `/hapo:docs --update` | Source thay đổi đủ lớn để docs cần refresh. |
+| `/hapo:docs --reconstruct <scope>` | Cần as-is docs dựa trên source cho hệ thống hiện có. |
+| `/hapo:generate-graph <request>` | Cần architecture, flow, sequence, hoặc state diagram. |
+
+## Release
+
+| Command | Dùng khi |
+|---|---|
+| `/hapo:git commit` | Change đã verify sẵn sàng commit conventional. |
+| `/hapo:git push` | Tests và review đủ sạch để publish branch. |
+
+OpenCode cài command không prefix như `/specs`, `/develop`, `/test`, `/code-review`.

@@ -1,0 +1,66 @@
+---
+title: インストール
+description: 現在の CafeKit package を導入、更新、確認する方法。
+---
+
+<DocsHero
+  eyebrow="Install"
+  title="既存 repo に runtime を bootstrap する。"
+  description="Installer は Claude Code と OpenCode を検出し、managed runtime files をコピーし、settings を安全に merge し、インストール済み package version を記録します。"
+/>
+
+## Requirements
+
+- Node.js `>=18`
+- 書き込み可能な project root
+- Claude Code project、OpenCode project、または install 時の runtime 選択
+
+## Install
+
+```bash
+npx @haposoft/cafekit
+```
+
+Binary は `cafekit` で、`packages/spec/bin/install.js` を実行します。
+
+## Upgrade
+
+```bash
+npx @haposoft/cafekit --upgrade
+```
+
+Upgrade mode は managed files を更新し、obsolete runtime hooks を削除し、可能な限り user-owned settings を保持します。
+
+## Platform detection
+
+| Runtime | Detection | Installed shape |
+|---|---|---|
+| Claude Code | `.claude/` | `.claude/skills`, `.claude/agents`, `.claude/hooks`, `settings.json`, `status.cjs`, `CLAUDE.md` |
+| OpenCode | `.opencode/`, `opencode.json`, or `opencode.jsonc` | `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, shared `.claude/skills` |
+
+runtime marker がない場合、installer が platform を質問します。
+
+## Verify
+
+target project の中で実行します。
+
+```bash
+/hapo:brainstorm Explore a small feature idea
+/hapo:specs Build a tiny verified feature
+```
+
+OpenCode では generated command は `hapo:` prefix を持ちません。
+
+```bash
+/brainstorm Explore a small feature idea
+/specs Build a tiny verified feature
+```
+
+## Version tracking
+
+Installer は metadata をここに書きます。
+
+- `.claude/cafekit.json`
+- `.opencode/cafekit.json`
+
+`packageName`、`version`、`platform`、timestamps、previous version、exact install command が含まれます。

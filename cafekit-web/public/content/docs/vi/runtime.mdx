@@ -1,0 +1,43 @@
+---
+title: Runtime bundle
+description: Hiểu installed files, hooks, state checks, và validators.
+---
+
+<DocsHero
+  eyebrow="Runtime"
+  title="CafeKit cài một operating system cho assistant."
+  description="Package thêm skills, agents, rules, scripts, hooks, statusline, runtime config, và state synchronization vào project."
+/>
+
+<RuntimeBundle />
+
+## Hooks
+
+| Hook | Mục đích |
+|---|---|
+| `privacy-block.cjs` | Yêu cầu user approval cho file nhạy cảm như `.env`, keys, credentials, tokens. |
+| `inspect-block.cjs` | Chặn scope nặng hoặc không an toàn như `.git`, `node_modules`, build outputs, glob quá rộng. |
+| `rules.cjs` | Inject reminder về workflow, skill routing, docs path, modularization. |
+| `spec-state.cjs` | Tìm active spec và inject state sync tollgate. |
+| `docs-sync.cjs` | Detect docs thiếu hoặc stale. |
+| `state.cjs` | Persist session state và modified-file summary. |
+| `agent.cjs` | Cấp context nhẹ cho subagent. |
+| `usage.cjs` | Fetch usage limits cho statusline cache. |
+
+## Validators
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+node .claude/scripts/validate-docs.cjs docs
+node .claude/scripts/validate-docs-reconstruct.cjs docs/as-is/<scope>
+node .claude/scripts/generate-skill-catalog.cjs --skills
+```
+
+Validator là hard backstop. Prompt có thể drift; script thì không nên.
+
+## State model
+
+- `spec.json` lưu phase, status, `task_files`, và `task_registry`.
+- `tasks/task-R*.md` lưu context, steps, criteria, và evidence.
+
+Hai layer này phải sync với nhau. Chat không phải source of truth.

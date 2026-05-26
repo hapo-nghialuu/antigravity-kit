@@ -1,0 +1,41 @@
+---
+title: Platforms
+description: Claude Code と OpenCode の現在の runtime support。
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code が primary。OpenCode も supported。"
+  description="現在の installer は Claude Code runtime files と、shared Claude-compatible skills を使う OpenCode command/agent conversion を持っています。"
+/>
+
+<PlatformMatrix />
+
+## Claude Code
+
+Claude Code には full runtime が入ります。
+
+- `.claude/skills`
+- `.claude/agents`
+- `.claude/hooks`
+- `.claude/settings.json`
+- `.claude/runtime.json`
+- `.claude/status.cjs`
+- root `CLAUDE.md`
+
+## OpenCode
+
+OpenCode には次が入ります。
+
+- `.opencode/commands`
+- `.opencode/agents`
+- `.opencode/cafekit.json`
+- root `AGENTS.md`
+- merged `opencode.json`
+- shared `.claude/skills`, `.claude/rules`, `.claude/scripts`, `.claude/references`, `.claude/runtime.json`
+
+OpenCode commands は意図的に `hapo:` を省略します。
+
+## Future platforms
+
+Cursor は current installer の runtime target ではありません。

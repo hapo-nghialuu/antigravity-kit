@@ -1,0 +1,71 @@
+---
+title: Tham khảo
+description: Commands, package facts, files, và state values.
+---
+
+<DocsHero
+  eyebrow="Reference"
+  title="Những thông tin cần chính xác và dễ tra."
+  description="Dùng trang này khi cần command names, installed files, package version, validators, state values, hoặc runtime support details."
+/>
+
+## Package facts
+
+| Field | Value |
+|---|---|
+| Package | `@haposoft/cafekit` |
+| Current package version | `0.8.17` |
+| Binary | `cafekit` |
+| Bin file | `packages/spec/bin/install.js` |
+| Node engine | `>=18.0.0` |
+| Required skills | `29` |
+| Required agents | `13` |
+
+## Command cheatsheet
+
+| Claude Code command | OpenCode command | Purpose |
+|---|---|---|
+| `/hapo:brainstorm` | `/brainstorm` | Làm rõ idea trước khi spec. |
+| `/hapo:specs` | `/specs` | Create, resume, validate, approve specs. |
+| `/hapo:develop` | `/develop` | Implement approved task packets. |
+| `/hapo:test` | `/test` | Task-aware verification. |
+| `/hapo:code-review` | `/code-review` | Review regressions và security. |
+| `/hapo:debug` | `/debug` | Diagnose trước khi fix. |
+| `/hapo:hotfix` | `/hotfix` | Narrow diagnosed fixes. |
+| `/hapo:docs` | `/docs` | Create, update, summarize, reconstruct docs. |
+| `/hapo:inspect` | `/inspect` | Scout source files và structure. |
+| `/hapo:generate-graph` | `/generate-graph` | Generate technical diagrams. |
+
+## Claude file structure
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── references/
+├── rules/
+├── scripts/
+├── runtime.json
+├── settings.json
+├── status.cjs
+└── cafekit.json
+```
+
+## Spec state values
+
+| State | Meaning |
+|---|---|
+| `pending` | Task chưa bắt đầu. |
+| `in_progress` | Task đang active. |
+| `blocked` | Task bị chặn; phải ghi blocker. |
+| `done` | Task có evidence thật, review, và synced state. |
+
+## Validators
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+node .claude/scripts/validate-docs.cjs docs
+node .claude/scripts/validate-docs-reconstruct.cjs docs/as-is/<scope>
+node .claude/scripts/generate-skill-catalog.cjs --skills
+```

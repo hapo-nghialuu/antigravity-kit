@@ -1,0 +1,34 @@
+---
+title: Agents
+description: Các specialist agents đóng gói với CafeKit.
+---
+
+<DocsHero
+  eyebrow="13 agents"
+  title="Specialists cho planning, building, testing, review, và shipping."
+  description="Agents là role instructions đóng gói. Chúng chia trách nhiệm suy luận trong workflow nhưng vẫn giữ source truth trong repo."
+/>
+
+<AgentGrid />
+
+## Agent roles
+
+| Agent | Vai trò |
+|---|---|
+| `brainstormer` | Pressure-test architecture và biến idea thô thành decisions sẵn cho spec. |
+| `spec-maker` | Tạo `spec.json`, requirements, research, design, task files. |
+| `god-developer` | Implement approved tasks thành production code. |
+| `test-runner` | Chạy verification và reject evidence thiếu/fake. |
+| `code-auditor` | Review correctness, security, architecture, principles, conventions. |
+| `debugger` | Điều tra bugs, CI failures, logs, DB, UI regressions, performance. |
+| `docs-keeper` | Giữ docs và specs dựa trên source evidence. |
+| `git-ops` | Stage, commit, push, close branch an toàn. |
+| `inspector` | Scan code structure và tìm file liên quan. |
+| `project-manager` | Tổng hợp progress, blockers, release status. |
+| `researcher` | Technical research đa nguồn. |
+| `ui-ux-designer` | Thiết kế web/mobile accessible và polished. |
+| `deployer` | Deploy checks, production handoff, rollback thinking. |
+
+## Coordination model
+
+Khi delegate, CafeKit cần context rõ: work path, specs path, docs path, files đọc/sửa, constraints, acceptance criteria. Subagent không nên nhận toàn bộ chat history.

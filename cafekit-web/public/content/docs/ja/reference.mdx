@@ -1,0 +1,71 @@
+---
+title: Reference
+description: commands、package facts、files、state values。
+---
+
+<DocsHero
+  eyebrow="Reference"
+  title="退屈で正確であるべき facts。"
+  description="command names、installed files、package version、validators、state values、runtime support details を確認するページです。"
+/>
+
+## Package facts
+
+| Field | Value |
+|---|---|
+| Package | `@haposoft/cafekit` |
+| Current package version | `0.8.17` |
+| Binary | `cafekit` |
+| Bin file | `packages/spec/bin/install.js` |
+| Node engine | `>=18.0.0` |
+| Required skills | `29` |
+| Required agents | `13` |
+
+## Command cheatsheet
+
+| Claude Code command | OpenCode command | Purpose |
+|---|---|---|
+| `/hapo:brainstorm` | `/brainstorm` | spec 前に idea を明確化。 |
+| `/hapo:specs` | `/specs` | specs の create、resume、validate、approve。 |
+| `/hapo:develop` | `/develop` | approved task packets の implementation。 |
+| `/hapo:test` | `/test` | task-aware verification。 |
+| `/hapo:code-review` | `/code-review` | regressions と security の review。 |
+| `/hapo:debug` | `/debug` | fix 前に diagnose。 |
+| `/hapo:hotfix` | `/hotfix` | narrow diagnosed fixes。 |
+| `/hapo:docs` | `/docs` | docs の create、update、summarize、reconstruct。 |
+| `/hapo:inspect` | `/inspect` | source files と structure の scout。 |
+| `/hapo:generate-graph` | `/generate-graph` | technical diagrams の generation。 |
+
+## Claude file structure
+
+```text
+.claude/
+├── skills/
+├── agents/
+├── hooks/
+├── references/
+├── rules/
+├── scripts/
+├── runtime.json
+├── settings.json
+├── status.cjs
+└── cafekit.json
+```
+
+## Spec state values
+
+| State | Meaning |
+|---|---|
+| `pending` | task は未開始。 |
+| `in_progress` | task は active。 |
+| `blocked` | task は blocked。blocker 記録が必要。 |
+| `done` | task は real evidence、review、synced state を持つ。 |
+
+## Validators
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+node .claude/scripts/validate-docs.cjs docs
+node .claude/scripts/validate-docs-reconstruct.cjs docs/as-is/<scope>
+node .claude/scripts/generate-skill-catalog.cjs --skills
+```

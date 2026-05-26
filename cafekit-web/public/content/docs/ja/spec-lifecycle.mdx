@@ -1,0 +1,52 @@
+---
+title: Spec lifecycle
+description: brainstorm から validated implementation tasks までの feature lifecycle。
+---
+
+<DocsHero
+  eyebrow="Specs"
+  title="Feature は chat memory ではなく contract。"
+  description="CafeKit は feature scope、requirements、design contracts、task packets、verification expectations を specs/<feature> に永続化します。"
+/>
+
+## Artifact shape
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/
+    ├── task-R0-01-*.md
+    └── task-R1-01-*.md
+```
+
+禁止される legacy artifacts:
+
+- `init.json`
+- `spec-state.json`
+- `hydration.md`
+
+## Phase gates
+
+| Phase | Required proof |
+|---|---|
+| Init | `spec.json` exists、status `in_progress`、`scope_lock` が object。 |
+| Requirements | numeric IDs と検証可能な acceptance criteria。 |
+| Design | canonical contracts と traceability が記録されている。 |
+| Tasks | task files が requirements に map され、completion criteria と evidence を持つ。 |
+| Validation | implementation readiness 前に `validate-spec-output.cjs` が pass。 |
+
+## Task registry
+
+Status values:
+
+- `pending`
+- `in_progress`
+- `blocked`
+- `done`
+
+fresh verification evidence がない `done` は無効です。
+
+<QualityGate />

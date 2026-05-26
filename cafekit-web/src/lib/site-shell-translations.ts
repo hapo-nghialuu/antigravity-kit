@@ -21,6 +21,7 @@ type SiteShellTranslations = {
     quickstart: string;
     commandReference: string;
     specs: string;
+    coreWorkflow: string;
     develop: string;
     testReview: string;
     claudeCode: string;
@@ -53,6 +54,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
       installation: "Installation",
       quickstart: "Quickstart",
       commandReference: "Command Reference",
+      coreWorkflow: "Core workflow",
       specs: "/hapo:specs",
       develop: "/hapo:develop",
       testReview: "/hapo:test + /hapo:code-review",
@@ -84,6 +86,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
       installation: "Cài đặt",
       quickstart: "Bắt đầu nhanh",
       commandReference: "Tham chiếu lệnh",
+      coreWorkflow: "Workflow chính",
       specs: "/hapo:specs",
       develop: "/hapo:develop",
       testReview: "/hapo:test + /hapo:code-review",
@@ -115,6 +118,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
       installation: "Installation",
       quickstart: "Quickstart",
       commandReference: "Command Reference",
+      coreWorkflow: "Core workflow",
       specs: "/hapo:specs",
       develop: "/hapo:develop",
       testReview: "/hapo:test + /hapo:code-review",

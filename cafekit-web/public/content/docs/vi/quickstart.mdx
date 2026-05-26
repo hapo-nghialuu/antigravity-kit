@@ -1,0 +1,70 @@
+---
+title: Bắt đầu nhanh
+description: Chạy workflow CafeKit đầu tiên từ ý tưởng đến review.
+---
+
+<DocsHero
+  eyebrow="First run"
+  title="Đưa một feature qua vòng verify."
+  description="Scout khi ý tưởng chưa rõ, tạo spec, validate, implement một task packet, rồi test và review trước khi sync completion."
+/>
+
+## 1. Cài CafeKit
+
+```bash
+npx @haposoft/cafekit
+```
+
+## 2. Brainstorm khi ý tưởng chưa rõ
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+Bỏ qua brainstorm chỉ khi requirement và acceptance criteria đã rõ.
+
+## 3. Tạo spec
+
+```bash
+/hapo:specs Build a meeting transcript extension with AI summaries
+```
+
+CafeKit tạo:
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/task-R0-01-*.md
+```
+
+## 4. Validate trước khi code
+
+```bash
+/hapo:specs --validate <feature>
+```
+
+Validation kiểm tra requirements, design, task files, `task_files`, và `task_registry` có khớp nhau không.
+
+## 5. Implement một task packet
+
+```bash
+/hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
+```
+
+Task-by-task là default an toàn nhất: diff nhỏ hơn và evidence dễ verify hơn.
+
+## 6. Test và review
+
+```bash
+/hapo:test --full
+/hapo:code-review --pending
+```
+
+`NO_TESTS` không phải success. Task chỉ nên thành `done` khi implementation, evidence, tests, review, và state sync cùng đồng ý.
+
+Đọc [Workflow chính](/vi/docs/core-workflow) để hiểu đầy đủ lý do sau từng gate.
+
+<QualityGate />

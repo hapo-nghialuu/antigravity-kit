@@ -1,0 +1,41 @@
+---
+title: Platforms
+description: Current CafeKit runtime support for Claude Code and OpenCode.
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code is primary. OpenCode is supported."
+  description="The current installer has first-class Claude Code runtime files and OpenCode command/agent conversion with shared Claude-compatible skills."
+/>
+
+<PlatformMatrix />
+
+## Claude Code
+
+Claude Code receives the full runtime:
+
+- `.claude/skills`
+- `.claude/agents`
+- `.claude/hooks`
+- `.claude/settings.json`
+- `.claude/runtime.json`
+- `.claude/status.cjs`
+- root `CLAUDE.md`
+
+## OpenCode
+
+OpenCode receives:
+
+- `.opencode/commands`
+- `.opencode/agents`
+- `.opencode/cafekit.json`
+- root `AGENTS.md`
+- merged `opencode.json`
+- shared `.claude/skills`, `.claude/rules`, `.claude/scripts`, `.claude/references`, and `.claude/runtime.json`
+
+OpenCode commands intentionally omit `hapo:`.
+
+## Future platforms
+
+Cursor is not packaged as a runtime target in the current installer.

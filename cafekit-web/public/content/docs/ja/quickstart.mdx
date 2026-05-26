@@ -1,0 +1,70 @@
+---
+title: クイックスタート
+description: idea から reviewed implementation まで最初の CafeKit workflow を走らせます。
+---
+
+<DocsHero
+  eyebrow="First run"
+  title="1つの feature を verified loop に通す。"
+  description="idea が曖昧なら scout し、spec を作り、validate し、1つの task packet を実装し、test と review の後に completion を sync します。"
+/>
+
+## 1. Install CafeKit
+
+```bash
+npx @haposoft/cafekit
+```
+
+## 2. 曖昧な idea は brainstorm
+
+```bash
+/hapo:brainstorm Explore approaches for a meeting transcript extension
+```
+
+requirements と acceptance criteria が明確な場合だけ skip してください。
+
+## 3. Spec を作る
+
+```bash
+/hapo:specs Build a meeting transcript extension with AI summaries
+```
+
+CafeKit は次を生成します。
+
+```text
+specs/<feature>/
+├── spec.json
+├── requirements.md
+├── research.md
+├── design.md
+└── tasks/task-R0-01-*.md
+```
+
+## 4. Code 前に validate
+
+```bash
+/hapo:specs --validate <feature>
+```
+
+requirements、design、task files、`task_files`、`task_registry` の整合性を確認します。
+
+## 5. 1つの task packet を実装
+
+```bash
+/hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
+```
+
+task-by-task が最も安全な default です。diff が小さく、evidence も検証しやすくなります。
+
+## 6. Test and review
+
+```bash
+/hapo:test --full
+/hapo:code-review --pending
+```
+
+`NO_TESTS` は success ではありません。implementation、evidence、tests、review、state sync が揃って初めて task は `done` になります。
+
+[Core workflow](/ja/docs/core-workflow) で各 gate の理由を詳しく確認できます。
+
+<QualityGate />

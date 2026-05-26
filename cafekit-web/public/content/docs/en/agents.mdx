@@ -1,0 +1,34 @@
+---
+title: Agents
+description: The specialist agents bundled with CafeKit.
+---
+
+<DocsHero
+  eyebrow="13 agents"
+  title="Specialists for planning, building, testing, reviewing, and shipping."
+  description="Agents are packaged role instructions. They let the workflow split reasoning by responsibility while keeping source truth in the repo."
+/>
+
+<AgentGrid />
+
+## Agent roles
+
+| Agent | Role |
+|---|---|
+| `brainstormer` | Pressure-tests architecture and turns raw ideas into spec-ready decisions. |
+| `spec-maker` | Creates `spec.json`, requirements, research, design, and task files. |
+| `god-developer` | Implements approved tasks as production code. |
+| `test-runner` | Runs verification and rejects missing or fake evidence. |
+| `code-auditor` | Reviews correctness, security, architecture, principles, and conventions. |
+| `debugger` | Investigates bugs, CI failures, logs, DB issues, UI regressions, and performance. |
+| `docs-keeper` | Keeps docs and specs grounded in source evidence. |
+| `git-ops` | Stages, commits, pushes, and helps close branches safely. |
+| `inspector` | Scans code structure and finds relevant files. |
+| `project-manager` | Aggregates progress, blockers, and release status. |
+| `researcher` | Performs multi-source technical research. |
+| `ui-ux-designer` | Designs accessible, polished web/mobile interfaces. |
+| `deployer` | Handles deploy checks, production handoff, and rollback thinking. |
+
+## Coordination model
+
+CafeKit expects explicit context when work is delegated: work path, specs path, docs path, files to read, files to modify, constraints, and acceptance criteria. Subagents should not receive full chat history.

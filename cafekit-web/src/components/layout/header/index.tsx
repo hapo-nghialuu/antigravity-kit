@@ -56,10 +56,13 @@ export default function Header() {
                                 </>
                             ) : (
                                 <>
-                                    <Link href={localizeHref(locale, "/docs/getting-started/quickstart")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                                    <Link href={localizeHref(locale, "/docs/core-workflow")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                                        {t.workflow}
+                                    </Link>
+                                    <Link href={localizeHref(locale, "/docs/quickstart")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
                                         Quickstart
                                     </Link>
-                                    <Link href={localizeHref(locale, "/docs/reference/commands")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                                    <Link href={localizeHref(locale, "/docs/reference")} className="rounded-full px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">
                                         Commands
                                     </Link>
                                 </>

@@ -1,96 +1,45 @@
 ---
 title: Tài liệu CafeKit
-description: Tài liệu Claude Code-first cho runtime spec-driven, workflow và phần tham chiếu của CafeKit.
+description: Tài liệu sản phẩm cho package runtime CafeKit hiện tại.
 ---
 
-# Tài liệu CafeKit
+<DocsHero
+  eyebrow="CafeKit 0.8.17"
+  title="Runtime spec-driven cho AI coding trong repo thật."
+  description="CafeKit cài skills, agents, hooks, state checks, và quality gates vào repo để assistant đi từ ý tưởng đến implementation đã verify mà không trôi vào kiểu prompt ngẫu hứng."
+/>
 
-CafeKit là một **runtime bundle Claude Code-first** cho quy trình phát triển theo spec. Nó cài các workflow, agent, hook và runtime context để đi từ ý tưởng tới implementation đã được verify mà không phụ thuộc vào prompt rời rạc.
+## CafeKit là gì
 
-## Dành Cho Ai
+CafeKit là runtime bundle đặt trong repo cho AI coding assistants. Package hiện tại là `@haposoft/cafekit`, cài bằng `npx @haposoft/cafekit`.
 
-Hãy dùng CafeKit nếu bạn muốn:
+Nó tạo workflow có cấu trúc quanh Claude Code và OpenCode:
 
-- một feature workflow có cấu trúc thay vì prompting từng lần
-- spec artifacts đi cùng project
-- task-level execution với verification rõ ràng
-- review và docs checkpoint trước khi claim công việc đã xong
+<CommandFlow />
 
-## Vòng Lặp Cốt Lõi
+## Cài những gì
 
-```text
-Ý tưởng
-  -> /hapo:brainstorm (nếu chưa rõ)
-  -> /hapo:specs
-  -> /hapo:develop
-  -> /hapo:test
-  -> /hapo:code-review
-```
+CafeKit cài một runtime thật, không chỉ là vài đoạn hướng dẫn.
 
-Các command hỗ trợ thường dùng:
+<RuntimeBundle />
 
-- `/hapo:brainstorm <idea>` để scout-first trước khi tạo spec
-- `/hapo:specs --validate <feature>`
-- `/hapo:sync audit <feature>`
-- `/hapo:generate-graph <request>`
-- `/docs init` và `/docs update` cho workflow tài liệu dự án
+Package hiện tại có **29 skills**, **13 agents**, installer support cho **Claude Code** và **OpenCode**, cùng các validator deterministic cho spec và docs bundle.
 
-## CafeKit Cài Gì
+## Nên đọc thế nào
 
-Khi cài, CafeKit thêm runtime bundle vào `.claude/`:
+Nếu mới bắt đầu, đọc theo thứ tự:
 
-```text
-.claude/
-├── skills/
-├── agents/
-├── hooks/
-├── settings.json
-├── runtime.json
-├── status.cjs
-└── CLAUDE.md
-```
+1. [Cài đặt](/vi/docs/installation)
+2. [Bắt đầu nhanh](/vi/docs/quickstart)
+3. [Workflow chính](/vi/docs/core-workflow)
+4. [Runtime bundle](/vi/docs/runtime)
+5. [Vòng đời spec](/vi/docs/spec-lifecycle)
+6. [Workflows](/vi/docs/workflows)
 
-Release surface chính là:
+Nếu đã quen workflow, đi thẳng tới [Skills](/vi/docs/skills), [Agents](/vi/docs/agents), hoặc [Tham khảo](/vi/docs/reference).
 
-- `/hapo:brainstorm`
-- `/hapo:specs`
-- `/hapo:develop`
-- `/hapo:test`
-- `/hapo:code-review`
-- `/hapo:generate-graph`
+## Cam kết cốt lõi
 
-## Bản Đồ Tài Liệu
+CafeKit không cố làm assistant nhanh hơn bằng cách bỏ quy trình. Nó làm assistant an toàn hơn bằng source-backed context, task boundary rõ, verify mới, adversarial review, và state sync.
 
-### Bắt đầu
-
-- [Cài đặt](/vi/docs/getting-started/installation)
-- [Bắt đầu nhanh](/vi/docs/getting-started/quickstart)
-
-### Khái niệm cốt lõi
-
-- [Vòng đời spec](/vi/docs/core-concepts/spec-lifecycle)
-- [Task Registry](/vi/docs/core-concepts/task-registry)
-
-### Workflow
-
-- [`/hapo:specs`](/vi/docs/workflows/specs)
-- [`/hapo:develop`](/vi/docs/workflows/develop)
-- [`/hapo:test + /hapo:code-review`](/vi/docs/workflows/test-review)
-- [`/hapo:sync`](/vi/docs/workflows/sync)
-- [`/hapo:generate-graph`](/vi/docs/workflows/generate-graph)
-
-### Tham khảo
-
-- [Cấu trúc file](/vi/docs/reference/file-structure)
-- [Bảng lệnh](/vi/docs/reference/commands)
-- [FAQ](/vi/docs/faq)
-
-## Trạng Thái Sản Phẩm
-
-- **Claude Code** là runtime chính hiện tại.
-- **Antigravity** sẽ có sau.
-- **Cursor** sẽ có sau.
-
-## Bước Tiếp Theo
-
-Bắt đầu với [Cài đặt](/vi/docs/getting-started/installation), rồi đi tiếp sang [Bắt đầu nhanh](/vi/docs/getting-started/quickstart).
+<QualityGate />

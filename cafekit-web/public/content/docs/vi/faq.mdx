@@ -1,43 +1,34 @@
 ---
 title: FAQ
-description: Frequently asked questions about CafeKit's current runtime and workflow model.
+description: Câu hỏi thường gặp về runtime và workflow của CafeKit.
 ---
 
-# FAQ
+<DocsHero
+  eyebrow="FAQ"
+  title="Trả lời trước khi workflow trở nên tốn kém."
+  description="Lỗi CafeKit thường đến từ việc bỏ scope, bỏ validation, hoặc coi chat là state. Trang này làm rõ các edge case thường gặp."
+/>
 
-## Is CafeKit multi-platform today?
+## OpenCode đã supported chưa?
 
-Not yet. Current releases are **Claude Code-first**.
+Có. Installer hiện tại tạo `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, và merge `opencode.json`. Skills vẫn nằm ở `.claude/skills` vì OpenCode đọc Claude-compatible skills.
 
-Planned:
+## Task nào cũng cần `/hapo:specs`?
 
-- Antigravity
-- Cursor
+Không. Dùng specs cho feature work có ý nghĩa. Dùng `/hapo:debug` và `/hapo:hotfix` cho bugs. Fix nhỏ local có thể không cần full spec.
 
-## Where do specs live?
+## Vì sao CafeKit cần task files?
 
-Under:
+Task files giữ scope, steps, completion criteria, và evidence. Chúng nối human intent với machine-checkable state.
 
-```text
-specs/<feature-name>/
-```
+## `NO_TESTS` có phải pass không?
 
-## Does CafeKit still use `.specs/` and `tasks.md`?
+Không. Nó chỉ nói rằng chưa có test suite thật nào chạy. Build health, runtime proof, và task evidence vẫn quan trọng.
 
-No. The current workflow expects:
+## Có thể mark `done` từ chat không?
 
-- `specs/<feature>/`
-- `spec.json`
-- `tasks/task-R*.md`
+Không. `done` cần state sync vật lý trong `spec.json` và task markdown sau verify mới.
 
-## Should I implement an entire feature in one run?
+## Production bug thì dùng gì?
 
-Usually no. Task-by-task execution is safer and keeps `task_registry` trustworthy.
-
-## Is `NO_TESTS` a successful verdict?
-
-No. It only means no test suite was executed. It does not replace real evidence or healthy preflight checks.
-
-## Do I need `/docs init` before `/hapo:specs`?
-
-No. `/docs init` is optional support infrastructure. The core CafeKit loop can start directly with `/hapo:specs`.
+Bắt đầu bằng `/hapo:debug` khi chưa biết root cause. Dùng `/hapo:hotfix` sau diagnosis hoặc khi bug và target fix đã rõ.
