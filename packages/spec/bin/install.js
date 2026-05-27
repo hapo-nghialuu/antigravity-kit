@@ -393,9 +393,10 @@ function copyPlatformFiles(platformKey, results, options = {}) {
   const agentsSourceDir = path.join(__dirname, `../src/${platform.sourceDir}/agents`);
 
   // Create directories
-  if (!fs.existsSync(platform.commandsDir)) {
-    fs.mkdirSync(platform.commandsDir, { recursive: true });
-  }
+  // commandsDir is created on-demand per platform: Claude only mkdirs when
+  // getPlatformSpecFiles returns files; OpenCode mkdirs inside
+  // copyOpenCodeCommandTemplates. Skip the unconditional mkdir to avoid
+  // leaving empty commands/ folders behind.
   if (!fs.existsSync(platform.skillsDir)) {
     fs.mkdirSync(platform.skillsDir, { recursive: true });
   }

@@ -32,6 +32,13 @@ const OPENCODE_COMMAND_TEMPLATES = [
     description: 'Explore and narrow an idea before writing a CafeKit spec.'
   },
   {
+    fileName: 'question.md',
+    skillName: 'question',
+    agent: 'brainstormer',
+    subtask: true,
+    description: 'Clarify requirements, scope, acceptance criteria, and workflow readiness.'
+  },
+  {
     fileName: 'specs.md',
     skillName: 'specs',
     agent: 'spec-maker',
@@ -93,6 +100,141 @@ const OPENCODE_COMMAND_TEMPLATES = [
     agent: 'god-developer',
     subtask: true,
     description: 'Generate technical diagrams from project context.'
+  },
+  // Domain skills — wrappers so users can invoke them directly via slash
+  // commands. Each delegates to the matching skill under .opencode/skills/.
+  {
+    fileName: 'agent-browser.md',
+    skillName: 'agent-browser',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Drive a browser session for research, snapshots, or scripted flows.'
+  },
+  {
+    fileName: 'ai-multimodal.md',
+    skillName: 'ai-multimodal',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Analyze images, audio, video, or mixed-media artifacts.'
+  },
+  {
+    fileName: 'backend-development.md',
+    skillName: 'backend-development',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Implement backend services, APIs, data layers, and integrations.'
+  },
+  {
+    fileName: 'chrome-devtools.md',
+    skillName: 'chrome-devtools',
+    agent: 'debugger',
+    subtask: true,
+    description: 'Collect Chrome DevTools or Puppeteer evidence for web debugging.'
+  },
+  {
+    fileName: 'devops.md',
+    skillName: 'devops',
+    agent: 'deployer',
+    subtask: true,
+    description: 'Plan or execute deployment, CI/CD, container, and infrastructure work.'
+  },
+  {
+    fileName: 'docx.md',
+    skillName: 'docx',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Create, edit, or analyze Word (.docx) documents.'
+  },
+  {
+    fileName: 'frontend-design.md',
+    skillName: 'frontend-design',
+    agent: 'ui-ux-designer',
+    subtask: true,
+    description: 'Define UI style, layout, design system, and UX direction.'
+  },
+  {
+    fileName: 'frontend-development.md',
+    skillName: 'frontend-development',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Build React/TypeScript UI components and frontend features.'
+  },
+  {
+    fileName: 'git.md',
+    skillName: 'git',
+    agent: 'git-ops',
+    subtask: true,
+    description: 'Run git workflows: branch, commit, tag, push, or release prep.'
+  },
+  {
+    fileName: 'impact-analysis.md',
+    skillName: 'impact-analysis',
+    agent: 'inspector',
+    subtask: true,
+    description: 'Assess affected files, blast radius, and side effects of a change.'
+  },
+  {
+    fileName: 'mobile-development.md',
+    skillName: 'mobile-development',
+    agent: 'god-developer',
+    subtask: true,
+    description: 'Implement iOS, Android, React Native, or Flutter mobile features.'
+  },
+  {
+    fileName: 'pdf.md',
+    skillName: 'pdf',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Read, edit, extract from, or generate PDF documents.'
+  },
+  {
+    fileName: 'pptx.md',
+    skillName: 'pptx',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Create or edit PowerPoint (.pptx) slide decks.'
+  },
+  {
+    fileName: 'react-best-practices.md',
+    skillName: 'react-best-practices',
+    agent: 'code-auditor',
+    subtask: true,
+    description: 'Apply React/Next.js performance and rerender best practices.'
+  },
+  {
+    fileName: 'research.md',
+    skillName: 'research',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Investigate external tools, docs, or best practices.'
+  },
+  {
+    fileName: 'sync.md',
+    skillName: 'sync',
+    agent: 'docs-keeper',
+    subtask: true,
+    description: 'Reconcile spec, docs, and code state after task completion.'
+  },
+  {
+    fileName: 'ui-ux-pro-max.md',
+    skillName: 'ui-ux-pro-max',
+    agent: 'ui-ux-designer',
+    subtask: true,
+    description: 'Apply advanced UI/UX intelligence and visual polish guidance.'
+  },
+  {
+    fileName: 'web-testing.md',
+    skillName: 'web-testing',
+    agent: 'test-runner',
+    subtask: true,
+    description: 'Plan or run E2E, integration, accessibility, or load testing.'
+  },
+  {
+    fileName: 'xlsx.md',
+    skillName: 'xlsx',
+    agent: 'researcher',
+    subtask: true,
+    description: 'Read, edit, or generate Excel (.xlsx) and CSV spreadsheets.'
   }
 ];
 

@@ -149,6 +149,7 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("OpenCode Runtime Mapping") &&
         content.includes("without the `hapo:` prefix") &&
+        content.includes("/question <request-or-context>") &&
         content.includes("/specs <feature-or-spec-command>") &&
         content.includes("Claude Code hooks/statusline/settings do not run in OpenCode"),
     },
@@ -193,6 +194,37 @@ async function runStaticSemanticTests() {
       label: "spec-maker forbids legacy work handoff",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) => content.includes("Never suggest `/work`"),
+    },
+    {
+      label: "hapo:question skill is clarification-only and readiness-gated",
+      file: "src/claude/skills/question/SKILL.md",
+      assert: (content) =>
+        content.includes("name: hapo:question") &&
+        content.includes("<CLARIFICATION-ONLY-GATE>") &&
+        content.includes("Do NOT implement, scaffold, edit product code") &&
+        content.includes("Known facts:") &&
+        content.includes("Blocking unknowns:") &&
+        content.includes("`P0`: blocks correct next action") &&
+        content.includes("not-ready") &&
+        content.includes("brainstorm-ready") &&
+        content.includes("specs-ready") &&
+        content.includes("develop-ready") &&
+        content.includes("templates/question.md"),
+    },
+    {
+      label: "hapo:question template captures prioritized questions",
+      file: "src/claude/skills/question/templates/question.md",
+      assert: (content) =>
+        content.includes("## P0 - Must Answer") &&
+        content.includes("## P1 - Should Answer") &&
+        content.includes("## P2 - Can Defer") &&
+        content.includes("## Readiness Verdict") &&
+        content.includes("## Next Command"),
+    },
+    {
+      label: "hapo:question is packaged in migration manifest",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => content.includes('"question"'),
     },
     {
       label: "hapo:specs validate uses hapo develop handoff",
@@ -488,15 +520,17 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
       assert: (content) =>
-        content.includes("/hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("/hapo:question -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
         content.includes("/hapo:debug -> /hapo:hotfix") &&
         content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("missing acceptance criteria") &&
         content.includes("Do not inject or force a skill"),
     },
     {
       label: "CafeKit skill routing domain rule maps installed skills",
       file: "src/claude/rules/skill-domain-routing.md",
       assert: (content) =>
+        content.includes("/hapo:question") &&
         content.includes("/hapo:frontend-development") &&
         content.includes("/hapo:react-best-practices") &&
         content.includes("/hapo:backend-development") &&
@@ -722,6 +756,7 @@ function runSkillCatalogTests() {
     "`hapo:specs`",
     "`hapo:develop`",
     "`hapo:docs`",
+    "`hapo:question`",
     "`hapo:debug`",
     "`hapo:hotfix`",
     "`hapo:react-best-practices`",
@@ -876,8 +911,10 @@ async function runOpenCodeInstallerFixtureTests() {
       "utf8",
     );
     const specsCommand = await readFile(join(root, ".opencode", "commands", "specs.md"), "utf8");
+    const questionCommand = await readFile(join(root, ".opencode", "commands", "question.md"), "utf8");
     const agentFrontmatter = godDeveloperAgent.split("---")[1] || "";
     const commandFrontmatter = specsCommand.split("---")[1] || "";
+    const questionFrontmatter = questionCommand.split("---")[1] || "";
     const failures = [];
 
     if (metadata.platform !== "opencode") {
@@ -903,11 +940,20 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {
       failures.push("OpenCode skill command wrappers were not installed");
     }
+    if (!(await fileExists(join(root, ".opencode", "commands", "question.md")))) {
+      failures.push("OpenCode question command wrapper was not installed");
+    }
     if (!specsCommand.includes(".opencode/skills/specs/SKILL.md")) {
       failures.push("OpenCode specs command does not route to the CafeKit specs skill");
     }
+    if (!questionCommand.includes(".opencode/skills/question/SKILL.md")) {
+      failures.push("OpenCode question command does not route to the CafeKit question skill");
+    }
     if (!commandFrontmatter.includes('agent: "spec-maker"') || !commandFrontmatter.includes("subtask: true")) {
       failures.push("OpenCode specs command is not bound to the spec-maker subagent");
+    }
+    if (!questionFrontmatter.includes('agent: "brainstormer"') || !questionFrontmatter.includes("subtask: true")) {
+      failures.push("OpenCode question command is not bound to the brainstormer subagent");
     }
     if (specsCommand.includes("allowed-tools")) {
       failures.push("OpenCode command still contains Claude command frontmatter");
@@ -930,6 +976,9 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "skills", "docs", "SKILL.md")))) {
       failures.push("OpenCode install did not install skills under .opencode/");
     }
+    if (!(await fileExists(join(root, ".opencode", "skills", "question", "SKILL.md")))) {
+      failures.push("OpenCode install did not install question skill under .opencode/");
+    }
     if (!(await fileExists(join(root, ".opencode", "rules", "skill-workflow-routing.md")))) {
       failures.push("OpenCode install did not install routing rules under .opencode/");
     }
@@ -945,6 +994,8 @@ async function runOpenCodeInstallerFixtureTests() {
       "docs-sync.ts",
       "session.ts",
       "state.ts",
+      "usage.ts",
+      "rules.ts",
     ];
     for (const plugin of expectedPlugins) {
       if (!(await fileExists(join(root, ".opencode", "plugins", plugin)))) {
@@ -969,6 +1020,21 @@ async function runOpenCodeInstallerFixtureTests() {
     }
     if (await fileExists(join(root, ".claude"))) {
       failures.push("OpenCode install must not create .claude/ directory");
+    }
+    // Spot-check that domain skills also have slash-command wrappers.
+    const expectedDomainCommands = [
+      "frontend-development.md",
+      "backend-development.md",
+      "research.md",
+      "git.md",
+      "devops.md",
+      "web-testing.md",
+      "impact-analysis.md",
+    ];
+    for (const cmd of expectedDomainCommands) {
+      if (!(await fileExists(join(root, ".opencode", "commands", cmd)))) {
+        failures.push(`OpenCode install missing domain command wrapper ${cmd}`);
+      }
     }
     if (!agentsMd.includes("Primary operating instructions for OpenCode")) {
       failures.push("OpenCode AGENTS.md instructions were not written");
