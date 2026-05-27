@@ -113,7 +113,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer offers OpenCode as secondary runtime",
-      file: "bin/install.js",
+      files: ["bin/install.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
         content.includes("id: 'opencode'") &&
         content.includes("name: 'OpenCode'") &&
@@ -133,7 +133,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "OpenCode install is self-contained under .opencode/",
-      file: "bin/install.js",
+      files: ["bin/install.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
         content.includes("skillsDir: '.opencode/skills'") &&
         content.includes("skillsRef: '.opencode/skills'") &&
@@ -690,9 +690,13 @@ async function runStaticSemanticTests() {
 
   console.log("\n[skill-test] static semantic checks");
   for (const check of checks) {
-    const content = await readFile(join(packageRoot, check.file), "utf8");
+    const targets = check.files ?? [check.file];
+    const parts = await Promise.all(
+      targets.map((rel) => readFile(join(packageRoot, rel), "utf8")),
+    );
+    const content = parts.join("\n");
     if (!check.assert(content)) {
-      console.error(`[FAIL] ${check.label}: ${check.file}`);
+      console.error(`[FAIL] ${check.label}: ${targets.join(", ")}`);
       process.exit(1);
     }
     console.log(`✔ ${check.label}`);
