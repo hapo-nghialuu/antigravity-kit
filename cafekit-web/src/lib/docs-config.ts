@@ -5,6 +5,7 @@ export type DocsNavItem = {
   href: string;
   description: string;
   keywords: string;
+  children?: DocsNavItem[];
 };
 
 export type DocsNavSection = {
@@ -17,6 +18,22 @@ type DocsLabels = {
   sections: Record<"start" | "runtime" | "catalog" | "reference", string>;
   pages: Record<string, Omit<DocsNavItem, "href">>;
 };
+
+type RouteItem = readonly [pageKey: string, href: string, children?: readonly RouteItem[]];
+
+const skillRoutes = [
+  ["skillBrainstorm", "/docs/skills/brainstorm"],
+  ["skillSpecs", "/docs/skills/specs"],
+  ["skillDevelop", "/docs/skills/develop"],
+  ["skillTest", "/docs/skills/test"],
+  ["skillCodeReview", "/docs/skills/code-review"],
+  ["skillSync", "/docs/skills/sync"],
+  ["skillDebug", "/docs/skills/debug"],
+  ["skillHotfix", "/docs/skills/hotfix"],
+  ["skillDocs", "/docs/skills/docs"],
+  ["skillInspect", "/docs/skills/inspect"],
+  ["skillGit", "/docs/skills/git"],
+] as const satisfies readonly RouteItem[];
 
 const routes = {
   start: [
@@ -31,7 +48,7 @@ const routes = {
     ["workflows", "/docs/workflows"],
   ],
   catalog: [
-    ["skills", "/docs/skills"],
+    ["skills", "/docs/skills", skillRoutes],
     ["agents", "/docs/agents"],
     ["platforms", "/docs/platforms"],
   ],
@@ -39,7 +56,7 @@ const routes = {
     ["reference", "/docs/reference"],
     ["faq", "/docs/faq"],
   ],
-} as const;
+} as const satisfies Record<string, readonly RouteItem[]>;
 
 const labels: Record<Locale, DocsLabels> = {
   en: {
@@ -53,7 +70,18 @@ const labels: Record<Locale, DocsLabels> = {
       runtime: page("Runtime bundle", "Understand installed files, hooks, state, and safety gates.", "runtime hooks settings statusline"),
       specLifecycle: page("Spec lifecycle", "Follow a feature from brainstorm to validated task packets.", "spec json task registry lifecycle"),
       workflows: page("Workflows", "Choose the right command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
-      skills: page("Skills", "Browse every packaged CafeKit skill and when to use it.", "skills catalog"),
+      skills: page("Skills", "Browse CafeKit workflow and domain skills, with detailed main-skill flows.", "skills catalog main skill flows"),
+      skillBrainstorm: page("Brainstorm", "Clarify unclear ideas before a spec exists.", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "Create requirements, research, design, task packets, and validation state.", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "Implement approved task packets with scope fidelity.", "develop implementation task"),
+      skillTest: page("Test", "Verify implementation with real commands and evidence.", "test verification evidence"),
+      skillCodeReview: page("Code Review", "Review changes for spec compliance, security, and regressions.", "code review security regression"),
+      skillSync: page("Sync", "Keep spec.json and task markdown state aligned.", "sync state task registry"),
+      skillDebug: page("Debug", "Diagnose failures before changing product code.", "debug root cause"),
+      skillHotfix: page("Hotfix", "Apply narrow evidence-backed fixes after diagnosis.", "hotfix repair bug"),
+      skillDocs: page("Docs", "Create, update, summarize, or reconstruct docs from source.", "docs reconstruct update"),
+      skillInspect: page("Inspect", "Discover relevant files, entrypoints, call paths, and blast radius.", "inspect discovery"),
+      skillGit: page("Git", "Commit, push, PR, finish, and worktree operations with safety checks.", "git commit push pr"),
       agents: page("Agents", "Understand each packaged agent and where it fits in the workflow.", "agents subagents roles"),
       platforms: page("Platforms", "Claude Code and OpenCode support, with future platform notes.", "claude opencode platforms"),
       reference: page("Reference", "Command cheatsheet, file structure, package facts, and state values.", "reference commands files"),
@@ -71,7 +99,18 @@ const labels: Record<Locale, DocsLabels> = {
       runtime: page("Runtime bundle", "Hiểu file cài vào repo, hooks, state, và safety gates.", "runtime hooks settings statusline"),
       specLifecycle: page("Vòng đời spec", "Theo dõi feature từ brainstorm đến task packet đã validate.", "spec json task registry lifecycle"),
       workflows: page("Workflows", "Chọn đúng command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
-      skills: page("Skills", "Xem toàn bộ skill CafeKit đóng gói và lúc nên dùng.", "skills catalog"),
+      skills: page("Skills", "Xem các workflow/domain skill của CafeKit và flow chi tiết cho skill chính.", "skills catalog main skill flows"),
+      skillBrainstorm: page("Brainstorm", "Làm rõ ý tưởng trước khi có spec.", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "Tạo requirements, research, design, task packets, và validation state.", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "Implement approved task packets với scope fidelity.", "develop implementation task"),
+      skillTest: page("Test", "Verify implementation bằng command thật và evidence.", "test verification evidence"),
+      skillCodeReview: page("Code Review", "Review changes cho spec compliance, security, và regressions.", "code review security regression"),
+      skillSync: page("Sync", "Đồng bộ spec.json và task markdown state.", "sync state task registry"),
+      skillDebug: page("Debug", "Diagnose failures trước khi sửa product code.", "debug root cause"),
+      skillHotfix: page("Hotfix", "Apply fix hẹp, có evidence sau diagnosis.", "hotfix repair bug"),
+      skillDocs: page("Docs", "Create, update, summarize, hoặc reconstruct docs từ source.", "docs reconstruct update"),
+      skillInspect: page("Inspect", "Discover relevant files, entrypoints, call paths, và blast radius.", "inspect discovery"),
+      skillGit: page("Git", "Commit, push, PR, finish, và worktree operations có safety checks.", "git commit push pr"),
       agents: page("Agents", "Hiểu từng agent đóng gói và vai trò trong workflow.", "agents subagents roles"),
       platforms: page("Platforms", "Support Claude Code và OpenCode, kèm ghi chú platform tương lai.", "claude opencode platforms"),
       reference: page("Tham khảo", "Bảng command, cấu trúc file, package facts, và state values.", "reference commands files"),
@@ -89,7 +128,18 @@ const labels: Record<Locale, DocsLabels> = {
       runtime: page("Runtime bundle", "インストールされるファイル、hooks、state、安全ゲートを理解します。", "runtime hooks settings statusline"),
       specLifecycle: page("Spec lifecycle", "brainstorm から validated task packet までの流れ。", "spec json task registry lifecycle"),
       workflows: page("Workflows", "brainstorm、specs、develop、debug、hotfix、test、review、sync、docs、graph、git の使い分け。", "commands workflows brainstorm debug hotfix"),
-      skills: page("Skills", "同梱される CafeKit skill と使いどころ。", "skills catalog"),
+      skills: page("Skills", "CafeKit workflow/domain skills と main skill flows。", "skills catalog main skill flows"),
+      skillBrainstorm: page("Brainstorm", "Spec 前に曖昧な idea を明確にします。", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "requirements、research、design、task packets、validation state を作ります。", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "approved task packets を scope fidelity で実装します。", "develop implementation task"),
+      skillTest: page("Test", "real commands と evidence で implementation を verify します。", "test verification evidence"),
+      skillCodeReview: page("Code Review", "spec compliance、security、regressions を review します。", "code review security regression"),
+      skillSync: page("Sync", "spec.json と task markdown state を同期します。", "sync state task registry"),
+      skillDebug: page("Debug", "product code 変更前に failures を diagnose します。", "debug root cause"),
+      skillHotfix: page("Hotfix", "diagnosis 後に narrow evidence-backed fix を適用します。", "hotfix repair bug"),
+      skillDocs: page("Docs", "source から docs を create、update、summarize、reconstruct します。", "docs reconstruct update"),
+      skillInspect: page("Inspect", "relevant files、entrypoints、call paths、blast radius を discover します。", "inspect discovery"),
+      skillGit: page("Git", "safety checks 付きで commit、push、PR、finish、worktree operations を行います。", "git commit push pr"),
       agents: page("Agents", "同梱 agent と workflow 内の役割。", "agents subagents roles"),
       platforms: page("Platforms", "Claude Code と OpenCode support、今後の platform 方針。", "claude opencode platforms"),
       reference: page("Reference", "command、file structure、package facts、state values の早見表。", "reference commands files"),
@@ -111,11 +161,20 @@ function buildSidebar(locale: Locale): DocsNavSection[] {
 
   return Object.entries(routes).map(([sectionKey, items]) => ({
     title: localeLabels.sections[sectionKey as keyof typeof routes],
-    items: items.map(([pageKey, href]) => ({
-      ...localeLabels.pages[pageKey],
-      href: localizeHref(locale, href),
-    })),
+    items: items.map((item) => buildNavItem(localeLabels, locale, item)),
   }));
+}
+
+function buildNavItem(localeLabels: DocsLabels, locale: Locale, [pageKey, href, children]: RouteItem): DocsNavItem {
+  return {
+    ...localeLabels.pages[pageKey],
+    href: localizeHref(locale, href),
+    ...(children ? { children: children.map((item) => buildNavItem(localeLabels, locale, item)) } : {}),
+  };
+}
+
+export function flattenDocsNavItems(items: DocsNavItem[]): DocsNavItem[] {
+  return items.flatMap(({ children, ...item }) => [item, ...(children ? flattenDocsNavItems(children) : [])]);
 }
 
 export function getDocsConfig(locale: string) {
@@ -133,5 +192,8 @@ export function getDocsConfig(locale: string) {
 }
 
 export function getDocsSearchGroups(locale: string): DocsNavSection[] {
-  return getDocsConfig(locale).sidebarNav;
+  return getDocsConfig(locale).sidebarNav.map((section) => ({
+    ...section,
+    items: flattenDocsNavItems(section.items),
+  }));
 }

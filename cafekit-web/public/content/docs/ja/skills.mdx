@@ -1,50 +1,24 @@
 ---
 title: Skills
-description: 同梱される CafeKit skill と使いどころ。
+description: CafeKit workflow/domain skills の overview。
 ---
 
 <DocsHero
-  eyebrow="29 skills"
-  title="CafeKit は作業を focused skills に routing する。"
-  description="Skills は runtime に含まれる local instructions です。specs、code、QA、docs、debugging、design、browser checks、media、files、release work を処理します。"
+  eyebrow="Skill overview"
+  title="Workflow から始め、必要な skill detail を開きます。"
+  description="CafeKit skills は repo-local operating procedures です。この overview は runtime の仕事の捉え方を示し、delivery、debugging、documentation、release を制御する main skills の detail pages に案内します。"
 />
 
 <SkillConstellation />
 
-## Catalog
+## How to read this page
 
-| Skill | Use it for |
-|---|---|
-| `hapo:brainstorm` | spec 前の scout-first ideation。 |
-| `hapo:specs` | requirements、research、design、task generation、validation。 |
-| `hapo:develop` | approved spec tasks の implementation。 |
-| `hapo:test` | unit、integration、build、UI、task-aware verification。 |
-| `hapo:code-review` | regressions、security、contract drift の adversarial review。 |
-| `hapo:sync` | `spec.json` と task markdown state の repair/audit。 |
-| `hapo:debug` | evidence-first root-cause diagnosis。 |
-| `hapo:hotfix` | diagnosis 後の small safe fix。 |
-| `hapo:inspect` | codebase discovery と scoped file scouting。 |
-| `impact-analysis` | blast-radius と regression scenario analysis。 |
-| `hapo:research` | external technical research と source validation。 |
-| `hapo:docs` | project docs、summaries、updates、as-is reconstruction。 |
-| `hapo:generate-graph` | SVG/PNG technical diagrams。 |
-| `hapo:git` | safe branch、commit、push、worktree operations。 |
-| `hapo:frontend-design` | polished frontend redesign と visual execution。 |
-| `hapo:frontend-development` | React/TypeScript frontend implementation patterns。 |
-| `hapo:react-best-practices` | React/Next.js performance guidance。 |
-| `hapo:ui-ux-pro-max` | UI/UX rules、accessibility、layout、motion、design intelligence。 |
-| `hapo:web-testing` | Playwright、Vitest、k6、visual、a11y、performance testing。 |
-| `hapo:agent-browser` | context-efficient browser automation snapshots。 |
-| `hapo:chrome-devtools` | Puppeteer screenshots、console、ARIA checks。 |
-| `hapo:ai-multimodal` | image、audio、video、OCR、transcript、document analysis。 |
-| `hapo:backend-development` | APIs、auth、databases、services、security。 |
-| `hapo:devops` | Cloudflare、Docker、GCP、Kubernetes、CI/CD。 |
-| `hapo:mobile-development` | React Native、Flutter、SwiftUI、Kotlin、mobile UX。 |
-| `hapo:docx` | Word creation、extraction、editing、comments、redlines。 |
-| `hapo:pdf` | PDF extraction、generation、forms、merge、split。 |
-| `hapo:pptx` | PowerPoint creation、editing、templates、slide generation。 |
-| `hapo:xlsx` | spreadsheets、formulas、charts、analysis、recalculation。 |
+Main workflow skills は repo 内の work flow を変えるため、個別ページで説明します。Domain skills は frontend、backend、browser automation、documents、spreadsheets、deployment など specific surfaces を支援するため catalog にまとめています。
+
+<MainSkillIndex locale="ja" />
+
+<SupportSkillCatalog locale="ja" />
 
 ## Routing rule
 
-task に合う最小の skill を選びます。小さな fix に full spec workflow を強制せず、曖昧な request のまま code に入らないでください。
+task に合う最小の skill を選びます。小さな fix に full spec workflow を強制せず、request が曖昧なまま code を始めません。

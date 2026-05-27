@@ -2,7 +2,7 @@ import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, P
 
 const skillGroups: Array<[string, string[]]> = [
   ['Core workflow', ['brainstorm', 'specs', 'develop', 'test', 'code-review', 'sync', 'git']],
-  ['Debug and change safety', ['inspect', 'debug', 'hotfix', 'impact-analysis', 'research']],
+  ['Debug and change safety', ['inspect', 'debug', 'hotfix', 'research']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
   ['Artifacts and media', ['docs', 'generate-graph', 'agent-browser', 'chrome-devtools', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],
@@ -32,16 +32,16 @@ const platforms: Array<[string, string, string]> = [
 
 export function SkillConstellation() {
   return (
-    <div className="not-prose my-8 grid gap-4 lg:grid-cols-5">
+    <div className="not-prose my-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {skillGroups.map(([title, skills]) => (
-        <section key={title} className="rounded-[22px] border border-border bg-card p-4">
+        <section key={title} className="min-w-0 rounded-[22px] border border-border bg-card p-4">
           <div className="mb-4 flex items-center gap-2">
             <Bot className="h-4 w-4 text-[#006242]" />
             <h3 className="text-sm font-semibold text-foreground">{title}</h3>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             {(skills as string[]).map((skill) => (
-              <span key={skill} className="rounded-full border border-[#006242]/15 bg-[#EEF5F1] px-2.5 py-1 font-mono text-[11px] text-[#006242] dark:bg-[#14252A] dark:text-[#A7C5EE]">
+              <span key={skill} className="whitespace-nowrap rounded-full border border-[#006242]/15 bg-[#EEF5F1] px-2.5 py-1 font-mono text-[11px] text-[#006242] dark:bg-[#14252A] dark:text-[#A7C5EE]">
                 {skill}
               </span>
             ))}

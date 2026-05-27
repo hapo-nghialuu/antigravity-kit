@@ -103,7 +103,7 @@ function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: L
       <article className="min-w-0 flex-1">
         <Breadcrumbs slug={slug} locale={locale} />
 
-        <div className="prose prose-zinc dark:prose-invert max-w-none text-[16px] prose-headings:scroll-mt-24 prose-headings:font-semibold prose-headings:tracking-tight prose-h2:text-[1.35em] prose-h3:text-[1.1em] prose-a:font-medium prose-a:text-primary prose-a:underline-offset-4 prose-a:decoration-primary/20 hover:prose-a:decoration-primary prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-normal prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-border">
+        <div className="prose prose-zinc dark:prose-invert max-w-none text-[16px] prose-headings:scroll-mt-24 prose-headings:font-semibold prose-headings:tracking-tight prose-h2:text-[1.35em] prose-h3:text-[1.1em] prose-a:font-medium prose-a:text-primary prose-a:underline-offset-4 prose-a:decoration-primary/20 hover:prose-a:decoration-primary prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-border">
           {mdxContent.content}
         </div>
 

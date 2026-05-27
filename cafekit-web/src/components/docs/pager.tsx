@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getDocsConfig } from '@/lib/docs-config';
+import { flattenDocsNavItems, getDocsConfig } from '@/lib/docs-config';
 import type { Locale } from '@/lib/locale-utils';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ export function DocsPager({ slug, locale = 'en' }: DocsPagerProps) {
 
   // Flatten sidebar config to get linear list of pages
   const config = getDocsConfig(locale);
-  const flatNav = config.sidebarNav.flatMap((section) => section.items);
+  const flatNav = config.sidebarNav.flatMap((section) => flattenDocsNavItems(section.items));
 
   const activeIndex = flatNav.findIndex((item) => item.href === pathname);
 
