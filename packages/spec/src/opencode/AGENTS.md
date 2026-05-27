@@ -7,8 +7,8 @@ Primary operating instructions for OpenCode using the CafeKit runtime.
 - Project instructions live in `AGENTS.md`.
 - CafeKit commands live in `.opencode/commands/` and use OpenCode-native slash names without the `hapo:` prefix.
 - CafeKit subagents live in `.opencode/agents/` using OpenCode frontmatter.
-- CafeKit skills intentionally live in `.claude/skills/` because OpenCode reads Claude-compatible skills natively.
-- Shared CafeKit support files live in `.claude/rules/`, `.claude/scripts/`, `.claude/references/`, and `.claude/runtime.json`.
+- CafeKit skills live in `.opencode/skills/` and are read natively by OpenCode.
+- Shared CafeKit support files live in `.opencode/rules/`, `.opencode/scripts/`, `.opencode/references/`, and `.opencode/runtime.json`.
 - OpenCode config is merged into `opencode.json`; keep project-specific model/provider choices there.
 
 ## Command Surface
@@ -16,6 +16,7 @@ Primary operating instructions for OpenCode using the CafeKit runtime.
 Use these OpenCode commands:
 
 - `/brainstorm <idea-or-problem>`: scout and narrow an unclear idea before specs.
+- `/question <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify requirements, missing decisions, and next workflow readiness.
 - `/specs <feature-or-spec-command>`: create, update, validate, or approve specs.
 - `/develop <feature> [task-file] [--flash]`: implement approved spec tasks.
 - `/test [scope|--full]`: verify implementation and collect evidence.
@@ -26,7 +27,7 @@ Use these OpenCode commands:
 - `/inspect <target>`: inspect source, artifacts, or external context.
 - `/generate-graph <request>`: generate technical diagrams.
 
-The underlying CafeKit skills are still named `hapo:*` in their documentation. In OpenCode, use the commands above; each command reads the matching skill from `.claude/skills/<skill>/SKILL.md`.
+The underlying CafeKit skills are still named `hapo:*` in their documentation. In OpenCode, use the commands above; each command reads the matching skill from `.opencode/skills/<skill>/SKILL.md`.
 
 ## Core Objective
 
@@ -41,7 +42,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 - Do not assume silently. State assumptions when they affect the work.
 - If multiple interpretations are plausible, surface them before implementation.
 - If the simpler option is likely better, say so and push back.
-- If the task/spec is too vague to verify, stop and ask or route back to spec correction.
+- If the task/spec is too vague to verify, use `/question` or ask one grounded clarification before planning.
 - Before feature planning or coding, read `./README.md` for project context.
 
 ### 2. Simplicity First
@@ -72,7 +73,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 Use this loop for non-trivial work:
 
 1. Understand: read README, relevant docs, active spec/task, and existing code.
-2. Plan: choose the smallest coherent path; use `/specs` for feature specs when needed.
+2. Plan: choose the smallest coherent path; use `/question` when requirements are unclear and `/specs` for feature specs when ready.
 3. Execute: implement only the active task/scope; no placeholder completion.
 4. Verify: run exact task commands first, then repo-level lint/test/build as needed.
 5. Sync: mark task state only after proof exists.
@@ -137,4 +138,3 @@ Consult these when the task touches the relevant area:
 ## Language Consistency
 
 When generating specs or structured project output, use the user's preferred language consistently across the whole spec workspace. Technical terms, code samples, and file paths may remain English.
-
