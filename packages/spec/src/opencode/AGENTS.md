@@ -16,7 +16,7 @@ Primary operating instructions for OpenCode using the CafeKit runtime.
 Use these OpenCode commands:
 
 - `/brainstorm <idea-or-problem>`: scout and narrow an unclear idea before specs.
-- `/question <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify requirements, missing decisions, and next workflow readiness.
+- `/qs <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify requirements, missing decisions, and next workflow readiness.
 - `/specs <feature-or-spec-command>`: create, update, validate, or approve specs.
 - `/develop <feature> [task-file] [--flash]`: implement approved spec tasks.
 - `/test [scope|--full]`: verify implementation and collect evidence.
@@ -42,7 +42,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 - Do not assume silently. State assumptions when they affect the work.
 - If multiple interpretations are plausible, surface them before implementation.
 - If the simpler option is likely better, say so and push back.
-- If the task/spec is too vague to verify, use `/question` or ask one grounded clarification before planning.
+- If the task/spec is too vague to verify, use `/qs` or ask one grounded clarification before planning.
 - Before feature planning or coding, read `./README.md` for project context.
 
 ### 2. Simplicity First
@@ -73,7 +73,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 Use this loop for non-trivial work:
 
 1. Understand: read README, relevant docs, active spec/task, and existing code.
-2. Plan: choose the smallest coherent path; use `/question` when requirements are unclear and `/specs` for feature specs when ready.
+2. Plan: choose the smallest coherent path; use `/qs` when requirements are unclear and `/specs` for feature specs when ready.
 3. Execute: implement only the active task/scope; no placeholder completion.
 4. Verify: run exact task commands first, then repo-level lint/test/build as needed.
 5. Sync: mark task state only after proof exists.

@@ -29,7 +29,7 @@ User wants to...
 
 ```text
 User wants to...
-├── clarify missing requirements or acceptance criteria   -> /hapo:question
+├── clarify missing requirements or acceptance criteria   -> /hapo:qs
 ├── find files, locate code, scan project structure       -> /hapo:inspect
 ├── diagnose an error or failing check                    -> /hapo:debug
 ├── understand possible side effects                      -> /hapo:impact-analysis
@@ -42,7 +42,7 @@ Local source truth comes from `/hapo:inspect`; external/current knowledge comes 
 
 ```text
 User wants to...
-├── prepare stakeholder/customer questions before docs     -> /hapo:question --batch
+├── prepare stakeholder/customer questions before docs     -> /hapo:qs --batch
 ├── create missing project docs                           -> /hapo:docs --init
 ├── update docs after source changes                      -> /hapo:docs --update
 ├── summarize codebase quickly                            -> /hapo:docs --summarize

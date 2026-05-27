@@ -27,4 +27,4 @@
 `not-ready | brainstorm-ready | specs-ready | develop-ready`
 
 ## Next Command
-`/hapo:question ... | /hapo:brainstorm ... | /hapo:specs ... | /hapo:debug ... | /hapo:docs --reconstruct ... | /hapo:develop ...`
+`/hapo:qs ... | /hapo:brainstorm ... | /hapo:specs ... | /hapo:debug ... | /hapo:docs --reconstruct ... | /hapo:develop ...`

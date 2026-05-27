@@ -7,12 +7,12 @@ Do not inject or force a skill when the user explicitly asks for a direct answer
 ## Core Specification Workflow
 
 ```text
-/hapo:question -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review -> /hapo:git
+/hapo:qs -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review -> /hapo:git
 ```
 
 | User intent | Suggested start |
 |---|---|
-| vague request, missing acceptance criteria, unclear scope, stakeholder questions | `/hapo:question` |
+| vague request, missing acceptance criteria, unclear scope, stakeholder questions | `/hapo:qs` |
 | unclear idea, possible approaches, scope tradeoffs | `/hapo:brainstorm` |
 | create requirements, design, task breakdown, validate spec | `/hapo:specs` |
 | implement an approved spec or a specific task file | `/hapo:develop` |
@@ -82,5 +82,5 @@ Use `/hapo:research` for external knowledge. Use `/hapo:inspect` for local sourc
 - Add a secondary skill only when it materially changes execution.
 - Prefer explicit user commands over this table.
 - If two workflows conflict, ask one concise clarification.
-- If missing information blocks workflow selection, use `/hapo:question` before choosing brainstorm/specs/develop.
+- If missing information blocks workflow selection, use `/hapo:qs` before choosing brainstorm/specs/develop.
 - If the user asks to "fix" and root cause is unknown, start with `/hapo:debug` unless the issue is trivial and local.

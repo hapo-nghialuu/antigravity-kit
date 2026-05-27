@@ -11,7 +11,7 @@
 CafeKit installs a structured workflow so an AI coding agent can move cleanly from:
 
 ```text
-Idea -> Question when unclear -> Brainstorm -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
+Idea -> QS when unclear -> Brainstorm -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
 ```
 
 Claude Code install support:
@@ -102,7 +102,7 @@ cat .opencode/cafekit.json
 
 CafeKit ships many skills, but the main release surface is:
 
-- `/hapo:question <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify missing decisions, acceptance criteria, scope, constraints, and next workflow readiness
+- `/hapo:qs <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify missing decisions, acceptance criteria, scope, constraints, and next workflow readiness
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
@@ -126,7 +126,7 @@ node .claude/scripts/generate-skill-catalog.cjs --skills
 Claude Code:
 
 ```bash
-/hapo:question "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
+/hapo:qs "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
 /hapo:brainstorm Explore approaches for a Google Meet transcript extension
 /hapo:specs Build a Google Meet transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
@@ -137,7 +137,7 @@ Claude Code:
 OpenCode uses the generated command names without the Claude `hapo:` prefix:
 
 ```bash
-/question "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
+/qs "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
 /brainstorm Explore approaches for a Google Meet transcript extension
 /specs Build a Google Meet transcript extension with AI summaries
 /develop meet-transcript-mvp

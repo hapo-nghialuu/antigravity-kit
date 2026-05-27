@@ -1,13 +1,13 @@
 ---
-name: hapo:question
+name: hapo:qs
 description: "Clarify vague requests before planning or implementation. Use when requirements, acceptance criteria, scope, constraints, stakeholder decisions, or next workflow readiness are unclear."
 argument-hint: "<request_or_context> [--batch|--spec-ready|--stakeholder]"
 version: 1.0.0
 ---
 
-# Question Skill
+# QS Skill
 
-`hapo:question` turns unclear intent into answerable questions and a readiness verdict. It is a clarification gate before `hapo:brainstorm`, `hapo:specs`, `hapo:docs --reconstruct`, `hapo:debug`, or `hapo:develop`.
+`hapo:qs` turns unclear intent into answerable questions and a readiness verdict. It is a clarification gate before `hapo:brainstorm`, `hapo:specs`, `hapo:docs --reconstruct`, `hapo:debug`, or `hapo:develop`.
 
 ## Core Stance
 
@@ -25,7 +25,7 @@ The output is questions, assumptions, readiness, and next-step guidance.
 
 ## When To Use
 
-Use `hapo:question` when:
+Use `hapo:qs` when:
 - The request is too vague to verify.
 - Acceptance criteria are missing.
 - Scope boundary is unclear.
@@ -106,7 +106,7 @@ End with one of:
 ### 5. Next Step
 
 Suggest exactly one next command:
-- `/hapo:question ...` when another clarification round is required.
+- `/hapo:qs ...` when another clarification round is required.
 - `/hapo:brainstorm ...` when design/options are still open.
 - `/hapo:specs ...` when requirements are clear enough.
 - `/hapo:debug ...` when the issue is a bug with unknown root cause.
@@ -139,12 +139,12 @@ Suggest exactly one next command:
 not-ready | brainstorm-ready | specs-ready | develop-ready
 
 **Next**
-/hapo:question ...
+/hapo:qs ...
 ```
 
 ### Batch Output
 
-Use `templates/question.md` when the user asks to save or document the question set.
+Use `templates/qs.md` when the user asks to save or document the question set.
 
 ```markdown
 **Question Set**
