@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- OpenCode installs now ship CafeKit runtime plugins under `.opencode/plugins/`:
+  - `privacy-block.ts` — blocks reads of `.env`, key, credential, and token files via `tool.execute.before`; mirrors the Claude `privacy-block.cjs` JSON-marker UX so assistants prompt the user before retrying via `bash cat`.
+  - `inspect-block.ts` — blocks reads/globs that target heavy dirs (`node_modules`, `.next`, `dist`, …) and excessively broad glob patterns; allows approved build/package-manager commands.
+  - `docs-sync.ts` — on `session.created`, writes a banner to `.opencode/session-banner.md` when source code exists without `docs/` or when `docs/.sync_hash` is stale.
+  - `session.ts` — writes project type / package manager / framework / git branch banner; emits the compaction warning on `session.compacted`.
+  - `state.ts` — loads `.opencode/session-state/latest.md` on `session.created`, refreshes on `tool.execute.after` for state-shaping tools (`todowrite`, `task*`), and archives on `session.idle`.
+- Installer now writes `.opencode/package.json` with `@opencode-ai/plugin ^1.15.11`; OpenCode runs `bun install` automatically at startup.
+
+### Changed
+- `normalizeOpenCodeBody` now rewrites `hooks/.logs/` → `plugins/.logs/` so the OpenCode `.gitignore` ignores plugin log output rather than the legacy hook log path.
+
+### Gaps (documented, intentionally unported)
+- `rules.cjs`, `agent.cjs`, `spec-state.cjs`, and the prompt half of `usage.cjs` remain Claude-only — OpenCode has no equivalent for `UserPromptSubmit` / `SubagentStart`. Equivalent guidance lives in `AGENTS.md` + `.opencode/rules/*` (skill workflow + domain routing) so OpenCode users still get the routing and spec-drift reminders, just statically rather than via a runtime hook.
+- The Claude statusline (`status.cjs`) remains Claude-only.
+
 ## [0.9.0] - 2026-05-26
 
 ### Changed (breaking)

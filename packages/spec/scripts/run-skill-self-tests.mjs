@@ -935,6 +935,34 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "runtime.json")))) {
       failures.push("OpenCode install did not install runtime.json under .opencode/");
     }
+    const expectedPlugins = [
+      "privacy-block.ts",
+      "inspect-block.ts",
+      "docs-sync.ts",
+      "session.ts",
+      "state.ts",
+    ];
+    for (const plugin of expectedPlugins) {
+      if (!(await fileExists(join(root, ".opencode", "plugins", plugin)))) {
+        failures.push(`OpenCode install did not install plugin ${plugin}`);
+      }
+    }
+    if (await fileExists(join(root, ".opencode", "plugins", "package.json"))) {
+      failures.push("OpenCode plugin package.json must live at .opencode/package.json, not inside plugins/");
+    }
+    if (!(await fileExists(join(root, ".opencode", "package.json")))) {
+      failures.push("OpenCode install did not write .opencode/package.json for plugin deps");
+    } else {
+      const pluginPkg = JSON.parse(
+        await readFile(join(root, ".opencode", "package.json"), "utf8"),
+      );
+      if (!pluginPkg.dependencies?.["@opencode-ai/plugin"]) {
+        failures.push("OpenCode .opencode/package.json missing @opencode-ai/plugin dependency");
+      }
+      if (pluginPkg.type !== "module") {
+        failures.push("OpenCode .opencode/package.json must set type: module");
+      }
+    }
     if (await fileExists(join(root, ".claude"))) {
       failures.push("OpenCode install must not create .claude/ directory");
     }

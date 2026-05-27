@@ -325,6 +325,9 @@ function normalizeOpenCodeBody(content) {
     .replace(/`\.claude`/g, '`.opencode`')
     // CLAUDE.md filename references
     .replace(/\bCLAUDE\.md\b/g, 'AGENTS.md')
+    // Runtime artifact paths inside .opencode/.gitignore that originate from
+    // the Claude template (hooks/.logs/ → plugins/.logs/).
+    .replace(/\bhooks\/\.logs\b/g, 'plugins/.logs')
     // OpenCode skill name regex is ^[a-z0-9]+(-[a-z0-9]+)*$ — strip the
     // Claude-only `hapo:` prefix so SKILL.md frontmatter passes validation
     // and matches the containing directory name.
@@ -1141,6 +1144,103 @@ function copyOpenCodeSharedRuntimeFiles(platformKey, results, options = {}) {
   });
 }
 
+const OPENCODE_PLUGIN_PACKAGE = '@opencode-ai/plugin';
+const OPENCODE_PLUGIN_VERSION = '^1.15.11';
+
+function copyOpenCodePlugins(platformKey, results, options = {}) {
+  if (platformKey !== 'opencode') return;
+
+  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
+  const sourceDir = path.join(__dirname, '../src/opencode/plugins');
+  const targetDir = path.join('.opencode', 'plugins');
+
+  if (!fs.existsSync(sourceDir)) {
+    console.log('  ⚠ OpenCode plugin source not found, skipping');
+    return;
+  }
+
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+  entries.forEach(entry => {
+    const sourcePath = path.join(sourceDir, entry.name);
+    const destPath = path.join(targetDir, entry.name);
+
+    if (entry.isDirectory()) {
+      copyRecursive(sourcePath, destPath, getCopyOptions(platformKey, options));
+      console.log(`  ✓ Plugin lib installed: ${entry.name}/`);
+      return;
+    }
+
+    if (!entry.isFile()) return;
+
+    const destExists = fs.existsSync(destPath);
+    if (destExists && !shouldOverwriteManagedFiles) {
+      console.log(`  → Plugin exists: ${entry.name}`);
+      results.skipped++;
+      return;
+    }
+
+    const sourceContent = fs.readFileSync(sourcePath, 'utf8');
+    fs.writeFileSync(destPath, sourceContent, 'utf8');
+
+    if (destExists) {
+      console.log(`  ↻ Plugin updated: ${entry.name}`);
+      results.updated++;
+    } else {
+      console.log(`  ✓ Plugin installed: ${entry.name}`);
+      results.copied++;
+    }
+  });
+
+  ensureOpenCodePluginPackageJson(results, shouldOverwriteManagedFiles);
+}
+
+function ensureOpenCodePluginPackageJson(results, shouldOverwriteManagedFiles) {
+  const pkgPath = path.join('.opencode', 'package.json');
+  const pkgExists = fs.existsSync(pkgPath);
+
+  let pkg = {};
+  if (pkgExists) {
+    try {
+      pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    } catch {
+      pkg = {};
+    }
+  }
+
+  const currentDep = pkg.dependencies?.[OPENCODE_PLUGIN_PACKAGE];
+  const needsUpdate = !pkgExists
+    || !currentDep
+    || (shouldOverwriteManagedFiles && currentDep !== OPENCODE_PLUGIN_VERSION);
+
+  if (!needsUpdate) {
+    return;
+  }
+
+  const nextPkg = {
+    name: pkg.name || 'cafekit-opencode-plugins',
+    private: pkg.private !== undefined ? pkg.private : true,
+    type: pkg.type || 'module',
+    ...pkg,
+    dependencies: {
+      ...(pkg.dependencies || {}),
+      [OPENCODE_PLUGIN_PACKAGE]: OPENCODE_PLUGIN_VERSION,
+    },
+  };
+
+  fs.writeFileSync(pkgPath, JSON.stringify(nextPkg, null, 2) + '\n', 'utf8');
+
+  if (pkgExists) {
+    console.log(`  ↻ Plugin package.json updated (${OPENCODE_PLUGIN_PACKAGE} ${OPENCODE_PLUGIN_VERSION})`);
+    results.updated++;
+  } else {
+    console.log(`  ✓ Plugin package.json installed (${OPENCODE_PLUGIN_PACKAGE} ${OPENCODE_PLUGIN_VERSION})`);
+    console.log('    OpenCode will run "bun install" automatically on startup.');
+    results.copied++;
+  }
+}
+
 function copyOpenCodeCommandTemplates(platformKey, results, options = {}) {
   if (platformKey !== 'opencode') return;
 
@@ -1760,6 +1860,7 @@ async function main() {
 
       if (platformKey === 'opencode') {
         copyOpenCodeSharedRuntimeFiles(platformKey, results, installerOptions);
+        copyOpenCodePlugins(platformKey, results, installerOptions);
         copyOpenCodeCommandTemplates(platformKey, results, installerOptions);
         copyOpenCodeAgentsMdFile(platformKey, results, installerOptions);
         copyRulesDirectory(platformKey, results, installerOptions);

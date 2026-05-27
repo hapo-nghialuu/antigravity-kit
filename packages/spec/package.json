@@ -43,5 +43,8 @@
   ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "1.15.11"
   }
 }
