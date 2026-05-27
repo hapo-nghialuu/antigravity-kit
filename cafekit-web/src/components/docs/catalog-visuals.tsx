@@ -2,7 +2,7 @@ import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, P
 
 const skillGroups: Array<[string, string[]]> = [
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
-  ['Pre-spec discovery', ['brainstorm', 'inspect', 'research']],
+  ['Pre-spec discovery', ['qs', 'brainstorm', 'inspect', 'research']],
   ['Debug and change safety', ['debug', 'hotfix']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
@@ -27,7 +27,7 @@ const agents = [
 
 const platforms: Array<[string, string, string]> = [
   ['Claude Code', 'Primary runtime', '.claude/ skills, agents, hooks, statusline, settings'],
-  ['OpenCode', 'Supported runtime', '.opencode/ commands and agents, plus shared .claude/ skills'],
+  ['OpenCode', 'Supported runtime', '.opencode/ skills, agents, commands, plugins, runtime.json, AGENTS.md'],
   ['Cursor', 'Future target', 'Not part of the current package runtime'],
 ];
 

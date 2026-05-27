@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { ArrowRight, Bot, Braces, Bug, FileText, GitBranch, PenTool, Shield, Sparkles, TestTube2, Wrench } from 'lucide-react';
+import { ArrowRight, Bot, Braces, Bug, FileText, GitBranch, HelpCircle, PenTool, Shield, Sparkles, TestTube2, Wrench } from 'lucide-react';
 import { type Locale, localizeHref } from '@/lib/locale-utils';
 import { getSkillDetails, type MainSkillSlug } from './skill-detail-content';
 
 const icons = {
+  qs: HelpCircle,
   brainstorm: Sparkles,
   specs: PenTool,
   develop: Wrench,

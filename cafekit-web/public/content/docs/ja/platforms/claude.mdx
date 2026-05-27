@@ -1,0 +1,65 @@
+---
+title: Claude Code
+description: Claude Code project 向け CafeKit runtime の完全 layout。
+---
+
+<DocsHero
+  eyebrow="Platforms · Claude Code"
+  title="Hooks、agents、skills 付きのネイティブ Claude Code runtime。"
+  description="Installer は `.claude/` runtime 全体と project ルートの `CLAUDE.md` を書き出します。Hooks は privacy、spec state、docs sync、session context を強制します。"
+/>
+
+## インストール後の layout
+
+```
+.claude/
+├── skills/         # Workflow + domain skill packs (qs, brainstorm, specs, ...)
+├── agents/         # Subagent prompts (brainstormer, code-auditor, ...)
+├── hooks/          # Event-driven CommonJS scripts
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts (catalog generator など)
+├── references/     # Static lookup material
+├── runtime.json    # Locale、paths、docs.maxLoc、gemini model
+├── settings.json   # Hook bindings と permissions
+└── status.cjs      # Statusline renderer
+CLAUDE.md           # Project ルートの operating instructions
+.mcp.json           # 任意の MCP server config
+```
+
+## Hooks
+
+Claude Code は `.claude/hooks/` の event-driven hooks を持ちます。
+
+| Hook | Event | Purpose |
+|---|---|---|
+| `privacy-block.cjs` | `PreToolUse` | User 承認まで sensitive path の read をブロック |
+| `inspect-block.cjs` | `PreToolUse` | 広範な inspection scan を gate |
+| `spec-state.cjs` | `PostToolUse` | Verification receipt なしの task `done` を拒否 |
+| `docs-sync.cjs` | `SessionStart` | Missing docs と sync hash drift を flag |
+| `session.cjs` | `SessionStart` | Session banner と context を inject |
+| `usage.cjs` | `UserPromptSubmit` | Token/usage hints を track |
+| `rules.cjs` | `UserPromptSubmit` | Per-prompt の dynamic rules block を inject |
+
+Hook contract の詳細は [Runtime bundle](/docs/runtime) を参照。
+
+## Commands
+
+Claude Code は `hapo:` namespace を使います。
+
+```
+/hapo:qs          /hapo:brainstorm    /hapo:specs       /hapo:develop
+/hapo:test        /hapo:code-review   /hapo:sync        /hapo:debug
+/hapo:hotfix      /hapo:docs          /hapo:inspect     /hapo:git
+```
+
+加えて全ての domain skill が `/hapo:<skill>` の形式で利用可能です。
+
+## Detection
+
+Installer は以下があれば Claude Code を認識します。
+
+- `.claude/` ディレクトリ
+- project ルートの `CLAUDE.md`
+- project ルートの `.mcp.json`
+
+Installer の再実行は idempotent です。既存ファイルは安全な範囲で merge され、盲目的に上書きされません。

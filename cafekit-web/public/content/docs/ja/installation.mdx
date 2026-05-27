@@ -36,7 +36,7 @@ Upgrade mode は managed files を更新し、obsolete runtime hooks を削除�
 | Runtime | Detection | Installed shape |
 |---|---|---|
 | Claude Code | `.claude/` | `.claude/skills`, `.claude/agents`, `.claude/hooks`, `settings.json`, `status.cjs`, `CLAUDE.md` |
-| OpenCode | `.opencode/`, `opencode.json`, or `opencode.jsonc` | `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, shared `.claude/skills` |
+| OpenCode | `.opencode/`, `opencode.json`, or `opencode.jsonc` | `.opencode/skills`, `.opencode/agents`, `.opencode/commands`, `.opencode/plugins`, `.opencode/runtime.json`, root `AGENTS.md`, merged `opencode.json` |
 
 runtime marker がない場合、installer が platform を質問します。
 

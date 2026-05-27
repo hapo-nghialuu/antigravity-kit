@@ -1,6 +1,17 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsJa: SkillDetailMap = {
+  qs: {
+    title: 'QS',
+    command: '/hapo:qs',
+    category: 'Clarification',
+    summary: 'Brainstorm、specs、develop の前に曖昧な request を優先順位付き質問に変える clarification-only gate。Product code は書きません。',
+    when: ['Request が verify できないほど曖昧。', 'Scope、constraints、acceptance criteria が不明確。', 'Spec または task に plan/implement のための回答が不足している。'],
+    flow: [['Capture', 'Request、code context、既存の spec/task signal を読みます。'], ['Identify gaps', 'Brainstorm-ready、spec-ready、develop-ready を妨げる unknowns を列挙します。'], ['Prioritize', 'Readiness impact と risk で質問を並べます。'], ['Output', 'User または upstream agent 向けに優先順位付き質問 packet を書きます。'], ['Gate', 'Readiness state を marking し、次の CafeKit skill を推奨します。']],
+    output: '優先順位付き clarification packet と次の workflow step 向け readiness verdict。',
+    avoid: 'Implement、scaffold、product code 編集、回答の推測は行いません。Clarification 専用 skill です。',
+    next: '質問が解決されたら /hapo:brainstorm または /hapo:specs',
+  },
   brainstorm: {
     title: 'Brainstorm',
     command: '/hapo:brainstorm',

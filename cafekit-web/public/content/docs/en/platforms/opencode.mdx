@@ -1,0 +1,68 @@
+---
+title: OpenCode
+description: Self-contained CafeKit runtime for OpenCode projects.
+---
+
+<DocsHero
+  eyebrow="Platforms · OpenCode"
+  title="Self-contained `.opencode/` runtime with TypeScript plugins."
+  description="CafeKit installs a complete OpenCode runtime that does not share files with `.claude/`. Hooks become typed plugins loaded by OpenCode at session start."
+/>
+
+## Installed layout
+
+```
+.opencode/
+├── skills/         # Self-contained skill packs
+├── agents/         # Subagent prompts (no hapo: prefix)
+├── commands/       # Slash commands without hapo: prefix
+├── plugins/        # TypeScript plugins (see below)
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts
+├── references/     # Static lookup material
+├── runtime.json    # Locale, paths, docs.maxLoc, gemini model
+├── cafekit.json    # CafeKit marker + version
+└── package.json    # Declares @opencode-ai/plugin
+AGENTS.md           # Project-level operating instructions
+opencode.json       # Merged with the installer (empty file is valid)
+```
+
+After install, plugin dependencies are installed automatically via `bun install` inside `.opencode/`.
+
+## TypeScript plugins
+
+Claude Code hooks are ported to typed OpenCode plugins:
+
+| Plugin | OpenCode event | Purpose |
+|---|---|---|
+| `privacy-block.ts` | `tool.execute.before` | Block reads of sensitive paths until user approves |
+| `inspect-block.ts` | `tool.execute.before` | Gate broad inspection scans |
+| `state.ts` | `tool.execute.after` | Reject task `done` without verification receipt |
+| `docs-sync.ts` | `session.created` | Flag missing docs, sync hash drift |
+| `session.ts` | `session.created` | Inject session banner and context |
+| `usage.ts` | `session.created` | Track token/usage hints |
+| `rules.ts` | `session.created` | Refresh dynamic rules block inside `AGENTS.md` |
+
+OpenCode lacks a per-prompt injection channel, so `rules.ts` upserts a managed block in `AGENTS.md` between `<!-- CAFEKIT DYNAMIC RULES START -->` and `<!-- CAFEKIT DYNAMIC RULES END -->`. OpenCode auto-loads `AGENTS.md` per session, so the dynamic rules still reach the model at session start.
+
+## Commands
+
+OpenCode intentionally drops the `hapo:` prefix:
+
+```
+/qs           /brainstorm    /specs       /develop
+/test         /code-review   /sync        /debug
+/hotfix       /docs          /inspect     /git
+```
+
+Plus all domain skills under `/<skill>`.
+
+## Detection
+
+The installer recognizes OpenCode when any of these exist:
+
+- `.opencode/` directory
+- `AGENTS.md` at project root
+- `opencode.json` or `opencode.jsonc` at project root (empty file counts)
+
+If only an empty `opencode.json` is present, the installer treats it as a valid marker and populates `$schema`, `instructions: ["AGENTS.md"]`, and a `permission` block on first install.

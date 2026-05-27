@@ -1,40 +1,31 @@
 ---
 title: Platforms
-description: Claude Code と OpenCode の現在の runtime support。
+description: Claude Code と OpenCode の runtime support 概要。
 ---
 
 <DocsHero
   eyebrow="Platforms"
-  title="Claude Code が primary。OpenCode も supported。"
-  description="現在の installer は Claude Code runtime files と、shared Claude-compatible skills を使う OpenCode command/agent conversion を持っています。"
+  title="Claude Code と OpenCode はそれぞれ self-contained runtime を持ちます。"
+  description="Installer は project markers から target platform を detect し、独立した完全な runtime を書き出します。詳細な bundle layout、hooks、plugins、commands は下の platform を選んで確認してください。"
 />
 
 <PlatformMatrix />
 
-## Claude Code
+## Platform を選ぶ
 
-Claude Code には full runtime が入ります。
+- [Claude Code](/docs/platforms/claude) — `.claude/` skills、agents、hooks、runtime、`CLAUDE.md`。
+- [OpenCode](/docs/platforms/opencode) — `.opencode/` skills、agents、plugins、runtime、`AGENTS.md`。
 
-- `.claude/skills`
-- `.claude/agents`
-- `.claude/hooks`
-- `.claude/settings.json`
-- `.claude/runtime.json`
-- `.claude/status.cjs`
-- root `CLAUDE.md`
+各 platform は self-contained です。OpenCode は `.claude/` ファイルに依存せず、Claude Code も `.opencode/` ファイルに依存しません。
 
-## OpenCode
+## Detection
 
-OpenCode には次が入ります。
+| Platform | Markers |
+|---|---|
+| Claude Code | `.claude/`、`CLAUDE.md`、`.mcp.json` |
+| OpenCode | `.opencode/`、`AGENTS.md`、`opencode.json`、`opencode.jsonc` |
 
-- `.opencode/commands`
-- `.opencode/agents`
-- `.opencode/cafekit.json`
-- root `AGENTS.md`
-- merged `opencode.json`
-- shared `.claude/skills`, `.claude/rules`, `.claude/scripts`, `.claude/references`, `.claude/runtime.json`
-
-OpenCode commands は意図的に `hapo:` を省略します。
+両方が検出された場合、installer は target ごとに選択を求めます。空の marker（例 `opencode.json: {}`）も valid な project marker として扱われます。
 
 ## Future platforms
 

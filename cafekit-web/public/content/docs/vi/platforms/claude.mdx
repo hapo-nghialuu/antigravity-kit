@@ -1,0 +1,65 @@
+---
+title: Claude Code
+description: Layout runtime CafeKit đầy đủ cho dự án Claude Code.
+---
+
+<DocsHero
+  eyebrow="Platforms · Claude Code"
+  title="Runtime Claude Code native với hooks, agents, skills."
+  description="Installer ghi `.claude/` runtime đầy đủ kèm `CLAUDE.md` ở project root. Hooks enforce privacy, spec state, docs sync, session context."
+/>
+
+## Layout sau khi cài
+
+```
+.claude/
+├── skills/         # Workflow + domain skill packs (qs, brainstorm, specs, ...)
+├── agents/         # Subagent prompts (brainstormer, code-auditor, ...)
+├── hooks/          # Event-driven CommonJS scripts
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts (catalog generator, ...)
+├── references/     # Static lookup material
+├── runtime.json    # Locale, paths, docs.maxLoc, gemini model
+├── settings.json   # Hook bindings và permissions
+└── status.cjs      # Statusline renderer
+CLAUDE.md           # Operating instructions ở project root
+.mcp.json           # Optional MCP server config
+```
+
+## Hooks
+
+Claude Code có hooks event-driven trong `.claude/hooks/`:
+
+| Hook | Event | Purpose |
+|---|---|---|
+| `privacy-block.cjs` | `PreToolUse` | Chặn read path nhạy cảm cho đến khi user approve |
+| `inspect-block.cjs` | `PreToolUse` | Gate inspection scan diện rộng |
+| `spec-state.cjs` | `PostToolUse` | Từ chối task `done` khi chưa có verification receipt |
+| `docs-sync.cjs` | `SessionStart` | Flag missing docs, sync hash drift |
+| `session.cjs` | `SessionStart` | Inject session banner + context |
+| `usage.cjs` | `UserPromptSubmit` | Track token/usage hints |
+| `rules.cjs` | `UserPromptSubmit` | Inject dynamic per-prompt rules block |
+
+Xem [Runtime bundle](/docs/runtime) để biết chi tiết hook contract.
+
+## Commands
+
+Claude Code dùng namespace `hapo:`:
+
+```
+/hapo:qs          /hapo:brainstorm    /hapo:specs       /hapo:develop
+/hapo:test        /hapo:code-review   /hapo:sync        /hapo:debug
+/hapo:hotfix      /hapo:docs          /hapo:inspect     /hapo:git
+```
+
+Cộng tất cả domain skill dưới dạng `/hapo:<skill>`.
+
+## Detection
+
+Installer detect Claude Code khi có:
+
+- Thư mục `.claude/`
+- `CLAUDE.md` ở project root
+- `.mcp.json` ở project root
+
+Chạy lại installer là idempotent — file đã có sẽ được merge nơi nào an toàn, không ghi đè mù.

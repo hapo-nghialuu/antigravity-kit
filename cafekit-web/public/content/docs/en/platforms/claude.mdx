@@ -1,0 +1,65 @@
+---
+title: Claude Code
+description: Full CafeKit runtime layout for Claude Code projects.
+---
+
+<DocsHero
+  eyebrow="Platforms · Claude Code"
+  title="Native Claude Code runtime with hooks, agents, and skills."
+  description="The installer writes a complete `.claude/` runtime plus a project-level `CLAUDE.md`. Hooks enforce privacy, spec state, docs sync, and session context."
+/>
+
+## Installed layout
+
+```
+.claude/
+├── skills/         # Workflow + domain skill packs (qs, brainstorm, specs, ...)
+├── agents/         # Subagent prompts (brainstormer, code-auditor, ...)
+├── hooks/          # Event-driven CommonJS scripts
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts (catalog generator, etc.)
+├── references/     # Static lookup material
+├── runtime.json    # Locale, paths, docs.maxLoc, gemini model
+├── settings.json   # Hook bindings and permissions
+└── status.cjs      # Statusline renderer
+CLAUDE.md           # Project-level operating instructions
+.mcp.json           # Optional MCP server config
+```
+
+## Hooks
+
+Claude Code receives event-driven hooks in `.claude/hooks/`:
+
+| Hook | Event | Purpose |
+|---|---|---|
+| `privacy-block.cjs` | `PreToolUse` | Block reads of sensitive paths until user approves |
+| `inspect-block.cjs` | `PreToolUse` | Gate broad inspection scans |
+| `spec-state.cjs` | `PostToolUse` | Reject task `done` without verification receipt |
+| `docs-sync.cjs` | `SessionStart` | Flag missing docs, sync hash drift |
+| `session.cjs` | `SessionStart` | Inject session banner and context |
+| `usage.cjs` | `UserPromptSubmit` | Track token/usage hints |
+| `rules.cjs` | `UserPromptSubmit` | Inject dynamic per-prompt rules block |
+
+See [Runtime bundle](/docs/runtime) for hook contract details.
+
+## Commands
+
+Claude Code uses the `hapo:` namespace:
+
+```
+/hapo:qs          /hapo:brainstorm    /hapo:specs       /hapo:develop
+/hapo:test        /hapo:code-review   /hapo:sync        /hapo:debug
+/hapo:hotfix      /hapo:docs          /hapo:inspect     /hapo:git
+```
+
+Plus all domain skills under the same `/hapo:<skill>` form.
+
+## Detection
+
+The installer recognizes Claude Code when any of these exist:
+
+- `.claude/` directory
+- `CLAUDE.md` at project root
+- `.mcp.json` at project root
+
+Re-running the installer is idempotent — existing files are merged where safe, not overwritten blindly.

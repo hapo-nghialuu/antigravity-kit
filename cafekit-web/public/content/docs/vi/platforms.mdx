@@ -1,40 +1,31 @@
 ---
 title: Platforms
-description: Support runtime hiện tại cho Claude Code và OpenCode.
+description: Tổng quan runtime support cho Claude Code và OpenCode.
 ---
 
 <DocsHero
   eyebrow="Platforms"
-  title="Claude Code là primary. OpenCode đã supported."
-  description="Installer hiện tại có runtime files đầy đủ cho Claude Code và conversion command/agent cho OpenCode với shared Claude-compatible skills."
+  title="Claude Code và OpenCode đều có runtime self-contained riêng."
+  description="Installer detect target platform từ project markers và ghi runtime đầy đủ, độc lập. Chọn platform bên dưới để xem layout, hooks, plugins, commands chi tiết."
 />
 
 <PlatformMatrix />
 
-## Claude Code
+## Chọn platform
 
-Claude Code nhận full runtime:
+- [Claude Code](/docs/platforms/claude) — `.claude/` skills, agents, hooks, runtime, và `CLAUDE.md`.
+- [OpenCode](/docs/platforms/opencode) — `.opencode/` skills, agents, plugins, runtime, và `AGENTS.md`.
 
-- `.claude/skills`
-- `.claude/agents`
-- `.claude/hooks`
-- `.claude/settings.json`
-- `.claude/runtime.json`
-- `.claude/status.cjs`
-- root `CLAUDE.md`
+Mỗi platform self-contained: OpenCode không depend vào file `.claude/`, Claude Code cũng không depend vào file `.opencode/`.
 
-## OpenCode
+## Detection
 
-OpenCode nhận:
+| Platform | Markers |
+|---|---|
+| Claude Code | `.claude/`, `CLAUDE.md`, `.mcp.json` |
+| OpenCode | `.opencode/`, `AGENTS.md`, `opencode.json`, `opencode.jsonc` |
 
-- `.opencode/commands`
-- `.opencode/agents`
-- `.opencode/cafekit.json`
-- root `AGENTS.md`
-- merged `opencode.json`
-- shared `.claude/skills`, `.claude/rules`, `.claude/scripts`, `.claude/references`, `.claude/runtime.json`
-
-OpenCode command cố ý bỏ `hapo:`.
+Nếu detect cả hai, installer cho chọn từng target. Marker rỗng (vd `opencode.json: {}`) vẫn được coi là project marker hợp lệ.
 
 ## Future platforms
 

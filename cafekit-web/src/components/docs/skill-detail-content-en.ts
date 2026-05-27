@@ -1,6 +1,17 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsEn: SkillDetailMap = {
+  qs: {
+    title: 'QS',
+    command: '/hapo:qs',
+    category: 'Clarification',
+    summary: 'Clarification-only gate that turns vague requests into prioritized questions before brainstorm, specs, or develop. It never writes product code.',
+    when: ['The request is too vague to verify.', 'Scope, constraints, or acceptance criteria are unclear.', 'A spec or task lacks the answers needed to plan or implement.'],
+    flow: [['Capture', 'Read request, code context, and existing spec/task signals.'], ['Identify gaps', 'List unknowns blocking brainstorm-ready, spec-ready, or develop-ready state.'], ['Prioritize', 'Order questions by readiness impact and risk.'], ['Output', 'Write the prioritized question packet for the user or upstream agent.'], ['Gate', 'Mark the readiness state and recommend the next CafeKit skill.']],
+    output: 'A prioritized clarification packet plus a readiness verdict for the next workflow step.',
+    avoid: 'Do not implement, scaffold, edit product code, or assume answers. This skill is clarification-only.',
+    next: '/hapo:brainstorm or /hapo:specs once questions are answered',
+  },
   brainstorm: {
     title: 'Brainstorm',
     command: '/hapo:brainstorm',

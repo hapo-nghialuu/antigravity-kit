@@ -11,7 +11,7 @@ description: Câu hỏi thường gặp về runtime và workflow của CafeKit.
 
 ## OpenCode đã supported chưa?
 
-Có. Installer hiện tại tạo `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, và merge `opencode.json`. Skills vẫn nằm ở `.claude/skills` vì OpenCode đọc Claude-compatible skills.
+Có. Installer ghi runtime `.opencode/` self-contained với skills, agents, commands, rules, references, scripts, `runtime.json`, và TypeScript plugins trong `.opencode/plugins/`. Cũng ghi root `AGENTS.md` và merge `opencode.json`. OpenCode không chia sẻ file với `.claude/`.
 
 ## Task nào cũng cần `/hapo:specs`?
 

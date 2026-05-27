@@ -1,6 +1,17 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsVi: SkillDetailMap = {
+  qs: {
+    title: 'QS',
+    command: '/hapo:qs',
+    category: 'Clarification',
+    summary: 'Clarification-only gate biến request mơ hồ thành danh sách câu hỏi có ưu tiên trước khi brainstorm, specs, hoặc develop. Không viết product code.',
+    when: ['Request quá mơ hồ để verify.', 'Scope, constraints, hoặc acceptance criteria chưa rõ.', 'Spec hoặc task thiếu câu trả lời cần thiết để plan hoặc implement.'],
+    flow: [['Capture', 'Đọc request, code context, và signal từ spec/task hiện có.'], ['Identify gaps', 'Liệt kê unknowns chặn brainstorm-ready, spec-ready, hoặc develop-ready state.'], ['Prioritize', 'Sắp xếp câu hỏi theo readiness impact và risk.'], ['Output', 'Viết packet câu hỏi đã ưu tiên cho user hoặc upstream agent.'], ['Gate', 'Mark readiness state và đề xuất CafeKit skill tiếp theo.']],
+    output: 'Packet clarification có ưu tiên kèm readiness verdict cho bước workflow tiếp theo.',
+    avoid: 'Không implement, scaffold, sửa product code, hoặc tự đoán câu trả lời. Skill này chỉ làm clarification.',
+    next: '/hapo:brainstorm hoặc /hapo:specs sau khi câu hỏi đã có trả lời',
+  },
   brainstorm: {
     title: 'Brainstorm',
     command: '/hapo:brainstorm',

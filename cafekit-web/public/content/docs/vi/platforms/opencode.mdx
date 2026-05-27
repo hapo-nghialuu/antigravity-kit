@@ -1,0 +1,68 @@
+---
+title: OpenCode
+description: Runtime CafeKit self-contained cho dự án OpenCode.
+---
+
+<DocsHero
+  eyebrow="Platforms · OpenCode"
+  title="Runtime `.opencode/` self-contained với TypeScript plugins."
+  description="CafeKit cài runtime OpenCode hoàn chỉnh, không chia sẻ file với `.claude/`. Hooks được port thành plugin TypeScript có type, load lúc session start."
+/>
+
+## Layout sau khi cài
+
+```
+.opencode/
+├── skills/         # Skill packs self-contained
+├── agents/         # Subagent prompts (không có hapo: prefix)
+├── commands/       # Slash commands không có hapo: prefix
+├── plugins/        # TypeScript plugins (xem bên dưới)
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts
+├── references/     # Static lookup material
+├── runtime.json    # Locale, paths, docs.maxLoc, gemini model
+├── cafekit.json    # CafeKit marker + version
+└── package.json    # Khai báo @opencode-ai/plugin
+AGENTS.md           # Operating instructions ở project root
+opencode.json       # Được merge bởi installer (file rỗng vẫn hợp lệ)
+```
+
+Sau khi cài, dependency của plugin được install tự động bằng `bun install` trong `.opencode/`.
+
+## TypeScript plugins
+
+Hooks Claude Code được port thành OpenCode plugin có type:
+
+| Plugin | OpenCode event | Purpose |
+|---|---|---|
+| `privacy-block.ts` | `tool.execute.before` | Chặn read path nhạy cảm cho đến khi user approve |
+| `inspect-block.ts` | `tool.execute.before` | Gate inspection scan diện rộng |
+| `state.ts` | `tool.execute.after` | Từ chối task `done` khi chưa có verification receipt |
+| `docs-sync.ts` | `session.created` | Flag missing docs, sync hash drift |
+| `session.ts` | `session.created` | Inject session banner + context |
+| `usage.ts` | `session.created` | Track token/usage hints |
+| `rules.ts` | `session.created` | Refresh dynamic rules block bên trong `AGENTS.md` |
+
+OpenCode không có channel inject per-prompt, nên `rules.ts` upsert managed block trong `AGENTS.md` giữa `<!-- CAFEKIT DYNAMIC RULES START -->` và `<!-- CAFEKIT DYNAMIC RULES END -->`. OpenCode tự load `AGENTS.md` mỗi session, nên dynamic rules vẫn tới model lúc session start.
+
+## Commands
+
+OpenCode cố ý bỏ prefix `hapo:`:
+
+```
+/qs           /brainstorm    /specs       /develop
+/test         /code-review   /sync        /debug
+/hotfix       /docs          /inspect     /git
+```
+
+Cộng tất cả domain skill dưới dạng `/<skill>`.
+
+## Detection
+
+Installer detect OpenCode khi có:
+
+- Thư mục `.opencode/`
+- `AGENTS.md` ở project root
+- `opencode.json` hoặc `opencode.jsonc` ở project root (file rỗng cũng tính)
+
+Nếu chỉ có `opencode.json` rỗng, installer coi đó là marker hợp lệ và populate `$schema`, `instructions: ["AGENTS.md"]`, kèm block `permission` ở lần cài đầu.

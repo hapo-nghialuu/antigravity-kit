@@ -11,7 +11,7 @@ description: Common questions about CafeKit's runtime and workflow.
 
 ## Is OpenCode supported?
 
-Yes. The current installer supports OpenCode by generating `.opencode/commands`, `.opencode/agents`, root `AGENTS.md`, and merged `opencode.json`. Skills remain in `.claude/skills` because OpenCode reads Claude-compatible skills.
+Yes. The installer writes a self-contained `.opencode/` runtime with skills, agents, commands, rules, references, scripts, `runtime.json`, and TypeScript plugins under `.opencode/plugins/`. It also writes a root `AGENTS.md` and merges `opencode.json`. OpenCode does not share files with `.claude/`.
 
 ## Should every task start with `/hapo:specs`?
 

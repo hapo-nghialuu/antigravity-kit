@@ -13,6 +13,8 @@ description: Understand the installed files, hooks, state checks, and validators
 
 ## Hooks
 
+Claude Code uses CommonJS hooks under `.claude/hooks/`. OpenCode uses TypeScript plugins under `.opencode/plugins/` — see [OpenCode platform](/docs/platforms/opencode) for the plugin-to-hook mapping.
+
 | Hook | Purpose |
 |---|---|
 | `privacy-block.cjs` | Requires user approval for sensitive files such as `.env`, keys, credentials, and tokens. |

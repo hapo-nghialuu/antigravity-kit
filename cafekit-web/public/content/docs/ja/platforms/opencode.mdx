@@ -1,0 +1,68 @@
+---
+title: OpenCode
+description: OpenCode project 向け self-contained な CafeKit runtime。
+---
+
+<DocsHero
+  eyebrow="Platforms · OpenCode"
+  title="TypeScript plugins を持つ self-contained `.opencode/` runtime。"
+  description="CafeKit は `.claude/` とファイルを共有しない完全な OpenCode runtime を install します。Hooks は型付きの plugin に port され、session start で読み込まれます。"
+/>
+
+## インストール後の layout
+
+```
+.opencode/
+├── skills/         # Self-contained skill packs
+├── agents/         # Subagent prompts (hapo: prefix なし)
+├── commands/       # Slash commands (hapo: prefix なし)
+├── plugins/        # TypeScript plugins (下記参照)
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts
+├── references/     # Static lookup material
+├── runtime.json    # Locale、paths、docs.maxLoc、gemini model
+├── cafekit.json    # CafeKit marker + version
+└── package.json    # @opencode-ai/plugin を宣言
+AGENTS.md           # Project ルートの operating instructions
+opencode.json       # Installer がマージ（空ファイルも有効）
+```
+
+Install 後、plugin の依存は `.opencode/` 内で `bun install` により自動でインストールされます。
+
+## TypeScript plugins
+
+Claude Code の hooks は型付き OpenCode plugin に port されています。
+
+| Plugin | OpenCode event | Purpose |
+|---|---|---|
+| `privacy-block.ts` | `tool.execute.before` | User 承認まで sensitive path の read をブロック |
+| `inspect-block.ts` | `tool.execute.before` | 広範な inspection scan を gate |
+| `state.ts` | `tool.execute.after` | Verification receipt なしの task `done` を拒否 |
+| `docs-sync.ts` | `session.created` | Missing docs と sync hash drift を flag |
+| `session.ts` | `session.created` | Session banner と context を inject |
+| `usage.ts` | `session.created` | Token/usage hints を track |
+| `rules.ts` | `session.created` | `AGENTS.md` 内 dynamic rules block を refresh |
+
+OpenCode には per-prompt の inject channel がないため、`rules.ts` は `AGENTS.md` 内 `<!-- CAFEKIT DYNAMIC RULES START -->` と `<!-- CAFEKIT DYNAMIC RULES END -->` の間に managed block を upsert します。OpenCode は session ごとに `AGENTS.md` を自動 load するので、dynamic rules は session 開始時に model に届きます。
+
+## Commands
+
+OpenCode は意図的に `hapo:` prefix を省略します。
+
+```
+/qs           /brainstorm    /specs       /develop
+/test         /code-review   /sync        /debug
+/hotfix       /docs          /inspect     /git
+```
+
+加えて全ての domain skill が `/<skill>` 形式で利用可能です。
+
+## Detection
+
+Installer は以下があれば OpenCode を認識します。
+
+- `.opencode/` ディレクトリ
+- project ルートの `AGENTS.md`
+- project ルートの `opencode.json` または `opencode.jsonc`（空ファイルも対象）
+
+`opencode.json` が空のみの場合、installer はそれを valid marker として扱い、初回 install で `$schema`、`instructions: ["AGENTS.md"]`、`permission` block を populate します。
