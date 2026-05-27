@@ -32,8 +32,8 @@ const OPENCODE_COMMAND_TEMPLATES = [
     description: 'Explore and narrow an idea before writing a CafeKit spec.'
   },
   {
-    fileName: 'question.md',
-    skillName: 'question',
+    fileName: 'qs.md',
+    skillName: 'qs',
     agent: 'brainstormer',
     subtask: true,
     description: 'Clarify requirements, scope, acceptance criteria, and workflow readiness.'
@@ -664,6 +664,11 @@ function readJsonWithComments(filePath) {
   const rawContent = fs.readFileSync(filePath, 'utf8');
   const withoutBlockComments = rawContent.replace(/\/\*[\s\S]*?\*\//g, '');
   const withoutLineComments = withoutBlockComments.replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  // Empty opencode.json is a valid project marker; treat as empty object.
+  if (withoutLineComments.trim() === '') {
+    return {};
+  }
 
   return JSON.parse(withoutLineComments);
 }
