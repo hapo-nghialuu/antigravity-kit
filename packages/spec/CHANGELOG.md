@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-26
+
+### Changed (breaking)
+- OpenCode installs are now self-contained under `.opencode/`. Skills, rules, scripts, references, `runtime.json`, and `.gitignore` previously written to `.claude/` are now installed to `.opencode/skills`, `.opencode/rules`, `.opencode/scripts`, `.opencode/references`, `.opencode/runtime.json`, and `.opencode/.gitignore`.
+- Text assets copied into `.opencode/` are rewritten on copy so internal references and Windows path variants point at the OpenCode runtime layout (`CLAUDE.md` → `AGENTS.md`, quoted `.claude` literals → `.opencode`).
+- Installer now prints a warning when an existing `.claude/` directory is detected during an OpenCode-only install so users can clean up the legacy layout manually.
+
+### Fixed
+- OpenCode skill installs now strip the Claude-only `hapo:` prefix from `SKILL.md` `name` frontmatter so skills satisfy OpenCode's strict `^[a-z0-9]+(-[a-z0-9]+)*$` validation and match the containing directory name.
+
+### Migration
+- Existing OpenCode users upgrading from 0.8.17 may safely delete the legacy `.claude/` directory after re-running the installer; the OpenCode runtime no longer reads from it.
+- Combined installs (Claude + OpenCode) continue to write both `.claude/` and `.opencode/` as independent self-contained runtimes.
+
 ## [0.8.17] - 2026-05-26
 
 ### Changed

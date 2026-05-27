@@ -132,13 +132,16 @@ async function runStaticSemanticTests() {
         !content.includes("folder: '.agent'"),
     },
     {
-      label: "OpenCode install reuses Claude-compatible skill support files",
+      label: "OpenCode install is self-contained under .opencode/",
       file: "bin/install.js",
       assert: (content) =>
-        content.includes("skillsDir: '.claude/skills'") &&
-        content.includes("getClaudeSupportTargetDir(platformKey, 'scripts')") &&
-        content.includes("getClaudeSupportTargetDir(platformKey, 'rules')") &&
-        content.includes("isClaudeCompatibleRuntime(platformKey)"),
+        content.includes("skillsDir: '.opencode/skills'") &&
+        content.includes("skillsRef: '.opencode/skills'") &&
+        content.includes("getRuntimeSupportTargetDir(platformKey, 'scripts')") &&
+        content.includes("getRuntimeSupportTargetDir(platformKey, 'rules')") &&
+        content.includes("isClaudeCompatibleRuntime(platformKey)") &&
+        content.includes("normalizeOpenCodeBody") &&
+        content.includes("warnLegacyClaudeFolder"),
     },
     {
       label: "OpenCode has dedicated project instruction template",
@@ -896,7 +899,7 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {
       failures.push("OpenCode skill command wrappers were not installed");
     }
-    if (!specsCommand.includes(".claude/skills/specs/SKILL.md")) {
+    if (!specsCommand.includes(".opencode/skills/specs/SKILL.md")) {
       failures.push("OpenCode specs command does not route to the CafeKit specs skill");
     }
     if (!commandFrontmatter.includes('agent: "spec-maker"') || !commandFrontmatter.includes("subtask: true")) {
@@ -920,17 +923,20 @@ async function runOpenCodeInstallerFixtureTests() {
     if (opencodeConfig.model !== "anthropic/claude-sonnet-4-20250514") {
       failures.push("OpenCode model prompt did not configure opencode.json");
     }
-    if (!(await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md")))) {
-      failures.push("OpenCode install did not install Claude-compatible skills");
+    if (!(await fileExists(join(root, ".opencode", "skills", "docs", "SKILL.md")))) {
+      failures.push("OpenCode install did not install skills under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "rules", "skill-workflow-routing.md")))) {
-      failures.push("OpenCode install did not install shared routing rules");
+    if (!(await fileExists(join(root, ".opencode", "rules", "skill-workflow-routing.md")))) {
+      failures.push("OpenCode install did not install routing rules under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "scripts", "generate-skill-catalog.cjs")))) {
-      failures.push("OpenCode install did not install shared scripts");
+    if (!(await fileExists(join(root, ".opencode", "scripts", "generate-skill-catalog.cjs")))) {
+      failures.push("OpenCode install did not install scripts under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "runtime.json")))) {
-      failures.push("OpenCode install did not install shared runtime.json");
+    if (!(await fileExists(join(root, ".opencode", "runtime.json")))) {
+      failures.push("OpenCode install did not install runtime.json under .opencode/");
+    }
+    if (await fileExists(join(root, ".claude"))) {
+      failures.push("OpenCode install must not create .claude/ directory");
     }
     if (!agentsMd.includes("Primary operating instructions for OpenCode")) {
       failures.push("OpenCode AGENTS.md instructions were not written");

@@ -4,9 +4,12 @@
  * CafeKit Installer
  * Multi-platform installer for AI coding assistants
  *
- * Supported platforms:
- * - claude: Claude Code (.claude/)
- * - opencode: OpenCode (.opencode/)
+ * Supported platforms (each install is fully self-contained):
+ * - claude: Claude Code → .claude/ (skills, rules, scripts, references, runtime.json)
+ * - opencode: OpenCode → .opencode/ (same layout, content rewritten on copy)
+ *
+ * Selecting both creates both folders independently. There is no shared
+ * runtime directory between platforms.
  *
  * To add a new platform:
  * 1. Add to PLATFORMS registry below
@@ -175,9 +178,9 @@ const PLATFORMS = {
     folder: '.opencode',
     detectFiles: ['.opencode', 'opencode.json', 'opencode.jsonc'],
     commandsDir: '.opencode/commands',
-    skillsDir: '.claude/skills',
+    skillsDir: '.opencode/skills',
     agentsDir: '.opencode/agents',
-    skillsRef: '.claude/skills',
+    skillsRef: '.opencode/skills',
     commandPrefix: '/',
     sourceDir: 'claude',
     sourceSubdir: 'archive-command'
@@ -223,15 +226,27 @@ function getPlatformKeys() {
   return Object.keys(PLATFORMS);
 }
 
+// Warn opencode-only installs when a legacy .claude/ folder remains from
+// pre-0.9.0 installs (when OpenCode shared the .claude/ runtime). We do not
+// delete anything; user must remove it explicitly to opt in.
+function warnLegacyClaudeFolder(platforms) {
+  if (!platforms.includes('opencode')) return;
+  if (platforms.includes('claude')) return;
+  if (!fs.existsSync('.claude')) return;
+
+  console.log('');
+  console.log('⚠ Legacy .claude/ folder detected.');
+  console.log('  As of CafeKit 0.9.0, OpenCode installs are self-contained under .opencode/.');
+  console.log('  The .claude/ folder from older installs is no longer used by OpenCode.');
+  console.log('  After this install finishes you can remove it: rm -rf .claude');
+  console.log('');
+}
+
 function isClaudeCompatibleRuntime(platformKey) {
   return platformKey === 'claude' || platformKey === 'opencode';
 }
 
-function getClaudeSupportTargetDir(platformKey, subdir) {
-  if (platformKey === 'opencode') {
-    return path.join('.claude', subdir);
-  }
-
+function getRuntimeSupportTargetDir(platformKey, subdir) {
   return path.join(PLATFORMS[platformKey].folder, subdir);
 }
 
@@ -291,10 +306,44 @@ function formatOpenCodeValue(value) {
   return JSON.stringify(String(value || ''));
 }
 
+// Rewrite Claude-runtime path references to OpenCode equivalents.
+// Applied to every text asset copied into .opencode/ so the installed
+// content points at the self-contained OpenCode runtime layout.
 function normalizeOpenCodeBody(content) {
   return content
-    .replace(/\.claude\/agents\//g, '.opencode/agents/')
-    .replace(/CLAUDE\.md/g, 'AGENTS.md');
+    // Subdirectory references with or without trailing slash, e.g. `.claude/skills/foo` and `.claude/skills`
+    .replace(/\.claude\/(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode/$1')
+    // Windows-style backslash variant
+    .replace(/\.claude\\(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode\\$1')
+    // Concrete runtime files
+    .replace(/\.claude\/runtime\.json/g, '.opencode/runtime.json')
+    .replace(/\.claude\/ROUTING\.md/g, '.opencode/ROUTING.md')
+    .replace(/\.claude\/\.env/g, '.opencode/.env')
+    // Quoted literal `.claude` used in script path-builders (e.g. `path.join(cwd, '.claude', 'skills')`).
+    .replace(/(['"])\.claude\1/g, '$1.opencode$1')
+    // Backtick-quoted bare `.claude` in prose
+    .replace(/`\.claude`/g, '`.opencode`')
+    // CLAUDE.md filename references
+    .replace(/\bCLAUDE\.md\b/g, 'AGENTS.md')
+    // OpenCode skill name regex is ^[a-z0-9]+(-[a-z0-9]+)*$ — strip the
+    // Claude-only `hapo:` prefix so SKILL.md frontmatter passes validation
+    // and matches the containing directory name.
+    .replace(/^(\s*name:\s*)hapo:([a-z0-9-]+)\s*$/gm, '$1$2');
+}
+
+const TEXT_REWRITE_EXTENSIONS = new Set([
+  '.md', '.mdx', '.txt', '.json', '.cjs', '.js', '.mjs', '.ts', '.sh', '.yml', '.yaml'
+]);
+
+function isTextAsset(filePath) {
+  return TEXT_REWRITE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+function getCopyOptions(platformKey, baseOptions = {}) {
+  if (platformKey === 'opencode') {
+    return { ...baseOptions, transform: normalizeOpenCodeBody };
+  }
+  return baseOptions;
 }
 
 function getOpenCodeToolEntries(toolsValue) {
@@ -380,7 +429,7 @@ function createOpenCodeSkillCommandContent(command) {
   lines.push(
     '---',
     '',
-    `Use the CafeKit skill at \`.claude/skills/${command.skillName}/SKILL.md\`.`,
+    `Use the CafeKit skill at \`.opencode/skills/${command.skillName}/SKILL.md\`.`,
     '',
     'Read that skill first, then execute its workflow with these arguments:',
     '',
@@ -480,7 +529,13 @@ function copyRecursive(src, dest, options = {}) {
     }
 
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
+
+    if (typeof options.transform === 'function' && isTextAsset(src)) {
+      const original = fs.readFileSync(src, 'utf8');
+      fs.writeFileSync(dest, options.transform(original, src), 'utf8');
+    } else {
+      fs.copyFileSync(src, dest);
+    }
   }
 }
 
@@ -640,7 +695,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
 
     if (fs.existsSync(specSkillSource)) {
       const skillExisted = fs.existsSync(specSkillDest);
-      copyRecursive(specSkillSource, specSkillDest, options);
+      copyRecursive(specSkillSource, specSkillDest, getCopyOptions(platformKey, options));
       results.installedSkills++;
 
       if (shouldOverwriteManagedFiles && skillExisted) {
@@ -716,7 +771,7 @@ function copyPlatformFiles(platformKey, results, options = {}) {
 
         if (fs.existsSync(skillSource)) {
           const skillExisted = fs.existsSync(skillDest);
-          copyRecursive(skillSource, skillDest, options);
+          copyRecursive(skillSource, skillDest, getCopyOptions(platformKey, options));
           results.installedSkills++;
 
           if (shouldOverwriteManagedFiles && skillExisted) {
@@ -782,9 +837,9 @@ function copyPlatformFiles(platformKey, results, options = {}) {
       // Copy agent reference manuals (debugger manuals, etc.) recursively
       const refsSource = path.join(__dirname, '../src', platform.sourceDir, 'references');
       if (fs.existsSync(refsSource)) {
-        const refsDest = getClaudeSupportTargetDir(platformKey, 'references');
+        const refsDest = getRuntimeSupportTargetDir(platformKey, 'references');
         const refsExisted = fs.existsSync(refsDest);
-        copyRecursive(refsSource, refsDest, options);
+        copyRecursive(refsSource, refsDest, getCopyOptions(platformKey, options));
 
         if (shouldOverwriteManagedFiles && refsExisted) {
           console.log(`  ↻ Agent reference manuals updated`);
@@ -803,9 +858,9 @@ function copyPlatformFiles(platformKey, results, options = {}) {
     // Copy native scripts (browser-tool, docs-fetch, validate-docs)
     const scriptsSourceDir = path.join(__dirname, '../src/claude/scripts');
     if (fs.existsSync(scriptsSourceDir)) {
-      const scriptsDest = getClaudeSupportTargetDir(platformKey, 'scripts');
+      const scriptsDest = getRuntimeSupportTargetDir(platformKey, 'scripts');
       const scriptsExisted = fs.existsSync(scriptsDest);
-      copyRecursive(scriptsSourceDir, scriptsDest, options);
+      copyRecursive(scriptsSourceDir, scriptsDest, getCopyOptions(platformKey, options));
 
       if (shouldOverwriteManagedFiles && scriptsExisted) {
         console.log(`  ↻ Native scripts updated`);
@@ -876,6 +931,9 @@ function copyRoutingFile(platformKey, results, options = {}) {
 
     let content = fs.readFileSync(source, 'utf8');
     content = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
+    if (platformKey === 'opencode') {
+      content = normalizeOpenCodeBody(content);
+    }
     fs.writeFileSync(dest, content);
 
     if (destinationExists && shouldOverwriteManagedFiles) {
@@ -889,14 +947,13 @@ function copyRoutingFile(platformKey, results, options = {}) {
 }
 
 function createOpenCodeAgentsContent(sourceContent) {
-  const adaptedContent = sourceContent
+  const adaptedContent = normalizeOpenCodeBody(sourceContent)
     .replace(/^# CLAUDE\.md/m, '# AGENTS.md')
     .replace(
       'Primary operating instructions for Claude Code or any AI agent using this CafeKit runtime.',
       'Primary operating instructions for OpenCode or any AI agent using this CafeKit runtime.'
     )
-    .replace(/Claude Code/g, 'OpenCode')
-    .replace(/CLAUDE\.md/g, 'AGENTS.md');
+    .replace(/Claude Code/g, 'OpenCode');
 
   const openCodeRuntimeBlock = [
     '## OpenCode Runtime Mapping',
@@ -904,8 +961,8 @@ function createOpenCodeAgentsContent(sourceContent) {
     '- OpenCode project instructions live in `AGENTS.md`.',
     '- CafeKit commands live in `.opencode/commands/` and can be run as OpenCode slash commands.',
     '- CafeKit subagents live in `.opencode/agents/` using OpenCode frontmatter.',
-    '- CafeKit skills intentionally live in `.claude/skills/` because OpenCode reads Claude-compatible skills natively.',
-    '- Shared CafeKit support files live in `.claude/rules/`, `.claude/scripts/`, `.claude/references/`, and `.claude/runtime.json`.',
+    '- CafeKit skills live in `.opencode/skills/` and are read natively by OpenCode.',
+    '- CafeKit support files live in `.opencode/rules/`, `.opencode/scripts/`, `.opencode/references/`, and `.opencode/runtime.json`.',
     '- OpenCode config is merged into `opencode.json`; keep project-specific model/provider choices there.',
     ''
   ].join('\n');
@@ -931,7 +988,7 @@ function getOpenCodeAgentsTemplateContent() {
   const openCodeTemplate = path.join(__dirname, '../src/opencode/AGENTS.md');
 
   if (fs.existsSync(openCodeTemplate)) {
-    return fs.readFileSync(openCodeTemplate, 'utf8');
+    return normalizeOpenCodeBody(fs.readFileSync(openCodeTemplate, 'utf8'));
   }
 
   const claudeTemplate = path.join(__dirname, '../src/claude/CLAUDE.md');
@@ -1055,7 +1112,7 @@ function copyOpenCodeSharedRuntimeFiles(platformKey, results, options = {}) {
   runtimeFiles.forEach(relPath => {
     const srcPath = path.join(srcBase, relPath);
     const targetRelPath = relPath === 'gitignore' ? '.gitignore' : relPath;
-    const targetPath = path.join('.claude', targetRelPath);
+    const targetPath = path.join('.opencode', targetRelPath);
 
     if (!fs.existsSync(srcPath)) {
       console.log(`  ⚠ Runtime file not found: ${relPath}`);
@@ -1068,7 +1125,8 @@ function copyOpenCodeSharedRuntimeFiles(platformKey, results, options = {}) {
 
     if (shouldCopy) {
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-      fs.copyFileSync(srcPath, targetPath);
+      const sourceContent = fs.readFileSync(srcPath, 'utf8');
+      fs.writeFileSync(targetPath, normalizeOpenCodeBody(sourceContent), 'utf8');
 
       if (targetExists) {
         console.log(`  ↻ Shared runtime updated: ${targetRelPath}`);
@@ -1449,10 +1507,10 @@ function copyRulesDirectory(platformKey, results, options = {}) {
   if (!isClaudeCompatibleRuntime(platformKey)) return;
 
   const source = path.join(__dirname, '../src/claude/rules');
-  const dest = getClaudeSupportTargetDir(platformKey, 'rules');
+  const dest = getRuntimeSupportTargetDir(platformKey, 'rules');
 
   if (fs.existsSync(source)) {
-    copyRecursive(source, dest, { upgrade: true });
+    copyRecursive(source, dest, getCopyOptions(platformKey, { upgrade: true }));
     console.log(`  ↻ rules/ directory overwritten`);
     results.updated++;
   } else {
@@ -1563,26 +1621,37 @@ async function promptGeminiAPIKey() {
   });
 }
 
-function configureGeminiKey(apiKey) {
-  try {
-    const targetDir = path.join(process.cwd(), '.claude');
-    const localEnvFile = path.join(targetDir, '.env');
+function configureGeminiKey(apiKey, platforms = ['claude']) {
+  const envBody = `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`;
+  const targets = platforms
+    .filter(key => PLATFORMS[key])
+    .map(key => PLATFORMS[key].folder);
 
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-
-    // Luôn ghi trực tiếp key vào rốn của não bộ AI
-    fs.writeFileSync(localEnvFile, `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`, { mode: 0o600 });
-    console.log('  ✓ Gemini API key configured securely in project (.claude/.env)');
-
-    return true;
-  } catch (error) {
-    console.log('  ✗ Failed to configure Gemini API key');
-    console.log(`  Error: ${error.message}`);
-    console.log('  You can manually set: export GEMINI_API_KEY="your-key"');
-    return false;
+  if (targets.length === 0) {
+    targets.push('.claude');
   }
+
+  let success = true;
+  for (const folder of targets) {
+    try {
+      const targetDir = path.join(process.cwd(), folder);
+      const localEnvFile = path.join(targetDir, '.env');
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      fs.writeFileSync(localEnvFile, envBody, { mode: 0o600 });
+      console.log(`  ✓ Gemini API key configured securely in project (${folder}/.env)`);
+    } catch (error) {
+      success = false;
+      console.log('  ✗ Failed to configure Gemini API key');
+      console.log(`  Error: ${error.message}`);
+      console.log('  You can manually set: export GEMINI_API_KEY="your-key"');
+    }
+  }
+
+  return success;
 }
 
 async function setupGeminiCLI(platforms) {
@@ -1604,7 +1673,7 @@ async function setupGeminiCLI(platforms) {
   // Always prompt for API config since we need it for hapo:test Multimodal
   const apiKey = await promptGeminiAPIKey();
   if (apiKey) {
-    configureGeminiKey(apiKey);
+    configureGeminiKey(apiKey, platforms);
   } else {
     console.log('\n  ℹ Skipped API key configuration');
     console.log('  Set later: export GEMINI_API_KEY="your-key"');
@@ -1650,6 +1719,8 @@ async function main() {
   // Show detected/selected platforms
   const platformNames = platforms.map(key => PLATFORMS[key].name).join(', ');
   console.log(`\nInstalling for: ${platformNames}`);
+
+  warnLegacyClaudeFolder(platforms);
 
   if (installerOptions.upgrade) {
     console.log('Mode: upgrade (overwrite managed files)\n');
@@ -1749,7 +1820,8 @@ async function main() {
     } else {
       console.log('\n  2. CafeKit skills and AGENTS.md are installed for the selected runtime');
     }
-    console.log('  3. Project API Keys are now securely isolated in .claude/.env');
+    const envHosts = platforms.map(key => `${PLATFORMS[key].folder}/.env`).join(' and ');
+    console.log(`  3. Project API Keys are now securely isolated in ${envHosts}`);
     if (!installerOptions.upgrade) {
       console.log('  4. To refresh managed templates later, run installer with --upgrade');
     }
