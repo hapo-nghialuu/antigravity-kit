@@ -2,11 +2,11 @@ import { ArrowRight, CheckCircle2, CircleDashed, FileCheck2, GitBranch, ShieldCh
 import { cn } from '@/lib/utils';
 
 const flowSteps = [
-  ['/hapo:brainstorm', 'Scout unclear ideas before a spec exists.'],
-  ['/hapo:specs', 'Write requirements, research, design, and task packets.'],
-  ['/hapo:develop', 'Implement one approved task boundary at a time.'],
+  ['/hapo:specs', 'Turn intent into scope, evidence, requirements, design, and task packets.'],
+  ['/hapo:develop', 'Implement one approved task packet, not the whole chat memory.'],
   ['/hapo:test', 'Run exact evidence commands and runtime checks.'],
-  ['/hapo:code-review', 'Review for correctness, regressions, security, and drift.'],
+  ['/hapo:code-review', 'Review for spec compliance, regressions, security, and drift.'],
+  ['/hapo:sync', 'Update task_registry and task markdown only after proof, or audit drift.'],
 ];
 
 const runtimeFiles = [
@@ -55,12 +55,18 @@ export function DocsHero({
 export function CommandFlow() {
   return (
     <div className="not-prose my-8 rounded-[24px] border border-border bg-card p-4 shadow-[0_24px_70px_-55px_rgba(16,24,32,0.7)] sm:p-5">
-      <div className="grid gap-3 lg:grid-cols-5">
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#006242] dark:text-[#A7C5EE]">Spec-driven delivery path</div>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">The docs should always point back to this contract loop.</p>
+        </div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {flowSteps.map(([command, detail], index) => (
           <div key={command} className="relative rounded-2xl border border-[#006242]/15 bg-[#EEF5F1] p-4 dark:bg-[#14252A]">
             <div className="mb-4 flex items-center justify-between gap-3">
               <span className="font-mono text-xs font-semibold text-[#006242] dark:text-[#A7C5EE]">{command}</span>
-              {index < flowSteps.length - 1 ? <ArrowRight className="hidden h-4 w-4 text-[#006242]/50 lg:block" /> : <CheckCircle2 className="h-4 w-4 text-[#006242]" />}
+              {index < flowSteps.length - 1 ? <ArrowRight className="hidden h-4 w-4 text-[#006242]/50 xl:block" /> : <CheckCircle2 className="h-4 w-4 text-[#006242]" />}
             </div>
             <p className="text-sm leading-6 text-muted-foreground">{detail}</p>
           </div>

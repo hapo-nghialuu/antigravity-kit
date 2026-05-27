@@ -93,7 +93,7 @@ export const proseComponents = {
       : <code className="rounded border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground" {...props} />
   ),
   blockquote: (props: ComponentPropsWithoutRef<'blockquote'>) => <blockquote className="my-6 rounded-r-2xl border-l-4 border-primary/25 bg-muted/40 py-3 pl-4 text-muted-foreground" {...props} />,
-  table: (props: ComponentPropsWithoutRef<'table'>) => <div className="my-6 overflow-x-auto rounded-2xl border border-border"><table className="w-full border-collapse text-sm" {...props} /></div>,
+  table: (props: ComponentPropsWithoutRef<'table'>) => <div className="not-prose my-6 overflow-x-auto rounded-2xl border border-border"><table className="m-0 w-full border-collapse text-sm" {...props} /></div>,
   thead: (props: ComponentPropsWithoutRef<'thead'>) => <thead className="border-b border-border bg-muted/50" {...props} />,
   th: (props: ComponentPropsWithoutRef<'th'>) => <th className="px-4 py-3 text-left font-semibold text-foreground" {...props} />,
   td: (props: ComponentPropsWithoutRef<'td'>) => <td className="border-b border-border px-4 py-3 text-muted-foreground last:border-0" {...props} />,

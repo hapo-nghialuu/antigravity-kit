@@ -1,12 +1,6 @@
-import { CheckCircle2, ClipboardCheck, Code2, FileText, GitBranch, ShieldCheck, Sparkles, TestTube2 } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, Code2, FileText, GitBranch, ShieldCheck, TestTube2 } from 'lucide-react';
 
 const stages = [
-  {
-    icon: Sparkles,
-    command: '/hapo:brainstorm',
-    title: 'Clarify',
-    detail: 'Scout the repo, pressure-test assumptions, and turn a loose idea into spec-ready decisions.',
-  },
   {
     icon: FileText,
     command: '/hapo:specs',
@@ -36,6 +30,12 @@ const stages = [
     command: '/hapo:code-review',
     title: 'Review',
     detail: 'Check spec compliance, code quality, edge cases, security, and regression risk before closeout.',
+  },
+  {
+    icon: GitBranch,
+    command: '/hapo:sync',
+    title: 'Sync',
+    detail: 'Update task_registry and task markdown only after proof, or audit drift before continuing.',
   },
 ];
 

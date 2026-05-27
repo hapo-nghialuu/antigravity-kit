@@ -17,12 +17,13 @@ Luồng delivery chính được giải thích kỹ ở [Workflow chính](/vi/do
 
 | Command | Dùng khi |
 |---|---|
-| `/hapo:brainstorm` | Ý tưởng chưa rõ, architecture còn mở, hoặc cần pressure-test scope. |
 | `/hapo:specs` | Cần requirements, research, design, tasks, validation. |
 | `/hapo:develop` | Spec hoặc task file đã approved và sẵn sàng implement. |
 | `/hapo:test` | Cần evidence từ commands, build, tests, UI checks, runtime reachability. |
 | `/hapo:code-review` | Cần adversarial review cho bugs, security, drift, missing proof. |
-| `/hapo:sync` | `spec.json` và task markdown lệch hoặc cần audit. |
+| `/hapo:sync` | Task status, `task_registry`, và task markdown cần update sau proof, hoặc cần audit drift. |
+
+Dùng `/hapo:brainstorm` trước path này chỉ khi idea chưa rõ, architecture còn mở, hoặc cần pressure-test scope.
 
 ## Bug và incident
 

@@ -14,7 +14,7 @@ description: Commands, package facts, files, và state values.
 | Field | Value |
 |---|---|
 | Package | `@haposoft/cafekit` |
-| Current package version | `0.8.17` |
+| Current package version | `0.9.0` |
 | Binary | `cafekit` |
 | Bin file | `packages/spec/bin/install.js` |
 | Node engine | `>=18.0.0` |
@@ -30,11 +30,14 @@ description: Commands, package facts, files, và state values.
 | `/hapo:develop` | `/develop` | Implement approved task packets. |
 | `/hapo:test` | `/test` | Task-aware verification. |
 | `/hapo:code-review` | `/code-review` | Review regressions và security. |
+| `/hapo:sync` | — | Sync task status, `task_registry`, task markdown, phase, hoặc audit drift. |
 | `/hapo:debug` | `/debug` | Diagnose trước khi fix. |
 | `/hapo:hotfix` | `/hotfix` | Narrow diagnosed fixes. |
 | `/hapo:docs` | `/docs` | Create, update, summarize, reconstruct docs. |
 | `/hapo:inspect` | `/inspect` | Scout source files và structure. |
 | `/hapo:generate-graph` | `/generate-graph` | Generate technical diagrams. |
+
+OpenCode hiện có generated slash commands cho surface implementation chính. Skill `sync` vẫn được ship trong shared skill bundle, nhưng installer hiện chưa tạo wrapper `/sync` cho OpenCode.
 
 ## Claude file structure
 

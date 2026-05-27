@@ -4,6 +4,8 @@ import { CoreWorkflowMap, WorkflowProofStack, WorkflowStateRail } from './core-w
 import { proseComponents } from './mdx-prose-components';
 import { SkillDetailPage } from './skill-detail-page';
 import { MainSkillIndex, SupportSkillCatalog } from './skill-overview';
+import { SddArtifactMap, SddCompareVisual, SddHeroVisual, SddLoopVisual } from './sdd-overview-visuals';
+import { SpecArtifactGrid, SpecLifecycleMap, SpecReadinessGrid } from './spec-lifecycle-visuals';
 import { CommandFlow, DocsHero, QualityGate, RuntimeBundle } from './workflow-visuals';
 
 export const MDXComponents = {
@@ -17,6 +19,13 @@ export const MDXComponents = {
   CoreWorkflowMap,
   WorkflowProofStack,
   WorkflowStateRail,
+  SddHeroVisual,
+  SddArtifactMap,
+  SddLoopVisual,
+  SddCompareVisual,
+  SpecLifecycleMap,
+  SpecArtifactGrid,
+  SpecReadinessGrid,
   MainSkillIndex,
   SupportSkillCatalog,
   SkillDetailPage,

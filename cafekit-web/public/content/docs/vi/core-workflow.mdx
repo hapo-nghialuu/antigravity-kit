@@ -6,7 +6,7 @@ description: Luồng CafeKit chính từ ý tưởng đến thay đổi đã ver
 <DocsHero
   eyebrow="Workflow chính"
   title="Ý tưởng chỉ thành code sau khi thành contract."
-  description="Workflow chính của CafeKit cố tình chặt: làm rõ request, viết spec, khóa task packet, implement một boundary, verify bằng evidence thật, review đối kháng, rồi sync state."
+  description="Workflow delivery của CafeKit bắt đầu từ specs: viết contract, khóa task packet, implement một boundary, verify bằng evidence thật, review đối kháng, rồi sync state."
 />
 
 <CoreWorkflowMap />
@@ -14,27 +14,25 @@ description: Luồng CafeKit chính từ ý tưởng đến thay đổi đã ver
 ## Bản ngắn gọn
 
 ```text
-Idea
-  -> /hapo:brainstorm        # nếu request vẫn chưa rõ
-  -> /hapo:specs             # requirements, research, design, tasks
+/hapo:specs                  # requirements, research, design, tasks
   -> approve task packet     # contract về scope và evidence
   -> /hapo:develop           # từng unblocked task một
   -> /hapo:test              # command thật và runtime proof
   -> /hapo:code-review       # spec, quality, security, regression
-  -> /hapo:sync              # state và task docs luôn khớp
+  -> /hapo:sync              # task_registry và task markdown luôn khớp
 ```
 
 Điểm quan trọng không phải là danh sách command. Điểm quan trọng là **chat không phải source of truth**. Contract bền vững nằm trong `specs/<feature>/spec.json`, `requirements.md`, `research.md`, `design.md`, và `tasks/task-R*.md`.
 
-## 1. Làm rõ trước khi viết spec
+## Optional pre-spec clarification
 
 Dùng `/hapo:brainstorm` khi request còn thô: hướng sản phẩm còn mở, architecture chưa chắc, risk chưa rõ, hoặc câu hỏi đầu tiên cần dựa vào codebase thật.
 
-Brainstorm là scout-first. Assistant nên inspect code hoặc context liên quan trước khi hỏi câu hỏi chung chung. Phase này không viết implementation code. Output nên là bộ quyết định đủ sẵn sàng để viết spec: đang giải quyết vấn đề gì, ngoài scope là gì, architecture nào đơn giản nhất, và risk nào phải đưa vào spec.
+Brainstorm là scout-first và nằm trước delivery path. Phase này không viết implementation code. Output nên là bộ quyết định đủ sẵn sàng để viết spec: đang giải quyết vấn đề gì, ngoài scope là gì, architecture nào đơn giản nhất, và risk nào phải đưa vào spec.
 
 Chỉ skip phase này khi request đã đủ cụ thể để chuyển thành requirements.
 
-## 2. Biến request thành spec
+## 1. Biến request thành spec
 
 Dùng `/hapo:specs` để chuyển intent thành artifacts lưu được. Một spec khỏe có:
 
@@ -48,7 +46,7 @@ Dùng `/hapo:specs` để chuyển intent thành artifacts lưu được. Một 
 
 Spec không phải paperwork. Nó là lớp chống drift. Nó ngăn assistant thay technology đã chốt, tự thêm scope ẩn, hoặc gọi placeholder là xong.
 
-## 3. Approve task packet
+## 2. Approve task packet
 
 CafeKit không nên bắt đầu implementation từ toàn bộ feature nằm trong đầu assistant. Nó bắt đầu từ một task packet active.
 
@@ -63,7 +61,7 @@ Một task packet phải trả lời được:
 
 Nếu thiếu các câu trả lời này, quay lại `/hapo:specs` hoặc `/hapo:sync audit <feature>`. Không tự lấp gap bằng phỏng đoán implementation.
 
-## 4. Implement từng boundary
+## 3. Implement từng boundary
 
 Dùng `/hapo:develop <feature>` để chạy full-spec, hoặc `/hapo:develop <feature> <task-file>` để làm đúng một task.
 
@@ -73,7 +71,7 @@ Trước khi code, task nên chuyển sang `in_progress`. Assistant cần inspec
 
 Không âm thầm đổi contract đã nêu tên. Nếu spec nói Next.js route, Better Auth, Redis, Drizzle, S3, OpenCode command, hoặc runtime cụ thể khác, lựa chọn đó là contract. Placeholder local không thỏa mãn trừ khi spec nói rõ như vậy.
 
-## 5. Verify bằng evidence, không bằng cảm giác
+## 4. Verify bằng evidence, không bằng cảm giác
 
 Dùng `/hapo:test <feature>` hoặc `/hapo:test --full` sau implementation. Test phase nên detect runner, chạy command thật, thu result, rồi so behavior với requirements, design contracts, task evidence, và reachability obligations.
 
@@ -81,7 +79,7 @@ Dùng `/hapo:test <feature>` hoặc `/hapo:test --full` sau implementation. Test
 
 <WorkflowProofStack />
 
-## 6. Review như thể change đang cố phá production
+## 5. Review như thể change đang cố phá production
 
 Dùng `/hapo:code-review --pending`, feature scope, PR, hoặc commit target.
 
@@ -95,9 +93,9 @@ Review kiểm tra ba lớp:
 
 Critical finding sẽ block completion. Review không phải bước polish; nó là một phần Definition of Done.
 
-## 7. Sync state và documentation
+## 6. Sync state và documentation
 
-Chỉ dùng `/hapo:sync <feature> <task> done` sau khi đã có proof. CafeKit kỳ vọng machine state và human state đi cùng nhau:
+Chỉ dùng `/hapo:sync <feature> <task> done` sau khi đã có proof. Dùng `/hapo:sync audit <feature>` khi nghi state drift. CafeKit kỳ vọng machine state và human state đi cùng nhau:
 
 <WorkflowStateRail />
 
@@ -123,7 +121,7 @@ Core flow dùng cho planned feature delivery. Nếu loại việc khác, dùng r
 OpenCode dùng command không có prefix, nhưng vẫn đọc cùng CafeKit skill bundle:
 
 ```text
-/brainstorm -> /specs -> /develop -> /test -> /code-review
+/specs -> /develop -> /test -> /code-review
 ```
 
 Contract không đổi: spec có source backing, từng task một, evidence thật, adversarial review, state đã sync.

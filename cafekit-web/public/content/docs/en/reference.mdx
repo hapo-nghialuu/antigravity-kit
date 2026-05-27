@@ -14,7 +14,7 @@ description: Commands, package facts, files, and state values.
 | Field | Value |
 |---|---|
 | Package | `@haposoft/cafekit` |
-| Current package version | `0.8.17` |
+| Current package version | `0.9.0` |
 | Binary | `cafekit` |
 | Bin file | `packages/spec/bin/install.js` |
 | Node engine | `>=18.0.0` |
@@ -30,11 +30,14 @@ description: Commands, package facts, files, and state values.
 | `/hapo:develop` | `/develop` | Implement approved task packets. |
 | `/hapo:test` | `/test` | Run task-aware verification. |
 | `/hapo:code-review` | `/code-review` | Review changes for regressions and security. |
+| `/hapo:sync` | — | Sync task status, `task_registry`, task markdown, phase, or audit drift. |
 | `/hapo:debug` | `/debug` | Diagnose failures before fixing. |
 | `/hapo:hotfix` | `/hotfix` | Apply narrow diagnosed fixes. |
 | `/hapo:docs` | `/docs` | Create, update, summarize, or reconstruct docs. |
 | `/hapo:inspect` | `/inspect` | Scout source files and project structure. |
 | `/hapo:generate-graph` | `/generate-graph` | Generate technical diagrams. |
+
+OpenCode currently gets generated slash commands for the main implementation surface. The `sync` skill is still shipped in the shared skill bundle, but the installer does not generate a `/sync` OpenCode wrapper.
 
 ## Installed Claude file structure
 

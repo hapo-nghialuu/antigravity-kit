@@ -1,8 +1,9 @@
 import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, PenTool, Shield, Sparkles, TestTube2, Wrench } from 'lucide-react';
 
 const skillGroups: Array<[string, string[]]> = [
-  ['Core workflow', ['brainstorm', 'specs', 'develop', 'test', 'code-review', 'sync', 'git']],
-  ['Debug and change safety', ['inspect', 'debug', 'hotfix', 'research']],
+  ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
+  ['Pre-spec discovery', ['brainstorm', 'inspect', 'research']],
+  ['Debug and change safety', ['debug', 'hotfix']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
   ['Artifacts and media', ['docs', 'generate-graph', 'agent-browser', 'chrome-devtools', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],

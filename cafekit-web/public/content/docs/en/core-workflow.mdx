@@ -6,7 +6,7 @@ description: The main CafeKit path from idea to verified change.
 <DocsHero
   eyebrow="Main workflow"
   title="Idea becomes code only after it becomes a contract."
-  description="CafeKit's primary workflow is intentionally strict: clarify the request, write the spec, lock the task packet, implement one boundary, verify with real evidence, review adversarially, then sync state."
+  description="CafeKit's delivery workflow starts at specs: write the contract, lock the task packet, implement one boundary, verify with real evidence, review adversarially, then sync state."
 />
 
 <CoreWorkflowMap />
@@ -14,27 +14,25 @@ description: The main CafeKit path from idea to verified change.
 ## The short version
 
 ```text
-Idea
-  -> /hapo:brainstorm        # if the request is still unclear
-  -> /hapo:specs             # requirements, research, design, tasks
+/hapo:specs                  # requirements, research, design, tasks
   -> approve task packet     # scope and evidence contract
   -> /hapo:develop           # one unblocked task at a time
   -> /hapo:test              # real commands and runtime proof
   -> /hapo:code-review       # spec, quality, security, regressions
-  -> /hapo:sync              # state and task docs stay aligned
+  -> /hapo:sync              # task_registry and task markdown stay aligned
 ```
 
 The important idea is not the command list. The important idea is that **chat is not the source of truth**. The durable contract lives in `specs/<feature>/spec.json`, `requirements.md`, `research.md`, `design.md`, and `tasks/task-R*.md`.
 
-## 1. Clarify before writing a spec
+## Optional pre-spec clarification
 
 Use `/hapo:brainstorm` when the request is still rough: product direction is open, architecture is uncertain, risks are unknown, or the first question should be grounded in repo reality.
 
-Brainstorming is scout-first. The assistant should inspect the relevant code or context before asking generic questions. This phase should not write implementation code. Its output should be a spec-ready decision set: what problem is being solved, what is out of scope, which architecture looks simplest, and which risks must be carried into the spec.
+Brainstorming is scout-first and sits before the delivery path. It should not write implementation code. Its output is a spec-ready decision set: what problem is being solved, what is out of scope, which architecture looks simplest, and which risks must be carried into the spec.
 
-Skip this phase only when the request is already concrete enough to become requirements.
+Skip this phase when the request is already concrete enough to become requirements.
 
-## 2. Turn the request into a spec
+## 1. Turn the request into a spec
 
 Use `/hapo:specs` to convert intent into persistent artifacts. A healthy spec contains:
 
@@ -48,7 +46,7 @@ Use `/hapo:specs` to convert intent into persistent artifacts. A healthy spec co
 
 The spec is not paperwork. It is the anti-drift layer. It prevents the assistant from replacing named technology, inventing hidden scope, or calling placeholder behavior complete.
 
-## 3. Approve a task packet
+## 2. Approve a task packet
 
 CafeKit implementation should not start from the whole feature in the assistant's head. It starts from one active task packet.
 
@@ -63,7 +61,7 @@ A task packet must answer:
 
 If those answers are missing, route back to `/hapo:specs` or `/hapo:sync audit <feature>`. Do not fill gaps with implementation guesses.
 
-## 4. Implement one boundary at a time
+## 3. Implement one boundary at a time
 
 Use `/hapo:develop <feature>` for full-spec execution or `/hapo:develop <feature> <task-file>` for a surgical task.
 
@@ -73,7 +71,7 @@ Before coding, the task should move to `in_progress`. The assistant should inspe
 
 Do not silently swap named contracts. If the spec says Next.js route, Better Auth, Redis, Drizzle, S3, OpenCode command, or another concrete runtime choice, that choice is part of the contract. A local placeholder does not satisfy it unless the spec explicitly says so.
 
-## 5. Verify with evidence, not optimism
+## 4. Verify with evidence, not optimism
 
 Use `/hapo:test <feature>` or `/hapo:test --full` after implementation. The test phase should detect the runner, execute real commands, collect results, and compare behavior against requirements, design contracts, task evidence, and reachability obligations.
 
@@ -81,7 +79,7 @@ Use `/hapo:test <feature>` or `/hapo:test --full` after implementation. The test
 
 <WorkflowProofStack />
 
-## 6. Review like the change is trying to break production
+## 5. Review like the change is trying to break production
 
 Use `/hapo:code-review --pending`, a feature scope, a PR, or a commit target.
 
@@ -95,9 +93,9 @@ The review checks three layers:
 
 Critical findings block completion. Review is not a polish step; it is part of the Definition of Done.
 
-## 7. Sync state and documentation
+## 6. Sync state and documentation
 
-Use `/hapo:sync <feature> <task> done` only after proof exists. CafeKit expects machine and human state to move together:
+Use `/hapo:sync <feature> <task> done` only after proof exists. Use `/hapo:sync audit <feature>` when state drift is suspected. CafeKit expects machine and human state to move together:
 
 <WorkflowStateRail />
 
@@ -123,7 +121,7 @@ The core flow handles planned feature delivery. Use another route when the work 
 OpenCode uses prefix-free commands while reading the same CafeKit skill bundle:
 
 ```text
-/brainstorm -> /specs -> /develop -> /test -> /code-review
+/specs -> /develop -> /test -> /code-review
 ```
 
 The contract remains the same: source-backed spec, one task at a time, real evidence, adversarial review, synchronized state.

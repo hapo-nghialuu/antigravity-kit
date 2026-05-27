@@ -17,12 +17,13 @@ The main delivery path is explained in depth in [Core workflow](/docs/core-workf
 
 | Command | Use when |
 |---|---|
-| `/hapo:brainstorm` | The idea is unclear, architectural choices are open, or scope needs pressure-testing. |
 | `/hapo:specs` | You need requirements, research, design, tasks, and validation. |
 | `/hapo:develop` | A spec or task file is approved and ready for implementation. |
 | `/hapo:test` | You need evidence from exact commands, build checks, tests, UI checks, or runtime reachability. |
 | `/hapo:code-review` | You need adversarial review for bugs, security, scope drift, and missing proof. |
-| `/hapo:sync` | `spec.json` and task markdown drift or need audit. |
+| `/hapo:sync` | Task status, `task_registry`, and task markdown must move after proof, or drift needs audit. |
+
+Use `/hapo:brainstorm` before this path only when the idea is unclear, architectural choices are open, or scope needs pressure-testing.
 
 ## Bug and incident workflow
 

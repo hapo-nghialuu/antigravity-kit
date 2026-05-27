@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { getDocsConfig, type DocsNavItem } from '@/lib/docs-config';
 import type { Locale } from '@/lib/locale-utils';
 import { cn } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function DocsSidebar({ locale = 'en' }: { locale?: Locale }) {
     const pathname = usePathname();
@@ -30,8 +31,50 @@ export default function DocsSidebar({ locale = 'en' }: { locale?: Locale }) {
 }
 
 function SidebarNavItem({ item, pathname, depth = 0 }: { item: DocsNavItem; pathname: string; depth?: number }) {
+    const [isPinnedOpen, setIsPinnedOpen] = useState(false);
     const isActive = pathname === item.href;
-    const isBranchActive = item.children?.some((child) => child.href === pathname) ?? false;
+    const hasChildren = Boolean(item.children?.length);
+    const isBranchActive = hasActiveDescendant(item, pathname);
+    const isExpanded = hasChildren && (isActive || isBranchActive || isPinnedOpen);
+
+    if (hasChildren) {
+        return (
+            <div>
+                <div
+                    className={cn(
+                        "group flex items-center rounded-xl border border-transparent font-medium transition hover:bg-muted hover:text-foreground",
+                        depth ? "text-[13px]" : "text-sm",
+                        isActive
+                            ? "border-[#006242]/20 bg-[#EEF5F1] text-[#006242] hover:bg-[#EEF5F1] dark:bg-[#14252A] dark:text-[#A7C5EE]"
+                            : isBranchActive ? "text-foreground" : "text-muted-foreground"
+                    )}
+                >
+                    <Link
+                        href={item.href}
+                        className={cn("min-w-0 flex-1 truncate", depth ? "px-3 py-1.5" : "px-3 py-2")}
+                    >
+                        {item.title}
+                    </Link>
+                    <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${item.title}`}
+                        className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-current opacity-70 transition hover:bg-background/70 hover:opacity-100"
+                        onClick={() => setIsPinnedOpen((value) => !value)}
+                    >
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded ? "rotate-180" : "")} />
+                    </button>
+                </div>
+                {isExpanded ? (
+                    <div className="ml-3 mt-1 space-y-1 border-l border-border/80 pl-3">
+                        {item.children?.map((child) => (
+                            <SidebarNavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} />
+                        ))}
+                    </div>
+                ) : null}
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -48,13 +91,10 @@ function SidebarNavItem({ item, pathname, depth = 0 }: { item: DocsNavItem; path
                 <span className="min-w-0 truncate">{item.title}</span>
                 {isActive && <ChevronRight className="h-3 w-3 text-primary" />}
             </Link>
-            {item.children ? (
-                <div className="ml-3 mt-1 space-y-1 border-l border-border/80 pl-3">
-                    {item.children.map((child) => (
-                        <SidebarNavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} />
-                    ))}
-                </div>
-            ) : null}
         </div>
     );
+}
+
+function hasActiveDescendant(item: DocsNavItem, pathname: string): boolean {
+    return item.children?.some((child) => child.href === pathname || hasActiveDescendant(child, pathname)) ?? false;
 }

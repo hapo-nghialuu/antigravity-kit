@@ -6,7 +6,7 @@ description: idea から reviewed implementation まで最初の CafeKit workflo
 <DocsHero
   eyebrow="First run"
   title="1つの feature を verified loop に通す。"
-  description="idea が曖昧なら scout し、spec を作り、validate し、1つの task packet を実装し、test と review の後に completion を sync します。"
+  description="spec を作り、validate し、1つの task packet を実装し、test、review、proof 後の sync まで進めます。"
 />
 
 ## 1. Install CafeKit
@@ -15,15 +15,9 @@ description: idea から reviewed implementation まで最初の CafeKit workflo
 npx @haposoft/cafekit
 ```
 
-## 2. 曖昧な idea は brainstorm
+Idea が specs に入れるほど明確でない場合だけ、先に `/hapo:brainstorm` で scope と architecture を明確にします。Main delivery run は specs から始まります。
 
-```bash
-/hapo:brainstorm Explore approaches for a meeting transcript extension
-```
-
-requirements と acceptance criteria が明確な場合だけ skip してください。
-
-## 3. Spec を作る
+## 2. Spec を作る
 
 ```bash
 /hapo:specs Build a meeting transcript extension with AI summaries
@@ -40,7 +34,7 @@ specs/<feature>/
 └── tasks/task-R0-01-*.md
 ```
 
-## 4. Code 前に validate
+## 3. Code 前に validate
 
 ```bash
 /hapo:specs --validate <feature>
@@ -48,7 +42,7 @@ specs/<feature>/
 
 requirements、design、task files、`task_files`、`task_registry` の整合性を確認します。
 
-## 5. 1つの task packet を実装
+## 4. 1つの task packet を実装
 
 ```bash
 /hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
@@ -56,7 +50,7 @@ requirements、design、task files、`task_files`、`task_registry` の整合性
 
 task-by-task が最も安全な default です。diff が小さく、evidence も検証しやすくなります。
 
-## 6. Test and review
+## 5. Test and review
 
 ```bash
 /hapo:test --full
@@ -64,6 +58,14 @@ task-by-task が最も安全な default です。diff が小さく、evidence �
 ```
 
 `NO_TESTS` は success ではありません。implementation、evidence、tests、review、state sync が揃って初めて task は `done` になります。
+
+## 6. Proof 後に sync
+
+```bash
+/hapo:sync <feature> task-R0-01-project-scaffold.md done
+```
+
+この command は `spec.json.task_registry` と matching task markdown を更新します。State が不整合に見える場合は、推測せず `/hapo:sync audit <feature>` を実行します。
 
 [Core workflow](/ja/docs/core-workflow) で各 gate の理由を詳しく確認できます。
 

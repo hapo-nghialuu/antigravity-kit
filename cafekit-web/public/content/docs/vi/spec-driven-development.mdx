@@ -1,0 +1,56 @@
+---
+title: Spec-driven development
+description: Cách hiểu đơn giản nhất về việc CafeKit biến request thành code đã verify.
+---
+
+<SddHeroVisual locale="vi" />
+
+## Hiểu đơn giản
+
+Spec-driven development nghĩa là **spec là người cầm lái, không phải đoạn chat**.
+
+Trong AI coding bình thường, assistant thường làm theo trí nhớ hội thoại. Cách đó mong manh. Request có thể bị tóm tắt sai, scope có thể trôi, và session sau không biết vì sao một quyết định được đưa ra.
+
+CafeKit đổi trọng tâm. Trước khi sửa code, công việc được ghi vào `specs/<feature>/`. Folder đó trở thành contract chung cho người dùng, assistant, reviewer, và các session sau.
+
+<SddLoopVisual locale="vi" />
+
+## Assistant được tin vào cái gì
+
+Assistant nên tin artifact bền vững trong repo trước:
+
+<SddArtifactMap locale="vi" />
+
+Điểm quan trọng không phải là CafeKit tạo nhiều file hơn. Điểm quan trọng là mỗi file trả lời một câu hỏi khác nhau:
+
+| Artifact | Câu hỏi nó trả lời |
+| --- | --- |
+| `requirements.md` | Product cần làm gì? |
+| `research.md` | Fact hoặc decision nào có source backing? |
+| `design.md` | System nên được thiết kế như thế nào? |
+| `tasks/task-R*.md` | Đơn vị implementation nào đang được approve? |
+| `spec.json` | Machine-readable state của feature là gì? |
+
+## Luật làm việc hằng ngày
+
+Khi feature đủ quan trọng, dùng luật này:
+
+Dùng `/hapo:brainstorm` trước chỉ khi request chưa đủ rõ để viết specs. Delivery path chính bắt đầu ở đây:
+
+1. Chạy `/hapo:specs` khi goal đã đủ rõ để thành contract.
+2. Không develop khi spec chưa có task packet đã approve.
+3. Chạy `/hapo:develop` cho từng task packet.
+4. Verify bằng `/hapo:test` và review bằng `/hapo:code-review`.
+5. Chỉ chạy `/hapo:sync` sau khi có proof, hoặc dùng `/hapo:sync audit <feature>` để repair drift.
+
+<SddCompareVisual locale="vi" />
+
+## Khi nào nên dùng full SDD
+
+Dùng full path khi work đổi product behavior, chạm nhiều file, đi qua runtime boundary, đổi data/auth/package contracts, ảnh hưởng user, cần review evidence, hoặc có khả năng handoff cho assistant hay teammate khác.
+
+Với copy edit nhỏ hoặc fix một dòng đã rất rõ, full spec flow có thể hơi nặng. Nhưng thói quen vẫn giữ nguyên: nói rõ boundary, chỉ sửa đúng boundary đó, verify kết quả, và không để scope lớn lên âm thầm.
+
+## Đọc tiếp ở đâu
+
+Đọc [Workflow chính](/vi/docs/core-workflow) để thấy toàn bộ command path. Đọc [Vòng đời spec](/vi/docs/spec-lifecycle) khi cần luật chi tiết hơn về `spec.json`, task packets, validation, và readiness.

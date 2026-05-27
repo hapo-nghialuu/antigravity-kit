@@ -17,12 +17,13 @@ Main delivery path は [Core workflow](/ja/docs/core-workflow) で詳しく説�
 
 | Command | Use when |
 |---|---|
-| `/hapo:brainstorm` | idea が曖昧、architecture が未決定、scope を pressure-test したい。 |
 | `/hapo:specs` | requirements、research、design、tasks、validation が必要。 |
 | `/hapo:develop` | spec または task file が approved で implementation ready。 |
 | `/hapo:test` | commands、build、tests、UI checks、runtime reachability の evidence が必要。 |
 | `/hapo:code-review` | bugs、security、drift、missing proof の adversarial review。 |
-| `/hapo:sync` | `spec.json` と task markdown の drift audit/repair。 |
+| `/hapo:sync` | proof 後に task status、`task_registry`、task markdown を更新する、または drift audit/repair が必要。 |
+
+Idea が曖昧、architecture が未決定、scope を pressure-test したい場合だけ、この path の前に `/hapo:brainstorm` を使います。
 
 ## Bug and incident
 

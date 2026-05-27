@@ -6,7 +6,7 @@ description: Run a first CafeKit workflow from idea to reviewed implementation.
 <DocsHero
   eyebrow="First run"
   title="Move one feature through the verified loop."
-  description="Start with a scout pass when the idea is unclear, generate a spec, validate it, implement one task packet, then test and review before syncing completion."
+  description="Generate a spec, validate it, implement one task packet, then test, review, and sync completion with proof."
 />
 
 ## 1. Install CafeKit
@@ -15,17 +15,9 @@ description: Run a first CafeKit workflow from idea to reviewed implementation.
 npx @haposoft/cafekit
 ```
 
-## 2. Brainstorm unclear ideas
+If the idea is not ready for specs, use `/hapo:brainstorm` first to clarify scope and architecture. The main delivery run starts with specs.
 
-Use this when the idea needs scope, architecture, or tradeoff clarification.
-
-```bash
-/hapo:brainstorm Explore approaches for a meeting transcript extension
-```
-
-Skip brainstorm only when requirements and acceptance criteria are already clear.
-
-## 3. Create a spec
+## 2. Create a spec
 
 ```bash
 /hapo:specs Build a meeting transcript extension with AI summaries
@@ -42,7 +34,7 @@ specs/<feature>/
 └── tasks/task-R0-01-*.md
 ```
 
-## 4. Validate before code
+## 3. Validate before code
 
 ```bash
 /hapo:specs --validate <feature>
@@ -50,7 +42,7 @@ specs/<feature>/
 
 Validation checks that requirements, design, task files, `task_files`, and `task_registry` agree.
 
-## 5. Implement one task packet
+## 4. Implement one task packet
 
 ```bash
 /hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
@@ -58,7 +50,7 @@ Validation checks that requirements, design, task files, `task_files`, and `task
 
 Task-by-task work is the safest default. It keeps diffs smaller and makes evidence easier to verify.
 
-## 6. Test and review
+## 5. Test and review
 
 ```bash
 /hapo:test --full
@@ -66,6 +58,14 @@ Task-by-task work is the safest default. It keeps diffs smaller and makes eviden
 ```
 
 `NO_TESTS` is not success. A task should not become `done` until implementation, evidence, tests, review, and state sync all agree.
+
+## 6. Sync after proof
+
+```bash
+/hapo:sync <feature> task-R0-01-project-scaffold.md done
+```
+
+This updates `spec.json.task_registry` and the matching task markdown. If state looks inconsistent, run `/hapo:sync audit <feature>` instead of guessing.
 
 Read [Core workflow](/docs/core-workflow) for the full reasoning behind each gate.
 

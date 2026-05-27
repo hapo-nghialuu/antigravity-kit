@@ -6,7 +6,7 @@ description: Chạy workflow CafeKit đầu tiên từ ý tưởng đến review
 <DocsHero
   eyebrow="First run"
   title="Đưa một feature qua vòng verify."
-  description="Scout khi ý tưởng chưa rõ, tạo spec, validate, implement một task packet, rồi test và review trước khi sync completion."
+  description="Tạo spec, validate, implement một task packet, rồi test, review, và sync completion khi đã có proof."
 />
 
 ## 1. Cài CafeKit
@@ -15,15 +15,9 @@ description: Chạy workflow CafeKit đầu tiên từ ý tưởng đến review
 npx @haposoft/cafekit
 ```
 
-## 2. Brainstorm khi ý tưởng chưa rõ
+Nếu idea chưa đủ rõ để viết specs, dùng `/hapo:brainstorm` trước để làm rõ scope và architecture. Delivery run chính bắt đầu từ specs.
 
-```bash
-/hapo:brainstorm Explore approaches for a meeting transcript extension
-```
-
-Bỏ qua brainstorm chỉ khi requirement và acceptance criteria đã rõ.
-
-## 3. Tạo spec
+## 2. Tạo spec
 
 ```bash
 /hapo:specs Build a meeting transcript extension with AI summaries
@@ -40,7 +34,7 @@ specs/<feature>/
 └── tasks/task-R0-01-*.md
 ```
 
-## 4. Validate trước khi code
+## 3. Validate trước khi code
 
 ```bash
 /hapo:specs --validate <feature>
@@ -48,7 +42,7 @@ specs/<feature>/
 
 Validation kiểm tra requirements, design, task files, `task_files`, và `task_registry` có khớp nhau không.
 
-## 5. Implement một task packet
+## 4. Implement một task packet
 
 ```bash
 /hapo:develop <feature> tasks/task-R0-01-project-scaffold.md
@@ -56,7 +50,7 @@ Validation kiểm tra requirements, design, task files, `task_files`, và `task_
 
 Task-by-task là default an toàn nhất: diff nhỏ hơn và evidence dễ verify hơn.
 
-## 6. Test và review
+## 5. Test và review
 
 ```bash
 /hapo:test --full
@@ -64,6 +58,14 @@ Task-by-task là default an toàn nhất: diff nhỏ hơn và evidence dễ veri
 ```
 
 `NO_TESTS` không phải success. Task chỉ nên thành `done` khi implementation, evidence, tests, review, và state sync cùng đồng ý.
+
+## 6. Sync sau khi có proof
+
+```bash
+/hapo:sync <feature> task-R0-01-project-scaffold.md done
+```
+
+Command này update `spec.json.task_registry` và task markdown tương ứng. Nếu state có vẻ lệch, chạy `/hapo:sync audit <feature>` thay vì đoán.
 
 Đọc [Workflow chính](/vi/docs/core-workflow) để hiểu đầy đủ lý do sau từng gate.
 
