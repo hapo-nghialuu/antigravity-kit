@@ -113,7 +113,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer offers OpenCode as secondary runtime",
-      file: "bin/install.js",
+      files: ["bin/install.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
         content.includes("id: 'opencode'") &&
         content.includes("name: 'OpenCode'") &&
@@ -132,13 +132,16 @@ async function runStaticSemanticTests() {
         !content.includes("folder: '.agent'"),
     },
     {
-      label: "OpenCode install reuses Claude-compatible skill support files",
-      file: "bin/install.js",
+      label: "OpenCode install is self-contained under .opencode/",
+      files: ["bin/install.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
-        content.includes("skillsDir: '.claude/skills'") &&
-        content.includes("getClaudeSupportTargetDir(platformKey, 'scripts')") &&
-        content.includes("getClaudeSupportTargetDir(platformKey, 'rules')") &&
-        content.includes("isClaudeCompatibleRuntime(platformKey)"),
+        content.includes("skillsDir: '.opencode/skills'") &&
+        content.includes("skillsRef: '.opencode/skills'") &&
+        content.includes("getRuntimeSupportTargetDir(platformKey, 'scripts')") &&
+        content.includes("getRuntimeSupportTargetDir(platformKey, 'rules')") &&
+        content.includes("isClaudeCompatibleRuntime(platformKey)") &&
+        content.includes("normalizeOpenCodeBody") &&
+        content.includes("warnLegacyClaudeFolder"),
     },
     {
       label: "OpenCode has dedicated project instruction template",
@@ -146,6 +149,7 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("OpenCode Runtime Mapping") &&
         content.includes("without the `hapo:` prefix") &&
+        content.includes("/question <question>") &&
         content.includes("/specs <feature-or-spec-command>") &&
         content.includes("Claude Code hooks/statusline/settings do not run in OpenCode"),
     },
@@ -190,6 +194,39 @@ async function runStaticSemanticTests() {
       label: "spec-maker forbids legacy work handoff",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) => content.includes("Never suggest `/work`"),
+    },
+    {
+      label: "hapo:question skill answers questions with repo-first evidence",
+      file: "src/claude/skills/question/SKILL.md",
+      assert: (content) =>
+        content.includes("name: hapo:question") &&
+        content.includes("Answer questions with evidence") &&
+        content.includes("<ANSWER-ONLY-GATE>") &&
+        content.includes("Source-first") &&
+        content.includes("Use external/current sources") &&
+        content.includes("Ask back only when") &&
+        content.includes("--repo") &&
+        content.includes("--web") &&
+        content.includes("--both") &&
+        content.includes("repo evidence") &&
+        content.includes("external/current evidence") &&
+        content.includes("templates/question.md"),
+    },
+    {
+      label: "hapo:question template captures answer evidence and gaps",
+      file: "src/claude/skills/question/templates/question.md",
+      assert: (content) =>
+        content.includes("## Question") &&
+        content.includes("## Answer") &&
+        content.includes("## Evidence") &&
+        content.includes("## Source Trace") &&
+        content.includes("## Gaps / Unknowns") &&
+        content.includes("## Follow-up Question"),
+    },
+    {
+      label: "hapo:question is packaged in migration manifest",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => content.includes('"question"'),
     },
     {
       label: "hapo:specs validate uses hapo develop handoff",
@@ -473,6 +510,27 @@ async function runStaticSemanticTests() {
         !content.includes("`references/debugger/"),
     },
     {
+      label: "hapo:brainstorm uses a structured question framework",
+      file: "src/claude/skills/brainstorm/SKILL.md",
+      assert: (content) =>
+        content.includes("## Discovery Question Framework") &&
+        content.includes("`references/question-framework.md`") &&
+        content.includes("Generate questions from scout evidence") &&
+        content.includes("decision register") &&
+        content.includes("technical facts"),
+    },
+    {
+      label: "hapo:brainstorm question framework covers domains and decision logging",
+      file: "src/claude/skills/brainstorm/references/question-framework.md",
+      assert: (content) =>
+        content.includes("## Domain Matrix") &&
+        content.includes("### Browser Extension") &&
+        content.includes("### AI / LLM") &&
+        content.includes("## Ask / Do Not Ask") &&
+        content.includes("## Decision Register") &&
+        content.includes("Do not write \"user selected\""),
+    },
+    {
       label: "CafeKit uses Research-style skill routing rules",
       file: "src/claude/CLAUDE.md",
       assert: (content) =>
@@ -485,15 +543,19 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
       assert: (content) =>
-        content.includes("/hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("/hapo:question -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("ask about source code, docs, specs, config, dependencies") &&
         content.includes("/hapo:debug -> /hapo:hotfix") &&
         content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("missing acceptance criteria") &&
         content.includes("Do not inject or force a skill"),
     },
     {
       label: "CafeKit skill routing domain rule maps installed skills",
       file: "src/claude/rules/skill-domain-routing.md",
       assert: (content) =>
+        content.includes("/hapo:question") &&
+        content.includes("answer questions from source code/docs/specs/config") &&
         content.includes("/hapo:frontend-development") &&
         content.includes("/hapo:react-best-practices") &&
         content.includes("/hapo:backend-development") &&
@@ -687,9 +749,13 @@ async function runStaticSemanticTests() {
 
   console.log("\n[skill-test] static semantic checks");
   for (const check of checks) {
-    const content = await readFile(join(packageRoot, check.file), "utf8");
+    const targets = check.files ?? [check.file];
+    const parts = await Promise.all(
+      targets.map((rel) => readFile(join(packageRoot, rel), "utf8")),
+    );
+    const content = parts.join("\n");
     if (!check.assert(content)) {
-      console.error(`[FAIL] ${check.label}: ${check.file}`);
+      console.error(`[FAIL] ${check.label}: ${targets.join(", ")}`);
       process.exit(1);
     }
     console.log(`✔ ${check.label}`);
@@ -715,6 +781,7 @@ function runSkillCatalogTests() {
     "`hapo:specs`",
     "`hapo:develop`",
     "`hapo:docs`",
+    "`hapo:question`",
     "`hapo:debug`",
     "`hapo:hotfix`",
     "`hapo:react-best-practices`",
@@ -869,8 +936,10 @@ async function runOpenCodeInstallerFixtureTests() {
       "utf8",
     );
     const specsCommand = await readFile(join(root, ".opencode", "commands", "specs.md"), "utf8");
+    const questionCommand = await readFile(join(root, ".opencode", "commands", "question.md"), "utf8");
     const agentFrontmatter = godDeveloperAgent.split("---")[1] || "";
     const commandFrontmatter = specsCommand.split("---")[1] || "";
+    const questionFrontmatter = questionCommand.split("---")[1] || "";
     const failures = [];
 
     if (metadata.platform !== "opencode") {
@@ -896,11 +965,20 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {
       failures.push("OpenCode skill command wrappers were not installed");
     }
-    if (!specsCommand.includes(".claude/skills/specs/SKILL.md")) {
+    if (!(await fileExists(join(root, ".opencode", "commands", "question.md")))) {
+      failures.push("OpenCode question command wrapper was not installed");
+    }
+    if (!specsCommand.includes(".opencode/skills/specs/SKILL.md")) {
       failures.push("OpenCode specs command does not route to the CafeKit specs skill");
+    }
+    if (!questionCommand.includes(".opencode/skills/question/SKILL.md")) {
+      failures.push("OpenCode question command does not route to the CafeKit question skill");
     }
     if (!commandFrontmatter.includes('agent: "spec-maker"') || !commandFrontmatter.includes("subtask: true")) {
       failures.push("OpenCode specs command is not bound to the spec-maker subagent");
+    }
+    if (!questionFrontmatter.includes('agent: "inspector"') || !questionFrontmatter.includes("subtask: true")) {
+      failures.push("OpenCode question command is not bound to the inspector subagent");
     }
     if (specsCommand.includes("allowed-tools")) {
       failures.push("OpenCode command still contains Claude command frontmatter");
@@ -920,17 +998,68 @@ async function runOpenCodeInstallerFixtureTests() {
     if (opencodeConfig.model !== "anthropic/claude-sonnet-4-20250514") {
       failures.push("OpenCode model prompt did not configure opencode.json");
     }
-    if (!(await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md")))) {
-      failures.push("OpenCode install did not install Claude-compatible skills");
+    if (!(await fileExists(join(root, ".opencode", "skills", "docs", "SKILL.md")))) {
+      failures.push("OpenCode install did not install skills under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "rules", "skill-workflow-routing.md")))) {
-      failures.push("OpenCode install did not install shared routing rules");
+    if (!(await fileExists(join(root, ".opencode", "skills", "question", "SKILL.md")))) {
+      failures.push("OpenCode install did not install question skill under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "scripts", "generate-skill-catalog.cjs")))) {
-      failures.push("OpenCode install did not install shared scripts");
+    if (!(await fileExists(join(root, ".opencode", "rules", "skill-workflow-routing.md")))) {
+      failures.push("OpenCode install did not install routing rules under .opencode/");
     }
-    if (!(await fileExists(join(root, ".claude", "runtime.json")))) {
-      failures.push("OpenCode install did not install shared runtime.json");
+    if (!(await fileExists(join(root, ".opencode", "scripts", "generate-skill-catalog.cjs")))) {
+      failures.push("OpenCode install did not install scripts under .opencode/");
+    }
+    if (!(await fileExists(join(root, ".opencode", "runtime.json")))) {
+      failures.push("OpenCode install did not install runtime.json under .opencode/");
+    }
+    const expectedPlugins = [
+      "privacy-block.ts",
+      "inspect-block.ts",
+      "docs-sync.ts",
+      "session.ts",
+      "state.ts",
+      "usage.ts",
+      "rules.ts",
+    ];
+    for (const plugin of expectedPlugins) {
+      if (!(await fileExists(join(root, ".opencode", "plugins", plugin)))) {
+        failures.push(`OpenCode install did not install plugin ${plugin}`);
+      }
+    }
+    if (await fileExists(join(root, ".opencode", "plugins", "package.json"))) {
+      failures.push("OpenCode plugin package.json must live at .opencode/package.json, not inside plugins/");
+    }
+    if (!(await fileExists(join(root, ".opencode", "package.json")))) {
+      failures.push("OpenCode install did not write .opencode/package.json for plugin deps");
+    } else {
+      const pluginPkg = JSON.parse(
+        await readFile(join(root, ".opencode", "package.json"), "utf8"),
+      );
+      if (!pluginPkg.dependencies?.["@opencode-ai/plugin"]) {
+        failures.push("OpenCode .opencode/package.json missing @opencode-ai/plugin dependency");
+      }
+      if (pluginPkg.type !== "module") {
+        failures.push("OpenCode .opencode/package.json must set type: module");
+      }
+    }
+    if (await fileExists(join(root, ".claude"))) {
+      failures.push("OpenCode install must not create .claude/ directory");
+    }
+    // Spot-check that domain skills also have slash-command wrappers.
+    const expectedDomainCommands = [
+      "frontend-development.md",
+      "backend-development.md",
+      "research.md",
+      "git.md",
+      "devops.md",
+      "web-testing.md",
+      "impact-analysis.md",
+    ];
+    for (const cmd of expectedDomainCommands) {
+      if (!(await fileExists(join(root, ".opencode", "commands", cmd)))) {
+        failures.push(`OpenCode install missing domain command wrapper ${cmd}`);
+      }
     }
     if (!agentsMd.includes("Primary operating instructions for OpenCode")) {
       failures.push("OpenCode AGENTS.md instructions were not written");

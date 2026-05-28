@@ -51,16 +51,17 @@ export default function Footer() {
 
   const productLinks = [
     { href: localizeHref(locale, "/docs"), label: t.documentation },
-    { href: localizeHref(locale, "/docs/getting-started/installation"), label: t.installation },
-    { href: localizeHref(locale, "/docs/getting-started/quickstart"), label: t.quickstart },
-    { href: localizeHref(locale, "/docs/reference/commands"), label: t.commandReference },
+    { href: localizeHref(locale, "/docs/installation"), label: t.installation },
+    { href: localizeHref(locale, "/docs/quickstart"), label: t.quickstart },
+    { href: localizeHref(locale, "/docs/reference"), label: t.commandReference },
   ];
 
   const workflowLinks = [
-    { href: localizeHref(locale, "/docs/workflows/specs"), label: t.specs },
-    { href: localizeHref(locale, "/docs/workflows/develop"), label: t.develop },
-    { href: localizeHref(locale, "/docs/workflows/test-review"), label: t.testReview },
-    { href: localizeHref(locale, "/docs/platforms/claude"), label: t.claudeCode },
+    { href: localizeHref(locale, "/docs/core-workflow"), label: t.coreWorkflow },
+    { href: localizeHref(locale, "/docs/workflows"), label: t.specs },
+    { href: localizeHref(locale, "/docs/workflows"), label: t.develop },
+    { href: localizeHref(locale, "/docs/workflows"), label: t.testReview },
+    { href: localizeHref(locale, "/docs/platforms"), label: t.claudeCode },
   ];
 
   const resourceLinks = [

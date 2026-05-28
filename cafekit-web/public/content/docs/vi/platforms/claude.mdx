@@ -1,51 +1,65 @@
 ---
 title: Claude Code
-description: Primary platform guide for using CafeKit with Claude Code.
+description: Layout runtime CafeKit đầy đủ cho dự án Claude Code.
 ---
 
-# Claude Code
+<DocsHero
+  eyebrow="Platforms · Claude Code"
+  title="Runtime Claude Code native với hooks, agents, skills."
+  description="Installer ghi `.claude/` runtime đầy đủ kèm `CLAUDE.md` ở project root. Hooks enforce privacy, spec state, docs sync, session context."
+/>
 
-Claude Code is the **primary supported runtime** for current CafeKit releases.
+## Layout sau khi cài
 
-## Command Surface
-
-The main commands are:
-
-- `/hapo:specs`
-- `/hapo:develop`
-- `/hapo:test`
-- `/hapo:code-review`
-- `/hapo:sync`
-- `/hapo:generate-graph`
-
-## Installed Runtime Shape
-
-```text
+```
 .claude/
-├── skills/
-├── agents/
-├── hooks/
-├── settings.json
-├── runtime.json
-├── status.cjs
-└── CLAUDE.md
+├── skills/         # Workflow + domain skill packs (question, brainstorm, specs, ...)
+├── agents/         # Subagent prompts (brainstormer, code-auditor, ...)
+├── hooks/          # Event-driven CommonJS scripts
+├── rules/          # Workflow, dev, docs, hook, state-sync rules
+├── scripts/        # Helper scripts (catalog generator, ...)
+├── references/     # Static lookup material
+├── runtime.json    # Locale, paths, docs.maxLoc, gemini model
+├── settings.json   # Hook bindings và permissions
+└── status.cjs      # Statusline renderer
+CLAUDE.md           # Operating instructions ở project root
+.mcp.json           # Optional MCP server config
 ```
 
-## Runtime Characteristics
+## Hooks
 
-- spec-aware hooks
-- task-state awareness
-- quality gates before completion sync
-- task-level docs checkpoints
+Claude Code có hooks event-driven trong `.claude/hooks/`:
 
-## Recommended Workflow
+| Hook | Event | Purpose |
+|---|---|---|
+| `privacy-block.cjs` | `PreToolUse` | Chặn read path nhạy cảm cho đến khi user approve |
+| `inspect-block.cjs` | `PreToolUse` | Gate inspection scan diện rộng |
+| `spec-state.cjs` | `PostToolUse` | Từ chối task `done` khi chưa có verification receipt |
+| `docs-sync.cjs` | `SessionStart` | Flag missing docs, sync hash drift |
+| `session.cjs` | `SessionStart` | Inject session banner + context |
+| `usage.cjs` | `UserPromptSubmit` | Track token/usage hints |
+| `rules.cjs` | `UserPromptSubmit` | Inject dynamic per-prompt rules block |
 
-```text
-/hapo:specs
--> /hapo:specs --validate
--> /hapo:develop
--> /hapo:test
--> /hapo:code-review
+Xem [Runtime bundle](/docs/runtime) để biết chi tiết hook contract.
+
+## Commands
+
+Claude Code dùng namespace `hapo:`:
+
+```
+/hapo:question    /hapo:brainstorm    /hapo:specs       /hapo:develop
+/hapo:test        /hapo:code-review   /hapo:sync        /hapo:debug
+/hapo:hotfix      /hapo:docs          /hapo:inspect     /hapo:git
 ```
 
-Use [`/hapo:sync`](/vi/docs/workflows/sync) whenever spec state drifts.
+Cộng tất cả domain skill dưới dạng `/hapo:<skill>`.
+
+## Detection
+
+Installer detect Claude Code khi có:
+
+- Thư mục `.claude/`
+- `CLAUDE.md` ở project root
+- `.mcp.json` ở project root
+
+Chạy lại installer là idempotent — file đã có sẽ được merge nơi nào an toàn, không ghi đè mù.

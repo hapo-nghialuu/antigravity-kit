@@ -1,0 +1,32 @@
+---
+title: Platforms
+description: Tổng quan runtime support cho Claude Code và OpenCode.
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code và OpenCode đều có runtime self-contained riêng."
+  description="Installer detect target platform từ project markers và ghi runtime đầy đủ, độc lập. Chọn platform bên dưới để xem layout, hooks, plugins, commands chi tiết."
+/>
+
+<PlatformMatrix />
+
+## Chọn platform
+
+- [Claude Code](/docs/platforms/claude) — `.claude/` skills, agents, hooks, runtime, và `CLAUDE.md`.
+- [OpenCode](/docs/platforms/opencode) — `.opencode/` skills, agents, plugins, runtime, và `AGENTS.md`.
+
+Mỗi platform self-contained: OpenCode không depend vào file `.claude/`, Claude Code cũng không depend vào file `.opencode/`.
+
+## Detection
+
+| Platform | Markers |
+|---|---|
+| Claude Code | `.claude/`, `CLAUDE.md`, `.mcp.json` |
+| OpenCode | `.opencode/`, `AGENTS.md`, `opencode.json`, `opencode.jsonc` |
+
+Nếu detect cả hai, installer cho chọn từng target. Marker rỗng (vd `opencode.json: {}`) vẫn được coi là project marker hợp lệ.
+
+## Future platforms
+
+Cursor chưa phải runtime target trong installer hiện tại.

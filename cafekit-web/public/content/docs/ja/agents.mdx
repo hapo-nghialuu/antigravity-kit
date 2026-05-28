@@ -1,0 +1,34 @@
+---
+title: Agents
+description: CafeKit に同梱される specialist agents。
+---
+
+<DocsHero
+  eyebrow="13 agents"
+  title="planning、building、testing、review、shipping の specialists。"
+  description="Agents は packaged role instructions です。workflow の責任を分けながら、source truth は repo に保持します。"
+/>
+
+<AgentGrid />
+
+## Agent roles
+
+| Agent | Role |
+|---|---|
+| `brainstormer` | architecture を pressure-test し、raw ideas を spec-ready decisions にする。 |
+| `spec-maker` | `spec.json`、requirements、research、design、task files を作る。 |
+| `god-developer` | approved tasks を production code に実装する。 |
+| `test-runner` | verification を実行し、missing/fake evidence を reject する。 |
+| `code-auditor` | correctness、security、architecture、principles、conventions を review。 |
+| `debugger` | bugs、CI failures、logs、DB issues、UI regressions、performance を調査。 |
+| `docs-keeper` | docs と specs を source evidence に基づかせる。 |
+| `git-ops` | stage、commit、push、branch closeout を安全に行う。 |
+| `inspector` | code structure を scan し関連 files を探す。 |
+| `project-manager` | progress、blockers、release status を集約する。 |
+| `researcher` | multi-source technical research を行う。 |
+| `ui-ux-designer` | accessible で polished な web/mobile interface を設計する。 |
+| `deployer` | deploy checks、production handoff、rollback thinking を担当する。 |
+
+## Coordination model
+
+delegation には work path、specs path、docs path、read/modify files、constraints、acceptance criteria が必要です。subagent に full chat history を渡すべきではありません。

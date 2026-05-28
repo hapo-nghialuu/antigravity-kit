@@ -16,14 +16,14 @@ interface DecisionTreeProps {
 }
 
 const commands: Command[] = [
-  { id: 'docs-init', label: '/docs init', href: '/docs/docs-workflow/init', category: 'docs' },
-  { id: 'docs-update', label: '/docs update', href: '/docs/docs-workflow/update', category: 'docs' },
-  { id: 'specs', label: '/hapo:specs', href: '/docs/workflows/specs', category: 'workflow' },
-  { id: 'develop', label: '/hapo:develop', href: '/docs/workflows/develop', category: 'workflow' },
-  { id: 'test', label: '/hapo:test', href: '/docs/workflows/test-review', category: 'workflow' },
-  { id: 'review', label: '/hapo:code-review', href: '/docs/workflows/test-review', category: 'workflow' },
-  { id: 'sync', label: '/hapo:sync', href: '/docs/workflows/sync', category: 'state' },
-  { id: 'graph', label: '/hapo:generate-graph', href: '/docs/workflows/generate-graph', category: 'workflow' },
+  { id: 'docs-init', label: '/hapo:docs --init', href: '/docs/workflows', category: 'docs' },
+  { id: 'docs-update', label: '/hapo:docs --update', href: '/docs/workflows', category: 'docs' },
+  { id: 'specs', label: '/hapo:specs', href: '/docs/workflows', category: 'workflow' },
+  { id: 'develop', label: '/hapo:develop', href: '/docs/workflows', category: 'workflow' },
+  { id: 'test', label: '/hapo:test', href: '/docs/workflows', category: 'workflow' },
+  { id: 'review', label: '/hapo:code-review', href: '/docs/workflows', category: 'workflow' },
+  { id: 'sync', label: '/hapo:sync', href: '/docs/workflows', category: 'state' },
+  { id: 'graph', label: '/hapo:generate-graph', href: '/docs/workflows', category: 'workflow' },
 ];
 
 const categoryStyles = {

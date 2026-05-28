@@ -1,43 +1,34 @@
 ---
 title: FAQ
-description: Frequently asked questions about CafeKit's current runtime and workflow model.
+description: CafeKit runtime と workflow のよくある質問。
 ---
 
-# FAQ
+<DocsHero
+  eyebrow="FAQ"
+  title="workflow が高コストになる前に答える。"
+  description="CafeKit の失敗は scope、validation、または chat を state として扱うことから起きます。このページは common edge cases を整理します。"
+/>
 
-## Is CafeKit multi-platform today?
+## OpenCode は supported ですか？
 
-Not yet. Current releases are **Claude Code-first**.
+はい。Installer は self-contained な `.opencode/` runtime（skills、agents、commands、rules、references、scripts、`runtime.json`、`.opencode/plugins/` 配下の TypeScript plugins を含む）を書き出します。root `AGENTS.md` も書き、`opencode.json` を merge します。OpenCode は `.claude/` とファイルを共有しません。
 
-Planned:
+## すべての task に `/hapo:specs` が必要ですか？
 
-- Antigravity
-- Cursor
+いいえ。meaningful feature work には specs を使います。bugs には `/hapo:debug` と `/hapo:hotfix` を使います。小さな local fix は full spec を必要としない場合があります。
 
-## Where do specs live?
+## なぜ task files が重要ですか？
 
-Under:
+task files は scope、steps、completion criteria、evidence を保存します。human intent と machine-checkable state をつなぐ layer です。
 
-```text
-specs/<feature-name>/
-```
+## `NO_TESTS` は pass ですか？
 
-## Does CafeKit still use `.specs/` and `tasks.md`?
+いいえ。real test suite が実行されていないという意味だけです。build health、runtime proof、task evidence はまだ必要です。
 
-No. The current workflow expects:
+## chat だけで `done` にできますか？
 
-- `specs/<feature>/`
-- `spec.json`
-- `tasks/task-R*.md`
+できません。fresh verification 後に `spec.json` と task markdown の物理 state sync が必要です。
 
-## Should I implement an entire feature in one run?
+## production bug は何を使いますか？
 
-Usually no. Task-by-task execution is safer and keeps `task_registry` trustworthy.
-
-## Is `NO_TESTS` a successful verdict?
-
-No. It only means no test suite was executed. It does not replace real evidence or healthy preflight checks.
-
-## Do I need `/docs init` before `/hapo:specs`?
-
-No. `/docs init` is optional support infrastructure. The core CafeKit loop can start directly with `/hapo:specs`.
+root cause が不明なら `/hapo:debug` から始めます。diagnosis 後、または bug と target fix が明確なら `/hapo:hotfix` を使います。

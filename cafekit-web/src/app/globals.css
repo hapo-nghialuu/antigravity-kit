@@ -161,3 +161,32 @@
     @apply opacity-100;
   }
 }
+
+@layer components {
+  .docs-code-block {
+    background: #101820;
+    color: #EAF4EF;
+  }
+
+  .docs-code-block code {
+    display: block;
+    min-width: max-content;
+    white-space: pre;
+    font: inherit;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+
+  .docs-code-block code::before,
+  .docs-code-block code::after {
+    content: none !important;
+  }
+
+  .docs-code-block .hljs,
+  .docs-code-block span {
+    background: transparent !important;
+  }
+}

@@ -1,0 +1,49 @@
+---
+title: Runtime bundle
+description: Understand the installed files, hooks, state checks, and validators.
+---
+
+<DocsHero
+  eyebrow="Runtime"
+  title="CafeKit installs an operating system for the assistant."
+  description="The package adds managed skills, agents, rules, scripts, hooks, statusline, runtime config, and state synchronization into the project."
+/>
+
+<RuntimeBundle />
+
+## Hooks
+
+Claude Code uses CommonJS hooks under `.claude/hooks/`. OpenCode uses TypeScript plugins under `.opencode/plugins/` — see [OpenCode platform](/docs/platforms/opencode) for the plugin-to-hook mapping.
+
+| Hook | Purpose |
+|---|---|
+| `privacy-block.cjs` | Requires user approval for sensitive files such as `.env`, keys, credentials, and tokens. |
+| `inspect-block.cjs` | Blocks heavy or unsafe scopes such as `.git`, `node_modules`, build outputs, and broad glob scans. |
+| `rules.cjs` | Injects concise workflow, skill routing, docs path, and modularization reminders. |
+| `spec-state.cjs` | Finds active specs and injects the state sync tollgate. |
+| `docs-sync.cjs` | Detects missing or stale project docs. |
+| `state.cjs` | Persists session state and modified-file summaries. |
+| `agent.cjs` | Gives subagents lightweight path, locale, and rule context. |
+| `usage.cjs` | Fetches Claude usage limits for the statusline cache. |
+
+## Validators
+
+The runtime includes deterministic scripts:
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+node .claude/scripts/validate-docs.cjs docs
+node .claude/scripts/validate-docs-reconstruct.cjs docs/as-is/<scope>
+node .claude/scripts/generate-skill-catalog.cjs --skills
+```
+
+Use validators as hard backstops. Prompt instructions can drift; scripts should not.
+
+## State model
+
+CafeKit stores feature state in both machine and human layers:
+
+- `spec.json` stores phase, status, `task_files`, and `task_registry`.
+- `tasks/task-R*.md` stores context, steps, criteria, and evidence.
+
+Both layers must move together. Chat messages are not a source of truth.

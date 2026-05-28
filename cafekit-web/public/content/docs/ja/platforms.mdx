@@ -1,0 +1,32 @@
+---
+title: Platforms
+description: Claude Code と OpenCode の runtime support 概要。
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code と OpenCode はそれぞれ self-contained runtime を持ちます。"
+  description="Installer は project markers から target platform を detect し、独立した完全な runtime を書き出します。詳細な bundle layout、hooks、plugins、commands は下の platform を選んで確認してください。"
+/>
+
+<PlatformMatrix />
+
+## Platform を選ぶ
+
+- [Claude Code](/docs/platforms/claude) — `.claude/` skills、agents、hooks、runtime、`CLAUDE.md`。
+- [OpenCode](/docs/platforms/opencode) — `.opencode/` skills、agents、plugins、runtime、`AGENTS.md`。
+
+各 platform は self-contained です。OpenCode は `.claude/` ファイルに依存せず、Claude Code も `.opencode/` ファイルに依存しません。
+
+## Detection
+
+| Platform | Markers |
+|---|---|
+| Claude Code | `.claude/`、`CLAUDE.md`、`.mcp.json` |
+| OpenCode | `.opencode/`、`AGENTS.md`、`opencode.json`、`opencode.jsonc` |
+
+両方が検出された場合、installer は target ごとに選択を求めます。空の marker（例 `opencode.json: {}`）も valid な project marker として扱われます。
+
+## Future platforms
+
+Cursor は current installer の runtime target ではありません。

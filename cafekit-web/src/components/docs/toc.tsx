@@ -43,7 +43,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
 
   return (
     <nav className="space-y-2">
-      <div className="font-semibold text-foreground mb-4 text-sm tracking-tight">
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-4">
         On This Page
       </div>
       <div className="relative pl-0.5">
@@ -68,7 +68,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
                     });
                   }}
                   className={cn(
-                    "block text-xs py-1.5 transition-colors border-l-2 -ml-px pl-4",
+                    "block text-xs leading-5 py-1.5 transition-colors border-l-2 -ml-px pl-4",
                     isActive
                       ? "border-primary text-primary font-medium"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"

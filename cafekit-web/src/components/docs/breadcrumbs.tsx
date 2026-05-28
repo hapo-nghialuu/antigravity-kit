@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { getDocsConfig } from '@/lib/docs-config';
+import { flattenDocsNavItems, getDocsConfig } from '@/lib/docs-config';
 import { type Locale, localizeHref } from '@/lib/locale-utils';
 
 interface BreadcrumbsProps {
@@ -24,7 +24,7 @@ export function Breadcrumbs({ slug, locale = 'en' }: BreadcrumbsProps) {
     // Logic to find titles could be complex, for now let's use slug parts or look up
     // Flatten config to find titles
     const docsConfig = getDocsConfig(locale);
-    const flatNav = docsConfig.sidebarNav.flatMap(section => section.items);
+    const flatNav = docsConfig.sidebarNav.flatMap(section => flattenDocsNavItems(section.items));
 
     let currentPath = localizeHref(locale, '/docs');
     slug.forEach((part) => {

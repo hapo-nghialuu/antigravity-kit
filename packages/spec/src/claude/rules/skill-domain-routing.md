@@ -29,6 +29,7 @@ User wants to...
 
 ```text
 User wants to...
+├── answer questions from source code/docs/specs/config    -> /hapo:question
 ├── find files, locate code, scan project structure       -> /hapo:inspect
 ├── diagnose an error or failing check                    -> /hapo:debug
 ├── understand possible side effects                      -> /hapo:impact-analysis
@@ -41,6 +42,7 @@ Local source truth comes from `/hapo:inspect`; external/current knowledge comes 
 
 ```text
 User wants to...
+├── ask/answer documentation questions from source         -> /hapo:question
 ├── create missing project docs                           -> /hapo:docs --init
 ├── update docs after source changes                      -> /hapo:docs --update
 ├── summarize codebase quickly                            -> /hapo:docs --summarize

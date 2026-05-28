@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- OpenCode installs now ship CafeKit runtime plugins under `.opencode/plugins/`:
+  - `privacy-block.ts` — blocks reads of `.env`, key, credential, and token files via `tool.execute.before`; mirrors the Claude `privacy-block.cjs` JSON-marker UX so assistants prompt the user before retrying via `bash cat`.
+  - `inspect-block.ts` — blocks reads/globs that target heavy dirs (`node_modules`, `.next`, `dist`, …) and excessively broad glob patterns; allows approved build/package-manager commands.
+  - `docs-sync.ts` — on `session.created`, writes a banner to `.opencode/session-banner.md` when source code exists without `docs/` or when `docs/.sync_hash` is stale.
+  - `session.ts` — writes project type / package manager / framework / git branch banner; emits the compaction warning on `session.compacted`.
+  - `state.ts` — loads `.opencode/session-state/latest.md` on `session.created`, refreshes on `tool.execute.after` for state-shaping tools (`todowrite`, `task*`), and archives on `session.idle`.
+- Installer now writes `.opencode/package.json` with `@opencode-ai/plugin ^1.15.11`; OpenCode runs `bun install` automatically at startup.
+
+### Changed
+- `normalizeOpenCodeBody` now rewrites `hooks/.logs/` → `plugins/.logs/` so the OpenCode `.gitignore` ignores plugin log output rather than the legacy hook log path.
+
+### Gaps (documented, intentionally unported)
+- `rules.cjs`, `agent.cjs`, `spec-state.cjs`, and the prompt half of `usage.cjs` remain Claude-only — OpenCode has no equivalent for `UserPromptSubmit` / `SubagentStart`. Equivalent guidance lives in `AGENTS.md` + `.opencode/rules/*` (skill workflow + domain routing) so OpenCode users still get the routing and spec-drift reminders, just statically rather than via a runtime hook.
+- The Claude statusline (`status.cjs`) remains Claude-only.
+
+## [0.9.0] - 2026-05-26
+
+### Changed (breaking)
+- OpenCode installs are now self-contained under `.opencode/`. Skills, rules, scripts, references, `runtime.json`, and `.gitignore` previously written to `.claude/` are now installed to `.opencode/skills`, `.opencode/rules`, `.opencode/scripts`, `.opencode/references`, `.opencode/runtime.json`, and `.opencode/.gitignore`.
+- Text assets copied into `.opencode/` are rewritten on copy so internal references and Windows path variants point at the OpenCode runtime layout (`CLAUDE.md` → `AGENTS.md`, quoted `.claude` literals → `.opencode`).
+- Installer now prints a warning when an existing `.claude/` directory is detected during an OpenCode-only install so users can clean up the legacy layout manually.
+
+### Fixed
+- OpenCode skill installs now strip the Claude-only `hapo:` prefix from `SKILL.md` `name` frontmatter so skills satisfy OpenCode's strict `^[a-z0-9]+(-[a-z0-9]+)*$` validation and match the containing directory name.
+
+### Migration
+- Existing OpenCode users upgrading from 0.8.17 may safely delete the legacy `.claude/` directory after re-running the installer; the OpenCode runtime no longer reads from it.
+- Combined installs (Claude + OpenCode) continue to write both `.claude/` and `.opencode/` as independent self-contained runtimes.
+
 ## [0.8.17] - 2026-05-26
 
 ### Changed

@@ -2,25 +2,31 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.8.16-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 
 ## Overview
 
-CafeKit installs a structured workflow into Claude Code so the assistant can move cleanly from:
+CafeKit installs a structured workflow so an AI coding agent can move cleanly from:
 
 ```text
-Idea -> Brainstorm when unclear -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
+Question -> Question answer -> Brainstorm -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
 ```
 
-This package currently focuses on the Claude Code runtime:
+Claude Code install support:
 - installs CafeKit skills under `.claude/skills/`
 - installs supporting agents under `.claude/agents/`
 - installs runtime hooks, statusline, and managed settings
 - merges Claude settings safely on re-run
 
-OpenCode install support installs command wrappers under `.opencode/commands/`, converted OpenCode agents under `.opencode/agents/`, root `AGENTS.md`, merged `opencode.json`, and CafeKit skills under `.claude/skills/` so OpenCode can read the Claude-compatible skill bundle. OpenCode command names intentionally omit the `hapo:` prefix.
+OpenCode install support:
+- installs command wrappers under `.opencode/commands/`
+- installs converted OpenCode agents under `.opencode/agents/`
+- installs CafeKit skills under `.opencode/skills/`
+- installs OpenCode plugin runtime files under `.opencode/plugins/`
+- merges `opencode.json` and root `AGENTS.md`
+- omits the Claude `hapo:` command prefix
 
 ## Install
 
@@ -38,11 +44,11 @@ npx @haposoft/cafekit --upgrade
 
 Requirements:
 - Node.js 18+
-- Claude Code project with a `.claude/` directory, OpenCode project with `.opencode/` or `opencode.json`, or choose a runtime when prompted
+- Claude Code project with `.claude/`, OpenCode project with `.opencode/` or `opencode.json`, or choose a runtime when prompted
 
 ## What Gets Installed
 
-Claude Code install targets:
+Claude Code targets:
 
 ```text
 .claude/
@@ -50,6 +56,9 @@ Claude Code install targets:
 ├── skills/
 ├── agents/
 ├── hooks/
+├── rules/
+├── scripts/
+├── references/
 ├── cafekit.json
 ├── status.cjs
 ├── runtime.json
@@ -57,37 +66,30 @@ Claude Code install targets:
 └── CLAUDE.md
 ```
 
-OpenCode install targets:
+OpenCode targets:
 
 ```text
 .opencode/
+├── .gitignore
 ├── commands/
 ├── agents/
-└── cafekit.json
-
-.claude/
-├── .gitignore
 ├── skills/
 ├── rules/
 ├── scripts/
-└── runtime.json
+├── references/
+├── plugins/
+├── cafekit.json
+├── runtime.json
+└── package.json
 
 AGENTS.md
 opencode.json
 ```
 
 OpenCode setup also:
-- binds generated commands to the matching CafeKit subagent with `agent` + `subtask`
-- configures `permission.skill` and `permission.task` for CafeKit skills/subtasks
+- binds generated commands to matching CafeKit subagents with `agent` + `subtask`
+- configures `permission.skill` and `permission.task`
 - optionally writes `model` to `opencode.json` from `OPENCODE_MODEL`, `OPENCODE_DEFAULT_MODEL`, or installer input
-
-Managed runtime features include:
-- Claude Code statusline
-- session and subagent hooks
-- rule/context injection
-- spec state awareness
-- safe settings merge on reinstall
-- installed CafeKit version tracking in `.claude/cafekit.json` or `.opencode/cafekit.json`
 
 To check the installed CafeKit package version:
 
@@ -100,6 +102,7 @@ cat .opencode/cafekit.json
 
 CafeKit ships many skills, but the main release surface is:
 
+- `/hapo:question <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
@@ -120,52 +123,29 @@ node .claude/scripts/generate-skill-catalog.cjs --skills
 
 ## Quick Start
 
+Claude Code:
+
+```bash
+/hapo:question "Which files define the current CafeKit install/runtime behavior?" --repo
+/hapo:brainstorm Explore approaches for a Google Meet transcript extension
+/hapo:specs Build a Google Meet transcript extension with AI summaries
+/hapo:develop meet-transcript-mvp
+/hapo:test meet-transcript-mvp --full
+/hapo:code-review meet-transcript-mvp --pending
+```
+
 OpenCode uses the generated command names without the Claude `hapo:` prefix:
 
 ```bash
+/question "Which files define the current CafeKit install/runtime behavior?" --repo
+/brainstorm Explore approaches for a Google Meet transcript extension
 /specs Build a Google Meet transcript extension with AI summaries
 /develop meet-transcript-mvp
 /test --full
+/code-review --pending
 ```
 
-For unclear ideas, brainstorm first:
-
-```bash
-/hapo:brainstorm Explore approaches for a Google Meet transcript extension
-```
-
-Create a new spec:
-
-```bash
-/hapo:specs Build a Google Meet transcript extension with AI summaries
-```
-
-Implement the whole feature:
-
-```bash
-/hapo:develop meet-transcript-mvp
-```
-
-Implement one specific task file:
-
-```bash
-/hapo:develop meet-transcript-mvp task-R0-02-extension-scaffold-dashboard-skeleton.md
-```
-
-Run tests and review:
-
-```bash
-/hapo:test --full
-/hapo:code-review --pending
-```
-
-Generate a diagram:
-
-```bash
-/hapo:generate-graph Draw a sequence diagram for auth flow between browser, API, and database
-```
-
-Reconstruct current-state docs for an existing or legacy system:
+Reconstruct as-is docs from a legacy codebase:
 
 ```bash
 /hapo:docs --reconstruct apps/legacy-admin
@@ -173,9 +153,9 @@ Reconstruct current-state docs for an existing or legacy system:
 
 The reconstruct bundle includes as-is markdown/JSON evidence and a self-contained `overview.html` review dashboard before the approved docs are handed to `/hapo:specs`.
 
-## Spec Artifacts
+## Spec Output
 
-CafeKit's current spec workflow writes artifacts under:
+Specs are stored under:
 
 ```text
 specs/<feature-name>/
@@ -183,34 +163,17 @@ specs/<feature-name>/
 ├── requirements.md
 ├── research.md
 ├── design.md
-└── tasks/
-    ├── task-R0-01-*.md
-    ├── task-R1-01-*.md
-    └── ...
+└── tasks/task-R*.md
 ```
 
-The active workflow expects:
-- `spec.json` to hold state, approvals, validation, and `task_files`
-- design to define canonical contracts
-- each task file to carry completion criteria and `Task Test Plan & Verification Evidence`
+## Development
 
-## Release Notes For 0.8.0
+Run package self-tests:
 
-This release strengthens CafeKit's Claude Code workflow:
-- added `hapo:brainstorm` as a scout-first pre-spec design workflow for unclear ideas
-- tightened `hapo:specs` routing so unresolved architecture choices move through brainstorm first
-- added task-level `Task Test Plan & Verification Evidence` guidance across specs, develop, test, review, and sync
-- added skill self-tests for bundled Chrome DevTools and PDF scripts
-- added `hapo:git finish` guidance for verified branch closeout
-- simplified Claude runtime rules and added hook protocol guidance
-- fixed web lint/build issues in the docs app
-
-## Documentation
-
-- Installation: https://cafekit.haposoft.com/docs/getting-started/installation
-- Quickstart: https://cafekit.haposoft.com/docs/getting-started/quickstart
-- Spec workflow: https://cafekit.haposoft.com/docs/guides/spec-workflow
+```bash
+npm test
+```
 
 ## License
 
-MIT © Haposoft
+MIT

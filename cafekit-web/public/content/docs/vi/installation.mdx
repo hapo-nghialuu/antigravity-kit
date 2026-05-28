@@ -1,0 +1,64 @@
+---
+title: Cài đặt
+description: Cài, nâng cấp, và verify package CafeKit hiện tại.
+---
+
+<DocsHero
+  eyebrow="Install"
+  title="Bootstrap runtime vào repo hiện có."
+  description="Installer detect Claude Code và OpenCode, copy managed runtime files, merge settings an toàn, và ghi lại version package đã cài."
+/>
+
+## Yêu cầu
+
+- Node.js `>=18`
+- Project root có quyền ghi
+- Claude Code project, OpenCode project, hoặc chọn runtime lúc cài
+
+## Cài đặt
+
+```bash
+npx @haposoft/cafekit
+```
+
+Binary là `cafekit`, trỏ tới `packages/spec/bin/install.js`.
+
+## Nâng cấp
+
+```bash
+npx @haposoft/cafekit --upgrade
+```
+
+Upgrade mode refresh managed files, xóa hook runtime cũ, và giữ setting user-owned khi có thể.
+
+## Platform detection
+
+| Runtime | Detection | Installed shape |
+|---|---|---|
+| Claude Code | `.claude/` | `.claude/skills`, `.claude/agents`, `.claude/hooks`, `settings.json`, `status.cjs`, `CLAUDE.md` |
+| OpenCode | `.opencode/`, `opencode.json`, hoặc `opencode.jsonc` | `.opencode/skills`, `.opencode/agents`, `.opencode/commands`, `.opencode/plugins`, `.opencode/runtime.json`, root `AGENTS.md`, merged `opencode.json` |
+
+Nếu không có marker runtime, installer sẽ hỏi platform cần cài.
+
+## Verify
+
+Chạy một trong các command sau trong project:
+
+```bash
+/hapo:specs Build a tiny verified feature
+```
+
+Với OpenCode, command sinh ra không có prefix `hapo:`:
+
+```bash
+/specs Build a tiny verified feature
+```
+
+## Version tracking
+
+Installer ghi metadata vào:
+
+- `.claude/cafekit.json`
+- `.opencode/cafekit.json`
+
+Metadata gồm `packageName`, `version`, `platform`, timestamps, previous version nếu có, và exact install command.

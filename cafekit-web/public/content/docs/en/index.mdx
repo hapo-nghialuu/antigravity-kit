@@ -1,96 +1,52 @@
 ---
-title: CafeKit Documentation
-description: Claude Code-first documentation for CafeKit's spec-driven runtime, workflows, and reference material.
+title: CafeKit Docs
+description: Product documentation for the current CafeKit runtime package.
 ---
 
-# CafeKit Documentation
+<DocsHero
+  eyebrow="CafeKit 0.9.1"
+  title="A spec-driven runtime for real AI coding work."
+  description="CafeKit installs skills, agents, hooks, state checks, and quality gates into your repo so an assistant can move from idea to verified implementation without drifting into ad-hoc prompting."
+/>
 
-CafeKit is a **Claude Code-first runtime bundle** for spec-driven development. It installs the workflows, agents, hooks, and runtime context needed to move from idea to verified implementation without relying on ad-hoc prompts.
+## What CafeKit is
 
-## Who This Is For
+CafeKit is a repo-local runtime bundle for AI coding assistants. The current package is `@haposoft/cafekit`, installed with `npx @haposoft/cafekit`.
 
-Use CafeKit if you want:
+It adds a structured workflow around Claude Code and OpenCode:
 
-- a structured feature workflow instead of one-off prompting
-- spec artifacts that stay with the project
-- task-level execution with explicit verification
-- review and docs checkpoints before claiming work is done
+<CommandFlow />
 
-## Core Loop
+## Start with SDD
 
-```text
-Idea
-  -> /hapo:brainstorm (if unclear)
-  -> /hapo:specs
-  -> /hapo:develop
-  -> /hapo:test
-  -> /hapo:code-review
-```
+CafeKit is built around **specification-driven development**: an idea becomes code only after it becomes a source-backed contract. Start with the visual guide: [Spec-driven development](/docs/spec-driven-development).
 
-Common support commands:
+After that, the deeper path is [Core workflow](/docs/core-workflow) → [Spec lifecycle](/docs/spec-lifecycle) → [Skills](/docs/skills).
 
-- `/hapo:brainstorm <idea>` for scout-first ideation before a spec
-- `/hapo:specs --validate <feature>`
-- `/hapo:sync audit <feature>`
-- `/hapo:generate-graph <request>`
-- `/docs init` and `/docs update` for project documentation workflows
+## What it installs
 
-## What CafeKit Installs
+CafeKit installs a working runtime, not just documentation snippets.
 
-At install time, CafeKit adds a runtime bundle to `.claude/`:
+<RuntimeBundle />
 
-```text
-.claude/
-├── skills/
-├── agents/
-├── hooks/
-├── settings.json
-├── runtime.json
-├── status.cjs
-└── CLAUDE.md
-```
+The package currently ships **30 skills**, **13 agents**, installer support for **Claude Code** and **OpenCode**, and deterministic validators for specs and documentation bundles.
 
-The primary release surface is:
+## How to read these docs
 
-- `/hapo:brainstorm`
-- `/hapo:specs`
-- `/hapo:develop`
-- `/hapo:test`
-- `/hapo:code-review`
-- `/hapo:generate-graph`
+If you are new, read in this order:
 
-## Documentation Map
+1. [Installation](/docs/installation)
+2. [Spec-driven development](/docs/spec-driven-development)
+3. [Quickstart](/docs/quickstart)
+4. [Core workflow](/docs/core-workflow)
+5. [Runtime bundle](/docs/runtime)
+6. [Spec lifecycle](/docs/spec-lifecycle)
+7. [Workflows](/docs/workflows)
 
-### Getting Started
+If you already know the workflow, jump to [Skills](/docs/skills), [Agents](/docs/agents), or [Reference](/docs/reference).
 
-- [Installation](/docs/getting-started/installation)
-- [Quickstart](/docs/getting-started/quickstart)
+## Core promise
 
-### Core Concepts
+CafeKit does not try to make the assistant faster by removing process. It makes the assistant safer by forcing source-backed context, explicit task boundaries, fresh verification, adversarial review, and synchronized state.
 
-- [Spec Lifecycle](/docs/core-concepts/spec-lifecycle)
-- [Task Registry](/docs/core-concepts/task-registry)
-
-### Workflows
-
-- [`/hapo:specs`](/docs/workflows/specs)
-- [`/hapo:develop`](/docs/workflows/develop)
-- [`/hapo:test + /hapo:code-review`](/docs/workflows/test-review)
-- [`/hapo:sync`](/docs/workflows/sync)
-- [`/hapo:generate-graph`](/docs/workflows/generate-graph)
-
-### Reference
-
-- [File Structure](/docs/reference/file-structure)
-- [Command Cheatsheet](/docs/reference/commands)
-- [FAQ](/docs/faq)
-
-## Product Position
-
-- **Claude Code** is the active runtime today.
-- **Antigravity** is coming soon.
-- **Cursor** is coming soon.
-
-## Next Step
-
-Start with [Installation](/docs/getting-started/installation), then follow the [Quickstart](/docs/getting-started/quickstart).
+<QualityGate />

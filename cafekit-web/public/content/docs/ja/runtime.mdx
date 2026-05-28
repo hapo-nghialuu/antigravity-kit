@@ -1,0 +1,45 @@
+---
+title: Runtime bundle
+description: installed files、hooks、state checks、validators を理解します。
+---
+
+<DocsHero
+  eyebrow="Runtime"
+  title="CafeKit は assistant の operating system を入れる。"
+  description="package は managed skills、agents、rules、scripts、hooks、statusline、runtime config、state synchronization を project に追加します。"
+/>
+
+<RuntimeBundle />
+
+## Hooks
+
+Claude Code は `.claude/hooks/` の CommonJS hooks を使います。OpenCode は `.opencode/plugins/` の TypeScript plugins を使います。Plugin と hook の対応は [OpenCode platform](/docs/platforms/opencode) を参照してください。
+
+| Hook | Purpose |
+|---|---|
+| `privacy-block.cjs` | `.env`、keys、credentials、tokens など sensitive files に user approval を要求します。 |
+| `inspect-block.cjs` | `.git`、`node_modules`、build outputs、広すぎる glob scans を block します。 |
+| `rules.cjs` | workflow、skill routing、docs path、modularization reminders を inject します。 |
+| `spec-state.cjs` | active spec を見つけ、state sync tollgate を inject します。 |
+| `docs-sync.cjs` | missing/stale project docs を検出します。 |
+| `state.cjs` | session state と modified-file summaries を保存します。 |
+| `agent.cjs` | subagent に path、locale、rule context を渡します。 |
+| `usage.cjs` | statusline cache 用に Claude usage limits を fetch します。 |
+
+## Validators
+
+```bash
+node .claude/scripts/validate-spec-output.cjs specs/<feature>
+node .claude/scripts/validate-docs.cjs docs
+node .claude/scripts/validate-docs-reconstruct.cjs docs/as-is/<scope>
+node .claude/scripts/generate-skill-catalog.cjs --skills
+```
+
+validators は hard backstop です。prompt instructions は drift しますが、scripts は drift しないようにします。
+
+## State model
+
+- `spec.json` は phase、status、`task_files`、`task_registry` を保持します。
+- `tasks/task-R*.md` は context、steps、criteria、evidence を保持します。
+
+2つの layer は一緒に動く必要があります。chat は source of truth ではありません。

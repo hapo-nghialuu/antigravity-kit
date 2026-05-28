@@ -1,204 +1,216 @@
 import { type Locale, localizeHref } from "@/lib/locale-utils";
 
-type DocsConfig = {
-  mainNav: {
-    title: string;
-    href: string;
-  }[];
-  sidebarNav: {
-    title: string;
-    items: {
-      title: string;
-      href: string;
-    }[];
-  }[];
+export type DocsNavItem = {
+  title: string;
+  href: string;
+  description: string;
+  keywords: string;
+  children?: DocsNavItem[];
 };
 
-const hrefGroups = {
-  gettingStarted: [
-    { href: "/docs", key: "introduction" },
-    { href: "/docs/getting-started/installation", key: "installation" },
-    { href: "/docs/getting-started/quickstart", key: "quickstart" },
+export type DocsNavSection = {
+  title: string;
+  items: DocsNavItem[];
+};
+
+type DocsLabels = {
+  mainNav: Record<"docs" | "quickstart" | "reference", string>;
+  sections: Record<"start" | "runtime" | "catalog" | "reference", string>;
+  pages: Record<string, Omit<DocsNavItem, "href">>;
+};
+
+type RouteItem = readonly [pageKey: string, href: string, children?: readonly RouteItem[]];
+
+const skillRoutes = [
+  ["skillQuestion", "/docs/skills/question"],
+  ["skillBrainstorm", "/docs/skills/brainstorm"],
+  ["skillSpecs", "/docs/skills/specs"],
+  ["skillDevelop", "/docs/skills/develop"],
+  ["skillTest", "/docs/skills/test"],
+  ["skillCodeReview", "/docs/skills/code-review"],
+  ["skillSync", "/docs/skills/sync"],
+  ["skillDebug", "/docs/skills/debug"],
+  ["skillHotfix", "/docs/skills/hotfix"],
+  ["skillDocs", "/docs/skills/docs"],
+  ["skillInspect", "/docs/skills/inspect"],
+  ["skillGit", "/docs/skills/git"],
+] as const satisfies readonly RouteItem[];
+
+const routes = {
+  start: [
+    ["overview", "/docs"],
+    ["specDriven", "/docs/spec-driven-development"],
+    ["installation", "/docs/installation"],
+    ["quickstart", "/docs/quickstart"],
+    ["coreWorkflow", "/docs/core-workflow"],
   ],
-  coreConcepts: [
-    { href: "/docs/core-concepts", key: "overview" },
-    { href: "/docs/core-concepts/spec-lifecycle", key: "specLifecycle" },
-    { href: "/docs/core-concepts/task-registry", key: "taskRegistry" },
+  runtime: [
+    ["runtime", "/docs/runtime"],
+    ["specLifecycle", "/docs/spec-lifecycle"],
+    ["workflows", "/docs/workflows"],
   ],
-  workflows: [
-    { href: "/docs/workflows/specs", key: "/hapo:specs" },
-    { href: "/docs/workflows/develop", key: "/hapo:develop" },
-    { href: "/docs/workflows/test-review", key: "/hapo:test + /hapo:code-review" },
-    { href: "/docs/workflows/sync", key: "/hapo:sync" },
-    { href: "/docs/workflows/generate-graph", key: "/hapo:generate-graph" },
-  ],
-  docsWorkflow: [
-    { href: "/docs/docs-workflow", key: "overview" },
-    { href: "/docs/docs-workflow/init", key: "/docs init" },
-    { href: "/docs/docs-workflow/update", key: "/docs update" },
-  ],
-  platforms: [
-    { href: "/docs/platforms", key: "overview" },
-    { href: "/docs/platforms/claude", key: "claudeCode" },
-    { href: "/docs/platforms/antigravity", key: "antigravityComingSoon" },
-    { href: "/docs/platforms/cursor", key: "cursorComingSoon" },
+  catalog: [
+    ["skills", "/docs/skills", skillRoutes],
+    ["agents", "/docs/agents"],
+    ["platforms", "/docs/platforms", [
+      ["platformsClaude", "/docs/platforms/claude"],
+      ["platformsOpencode", "/docs/platforms/opencode"],
+    ]],
   ],
   reference: [
-    { href: "/docs/reference", key: "overview" },
-    { href: "/docs/reference/file-structure", key: "fileStructure" },
-    { href: "/docs/reference/commands", key: "commandCheatsheet" },
-    { href: "/docs/faq", key: "faq" },
+    ["reference", "/docs/reference"],
+    ["faq", "/docs/faq"],
   ],
-} as const;
+} as const satisfies Record<string, readonly RouteItem[]>;
 
-const labels = {
+const labels: Record<Locale, DocsLabels> = {
   en: {
-    sectionTitles: {
-      gettingStarted: "Getting Started",
-      coreConcepts: "Core Concepts",
-      workflows: "Workflows",
-      docsWorkflow: "Docs Workflow",
-      platforms: "Platforms",
-      reference: "Reference",
-    },
-    itemTitles: {
-      introduction: "Introduction",
-      installation: "Installation",
-      quickstart: "Quickstart",
-      overview: "Overview",
-      specLifecycle: "Spec Lifecycle",
-      taskRegistry: "Task Registry",
-      claudeCode: "Claude Code",
-      antigravityComingSoon: "Antigravity (Coming Soon)",
-      cursorComingSoon: "Cursor (Coming Soon)",
-      fileStructure: "File Structure",
-      commandCheatsheet: "Command Cheatsheet",
-      faq: "FAQ",
+    mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
+    sections: { start: "Start here", runtime: "Runtime model", catalog: "Catalog", reference: "Reference" },
+    pages: {
+      overview: page("Overview", "What CafeKit is, who it is for, and how the docs are organized.", "overview what is cafekit"),
+      specDriven: page("Spec-driven development", "The simple visual guide to CafeKit SDD: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
+      installation: page("Installation", "Install, upgrade, and verify the CafeKit runtime bundle.", "install npx upgrade package"),
+      quickstart: page("Quickstart", "Run the first spec-driven workflow from idea to review.", "quickstart first workflow"),
+      coreWorkflow: page("Core workflow", "Understand the main CafeKit path from idea to verified change.", "core workflow main workflow specs develop test review"),
+      runtime: page("Runtime bundle", "Understand installed files, hooks, state, and safety gates.", "runtime hooks settings statusline"),
+      specLifecycle: page("Spec lifecycle", "Understand CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, and develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
+      workflows: page("Workflows", "Choose the right command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
+      skills: page("Skills", "Browse CafeKit workflow and domain skills, with detailed main-skill flows.", "skills catalog main skill flows"),
+      skillQuestion: page("Question", "Answer project and technical questions with repo-first evidence, then current external sources when needed.", "question ask answer source evidence consultation"),
+      skillBrainstorm: page("Brainstorm", "Clarify unclear ideas before a spec exists.", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "Create requirements, research, design, task packets, and validation state.", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "Implement approved task packets with scope fidelity.", "develop implementation task"),
+      skillTest: page("Test", "Verify implementation with real commands and evidence.", "test verification evidence"),
+      skillCodeReview: page("Code Review", "Review changes for spec compliance, security, and regressions.", "code review security regression"),
+      skillSync: page("Sync", "Update task status, task_registry, task markdown, phase, and audit drift.", "sync state task registry audit phase"),
+      skillDebug: page("Debug", "Diagnose failures before changing product code.", "debug root cause"),
+      skillHotfix: page("Hotfix", "Apply narrow evidence-backed fixes after diagnosis.", "hotfix repair bug"),
+      skillDocs: page("Docs", "Create, update, summarize, or reconstruct docs from source.", "docs reconstruct update"),
+      skillInspect: page("Inspect", "Discover relevant files, entrypoints, call paths, and blast radius.", "inspect discovery"),
+      skillGit: page("Git", "Commit, push, PR, finish, and worktree operations with safety checks.", "git commit push pr"),
+      agents: page("Agents", "Understand each packaged agent and where it fits in the workflow.", "agents subagents roles"),
+      platforms: page("Platforms", "Claude Code and OpenCode support, with future platform notes.", "claude opencode platforms"),
+      platformsClaude: page("Claude Code", "Native `.claude/` runtime with hooks, agents, skills, and commands.", "claude code hooks agents skills"),
+      platformsOpencode: page("OpenCode", "Self-contained `.opencode/` runtime with TypeScript plugins and AGENTS.md.", "opencode plugins agents skills"),
+      reference: page("Reference", "Command cheatsheet, file structure, package facts, and state values.", "reference commands files"),
+      faq: page("FAQ", "Answers to common workflow and runtime questions.", "faq questions"),
     },
   },
   vi: {
-    sectionTitles: {
-      gettingStarted: "Bắt đầu",
-      coreConcepts: "Khái niệm cốt lõi",
-      workflows: "Workflows",
-      docsWorkflow: "Docs Workflow",
-      platforms: "Nền tảng",
-      reference: "Tham khảo",
-    },
-    itemTitles: {
-      introduction: "Giới thiệu",
-      installation: "Cài đặt",
-      quickstart: "Bắt đầu nhanh",
-      overview: "Tổng quan",
-      specLifecycle: "Vòng đời spec",
-      taskRegistry: "Task registry",
-      claudeCode: "Claude Code",
-      antigravityComingSoon: "Antigravity (Sắp có)",
-      cursorComingSoon: "Cursor (Sắp có)",
-      fileStructure: "Cấu trúc file",
-      commandCheatsheet: "Bảng lệnh",
-      faq: "FAQ",
+    mainNav: { docs: "Tài liệu", quickstart: "Bắt đầu nhanh", reference: "Tham khảo" },
+    sections: { start: "Bắt đầu", runtime: "Runtime", catalog: "Catalog", reference: "Tham khảo" },
+    pages: {
+      overview: page("Tổng quan", "CafeKit là gì, dành cho ai, và nên đọc docs theo thứ tự nào.", "tong quan cafekit"),
+      specDriven: page("Spec-driven development", "Trang giải thích trực quan về SDD của CafeKit: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
+      installation: page("Cài đặt", "Cài, nâng cấp, và kiểm tra runtime bundle của CafeKit.", "cai dat npx upgrade package"),
+      quickstart: page("Bắt đầu nhanh", "Chạy workflow spec-driven đầu tiên từ ý tưởng đến review.", "quickstart workflow dau tien"),
+      coreWorkflow: page("Workflow chính", "Hiểu luồng CafeKit chính từ ý tưởng đến thay đổi đã verify.", "workflow chinh core specs develop test review"),
+      runtime: page("Runtime bundle", "Hiểu file cài vào repo, hooks, state, và safety gates.", "runtime hooks settings statusline"),
+      specLifecycle: page("Vòng đời spec", "Hiểu SDD của CafeKit: scope lock, evidence, requirements, design, task packets, validation, và develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
+      workflows: page("Workflows", "Chọn đúng command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
+      skills: page("Skills", "Xem các workflow/domain skill của CafeKit và flow chi tiết cho skill chính.", "skills catalog main skill flows"),
+      skillQuestion: page("Question", "Trả lời câu hỏi về project và kỹ thuật bằng source evidence trước, rồi dùng nguồn ngoài hiện tại khi cần.", "question ask answer source evidence consultation"),
+      skillBrainstorm: page("Brainstorm", "Làm rõ ý tưởng trước khi có spec.", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "Tạo requirements, research, design, task packets, và validation state.", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "Implement approved task packets với scope fidelity.", "develop implementation task"),
+      skillTest: page("Test", "Verify implementation bằng command thật và evidence.", "test verification evidence"),
+      skillCodeReview: page("Code Review", "Review changes cho spec compliance, security, và regressions.", "code review security regression"),
+      skillSync: page("Sync", "Update task status, task_registry, task markdown, phase, và audit drift.", "sync state task registry audit phase"),
+      skillDebug: page("Debug", "Diagnose failures trước khi sửa product code.", "debug root cause"),
+      skillHotfix: page("Hotfix", "Apply fix hẹp, có evidence sau diagnosis.", "hotfix repair bug"),
+      skillDocs: page("Docs", "Create, update, summarize, hoặc reconstruct docs từ source.", "docs reconstruct update"),
+      skillInspect: page("Inspect", "Discover relevant files, entrypoints, call paths, và blast radius.", "inspect discovery"),
+      skillGit: page("Git", "Commit, push, PR, finish, và worktree operations có safety checks.", "git commit push pr"),
+      agents: page("Agents", "Hiểu từng agent đóng gói và vai trò trong workflow.", "agents subagents roles"),
+      platforms: page("Platforms", "Support Claude Code và OpenCode, kèm ghi chú platform tương lai.", "claude opencode platforms"),
+      platformsClaude: page("Claude Code", "Runtime `.claude/` native với hooks, agents, skills, commands.", "claude code hooks agents skills"),
+      platformsOpencode: page("OpenCode", "Runtime `.opencode/` self-contained với TypeScript plugins và AGENTS.md.", "opencode plugins agents skills"),
+      reference: page("Tham khảo", "Bảng command, cấu trúc file, package facts, và state values.", "reference commands files"),
+      faq: page("FAQ", "Câu trả lời cho các câu hỏi runtime và workflow thường gặp.", "faq cau hoi"),
     },
   },
   ja: {
-    sectionTitles: {
-      gettingStarted: "はじめに",
-      coreConcepts: "コアコンセプト",
-      workflows: "ワークフロー",
-      docsWorkflow: "Docs Workflow",
-      platforms: "プラットフォーム",
-      reference: "リファレンス",
-    },
-    itemTitles: {
-      introduction: "はじめに",
-      installation: "インストール",
-      quickstart: "クイックスタート",
-      overview: "概要",
-      specLifecycle: "Spec ライフサイクル",
-      taskRegistry: "Task registry",
-      claudeCode: "Claude Code",
-      antigravityComingSoon: "Antigravity (Coming Soon)",
-      cursorComingSoon: "Cursor (Coming Soon)",
-      fileStructure: "ファイル構成",
-      commandCheatsheet: "コマンド早見表",
-      faq: "FAQ",
+    mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
+    sections: { start: "はじめに", runtime: "Runtime", catalog: "Catalog", reference: "Reference" },
+    pages: {
+      overview: page("概要", "CafeKit の役割、対象ユーザー、読む順番を説明します。", "overview cafekit"),
+      specDriven: page("Spec-driven development", "CafeKit SDD: spec、develop、verify、sync の visual guide。", "sdd specification driven development visual guide"),
+      installation: page("インストール", "CafeKit runtime bundle の導入、更新、確認方法。", "install npx upgrade package"),
+      quickstart: page("クイックスタート", "アイデアから review までの最初の spec-driven workflow。", "quickstart workflow"),
+      coreWorkflow: page("Core workflow", "idea から verified change までの CafeKit の主ルートを理解します。", "core workflow specs develop test review"),
+      runtime: page("Runtime bundle", "インストールされるファイル、hooks、state、安全ゲートを理解します。", "runtime hooks settings statusline"),
+      specLifecycle: page("Spec lifecycle", "CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, develop handoff。", "sdd spec json task registry lifecycle specification driven development"),
+      workflows: page("Workflows", "brainstorm、specs、develop、debug、hotfix、test、review、sync、docs、graph、git の使い分け。", "commands workflows brainstorm debug hotfix"),
+      skills: page("Skills", "CafeKit workflow/domain skills と main skill flows。", "skills catalog main skill flows"),
+      skillQuestion: page("Question", "Project と technical questions に repo-first evidence で答え、必要に応じて current external sources を使います。", "question ask answer source evidence consultation"),
+      skillBrainstorm: page("Brainstorm", "Spec 前に曖昧な idea を明確にします。", "brainstorm ideation scout"),
+      skillSpecs: page("Specs", "requirements、research、design、task packets、validation state を作ります。", "specs requirements design tasks"),
+      skillDevelop: page("Develop", "approved task packets を scope fidelity で実装します。", "develop implementation task"),
+      skillTest: page("Test", "real commands と evidence で implementation を verify します。", "test verification evidence"),
+      skillCodeReview: page("Code Review", "spec compliance、security、regressions を review します。", "code review security regression"),
+      skillSync: page("Sync", "task status、task_registry、task markdown、phase、drift audit を扱います。", "sync state task registry audit phase"),
+      skillDebug: page("Debug", "product code 変更前に failures を diagnose します。", "debug root cause"),
+      skillHotfix: page("Hotfix", "diagnosis 後に narrow evidence-backed fix を適用します。", "hotfix repair bug"),
+      skillDocs: page("Docs", "source から docs を create、update、summarize、reconstruct します。", "docs reconstruct update"),
+      skillInspect: page("Inspect", "relevant files、entrypoints、call paths、blast radius を discover します。", "inspect discovery"),
+      skillGit: page("Git", "safety checks 付きで commit、push、PR、finish、worktree operations を行います。", "git commit push pr"),
+      agents: page("Agents", "同梱 agent と workflow 内の役割。", "agents subagents roles"),
+      platforms: page("Platforms", "Claude Code と OpenCode support、今後の platform 方針。", "claude opencode platforms"),
+      platformsClaude: page("Claude Code", "Hooks、agents、skills、commands を持つ native `.claude/` runtime。", "claude code hooks agents skills"),
+      platformsOpencode: page("OpenCode", "TypeScript plugins と AGENTS.md を持つ self-contained `.opencode/` runtime。", "opencode plugins agents skills"),
+      reference: page("Reference", "command、file structure、package facts、state values の早見表。", "reference commands files"),
+      faq: page("FAQ", "runtime と workflow に関するよくある質問。", "faq questions"),
     },
   },
-} as const;
-
-function buildSidebar(locale: keyof typeof labels) {
-  const localeLabels = labels[locale] ?? labels.en;
-
-  const makeItems = (group: keyof typeof hrefGroups) =>
-    hrefGroups[group].map((item) => ({
-      title: localeLabels.itemTitles[item.key as keyof typeof localeLabels.itemTitles] ?? item.key,
-      href: localizeHref(locale, item.href),
-    }));
-
-  return [
-    {
-      title: localeLabels.sectionTitles.gettingStarted,
-      items: makeItems("gettingStarted"),
-    },
-    {
-      title: localeLabels.sectionTitles.coreConcepts,
-      items: makeItems("coreConcepts"),
-    },
-    {
-      title: localeLabels.sectionTitles.workflows,
-      items: makeItems("workflows"),
-    },
-    {
-      title: localeLabels.sectionTitles.docsWorkflow,
-      items: makeItems("docsWorkflow"),
-    },
-    {
-      title: localeLabels.sectionTitles.platforms,
-      items: makeItems("platforms"),
-    },
-    {
-      title: localeLabels.sectionTitles.reference,
-      items: makeItems("reference"),
-    },
-  ];
-}
-
-export const docsConfig = {
-  mainNav: [
-    {
-      title: "Documentation",
-      href: "/en/docs",
-    },
-    {
-      title: "Quickstart",
-      href: "/en/docs/getting-started/quickstart",
-    },
-    {
-      title: "Reference",
-      href: "/en/docs/reference",
-    },
-  ],
-  sidebarNav: buildSidebar("en"),
 };
 
-export function getDocsConfig(locale: string): DocsConfig {
-  const normalized: Locale = locale === "vi" || locale === "ja" ? locale : "en";
+function page(title: string, description: string, keywords: string) {
+  return { title, description, keywords };
+}
+
+function normalizeLocale(locale: string): Locale {
+  return locale === "vi" || locale === "ja" ? locale : "en";
+}
+
+function buildSidebar(locale: Locale): DocsNavSection[] {
+  const localeLabels = labels[locale];
+
+  return Object.entries(routes).map(([sectionKey, items]) => ({
+    title: localeLabels.sections[sectionKey as keyof typeof routes],
+    items: items.map((item) => buildNavItem(localeLabels, locale, item)),
+  }));
+}
+
+function buildNavItem(localeLabels: DocsLabels, locale: Locale, [pageKey, href, children]: RouteItem): DocsNavItem {
+  return {
+    ...localeLabels.pages[pageKey],
+    href: localizeHref(locale, href),
+    ...(children ? { children: children.map((item) => buildNavItem(localeLabels, locale, item)) } : {}),
+  };
+}
+
+export function flattenDocsNavItems(items: DocsNavItem[]): DocsNavItem[] {
+  return items.flatMap(({ children, ...item }) => [item, ...(children ? flattenDocsNavItems(children) : [])]);
+}
+
+export function getDocsConfig(locale: string) {
+  const normalized = normalizeLocale(locale);
+  const localeLabels = labels[normalized];
 
   return {
     mainNav: [
-      {
-        title: "Documentation",
-        href: localizeHref(normalized, "/docs"),
-      },
-      {
-        title: "Quickstart",
-        href: localizeHref(normalized, "/docs/getting-started/quickstart"),
-      },
-      {
-        title: "Reference",
-        href: localizeHref(normalized, "/docs/reference"),
-      },
+      { title: localeLabels.mainNav.docs, href: localizeHref(normalized, "/docs") },
+      { title: localeLabels.mainNav.quickstart, href: localizeHref(normalized, "/docs/quickstart") },
+      { title: localeLabels.mainNav.reference, href: localizeHref(normalized, "/docs/reference") },
     ],
     sidebarNav: buildSidebar(normalized),
   };
+}
+
+export function getDocsSearchGroups(locale: string): DocsNavSection[] {
+  return getDocsConfig(locale).sidebarNav.map((section) => ({
+    ...section,
+    items: flattenDocsNavItems(section.items),
+  }));
 }

@@ -1,0 +1,51 @@
+---
+title: Workflows
+description: 作業内容に合う CafeKit command を選びます。
+---
+
+<DocsHero
+  eyebrow="Command surface"
+  title="risk に合う workflow を使う。"
+  description="CafeKit は happy path だけではありません。ideation、implementation、debugging、hotfix、docs、review、sync、git、diagram workflows を含みます。"
+/>
+
+<CommandFlow />
+
+Main delivery path は [Core workflow](/ja/docs/core-workflow) で詳しく説明しています。このページは標準 feature path 以外の command selector として使います。
+
+## Core feature workflow
+
+| Command | Use when |
+|---|---|
+| `/hapo:specs` | requirements、research、design、tasks、validation が必要。 |
+| `/hapo:develop` | spec または task file が approved で implementation ready。 |
+| `/hapo:test` | commands、build、tests、UI checks、runtime reachability の evidence が必要。 |
+| `/hapo:code-review` | bugs、security、drift、missing proof の adversarial review。 |
+| `/hapo:sync` | proof 後に task status、`task_registry`、task markdown を更新する、または drift audit/repair が必要。 |
+
+Idea が曖昧、architecture が未決定、scope を pressure-test したい場合だけ、この path の前に `/hapo:brainstorm` を使います。
+
+## Bug and incident
+
+| Command | Use when |
+|---|---|
+| `/hapo:debug` | root cause が不明。code change 前に evidence を作る diagnostic-first workflow。 |
+| `/hapo:hotfix` | diagnosis 後に小さく安全に bug を修正し regression checks を行う。 |
+
+## Docs and artifacts
+
+| Command | Use when |
+|---|---|
+| `/hapo:docs --init` | project docs がない。 |
+| `/hapo:docs --update` | source changes が docs refresh を必要とする。 |
+| `/hapo:docs --reconstruct <scope>` | existing system の source-backed as-is docs が必要。 |
+| `/hapo:generate-graph <request>` | architecture、flow、sequence、state diagram が必要。 |
+
+## Release
+
+| Command | Use when |
+|---|---|
+| `/hapo:git commit` | verified changes を focused conventional commit にする。 |
+| `/hapo:git push` | tests と review が clean で branch を publish できる。 |
+
+OpenCode では `/specs`、`/develop`、`/test`、`/code-review` のような prefix-free commands が使われます。

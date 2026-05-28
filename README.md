@@ -13,6 +13,7 @@ The installer records the installed package version in `.claude/cafekit.json` fo
 ## What It Is
 
 CafeKit installs a working runtime bundle for Claude Code:
+- `hapo:question` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
 - `hapo:brainstorm` for scout-first ideation before a spec is ready
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation from approved specs
@@ -29,12 +30,13 @@ using an automatic prompt-scoring hook.
 Core flow:
 
 ```text
-Idea -> /hapo:brainstorm (if unclear) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+Question -> /hapo:question -> Idea -> /hapo:brainstorm (if design choices remain) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 ```
 
 ## Quick Start
 
 ```bash
+/hapo:question "Which config file controls CafeKit runtime behavior in this project?"
 /hapo:brainstorm Explore approaches for a meeting transcript extension
 /hapo:specs Build a meeting transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp

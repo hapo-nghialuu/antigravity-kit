@@ -1,0 +1,32 @@
+---
+title: Platforms
+description: CafeKit runtime support overview for Claude Code and OpenCode.
+---
+
+<DocsHero
+  eyebrow="Platforms"
+  title="Claude Code and OpenCode each get a self-contained runtime."
+  description="The installer detects the target platform from project markers and writes a complete, isolated runtime. Pick your platform below for the full bundle layout, hooks, plugins, and commands."
+/>
+
+<PlatformMatrix />
+
+## Pick your platform
+
+- [Claude Code](/docs/platforms/claude) — `.claude/` skills, agents, hooks, runtime, and `CLAUDE.md`.
+- [OpenCode](/docs/platforms/opencode) — `.opencode/` skills, agents, plugins, runtime, and `AGENTS.md`.
+
+Each platform is self-contained: OpenCode does not depend on any `.claude/` files, and Claude Code does not depend on any `.opencode/` files.
+
+## Detection
+
+| Platform | Markers |
+|---|---|
+| Claude Code | `.claude/`, `CLAUDE.md`, `.mcp.json` |
+| OpenCode | `.opencode/`, `AGENTS.md`, `opencode.json`, `opencode.jsonc` |
+
+If both targets are detected, the installer offers a per-target choice. Empty marker files (e.g. `opencode.json: {}`) are valid project markers.
+
+## Future platforms
+
+Cursor is not a packaged runtime target in the current installer.
