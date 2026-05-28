@@ -2,7 +2,7 @@ import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, P
 
 const skillGroups: Array<[string, string[]]> = [
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
-  ['Pre-spec discovery', ['qs', 'brainstorm', 'inspect', 'research']],
+  ['Pre-spec discovery', ['question', 'brainstorm', 'inspect', 'research']],
   ['Debug and change safety', ['debug', 'hotfix']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],

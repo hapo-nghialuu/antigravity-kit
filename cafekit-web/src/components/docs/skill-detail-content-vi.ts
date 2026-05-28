@@ -1,16 +1,16 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsVi: SkillDetailMap = {
-  qs: {
-    title: 'QS',
-    command: '/hapo:qs',
-    category: 'Clarification',
-    summary: 'Clarification-only gate biến request mơ hồ thành danh sách câu hỏi có ưu tiên trước khi brainstorm, specs, hoặc develop. Không viết product code.',
-    when: ['Request quá mơ hồ để verify.', 'Scope, constraints, hoặc acceptance criteria chưa rõ.', 'Spec hoặc task thiếu câu trả lời cần thiết để plan hoặc implement.'],
-    flow: [['Capture', 'Đọc request, code context, và signal từ spec/task hiện có.'], ['Identify gaps', 'Liệt kê unknowns chặn brainstorm-ready, spec-ready, hoặc develop-ready state.'], ['Prioritize', 'Sắp xếp câu hỏi theo readiness impact và risk.'], ['Output', 'Viết packet câu hỏi đã ưu tiên cho user hoặc upstream agent.'], ['Gate', 'Mark readiness state và đề xuất CafeKit skill tiếp theo.']],
-    output: 'Packet clarification có ưu tiên kèm readiness verdict cho bước workflow tiếp theo.',
-    avoid: 'Không implement, scaffold, sửa product code, hoặc tự đoán câu trả lời. Skill này chỉ làm clarification.',
-    next: '/hapo:brainstorm hoặc /hapo:specs sau khi câu hỏi đã có trả lời',
+  question: {
+    title: 'Question',
+    command: '/hapo:question',
+    category: 'Consultation',
+    summary: 'Skill hỏi đáp có evidence cho source code, docs, specs, config, dependencies, workflow, và thông tin kỹ thuật bên ngoài.',
+    when: ['Cần hiểu một luồng hoặc hành vi trong hệ thống hiện tại.', 'Cần câu trả lời có bằng chứng trước khi plan hoặc sửa code.', 'Source trong repo có thể chưa đủ và cần đối chiếu docs/internet hiện tại.'],
+    flow: [['Classify', 'Xác định câu hỏi thuộc code behavior, config, specs, dependencies, workflow, hay external knowledge.'], ['Scout', 'Đọc README, docs, specs, code, config, tests, và package metadata trước khi kết luận.'], ['Research', 'Chỉ dùng external/current sources khi repo thiếu bằng chứng hoặc topic phụ thuộc version.'], ['Answer', 'Tách facts đã confirm từ source với inference và cite evidence.'], ['Ask back', 'Chỉ hỏi lại 1 câu tập trung khi nếu trả lời ngay sẽ dễ sai.']],
+    output: 'Câu trả lời trực tiếp kèm evidence, confidence, gaps, và next step khi cần.',
+    avoid: 'Không implement, scaffold, sửa product code, tạo spec, hoặc xem inference như fact đã confirm.',
+    next: '/hapo:brainstorm, /hapo:specs, /hapo:docs, hoặc /hapo:debug tùy kết quả trả lời',
   },
   brainstorm: {
     title: 'Brainstorm',

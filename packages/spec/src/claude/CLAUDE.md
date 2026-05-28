@@ -15,7 +15,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 - Do not assume silently. State assumptions when they affect the work.
 - If multiple interpretations are plausible, surface them before implementation.
 - If the simpler option is likely better, say so and push back.
-- If the task/spec is too vague to verify, use `/hapo:qs` or ask one grounded clarification before planning.
+- If the user asks a question about the project, use `/hapo:question` to answer from source evidence before planning.
 - Before feature planning or coding, read `./README.md` for project context.
 
 ### 2. Simplicity First
@@ -46,7 +46,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 Use this loop for non-trivial work:
 
 1. **Understand** — read README, relevant docs, active spec/task, and existing code.
-2. **Plan** — choose the smallest coherent path; use `/hapo:qs` when requirements are unclear and `/hapo:specs` for feature specs when ready.
+2. **Plan** — choose the smallest coherent path; use `/hapo:question` for evidence-backed project questions and `/hapo:specs` for feature specs when ready.
 3. **Execute** — implement only the active task/scope; no placeholder completion.
 4. **Verify** — run exact task commands first, then repo-level lint/test/build as needed.
 5. **Sync** — mark task state only after proof exists.

@@ -1,5 +1,5 @@
 export const mainSkillSlugs = [
-  'qs',
+  'question',
   'brainstorm',
   'specs',
   'develop',

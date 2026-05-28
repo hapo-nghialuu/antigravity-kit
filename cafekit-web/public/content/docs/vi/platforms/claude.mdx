@@ -13,7 +13,7 @@ description: Layout runtime CafeKit đầy đủ cho dự án Claude Code.
 
 ```
 .claude/
-├── skills/         # Workflow + domain skill packs (qs, brainstorm, specs, ...)
+├── skills/         # Workflow + domain skill packs (question, brainstorm, specs, ...)
 ├── agents/         # Subagent prompts (brainstormer, code-auditor, ...)
 ├── hooks/          # Event-driven CommonJS scripts
 ├── rules/          # Workflow, dev, docs, hook, state-sync rules
@@ -47,7 +47,7 @@ Xem [Runtime bundle](/docs/runtime) để biết chi tiết hook contract.
 Claude Code dùng namespace `hapo:`:
 
 ```
-/hapo:qs          /hapo:brainstorm    /hapo:specs       /hapo:develop
+/hapo:question    /hapo:brainstorm    /hapo:specs       /hapo:develop
 /hapo:test        /hapo:code-review   /hapo:sync        /hapo:debug
 /hapo:hotfix      /hapo:docs          /hapo:inspect     /hapo:git
 ```

@@ -87,16 +87,17 @@ export const proseComponents = {
   ol: (props: ComponentPropsWithoutRef<'ol'>) => <ol className="mb-6 ml-6 list-decimal space-y-2 text-muted-foreground/90 leading-7" {...props} />,
   li: (props: ComponentPropsWithoutRef<'li'>) => <li className="pl-1" {...props} />,
   pre: (props: ComponentPropsWithoutRef<'pre'>) => <CodeBlock {...props} />,
-  code: (props: ComponentPropsWithoutRef<'code'>) => (
-    props.className?.includes('hljs')
-      ? <code className="font-mono text-[13px] text-zinc-200" {...props} />
-      : <code className="rounded border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground" {...props} />
+  code: ({ className, ...props }: ComponentPropsWithoutRef<'code'>) => (
+    className?.includes('hljs')
+      ? <code className={cn(className, "font-mono text-[13px] text-zinc-100")} {...props} />
+      : <code className={cn(className, "rounded border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground")} {...props} />
   ),
   blockquote: (props: ComponentPropsWithoutRef<'blockquote'>) => <blockquote className="my-6 rounded-r-2xl border-l-4 border-primary/25 bg-muted/40 py-3 pl-4 text-muted-foreground" {...props} />,
   table: (props: ComponentPropsWithoutRef<'table'>) => <div className="not-prose my-6 overflow-x-auto rounded-2xl border border-border"><table className="m-0 w-full border-collapse text-sm" {...props} /></div>,
   thead: (props: ComponentPropsWithoutRef<'thead'>) => <thead className="border-b border-border bg-muted/50" {...props} />,
+  tbody: (props: ComponentPropsWithoutRef<'tbody'>) => <tbody className="[&>tr:last-child>td]:border-b-0" {...props} />,
   th: (props: ComponentPropsWithoutRef<'th'>) => <th className="px-4 py-3 text-left font-semibold text-foreground" {...props} />,
-  td: (props: ComponentPropsWithoutRef<'td'>) => <td className="border-b border-border px-4 py-3 text-muted-foreground last:border-0" {...props} />,
+  td: (props: ComponentPropsWithoutRef<'td'>) => <td className="border-b border-border px-4 py-3 text-muted-foreground" {...props} />,
   hr: (props: ComponentPropsWithoutRef<'hr'>) => <hr className="my-8 border-border" {...props} />,
   Callout,
   Cards,

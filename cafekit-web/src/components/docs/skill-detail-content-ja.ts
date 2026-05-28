@@ -1,16 +1,16 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsJa: SkillDetailMap = {
-  qs: {
-    title: 'QS',
-    command: '/hapo:qs',
-    category: 'Clarification',
-    summary: 'Brainstorm、specs、develop の前に曖昧な request を優先順位付き質問に変える clarification-only gate。Product code は書きません。',
-    when: ['Request が verify できないほど曖昧。', 'Scope、constraints、acceptance criteria が不明確。', 'Spec または task に plan/implement のための回答が不足している。'],
-    flow: [['Capture', 'Request、code context、既存の spec/task signal を読みます。'], ['Identify gaps', 'Brainstorm-ready、spec-ready、develop-ready を妨げる unknowns を列挙します。'], ['Prioritize', 'Readiness impact と risk で質問を並べます。'], ['Output', 'User または upstream agent 向けに優先順位付き質問 packet を書きます。'], ['Gate', 'Readiness state を marking し、次の CafeKit skill を推奨します。']],
-    output: '優先順位付き clarification packet と次の workflow step 向け readiness verdict。',
-    avoid: 'Implement、scaffold、product code 編集、回答の推測は行いません。Clarification 専用 skill です。',
-    next: '質問が解決されたら /hapo:brainstorm または /hapo:specs',
+  question: {
+    title: 'Question',
+    command: '/hapo:question',
+    category: 'Consultation',
+    summary: 'Source code、docs、specs、config、dependencies、external technical topics に対する evidence-backed Q&A skill。',
+    when: ['現在の system behavior や flow を理解したい。', 'Planning や code change の前に source-backed answer が必要。', 'Repo evidence が不足し、current external docs も確認する必要がある。'],
+    flow: [['Classify', 'Code behavior、config、specs、dependencies、workflow、external knowledge のどれかを判定します。'], ['Scout', 'README、docs、specs、code、config、tests、package metadata を先に読みます。'], ['Research', 'Repo evidence が不足または version-sensitive な場合だけ external/current sources を使います。'], ['Answer', 'Confirmed facts と inference を分け、evidence を示します。'], ['Ask back', 'そのまま答えると誤解を招く場合のみ、focused question を1つ返します。']],
+    output: 'Evidence、confidence、gaps、必要な next step を含む直接回答。',
+    avoid: 'Implement、scaffold、product code 編集、spec 作成、inference を confirmed fact と扱うことは禁止。',
+    next: '回答内容に応じて /hapo:brainstorm、/hapo:specs、/hapo:docs、または /hapo:debug',
   },
   brainstorm: {
     title: 'Brainstorm',

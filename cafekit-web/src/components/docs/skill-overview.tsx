@@ -4,7 +4,7 @@ import { type Locale, localizeHref } from '@/lib/locale-utils';
 import { getSkillDetails, type MainSkillSlug } from './skill-detail-content';
 
 const icons = {
-  qs: HelpCircle,
+  question: HelpCircle,
   brainstorm: Sparkles,
   specs: PenTool,
   develop: Wrench,

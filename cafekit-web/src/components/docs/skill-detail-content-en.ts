@@ -1,16 +1,16 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsEn: SkillDetailMap = {
-  qs: {
-    title: 'QS',
-    command: '/hapo:qs',
-    category: 'Clarification',
-    summary: 'Clarification-only gate that turns vague requests into prioritized questions before brainstorm, specs, or develop. It never writes product code.',
-    when: ['The request is too vague to verify.', 'Scope, constraints, or acceptance criteria are unclear.', 'A spec or task lacks the answers needed to plan or implement.'],
-    flow: [['Capture', 'Read request, code context, and existing spec/task signals.'], ['Identify gaps', 'List unknowns blocking brainstorm-ready, spec-ready, or develop-ready state.'], ['Prioritize', 'Order questions by readiness impact and risk.'], ['Output', 'Write the prioritized question packet for the user or upstream agent.'], ['Gate', 'Mark the readiness state and recommend the next CafeKit skill.']],
-    output: 'A prioritized clarification packet plus a readiness verdict for the next workflow step.',
-    avoid: 'Do not implement, scaffold, edit product code, or assume answers. This skill is clarification-only.',
-    next: '/hapo:brainstorm or /hapo:specs once questions are answered',
+  question: {
+    title: 'Question',
+    command: '/hapo:question',
+    category: 'Consultation',
+    summary: 'Evidence-backed Q&A for project behavior, source code, specs, docs, configuration, dependencies, and external technical topics.',
+    when: ['You need to understand how something works in the current system.', 'You need a source-backed answer before planning or changing code.', 'The repo may not have enough information and current external docs may be needed.'],
+    flow: [['Classify', 'Identify whether the question is about code behavior, config, specs, dependencies, workflow, or external knowledge.'], ['Scout', 'Read README, docs, specs, code, config, tests, and package metadata before making claims.'], ['Research', 'Use external/current sources only when repo evidence is missing or version-sensitive.'], ['Answer', 'Separate confirmed source facts from inferences and cite evidence.'], ['Ask back', 'Ask one focused question only when the answer would otherwise be misleading.']],
+    output: 'A direct answer with evidence, confidence, gaps, and a next step when useful.',
+    avoid: 'Do not implement, scaffold, edit product code, generate specs, or treat unanswered facts as confirmed.',
+    next: '/hapo:brainstorm, /hapo:specs, /hapo:docs, or /hapo:debug depending on the answer',
   },
   brainstorm: {
     title: 'Brainstorm',

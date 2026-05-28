@@ -31,11 +31,13 @@ export default function DocsSidebar({ locale = 'en' }: { locale?: Locale }) {
 }
 
 function SidebarNavItem({ item, pathname, depth = 0 }: { item: DocsNavItem; pathname: string; depth?: number }) {
-    const [isPinnedOpen, setIsPinnedOpen] = useState(false);
+    const [manualState, setManualState] = useState<{ pathname: string; expanded: boolean } | null>(null);
     const isActive = pathname === item.href;
     const hasChildren = Boolean(item.children?.length);
     const isBranchActive = hasActiveDescendant(item, pathname);
-    const isExpanded = hasChildren && (isActive || isBranchActive || isPinnedOpen);
+    const isAutoExpanded = isActive || isBranchActive;
+    const manualExpanded = manualState?.pathname === pathname ? manualState.expanded : null;
+    const isExpanded = hasChildren && (manualExpanded ?? isAutoExpanded);
 
     if (hasChildren) {
         return (
@@ -60,7 +62,15 @@ function SidebarNavItem({ item, pathname, depth = 0 }: { item: DocsNavItem; path
                         aria-expanded={isExpanded}
                         aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${item.title}`}
                         className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-current opacity-70 transition hover:bg-background/70 hover:opacity-100"
-                        onClick={() => setIsPinnedOpen((value) => !value)}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setManualState((value) => {
+                                const currentExpanded = value?.pathname === pathname ? value.expanded : isAutoExpanded;
+
+                                return { pathname, expanded: !currentExpanded };
+                            });
+                        }}
                     >
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded ? "rotate-180" : "")} />
                     </button>

@@ -32,11 +32,11 @@ const OPENCODE_COMMAND_TEMPLATES = [
     description: 'Explore and narrow an idea before writing a CafeKit spec.'
   },
   {
-    fileName: 'qs.md',
-    skillName: 'qs',
-    agent: 'brainstormer',
+    fileName: 'question.md',
+    skillName: 'question',
+    agent: 'inspector',
     subtask: true,
-    description: 'Clarify requirements, scope, acceptance criteria, and workflow readiness.'
+    description: 'Answer questions using repo evidence first, then external sources when needed.'
   },
   {
     fileName: 'specs.md',

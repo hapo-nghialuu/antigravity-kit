@@ -149,7 +149,7 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("OpenCode Runtime Mapping") &&
         content.includes("without the `hapo:` prefix") &&
-        content.includes("/qs <request-or-context>") &&
+        content.includes("/question <question>") &&
         content.includes("/specs <feature-or-spec-command>") &&
         content.includes("Claude Code hooks/statusline/settings do not run in OpenCode"),
     },
@@ -196,35 +196,37 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes("Never suggest `/work`"),
     },
     {
-      label: "hapo:qs skill is clarification-only and readiness-gated",
-      file: "src/claude/skills/qs/SKILL.md",
+      label: "hapo:question skill answers questions with repo-first evidence",
+      file: "src/claude/skills/question/SKILL.md",
       assert: (content) =>
-        content.includes("name: hapo:qs") &&
-        content.includes("<CLARIFICATION-ONLY-GATE>") &&
-        content.includes("Do NOT implement, scaffold, edit product code") &&
-        content.includes("Known facts:") &&
-        content.includes("Blocking unknowns:") &&
-        content.includes("`P0`: blocks correct next action") &&
-        content.includes("not-ready") &&
-        content.includes("brainstorm-ready") &&
-        content.includes("specs-ready") &&
-        content.includes("develop-ready") &&
-        content.includes("templates/qs.md"),
+        content.includes("name: hapo:question") &&
+        content.includes("Answer questions with evidence") &&
+        content.includes("<ANSWER-ONLY-GATE>") &&
+        content.includes("Source-first") &&
+        content.includes("Use external/current sources") &&
+        content.includes("Ask back only when") &&
+        content.includes("--repo") &&
+        content.includes("--web") &&
+        content.includes("--both") &&
+        content.includes("repo evidence") &&
+        content.includes("external/current evidence") &&
+        content.includes("templates/question.md"),
     },
     {
-      label: "hapo:qs template captures prioritized questions",
-      file: "src/claude/skills/qs/templates/qs.md",
+      label: "hapo:question template captures answer evidence and gaps",
+      file: "src/claude/skills/question/templates/question.md",
       assert: (content) =>
-        content.includes("## P0 - Must Answer") &&
-        content.includes("## P1 - Should Answer") &&
-        content.includes("## P2 - Can Defer") &&
-        content.includes("## Readiness Verdict") &&
-        content.includes("## Next Command"),
+        content.includes("## Question") &&
+        content.includes("## Answer") &&
+        content.includes("## Evidence") &&
+        content.includes("## Source Trace") &&
+        content.includes("## Gaps / Unknowns") &&
+        content.includes("## Follow-up Question"),
     },
     {
-      label: "hapo:qs is packaged in migration manifest",
+      label: "hapo:question is packaged in migration manifest",
       file: "src/claude/migration-manifest.json",
-      assert: (content) => content.includes('"qs"'),
+      assert: (content) => content.includes('"question"'),
     },
     {
       label: "hapo:specs validate uses hapo develop handoff",
@@ -508,6 +510,27 @@ async function runStaticSemanticTests() {
         !content.includes("`references/debugger/"),
     },
     {
+      label: "hapo:brainstorm uses a structured question framework",
+      file: "src/claude/skills/brainstorm/SKILL.md",
+      assert: (content) =>
+        content.includes("## Discovery Question Framework") &&
+        content.includes("`references/question-framework.md`") &&
+        content.includes("Generate questions from scout evidence") &&
+        content.includes("decision register") &&
+        content.includes("technical facts"),
+    },
+    {
+      label: "hapo:brainstorm question framework covers domains and decision logging",
+      file: "src/claude/skills/brainstorm/references/question-framework.md",
+      assert: (content) =>
+        content.includes("## Domain Matrix") &&
+        content.includes("### Browser Extension") &&
+        content.includes("### AI / LLM") &&
+        content.includes("## Ask / Do Not Ask") &&
+        content.includes("## Decision Register") &&
+        content.includes("Do not write \"user selected\""),
+    },
+    {
       label: "CafeKit uses Research-style skill routing rules",
       file: "src/claude/CLAUDE.md",
       assert: (content) =>
@@ -520,7 +543,8 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
       assert: (content) =>
-        content.includes("/hapo:qs -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("/hapo:question -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("ask about source code, docs, specs, config, dependencies") &&
         content.includes("/hapo:debug -> /hapo:hotfix") &&
         content.includes("/hapo:docs --reconstruct <scope>") &&
         content.includes("missing acceptance criteria") &&
@@ -530,7 +554,8 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing domain rule maps installed skills",
       file: "src/claude/rules/skill-domain-routing.md",
       assert: (content) =>
-        content.includes("/hapo:qs") &&
+        content.includes("/hapo:question") &&
+        content.includes("answer questions from source code/docs/specs/config") &&
         content.includes("/hapo:frontend-development") &&
         content.includes("/hapo:react-best-practices") &&
         content.includes("/hapo:backend-development") &&
@@ -756,7 +781,7 @@ function runSkillCatalogTests() {
     "`hapo:specs`",
     "`hapo:develop`",
     "`hapo:docs`",
-    "`hapo:qs`",
+    "`hapo:question`",
     "`hapo:debug`",
     "`hapo:hotfix`",
     "`hapo:react-best-practices`",
@@ -911,10 +936,10 @@ async function runOpenCodeInstallerFixtureTests() {
       "utf8",
     );
     const specsCommand = await readFile(join(root, ".opencode", "commands", "specs.md"), "utf8");
-    const qsCommand = await readFile(join(root, ".opencode", "commands", "qs.md"), "utf8");
+    const questionCommand = await readFile(join(root, ".opencode", "commands", "question.md"), "utf8");
     const agentFrontmatter = godDeveloperAgent.split("---")[1] || "";
     const commandFrontmatter = specsCommand.split("---")[1] || "";
-    const qsFrontmatter = qsCommand.split("---")[1] || "";
+    const questionFrontmatter = questionCommand.split("---")[1] || "";
     const failures = [];
 
     if (metadata.platform !== "opencode") {
@@ -940,20 +965,20 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {
       failures.push("OpenCode skill command wrappers were not installed");
     }
-    if (!(await fileExists(join(root, ".opencode", "commands", "qs.md")))) {
-      failures.push("OpenCode qs command wrapper was not installed");
+    if (!(await fileExists(join(root, ".opencode", "commands", "question.md")))) {
+      failures.push("OpenCode question command wrapper was not installed");
     }
     if (!specsCommand.includes(".opencode/skills/specs/SKILL.md")) {
       failures.push("OpenCode specs command does not route to the CafeKit specs skill");
     }
-    if (!qsCommand.includes(".opencode/skills/qs/SKILL.md")) {
-      failures.push("OpenCode qs command does not route to the CafeKit qs skill");
+    if (!questionCommand.includes(".opencode/skills/question/SKILL.md")) {
+      failures.push("OpenCode question command does not route to the CafeKit question skill");
     }
     if (!commandFrontmatter.includes('agent: "spec-maker"') || !commandFrontmatter.includes("subtask: true")) {
       failures.push("OpenCode specs command is not bound to the spec-maker subagent");
     }
-    if (!qsFrontmatter.includes('agent: "brainstormer"') || !qsFrontmatter.includes("subtask: true")) {
-      failures.push("OpenCode qs command is not bound to the brainstormer subagent");
+    if (!questionFrontmatter.includes('agent: "inspector"') || !questionFrontmatter.includes("subtask: true")) {
+      failures.push("OpenCode question command is not bound to the inspector subagent");
     }
     if (specsCommand.includes("allowed-tools")) {
       failures.push("OpenCode command still contains Claude command frontmatter");
@@ -976,8 +1001,8 @@ async function runOpenCodeInstallerFixtureTests() {
     if (!(await fileExists(join(root, ".opencode", "skills", "docs", "SKILL.md")))) {
       failures.push("OpenCode install did not install skills under .opencode/");
     }
-    if (!(await fileExists(join(root, ".opencode", "skills", "qs", "SKILL.md")))) {
-      failures.push("OpenCode install did not install qs skill under .opencode/");
+    if (!(await fileExists(join(root, ".opencode", "skills", "question", "SKILL.md")))) {
+      failures.push("OpenCode install did not install question skill under .opencode/");
     }
     if (!(await fileExists(join(root, ".opencode", "rules", "skill-workflow-routing.md")))) {
       failures.push("OpenCode install did not install routing rules under .opencode/");

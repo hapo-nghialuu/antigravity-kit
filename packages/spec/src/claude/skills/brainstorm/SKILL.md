@@ -69,17 +69,30 @@ Leverage these specific tools or sub-agents to execute the workflow effectively:
 - `brainstormer`: Call only for medium/high-complexity architecture trade-offs.
 - **Ecosystem Swarm (`SendMessage`):** Call `researcher` (validation), `docs-keeper` (architecture boundaries), or `project-manager` (scope warnings) for deeply complex specs.
 
+## Discovery Question Framework
+
+Load and follow `references/question-framework.md` before the first user-facing discovery question.
+
+Use it to:
+- Generate questions from scout evidence, user intent, exact requirement gaps, matching domain matrices, and risk surfaces.
+- Avoid asking the user to answer technical facts that should be verified from code, docs, or current provider/browser documentation.
+- Prioritize only questions that can materially change architecture, MVP scope, UX, cost/privacy/security, acceptance criteria, or delivery format.
+- Record every user-confirmed decision in a decision register in the final report.
+
+If the framework conflicts with the general "one question at a time" rule, prefer the framework's question budget and batching limits: one high-impact question by default, up to 3 independent questions in one `AskUserQuestion` call only when batching reduces friction without mixing unrelated decisions.
+
 ## Authoritative Workflow
 
 ```mermaid
 flowchart TD
     A["Run /hapo:inspect or narrow scout"] --> B["Summarize codebase findings"]
-    B --> C["Ask one grounded clarifying question"]
-    C --> D{"Exact requirements captured?"}
-    D -->|No| C
+    B --> C["Load question framework"]
+    C --> DQ["Ask highest-impact grounded question"]
+    DQ --> D{"Exact requirements captured?"}
+    D -->|No| DQ
     D -->|Yes| E{"Multiple independent subsystems?"}
     E -->|Yes| F["Decompose into sub-projects"]
-    F --> C
+    F --> DQ
     E -->|No| G{"Medium/high complexity?"}
     G -->|Yes| H["Call brainstormer/researcher/docs-keeper as needed"]
     G -->|No| I["Propose 2-3 approaches"]
@@ -107,10 +120,14 @@ flowchart TD
 
 ### 2. Discovery Phase
 
-- Ask exactly **one question at a time**. Do not stack multiple unrelated questions.
+- Load `references/question-framework.md`.
+- Ask exactly **one high-impact question at a time** by default. Do not stack unrelated questions.
+- You may batch up to 3 independent questions only when each question maps to a different required decision surface and none requires explanation before the user can answer.
 - Prefer multiple-choice options grounded in scout findings.
 - Push vague intent into concrete examples, sample inputs/outputs, or acceptance criteria.
 - Challenge the first proposed solution when the underlying goal suggests a simpler path.
+- Do not ask users to decide technical facts. Research browser/runtime/provider/package facts first; then ask only the product or trade-off decision.
+- Track decisions as you go so the final report can distinguish `User Decision`, `Assumption`, and `Open Question`.
 
 ### 3. Scope Guard
 
@@ -154,7 +171,7 @@ Before passing the completed design to the user for final review, you must inter
 ### 8. Final Handoff & Documentation
 Upon the user's explicit final approval of the sanitized design document:
 1. Generate the final **Design Doc / Summary Report**.
-2. Include: problem statement, exact requirements, evaluated approaches, recommended solution, risks, validation criteria, and next steps.
+2. Include: problem statement, exact requirements, evaluated approaches, recommended solution, risks, validation criteria, decision register, open questions, and next steps.
 3. Invoke `/hapo:specs` with the report context to hand off into CafeKit's structured specification phase.
 4. Optionally update an existing project notes, docs, or report file if the approved design context should be persisted for future work.
 

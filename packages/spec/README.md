@@ -2,7 +2,7 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 
@@ -11,7 +11,7 @@
 CafeKit installs a structured workflow so an AI coding agent can move cleanly from:
 
 ```text
-Idea -> QS when unclear -> Brainstorm -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
+Question -> Question answer -> Brainstorm -> Spec -> Design -> Task Files -> Implementation -> Test -> Review
 ```
 
 Claude Code install support:
@@ -102,7 +102,7 @@ cat .opencode/cafekit.json
 
 CafeKit ships many skills, but the main release surface is:
 
-- `/hapo:qs <request-or-context> [--batch|--spec-ready|--stakeholder]`: clarify missing decisions, acceptance criteria, scope, constraints, and next workflow readiness
+- `/hapo:question <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
@@ -126,7 +126,7 @@ node .claude/scripts/generate-skill-catalog.cjs --skills
 Claude Code:
 
 ```bash
-/hapo:qs "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
+/hapo:question "Which files define the current CafeKit install/runtime behavior?" --repo
 /hapo:brainstorm Explore approaches for a Google Meet transcript extension
 /hapo:specs Build a Google Meet transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
@@ -137,7 +137,7 @@ Claude Code:
 OpenCode uses the generated command names without the Claude `hapo:` prefix:
 
 ```bash
-/qs "What is still unclear before the Google Meet transcript extension spec?" --spec-ready
+/question "Which files define the current CafeKit install/runtime behavior?" --repo
 /brainstorm Explore approaches for a Google Meet transcript extension
 /specs Build a Google Meet transcript extension with AI summaries
 /develop meet-transcript-mvp

@@ -22,7 +22,7 @@ type DocsLabels = {
 type RouteItem = readonly [pageKey: string, href: string, children?: readonly RouteItem[]];
 
 const skillRoutes = [
-  ["skillQs", "/docs/skills/qs"],
+  ["skillQuestion", "/docs/skills/question"],
   ["skillBrainstorm", "/docs/skills/brainstorm"],
   ["skillSpecs", "/docs/skills/specs"],
   ["skillDevelop", "/docs/skills/develop"],
@@ -77,7 +77,7 @@ const labels: Record<Locale, DocsLabels> = {
       specLifecycle: page("Spec lifecycle", "Understand CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, and develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
       workflows: page("Workflows", "Choose the right command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
       skills: page("Skills", "Browse CafeKit workflow and domain skills, with detailed main-skill flows.", "skills catalog main skill flows"),
-      skillQs: page("QS", "Clarify vague requests before brainstorm, specs, or develop.", "qs question clarification readiness gate"),
+      skillQuestion: page("Question", "Answer project and technical questions with repo-first evidence, then current external sources when needed.", "question ask answer source evidence consultation"),
       skillBrainstorm: page("Brainstorm", "Clarify unclear ideas before a spec exists.", "brainstorm ideation scout"),
       skillSpecs: page("Specs", "Create requirements, research, design, task packets, and validation state.", "specs requirements design tasks"),
       skillDevelop: page("Develop", "Implement approved task packets with scope fidelity.", "develop implementation task"),
@@ -110,7 +110,7 @@ const labels: Record<Locale, DocsLabels> = {
       specLifecycle: page("Vòng đời spec", "Hiểu SDD của CafeKit: scope lock, evidence, requirements, design, task packets, validation, và develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
       workflows: page("Workflows", "Chọn đúng command: brainstorm, specs, develop, debug, hotfix, test, review, sync, docs, graph, git.", "commands workflows brainstorm debug hotfix"),
       skills: page("Skills", "Xem các workflow/domain skill của CafeKit và flow chi tiết cho skill chính.", "skills catalog main skill flows"),
-      skillQs: page("QS", "Làm rõ request mơ hồ trước brainstorm, specs, hoặc develop.", "qs question clarification readiness gate"),
+      skillQuestion: page("Question", "Trả lời câu hỏi về project và kỹ thuật bằng source evidence trước, rồi dùng nguồn ngoài hiện tại khi cần.", "question ask answer source evidence consultation"),
       skillBrainstorm: page("Brainstorm", "Làm rõ ý tưởng trước khi có spec.", "brainstorm ideation scout"),
       skillSpecs: page("Specs", "Tạo requirements, research, design, task packets, và validation state.", "specs requirements design tasks"),
       skillDevelop: page("Develop", "Implement approved task packets với scope fidelity.", "develop implementation task"),
@@ -143,7 +143,7 @@ const labels: Record<Locale, DocsLabels> = {
       specLifecycle: page("Spec lifecycle", "CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, develop handoff。", "sdd spec json task registry lifecycle specification driven development"),
       workflows: page("Workflows", "brainstorm、specs、develop、debug、hotfix、test、review、sync、docs、graph、git の使い分け。", "commands workflows brainstorm debug hotfix"),
       skills: page("Skills", "CafeKit workflow/domain skills と main skill flows。", "skills catalog main skill flows"),
-      skillQs: page("QS", "Brainstorm、specs、develop の前に曖昧な request を明確にします。", "qs question clarification readiness gate"),
+      skillQuestion: page("Question", "Project と technical questions に repo-first evidence で答え、必要に応じて current external sources を使います。", "question ask answer source evidence consultation"),
       skillBrainstorm: page("Brainstorm", "Spec 前に曖昧な idea を明確にします。", "brainstorm ideation scout"),
       skillSpecs: page("Specs", "requirements、research、design、task packets、validation state を作ります。", "specs requirements design tasks"),
       skillDevelop: page("Develop", "approved task packets を scope fidelity で実装します。", "develop implementation task"),
