@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `hooks/state.cjs` no longer emits "Agent Result: unknown" sections (skipped at `SubagentStop` when `agent_type` is missing or `unknown`) and caps retained agent sections at 3 most recent. Also limits `Key Files Modified` to top 5 entries. Reduces SessionStart payload re-injection across resume/compact events.
+
+## [0.9.1] - 2026-05-27
+
 ### Added
+- Added `hapo:question` / OpenCode `/question` as the standard evidence-backed Q&A skill for source code, docs, specs, config, dependencies, and external technical knowledge.
 - OpenCode installs now ship CafeKit runtime plugins under `.opencode/plugins/`:
   - `privacy-block.ts` — blocks reads of `.env`, key, credential, and token files via `tool.execute.before`; mirrors the Claude `privacy-block.cjs` JSON-marker UX so assistants prompt the user before retrying via `bash cat`.
   - `inspect-block.ts` — blocks reads/globs that target heavy dirs (`node_modules`, `.next`, `dist`, …) and excessively broad glob patterns; allows approved build/package-manager commands.
@@ -17,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installer now writes `.opencode/package.json` with `@opencode-ai/plugin ^1.15.11`; OpenCode runs `bun install` automatically at startup.
 
 ### Changed
+- Standardized the temporary `qs` skill surface back to `question` across Claude Code, OpenCode, package docs, and cafekit-web docs.
 - `normalizeOpenCodeBody` now rewrites `hooks/.logs/` → `plugins/.logs/` so the OpenCode `.gitignore` ignores plugin log output rather than the legacy hook log path.
 
 ### Gaps (documented, intentionally unported)
