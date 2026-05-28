@@ -26,6 +26,8 @@ try {
 
   const EXPIRY_DAYS = 7;
   const MAX_ARCHIVES = 5;
+  const MAX_AGENT_SECTIONS = 3;
+  const MAX_MODIFIED_FILES_DISPLAY = 5;
   const TRACKED_POST_TOOL_EVENTS = new Set(['Task', 'TaskCreate', 'TaskUpdate', 'TodoWrite']);
 
   function stateDir(cwd) {
@@ -126,7 +128,7 @@ try {
       }).trim();
 
       if (diff) {
-        data.modifiedFiles = diff.split('\n').slice(0, 20);
+        data.modifiedFiles = diff.split('\n').slice(0, MAX_MODIFIED_FILES_DISPLAY);
       }
     } catch {
       // fail-open
@@ -157,9 +159,15 @@ try {
   }
 
   function buildAgentSection(data) {
-    const agentType = data.agent_type || 'unknown';
+    const agentType = data.agent_type || '';
+    if (!agentType || agentType === 'unknown') return '';
     const time = new Date().toISOString().slice(11, 19);
     return `\n## Agent Result: ${agentType} (${time})\n- Completed at ${time}\n`;
+  }
+
+  function takeRecentAgentSections(sections) {
+    if (!Array.isArray(sections) || sections.length <= MAX_AGENT_SECTIONS) return sections || [];
+    return sections.slice(-MAX_AGENT_SECTIONS);
   }
 
   function mergeAgentSections(existing, content) {
@@ -168,16 +176,23 @@ try {
     const agentSections = existing.match(/## Agent Result:.+?(?=\n## |$)/gs);
     if (!agentSections) return content;
 
+    const kept = takeRecentAgentSections(agentSections);
     const marker = '\n## Key Files Modified';
     if (content.includes(marker)) {
-      return content.replace(marker, `\n${agentSections.join('\n')}${marker}`);
+      return content.replace(marker, `\n${kept.join('\n')}${marker}`);
     }
 
-    return `${content.trimEnd()}\n\n${agentSections.join('\n')}\n`;
+    return `${content.trimEnd()}\n\n${kept.join('\n')}\n`;
   }
 
   function appendAgentSection(existing, agentSection) {
     if (!existing) return agentSection.trimStart();
+    if (!agentSection) {
+      const sections = existing.match(/## Agent Result:.+?(?=\n## |$)/gs) || [];
+      if (sections.length <= MAX_AGENT_SECTIONS) return existing;
+      const kept = takeRecentAgentSections(sections);
+      return existing.replace(/(## Agent Result:.+?(?=\n## |$))+/gs, kept.join('\n'));
+    }
 
     const marker = '\n## Key Files Modified';
     if (existing.includes(marker)) {
@@ -226,8 +241,10 @@ try {
     }
 
     if (event === 'SubagentStop') {
-      const file = path.join(dir, 'latest.md');
       const agentSection = buildAgentSection(data);
+      if (!agentSection) process.exit(0);
+
+      const file = path.join(dir, 'latest.md');
       const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
       const updated = existing
         ? appendAgentSection(existing, agentSection)
