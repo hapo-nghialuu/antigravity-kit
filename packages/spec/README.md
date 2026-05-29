@@ -2,7 +2,7 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 

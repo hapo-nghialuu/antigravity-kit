@@ -290,6 +290,43 @@ async function runStaticSemanticTests() {
         content.includes("golden shape is: `Context` -> `Steps` -> `Requirements`"),
     },
     {
+      label: "hapo:specs loads planning decision frameworks",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("references/ask-user-question-gates.md") &&
+        content.includes("rules/phase-decision-matrix.md") &&
+        content.includes("rules/task-scoring-rubric.md") &&
+        content.includes("implementation slices") &&
+        content.includes("priority, split/merge, spike needs"),
+    },
+    {
+      label: "hapo:specs ask-user gate matrix protects user-owned decisions",
+      file: "src/claude/skills/specs/references/ask-user-question-gates.md",
+      assert: (content) =>
+        content.includes("# AskUserQuestion Gate Matrix") &&
+        content.includes("Do not ask about facts") &&
+        content.includes("Scope inquiry") &&
+        content.includes("Architecture tie") &&
+        content.includes("Validation findings") &&
+        content.includes("Do not mark `ready_for_implementation = true`"),
+    },
+    {
+      label: "hapo:specs phase and task scoring rules guide task generation",
+      files: [
+        "src/claude/skills/specs/rules/phase-decision-matrix.md",
+        "src/claude/skills/specs/rules/task-scoring-rubric.md",
+        "src/claude/skills/specs/rules/tasks-generation.md",
+      ],
+      assert: (content) =>
+        content.includes("R0 Foundation") &&
+        content.includes("Risk Spike") &&
+        content.includes("Integration Gate") &&
+        content.includes("Task Scoring Rubric") &&
+        content.includes("Mandatory Overrides") &&
+        content.includes("Pre-Generation Decision Gates") &&
+        content.includes("Use the Phase Decision Matrix"),
+    },
+    {
       label: "hapo:specs compact task template keeps evidence gate",
       file: "src/claude/skills/specs/templates/task.md",
       assert: (content) =>
