@@ -2,6 +2,17 @@
 
 ## Core Principles
 
+### 0. Pre-Generation Decision Gates
+
+Before writing any `tasks/task-R*.md` file:
+
+1. Load `phase-decision-matrix.md` and identify implementation slices/task clusters: R0 foundation, risk spikes, vertical slices, layer slices, cross-cutting slices, integration gates, verification gates, and release/packaging slices when in scope.
+2. Load `task-scoring-rubric.md` and score each candidate task. Use the result to choose priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
+3. Load `../references/ask-user-question-gates.md` if scoring or slicing detects unapproved scope expansion, unresolved architecture tie, missing evidence, contract ambiguity, or final contradiction.
+4. Do not ask about facts that targeted scout, repo files, tests, or official/current docs can answer.
+
+The raw score table does not need to appear in each task file. The task file must reflect the decisions: why the task exists, what it depends on, why it is split/merged, whether it can be parallel, and what proof is required.
+
 ### 1. Natural Language Descriptions
 Focus on capabilities and outcomes, not code structure.
 
@@ -71,6 +82,7 @@ When splitting a requirement into multiple tasks:
 2. **Split by concern** — e.g., R3-01 for consent onboarding UI, R3-02 for consent version re-check logic
 3. **Split by dependency chain** — if acceptance criteria A must finish before B can start, they belong in separate task files with explicit `Dependencies:`
 4. **Never split by arbitrary size** — don't create 3 task files just because "3 feels right"
+5. **Use the Phase Decision Matrix** — only split when the implementation slice has an independent deliverable boundary or proof path.
 
 #### Cross-cutting requirements
 Some requirements (e.g., "language handling", "error handling") naturally touch code in many other requirements' tasks. For these:
@@ -86,6 +98,7 @@ Grouping tasks vertically by requirement carries the risk of "siloed" or fragmen
 2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
 3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
 4. **Final Runtime Integration**: For any feature that has a user-facing screen, public route, CLI command, background worker, browser extension surface, or API flow, create a final integration task (or a final integration section in the last dependent task) that proves the whole scoped feature works from its runtime entrypoint. This task MUST fail if prior-task outputs exist but are not imported, mounted, registered, or invoked.
+5. **Scored Sequencing**: Use `task-scoring-rubric.md` to schedule high-value/high-dependency tasks early, but only after required foundation/spike work. High file-conflict or high blast-radius tasks must not be marked `(P)` without isolated ownership.
 
 ### 3d. Spike Tasks for Complex/Uncertain Areas (MANDATORY)
 

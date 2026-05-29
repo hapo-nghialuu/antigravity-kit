@@ -184,6 +184,7 @@ flowchart TD
 ## Detailed Workflow
 
 ### Step 1: Analyze Description
+- Load `references/ask-user-question-gates.md` before asking user questions. Ask only at documented gates; do not ask questions that repo evidence or official/current docs can answer.
 - Assess clarity and complexity of the description
 - Route to `hapo:brainstorm` before creating files when:
   - the expected output or acceptance criteria are not concrete
@@ -209,6 +210,7 @@ Load: `references/cross-spec-dependency.md`
 
 ### Step 3: Complexity Assessment & Scope Inquiry
 Load: `references/scope-inquiry.md`
+- Also load `references/ask-user-question-gates.md` when scope, evidence, contract, or architecture decisions require user input.
 - Evaluate the request across **5 dimensions**: Semantic Intent, Implementation Hypothesis, Gap Sizing, Risk/Uncertainty (Cynefin), and Blast Radius
 - If Risk = **Chaotic** → exit spec workflow, redirect to `hapo:hotfix`
 - If Risk = **Complex** → include spike/prototype tasks in the spec
@@ -252,6 +254,8 @@ Load: `references/scope-inquiry.md`
 - Read `spec.json` — stop if requirements haven't completed
 - Pick discovery mode: `minimal` / `light` / `full` based on complexity. **Default: `light`** unless certain it is simple UI (minimal) or complex integration (full).
 - Load `rules/design-principles.md`
+- Load `rules/phase-decision-matrix.md` to define implementation slices, task clusters, foundation boundaries, spike needs, integration gates, and verification gates before task generation.
+- Load `references/ask-user-question-gates.md` if a design decision would change scope, contract, provider/platform, or implementation safety.
 - Load `rules/design-discovery-[mode].md`:
   - **minimal**: UI-only or simple CRUD
   - **light**: extending existing system
@@ -267,6 +271,9 @@ Load: `references/scope-inquiry.md`
 - Read `spec.json` — stop if `requirements.md` or `design.md` missing
 - Respect `scope_lock` — only use valid requirement IDs within `in_scope`
 - Load `rules/tasks-generation.md` for core principles
+- Load `rules/phase-decision-matrix.md` before generating task files. Treat "phase" as an implementation slice/task cluster, not a `phase-XX.md` artifact.
+- Load `rules/task-scoring-rubric.md` for every candidate task to decide priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
+- Load `references/ask-user-question-gates.md`; if scoring reveals unapproved scope expansion or an unresolved user-owned choice, pause before writing task files.
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
 - `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
@@ -345,6 +352,7 @@ Load: `references/task-hydration.md`
 
 ### Step 9: Validation Review (Optional)
 Load: `references/review.md` + `rules/design-review.md`
+- Load `references/ask-user-question-gates.md` before applying validation or red-team changes. User approval is required when findings modify approved scope, requirements, canonical contracts, design decisions, or task behavior.
 - System auto-evaluates spec complexity and decides review depth:
   - **< 3 task files, no security concerns** → Validate only (lightweight interview)
   - **>= 5 task files OR security/migration keywords** → Red Team first, then Validate
@@ -551,10 +559,13 @@ Before finalizing any specification, assert all the following:
 - `design-discovery-full.md` — Full research workflow
 - `design-discovery-light.md` — Lightweight research workflow
 - `design-review.md` — Design review GO/NO-GO process
+- `phase-decision-matrix.md` — Implementation slice/task-cluster boundary rules
 - `tasks-generation.md` — Task generation rules (includes spike task rules)
 - `tasks-parallel-analysis.md` — Parallel task analysis
+- `task-scoring-rubric.md` — Task priority, split/merge, spike, dependency, and evidence-depth scoring
 
 ### References (`references/`)
+- `ask-user-question-gates.md` — AskUserQuestion gate matrix for user-owned decisions
 - `cross-spec-dependency.md` — Cross-spec dependency detection
 - `scope-inquiry.md` — 5-Dimension Complexity Assessment (Semantic, Hypothesis, Gap, Risk/Cynefin, Blast Radius)
 - `research-strategy.md` — Research strategy (7 tools)

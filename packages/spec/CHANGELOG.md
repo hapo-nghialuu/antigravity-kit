@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-05-29
+
+### Added
+- Added `hapo:specs` planning decision frameworks:
+  - `ask-user-question-gates.md` defines when specs must pause for user-owned decisions and when evidence/research should answer instead.
+  - `phase-decision-matrix.md` guides implementation slices/task clusters such as R0 foundation, risk spikes, vertical slices, integration gates, and verification gates.
+  - `task-scoring-rubric.md` scores candidate tasks for priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
+
+### Changed
+- `hapo:specs` now loads the decision frameworks during description analysis, scope inquiry, design, task breakdown, and validation review.
+- `tasks-generation.md` now requires pre-generation decision gates before writing `tasks/task-R*.md` files.
+
 ## [0.9.2] - 2026-05-28
 
 ### Fixed
