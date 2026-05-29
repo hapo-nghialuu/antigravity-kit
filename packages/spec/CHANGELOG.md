@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [0.9.2] - 2026-05-28
+
+### Fixed
 - `hooks/state.cjs` no longer emits "Agent Result: unknown" sections (skipped at `SubagentStop` when `agent_type` is missing or `unknown`) and caps retained agent sections at 3 most recent. Also limits `Key Files Modified` to top 5 entries. Reduces SessionStart payload re-injection across resume/compact events.
 
 ## [0.9.1] - 2026-05-27
