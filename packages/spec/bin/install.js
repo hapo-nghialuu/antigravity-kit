@@ -1018,6 +1018,135 @@ function configureGeminiKey(apiKey, platforms = ['claude']) {
   return success;
 }
 
+async function promptAddressingConfig() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('\n🎯 Xưng hô (Addressing Configuration)');
+  console.log('  CafeKit có thể cấu hình cách AI xưng hô khi giao tiếp tiếng Việt');
+  console.log('  • Mục đích: Phát hiện context overflow (khi AI đột nhiên đổi cách xưng hô)');
+  console.log('  • Để trống = dùng mặc định (em/anh)');
+  console.log();
+
+  return new Promise((resolve) => {
+    rl.question('AI xưng gì? (ví dụ: em, mình, tôi, con - Enter=em): ', (firstAnswer) => {
+      let firstPerson = firstAnswer.trim();
+
+      // Validate: không rỗng và chỉ chứa chữ cái tiếng Việt
+      if (!firstPerson || firstPerson.length === 0 || /[^a-zA-ZÀ-ỹ\s]/.test(firstPerson)) {
+        if (firstAnswer.trim().length > 0) {
+          console.log('  ⚠ Xưng hô không hợp lệ, dùng mặc định: em');
+        }
+        firstPerson = 'em';
+      }
+
+      rl.question('AI hô user là gì? (ví dụ: anh, bạn, thầy - Enter=anh): ', (secondAnswer) => {
+        let secondPerson = secondAnswer.trim();
+
+        // Validate: không rỗng và chỉ chứa chữ cái tiếng Việt
+        if (!secondPerson || secondPerson.length === 0 || /[^a-zA-ZÀ-ỹ\s]/.test(secondPerson)) {
+          if (secondAnswer.trim().length > 0) {
+            console.log('  ⚠ Xưng hô không hợp lệ, dùng mặc định: anh');
+          }
+          secondPerson = 'anh';
+        }
+
+        rl.question('Bật xưng hô? (Y/n, Enter=Y): ', (enableAnswer) => {
+          rl.close();
+          const enabled = enableAnswer.trim().toLowerCase();
+          const isEnabled = enabled === '' || enabled === 'y' || enabled === 'yes';
+
+          resolve({
+            enabled: isEnabled,
+            firstPerson: firstPerson,
+            secondPerson: secondPerson
+          });
+        });
+      });
+    });
+  });
+}
+
+function configureAddressing(addressingConfig, platforms = ['claude']) {
+  const targets = platforms
+    .filter(key => PLATFORMS[key])
+    .map(key => PLATFORMS[key].folder);
+
+  if (targets.length === 0) {
+    targets.push('.claude');
+  }
+
+  // Helper function to safely capitalize
+  function capitalize(str) {
+    if (!str || str.length === 0) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  const firstPersonCap = capitalize(addressingConfig.firstPerson);
+  const secondPersonCap = capitalize(addressingConfig.secondPerson);
+
+  for (const folder of targets) {
+    try {
+      const targetDir = path.join(process.cwd(), folder);
+      const claudeMdFile = path.join(targetDir, 'CLAUDE.md');
+
+      if (!fs.existsSync(claudeMdFile)) {
+        console.log(`  ⚠ CLAUDE.md not found in ${folder}/`);
+        continue;
+      }
+
+      let content = fs.readFileSync(claudeMdFile, 'utf8');
+
+      // Build the addressing section
+      const addressingSection = `## Xưng hô (Addressing - Context Overflow Indicator)
+
+Khi giao tiếp bằng tiếng Việt:
+- Luôn xưng "${addressingConfig.firstPerson}" (bản thân AI)
+- Luôn hô "${addressingConfig.secondPerson}" (người dùng)
+- Duy trì xưng hô nhất quán trong toàn bộ conversation
+
+**Ví dụ:** "${firstPersonCap} đã đọc file này và ${addressingConfig.firstPerson} thấy ${addressingConfig.secondPerson} cần sửa dòng 45."
+
+**⚠️ Context Overflow Detection:**
+Nếu bạn (AI) đột nhiên không thể nhớ hoặc tuân thủ quy tắc xưng hô này, đây là dấu hiệu context window đã bị compact/truncate. Hãy thông báo ngay:
+"${firstPersonCap} nhận thấy context có thể đã bị compact. ${secondPersonCap} có thể cần /clear để reset session."
+
+**Lưu ý:** Xưng hô được thiết lập khi cài đặt CafeKit và lưu trực tiếp trong file CLAUDE.md này. Để thay đổi, chỉnh sửa section này hoặc chạy lại installer.`;
+
+      // Match from ## Xưng hô to the end of section (including any trailing newlines)
+      // This regex matches the entire section including the final newline after "Lưu ý:" paragraph
+      const regex = /## Xưng hô \(Addressing - Context Overflow Indicator\)[\s\S]*?(?=\n##|\n*$)/;
+
+      if (regex.test(content)) {
+        // Replace existing section
+        content = content.replace(regex, addressingSection);
+      } else {
+        // Append at the end
+        if (!content.endsWith('\n')) {
+          content += '\n';
+        }
+        content += '\n' + addressingSection + '\n';
+      }
+
+      fs.writeFileSync(claudeMdFile, content, 'utf8');
+
+      if (addressingConfig.enabled) {
+        console.log(`  ✓ Xưng hô configured in CLAUDE.md: ${addressingConfig.firstPerson}/${addressingConfig.secondPerson}`);
+      } else {
+        console.log(`  ✓ Xưng hô disabled in CLAUDE.md`);
+      }
+    } catch (error) {
+      console.error(`  ✗ Failed to configure addressing in ${folder}/CLAUDE.md`);
+      console.error(`     Error: ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+    }
+  }
+}
+
 async function setupGeminiCLI(platforms) {
   const hasGemini = checkGeminiCLI();
 
@@ -1146,6 +1275,10 @@ async function main() {
     // Setup runtime-specific optional model/API configuration
     await setupOpenCodeModel(platforms, results);
     await setupGeminiCLI(platforms);
+
+    // Setup addressing configuration
+    const addressingConfig = await promptAddressingConfig();
+    configureAddressing(addressingConfig, platforms);
 
     // Summary
     console.log('╔════════════════════════════════════════════════════════╗');

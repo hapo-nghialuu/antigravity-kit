@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-05-31
+
+### Added
+- Addressing (xưng hô) configuration as a context-overflow indicator:
+  - Installer now prompts for the AI's first-person and second-person Vietnamese pronouns (defaults to `em`/`anh`), writing the result directly into the runtime `CLAUDE.md`.
+  - When the model stops honoring the configured pronouns mid-session, it signals that the context window has likely been compacted/truncated and suggests `/clear`.
+  - Input is validated to Vietnamese letters and spaces; invalid entries fall back to defaults.
+- `docs/addressing.md` documents the feature, configuration, and overflow-detection behavior.
+
 ## [0.9.3] - 2026-05-29
 
 ### Added
