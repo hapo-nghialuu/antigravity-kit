@@ -102,7 +102,7 @@ function copyPlatformFiles(ctx, platformKey) {
       const legacyInitTemplate = path.join(platform.skillsDir, 'specs', 'templates', 'init.json');
       if (fs.existsSync(legacyInitTemplate)) {
         if (!ctx.dryRun) fs.rmSync(legacyInitTemplate, { force: true });
-        console.log(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed legacy template: ${legacyInitTemplate}`);
+        ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed legacy template: ${legacyInitTemplate}`);
         ctx.results.updated++;
       }
 
@@ -197,7 +197,7 @@ function copyPlatformFiles(ctx, platformKey) {
     const src = path.join(commandsSourceDir, file);
     const dest = path.join(platform.commandsDir, file);
     if (!fs.existsSync(src)) {
-      console.error(`  ✗ Error: Source file not found: ${file}`);
+      ctx.ui.error(`Source file not found: ${file}`);
       ctx.results.errors++;
       return;
     }

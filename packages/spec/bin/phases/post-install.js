@@ -2,13 +2,13 @@
  * Phase: post-install runtime configuration.
  *
  * OpenCode model, optional Gemini CLI install + API key, and addressing config.
- * These are interactive and write outside the ownership model (.env, CLAUDE.md,
- * opencode.json). Skipped entirely in dry-run to keep previews side-effect free.
+ * Interactive prompts use ctx.ui (clack); in non-interactive/dry-run they are
+ * skipped via fallbacks so spawned/CI runs never hang. Writes (.env, CLAUDE.md,
+ * opencode.json) happen only when a value is actually provided.
  */
 
 const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
 const { execSync } = require('child_process');
 const { PLATFORMS } = require('../lib/context');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
@@ -22,170 +22,115 @@ function checkGeminiCLI() {
   }
 }
 
-function installGeminiCLI() {
-  console.log('\n⚙ Installing gemini-cli...');
+function installGeminiCLI(ctx) {
+  ctx.ui.startSpinner('Installing gemini-cli...');
   try {
-    execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-    console.log('  ✓ gemini-cli installed successfully');
+    execSync('npm install -g @google/gemini-cli', { stdio: 'ignore' });
+    ctx.ui.stopSpinner('gemini-cli installed');
     return true;
   } catch {
-    console.log('  ✗ Failed to install gemini-cli automatically');
-    console.log('  Please run manually: npm install -g @google/gemini-cli');
+    ctx.ui.stopSpinner('Could not install gemini-cli automatically');
+    ctx.ui.warn('Run manually: npm install -g @google/gemini-cli');
     return false;
   }
 }
 
-async function promptInstallGemini() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  console.log('\n📦 Optional: Gemini CLI Installation');
-  console.log('  hapo:inspect with ext mode requires gemini-cli');
-  console.log('  • Install now: Auto-install and configure API key');
-  console.log('  • Skip: You can still use hapo:inspect in internal mode');
-  console.log();
-  return new Promise((resolve) => {
-    rl.question('Install gemini-cli? (Y/n): ', (answer) => {
-      rl.close();
-      const response = answer.trim().toLowerCase();
-      resolve(response === '' || response === 'y' || response === 'yes');
-    });
-  });
-}
-
-async function promptGeminiAPIKey() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  console.log('\n📝 Gemini API Key Configuration');
-  console.log('  Get your API key: https://aistudio.google.com/apikey');
-  console.log();
-  return new Promise((resolve) => {
-    rl.question('Enter your Gemini API key (or press Enter to skip): ', (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-function configureGeminiKey(apiKey, platforms = ['claude']) {
+function configureGeminiKey(ctx, apiKey, platforms) {
   const envBody = `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`;
   const targets = platforms.filter((key) => PLATFORMS[key]).map((key) => PLATFORMS[key].folder);
   if (targets.length === 0) targets.push('.claude');
 
-  let success = true;
   for (const folder of targets) {
     try {
       const targetDir = path.join(process.cwd(), folder);
-      const localEnvFile = path.join(targetDir, '.env');
       if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-      fs.writeFileSync(localEnvFile, envBody, { mode: 0o600 });
-      console.log(`  ✓ Gemini API key configured securely in project (${folder}/.env)`);
+      fs.writeFileSync(path.join(targetDir, '.env'), envBody, { mode: 0o600 });
+      ctx.ui.success(`Gemini API key stored in ${folder}/.env (0600)`);
     } catch (error) {
-      success = false;
-      console.log('  ✗ Failed to configure Gemini API key');
-      console.log(`  Error: ${error.message}`);
-      console.log('  You can manually set: export GEMINI_API_KEY="your-key"');
+      ctx.ui.error(`Failed to configure Gemini API key: ${error.message}`);
     }
   }
-  return success;
 }
 
-async function promptAddressingConfig() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question('\nHow should the AI address you? (e.g. boss, sir, master - Enter to skip): ', (answer) => {
-      rl.close();
-      const userAddress = answer.trim();
-      if (!userAddress || userAddress.length === 0) {
-        resolve({ enabled: false, userAddress: '' });
-        return;
-      }
-      if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
-        console.log('  ⚠ Invalid input (letters only), skipping addressing setup');
-        resolve({ enabled: false, userAddress: '' });
-        return;
-      }
-      resolve({ enabled: true, userAddress });
-    });
-  });
+async function setupGemini(ctx) {
+  if (checkGeminiCLI()) {
+    ctx.ui.info('gemini-cli already installed');
+  } else if (ctx.interactive) {
+    const yes = await ctx.ui.confirm(
+      { message: 'Install gemini-cli? (enables hapo:inspect ext mode)', initialValue: false },
+      false
+    );
+    if (yes === true) installGeminiCLI(ctx);
+  }
+
+  const apiKey = await ctx.ui.text(
+    { message: 'Gemini API key (Enter to skip)', placeholder: 'aistudio.google.com/apikey' },
+    ''
+  );
+  if (apiKey && typeof apiKey === 'string' && apiKey.trim()) {
+    configureGeminiKey(ctx, apiKey.trim(), ctx.platforms);
+  }
 }
 
-function configureAddressing(addressingConfig, platforms = ['claude']) {
-  if (!platforms.includes('claude')) return;
-  if (!addressingConfig.enabled || !addressingConfig.userAddress) {
-    console.log('  → Bỏ qua thiết lập xưng hô');
+function configureAddressing(ctx, userAddress) {
+  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
+  if (!fs.existsSync(claudeMdFile)) {
+    ctx.ui.warn('CLAUDE.md not found at project root; skipped addressing');
     return;
   }
 
-  const userAddress = addressingConfig.userAddress;
-  try {
-    const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
-    if (!fs.existsSync(claudeMdFile)) {
-      console.log('  ⚠ CLAUDE.md not found at project root');
-      return;
-    }
-
-    let content = fs.readFileSync(claudeMdFile, 'utf8');
-    const addressingSection = `## Addressing (Context Overflow Indicator)
+  let content = fs.readFileSync(claudeMdFile, 'utf8');
+  const addressingSection = `## Addressing (Context Overflow Indicator)
 
 The AI always addresses the user as "${userAddress}" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
-    // Idempotent: replace the existing section (matched by shared marker) or append.
-    const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
-    if (regex.test(content)) {
-      content = content.replace(regex, addressingSection);
-    } else {
-      if (!content.endsWith('\n')) content += '\n';
-      content += '\n' + addressingSection + '\n';
-    }
+  // Idempotent: replace existing section (shared marker) or append.
+  const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
+  content = regex.test(content)
+    ? content.replace(regex, addressingSection)
+    : `${content.endsWith('\n') ? content : `${content}\n`}\n${addressingSection}\n`;
 
-    fs.writeFileSync(claudeMdFile, content, 'utf8');
-    console.log(`  ✓ Addressing configured in CLAUDE.md: AI calls the user "${userAddress}"`);
-  } catch (error) {
-    console.error('  ✗ Failed to configure addressing in CLAUDE.md');
-    console.error(`     Error: ${error.message}`);
-    if (process.env.DEBUG) console.error(error.stack);
-  }
+  fs.writeFileSync(claudeMdFile, content, 'utf8');
+  ctx.ui.success(`Addressing set: AI will call you "${userAddress}"`);
 }
 
-async function setupGeminiCLI(platforms) {
-  const hasGemini = checkGeminiCLI();
-  if (hasGemini) {
-    console.log('  ✓ gemini-cli already installed');
-  } else {
-    const shouldInstall = await promptInstallGemini();
-    if (shouldInstall) {
-      installGeminiCLI();
-    } else {
-      console.log('\n  ℹ Skipped gemini-cli installation');
-      console.log('  • hapo:inspect will work in internal mode (default)');
-      console.log('  • To install later: npm install -g @google/gemini-cli');
-    }
-  }
+async function setupAddressing(ctx) {
+  if (!ctx.platforms.includes('claude')) return;
 
-  const apiKey = await promptGeminiAPIKey();
-  if (apiKey) {
-    configureGeminiKey(apiKey, platforms);
-  } else {
-    console.log('\n  ℹ Skipped API key configuration');
-    console.log('  Set later: export GEMINI_API_KEY="your-key"');
+  const answer = await ctx.ui.text(
+    { message: 'How should the AI address you? (e.g. boss, sir — Enter to skip)', placeholder: 'Enter to skip' },
+    ''
+  );
+  if (ctx.ui.isCancel(answer)) return;
+  const userAddress = (answer || '').trim();
+  if (!userAddress) return;
+
+  if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
+    ctx.ui.warn('Invalid input (letters only); skipped addressing');
+    return;
   }
+  configureAddressing(ctx, userAddress);
 }
 
-/** Run the post-install interactive configuration sequence. */
+/** Run the post-install configuration sequence. */
 async function runPostInstall(ctx) {
   if (ctx.dryRun) {
-    console.log('  → [dry-run] Skipping OpenCode model / Gemini / addressing prompts');
+    ctx.ui.info('[dry-run] Skipping OpenCode model / Gemini / addressing setup');
     return ctx;
   }
 
-  await setupOpenCodeModel(ctx.platforms, ctx.results);
-  await setupGeminiCLI(ctx.platforms);
+  // OpenCode model uses its own readline; only run it when it won't block:
+  // interactive, or an env override is present (which it reads without prompting).
+  const hasModelEnv = Boolean(process.env.OPENCODE_MODEL || process.env.OPENCODE_DEFAULT_MODEL);
+  if (ctx.platforms.includes('opencode') && (ctx.interactive || hasModelEnv)) {
+    await setupOpenCodeModel(ctx.platforms, ctx.results);
+  }
 
-  const addressingConfig = await promptAddressingConfig();
-  configureAddressing(addressingConfig, ctx.platforms);
+  await setupGemini(ctx);
+  await setupAddressing(ctx);
 
-  // configureAddressing rewrites root CLAUDE.md AFTER its baseline was recorded
-  // in write-metadata. Re-record the final content so the installer-managed
-  // CLAUDE.md (template + addressing) stays "pristine" — otherwise the next run
-  // would see it as user-modified and stop delivering upstream CLAUDE.md updates.
+  // Re-record CLAUDE.md baseline so the installer-managed file (template +
+  // addressing) stays "pristine" and keeps receiving upstream updates.
   if (ctx.platforms.includes('claude') && ctx.trackers.claude && fs.existsSync('CLAUDE.md')) {
     ctx.trackers.claude.record('CLAUDE.md');
     ctx.trackers.claude.write();
@@ -193,13 +138,4 @@ async function runPostInstall(ctx) {
   return ctx;
 }
 
-module.exports = {
-  checkGeminiCLI,
-  promptInstallGemini,
-  promptGeminiAPIKey,
-  configureGeminiKey,
-  promptAddressingConfig,
-  configureAddressing,
-  setupGeminiCLI,
-  runPostInstall
-};
+module.exports = { checkGeminiCLI, configureGeminiKey, configureAddressing, runPostInstall };

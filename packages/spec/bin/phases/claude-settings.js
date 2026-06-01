@@ -56,7 +56,7 @@ function pruneObsoleteSettingsHooks(settings, ctx) {
   });
 
   if (removedCount > 0) {
-    console.log(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: removed ${removedCount} obsolete hook(s)`);
+    ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: removed ${removedCount} obsolete hook(s)`);
     ctx.results.updated++;
     return { ...settings, hooks: prunedHooks };
   }
@@ -78,7 +78,7 @@ function mergeClaudeSettings(ctx, platformKey) {
   const targetPath = path.join(PLATFORMS.claude.folder, 'settings.json');
 
   if (!fs.existsSync(templatePath)) {
-    console.log(`  ⚠ Settings template not found: ${manifest.settings.template}`);
+    ctx.ui.warn(`Settings template not found: ${manifest.settings.template}`);
     return;
   }
 
@@ -96,7 +96,7 @@ function mergeClaudeSettings(ctx, platformKey) {
     const isCafeKitOwned = existingCommand.includes('status.cjs') || existingCommand.includes('statusline.cjs');
     if (ctx.options.forceOverwrite || !existingSettings.statusLine || isCafeKitOwned) {
       mergedSettings.statusLine = managedSettings.statusLine;
-      console.log(`  ✓ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: statusLine merged`);
+      ctx.ui.detail(`  ✓ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: statusLine merged`);
     }
   }
 
@@ -114,7 +114,7 @@ function mergeClaudeSettings(ctx, platformKey) {
           existingHook.hooks?.some((h) => h.command === managedCommand));
         if (!isDuplicate) {
           mergedHooks.push(managedHook);
-          console.log(`  ✓ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: hook ${eventName} merged`);
+          ctx.ui.detail(`  ✓ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: hook ${eventName} merged`);
         }
       });
 

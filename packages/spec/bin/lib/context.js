@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const packageJson = require('../../package.json');
 const { getOpenCodeCopyOptions } = require('./opencode-install');
+const { isInteractive, createUI } = require('./ui');
 
 const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
@@ -181,7 +182,8 @@ function getCopyOptions(platformKey, baseOptions = {}) {
 function parseInstallerArgs(argv) {
   const args = {
     forceOverwrite: false,
-    dryRun: false
+    dryRun: false,
+    yes: false
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -191,6 +193,8 @@ function parseInstallerArgs(argv) {
       args.forceOverwrite = true;
     } else if (arg === '--dry-run') {
       args.dryRun = true;
+    } else if (arg === '--yes' || arg === '-y') {
+      args.yes = true;
     }
   }
 
@@ -231,11 +235,15 @@ function createResults() {
  */
 function buildContext(argv, runId) {
   const options = parseInstallerArgs(argv);
+  // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
+  const interactive = isInteractive() && !options.yes;
   return {
     argv,
     runId,
     options,
     dryRun: options.dryRun,
+    interactive,
+    ui: createUI(interactive),
     manifest: loadClaudeMigrationManifest(),  // migration manifest (skills/agents/runtime lists)
     platforms: [],
     results: createResults(),

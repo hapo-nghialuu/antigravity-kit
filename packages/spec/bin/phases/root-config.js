@@ -23,7 +23,7 @@ function ensureGitignore(ctx) {
   if (!fs.existsSync(gitignorePath)) {
     const content = ['# Git Ignore', '', header, ...patterns, ''].join('\n');
     if (!ctx.dryRun) fs.writeFileSync(gitignorePath, content, 'utf8');
-    console.log(`  ✓ ${prefix}.gitignore created at root`);
+    ctx.ui.detail(`  ✓ ${prefix}.gitignore created at root`);
     ctx.results.copied++;
     return;
   }
@@ -38,10 +38,10 @@ function ensureGitignore(ctx) {
     if (!content.includes(header)) newContent += `\n${header}\n`;
     newContent += missing.join('\n') + '\n';
     if (!ctx.dryRun) fs.writeFileSync(gitignorePath, newContent, 'utf8');
-    console.log(`  ↻ ${prefix}.gitignore updated: added ${missing.join(', ')}`);
+    ctx.ui.detail(`  ↻ ${prefix}.gitignore updated: added ${missing.join(', ')}`);
     ctx.results.updated++;
   } else {
-    console.log(`  → ${prefix}.gitignore already up to date`);
+    ctx.ui.detail(`  → ${prefix}.gitignore already up to date`);
     ctx.results.skipped++;
   }
 }

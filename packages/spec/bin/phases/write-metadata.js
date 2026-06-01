@@ -43,10 +43,10 @@ function writePlatformVersionMetadata(ctx, platformKey) {
 
   const prefix = ctx.dryRun ? '[dry-run] ' : '';
   if (targetExists) {
-    console.log(`  ↻ ${prefix}Version metadata updated: ${targetPath}`);
+    ctx.ui.detail(`  ↻ ${prefix}Version metadata updated: ${targetPath}`);
     ctx.results.updated++;
   } else {
-    console.log(`  ✓ ${prefix}Version metadata installed: ${targetPath}`);
+    ctx.ui.detail(`  ✓ ${prefix}Version metadata installed: ${targetPath}`);
     ctx.results.copied++;
   }
 

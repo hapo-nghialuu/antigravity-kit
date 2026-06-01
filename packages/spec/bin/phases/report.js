@@ -1,8 +1,10 @@
 /**
  * Shared reporting helper for install phases.
  *
- * Maps an ownership-writer action to a console line + results counter so every
- * phase logs file outcomes consistently. Honors dry-run by prefixing messages.
+ * Maps an ownership-writer action to a UI update + results counter so every
+ * phase reports outcomes consistently. Routine create/update lines go to
+ * ctx.ui.detail (ephemeral spinner progress when interactive; plain log when
+ * not). Preserved/missing are surfaced more prominently.
  */
 
 const SYMBOL = {
@@ -16,7 +18,7 @@ const SYMBOL = {
 /**
  * Report a single file/group outcome.
  *
- * @param {object} ctx     run context (for dryRun + results)
+ * @param {object} ctx     run context (ui + results + dryRun)
  * @param {string} action  'created'|'updated'|'unchanged'|'preserved'|'missing'
  * @param {string} label   human label, e.g. "Skill: specs"
  */
@@ -27,22 +29,22 @@ function report(ctx, action, label) {
 
   switch (action) {
     case 'created':
-      console.log(`  ${sym} ${prefix}${label}`);
+      ctx.ui.detail(`  ${sym} ${prefix}${label}`);
       r.copied++;
       break;
     case 'updated':
-      console.log(`  ${sym} ${prefix}${label}`);
+      ctx.ui.detail(`  ${sym} ${prefix}${label}`);
       r.updated++;
       break;
     case 'unchanged':
       r.unchanged++;
       break;
     case 'preserved':
-      console.log(`  ${sym} ${prefix}preserved (user-modified): ${label}`);
+      ctx.ui.detail(`  ${sym} ${prefix}preserved (user-modified): ${label}`);
       r.preserved++;
       break;
     case 'missing':
-      console.log(`  ${sym} ${prefix}Missing: ${label}`);
+      ctx.ui.warn(`${prefix}Missing: ${label}`);
       r.missingDependencies++;
       break;
     default:

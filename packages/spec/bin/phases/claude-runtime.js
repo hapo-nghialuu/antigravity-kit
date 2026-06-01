@@ -55,7 +55,7 @@ function copyClaudeRuntimeFiles(ctx, platformKey) {
     const targetPath = path.join(targetBase, targetRelPath);
 
     if (!fs.existsSync(srcPath)) {
-      console.log(`  ⚠ Runtime file not found: ${relPath}`);
+      ctx.ui.warn(`Runtime file not found: ${relPath}`);
       ctx.results.missingDependencies++;
       return;
     }
@@ -79,7 +79,7 @@ function removeObsoleteClaudeRuntimeFiles(ctx, platformKey) {
     if (!fs.existsSync(targetPath)) return;
 
     if (!ctx.dryRun) fs.rmSync(targetPath, { force: true });
-    console.log(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed obsolete runtime: ${relPath}`);
+    ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed obsolete runtime: ${relPath}`);
     ctx.results.updated++;
   });
 }
@@ -91,7 +91,7 @@ function copyClaudeMdFile(ctx, platformKey) {
   const src = path.join(SRC, 'claude/CLAUDE.md');
   const dest = 'CLAUDE.md'; // project root
   if (!fs.existsSync(src)) {
-    console.log('  ⚠ CLAUDE.md template not found');
+    ctx.ui.warn('CLAUDE.md template not found');
     ctx.results.missingDependencies++;
     return;
   }
@@ -109,7 +109,7 @@ function copyRulesDirectory(ctx, platformKey) {
   const src = path.join(SRC, 'claude/rules');
   const dest = getRuntimeSupportTargetDir(platformKey, 'rules');
   if (!fs.existsSync(src)) {
-    console.log('  ⚠ rules/ directory not found');
+    ctx.ui.warn('rules/ directory not found');
     ctx.results.missingDependencies++;
     return;
   }

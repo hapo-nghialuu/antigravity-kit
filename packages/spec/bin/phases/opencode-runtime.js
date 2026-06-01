@@ -20,7 +20,7 @@ function installOpenCodeRuntime(ctx, platformKey) {
   if (platformKey !== 'opencode') return;
 
   if (ctx.dryRun) {
-    console.log('  → [dry-run] OpenCode runtime (plugins, command templates, AGENTS.md, opencode.json) would be installed');
+    ctx.ui.detail('  → [dry-run] OpenCode runtime (plugins, command templates, AGENTS.md, opencode.json) would be installed');
     // rules/ is dry-run aware; still preview it.
     copyRulesDirectory(ctx, platformKey);
     return;

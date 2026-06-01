@@ -15,6 +15,12 @@ All notable changes to CafeKit are documented here, following
   Re-running the installer no longer blindly overwrites managed files.
 
 ### Added
+- **Interactive TUI via `@clack/prompts`.** Installer now renders framed
+  intro/outro, a spinner per platform, and `◆/│/└` prompts (`bin/lib/ui.js`,
+  `ctx.ui`). Falls back to plain output when piped/CI/`--yes`.
+- **`--yes` / `-y` and non-interactive detection.** Piped/CI runs skip prompts
+  and use defaults instead of hanging — fixes the previous readline-on-pipe stall
+  and makes the installer CI-friendly.
 - **Ownership tracking (SHA-256).** Each install records a per-platform
   `<folder>/cafekit-manifest.json` mapping every managed file to its content hash.
   Re-installs classify files as pristine / user-modified / user-created and update

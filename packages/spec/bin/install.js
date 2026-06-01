@@ -5,16 +5,14 @@
  *
  * Thin coordinator that runs the install as a sequence of phase handlers. Each
  * phase receives and returns the run context (`ctx`). Heavy logic lives in
- * bin/phases/* and bin/lib/*.
+ * bin/phases/* and bin/lib/*. Terminal UX is rendered via ctx.ui (clack in an
+ * interactive TTY; plain logs when piped/CI/--yes).
  *
  * Safety features:
  *  - Process lock (lib/lock)       — refuses to run concurrently.
  *  - Pre-run snapshot (lib/backup) — rolls back on a mid-install crash.
  *  - Ownership manifest (lib/manifest) — selective update; preserves user edits.
  *  - --dry-run                     — preview only, no filesystem changes.
- *
- * Supported platforms (each self-contained): claude → .claude/, opencode → .opencode/.
- * To add a platform, extend the PLATFORMS registry in lib/context.js.
  */
 
 const { buildContext, PLATFORMS, packageJson } = require('./lib/context');
@@ -38,16 +36,7 @@ const { ensureGitignore } = require('./phases/root-config');
 const { runPostInstall } = require('./phases/post-install');
 const { printSummary } = require('./phases/summary');
 
-function printHeader() {
-  console.log();
-  console.log('╔════════════════════════════════════════════════════════╗');
-  console.log(`║         CafeKit Installer v${String(packageJson.version).padEnd(5, ' ')}                    ║`);
-  console.log('║         Multi-platform SDD Workflow                    ║');
-  console.log('╚════════════════════════════════════════════════════════╝');
-  console.log();
-}
-
-/** Install a single platform: payload + runtime + metadata. */
+/** Install a single platform: payload + runtime + metadata, under one spinner. */
 function installPlatform(ctx, platformKey) {
   const platform = PLATFORMS[platformKey];
 
@@ -55,8 +44,8 @@ function installPlatform(ctx, platformKey) {
   ctx.ownership[platform.folder] = manifestLib.read(platform.folder);
   ctx.trackers[platformKey] = manifestLib.createTracker(platform.folder, packageJson.version);
 
-  console.log(`${platform.name} (${platform.folder}/)`);
-  console.log('-'.repeat(40));
+  const before = { copied: ctx.results.copied, updated: ctx.results.updated, skills: ctx.results.installedSkills };
+  ctx.ui.startSpinner(`Installing ${platform.name} (${platform.folder}/)`);
 
   copyPlatformFiles(ctx, platformKey);
 
@@ -75,22 +64,20 @@ function installPlatform(ctx, platformKey) {
 
   writePlatformVersionMetadata(ctx, platformKey);
 
+  const wrote = (ctx.results.copied - before.copied) + (ctx.results.updated - before.updated);
+  const verb = ctx.dryRun ? 'would install' : 'installed';
+  ctx.ui.stopSpinner(`${platform.name} ${verb} — ${wrote} file(s), ${ctx.results.installedSkills - before.skills} skill(s)`);
+
   ctx.results.targets.push(platform.commandsDir);
-  console.log();
 }
 
 async function main() {
-  printHeader();
-
-  // ── Concurrency guard ───────────────────────────────────
+  // ── Concurrency guard (before context; plain output) ────
   const got = lock.acquire();
   if (!got.acquired) {
     console.error(`✗ Another CafeKit install is in progress (pid ${got.pid}, since ${got.since}).`);
     console.error('  If that process is gone, delete .cafekit.lock and retry.');
     process.exit(1);
-  }
-  if (got.reclaimed) {
-    console.log('  ℹ Reclaimed a stale install lock from a dead process.\n');
   }
 
   let ctx;
@@ -98,6 +85,8 @@ async function main() {
 
   try {
     ctx = buildContext(process.argv, `${Date.now()}`);
+    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))} Installer v${packageJson.version} · Multi-platform SDD`);
+    if (got.reclaimed) ctx.ui.info('Reclaimed a stale install lock from a dead process.');
 
     await resolvePlatforms(ctx);
     if (ctx.cancelled) {
@@ -117,27 +106,23 @@ async function main() {
       installPlatform(ctx, platformKey);
     }
 
-    console.log('Root Configuration');
-    console.log('-'.repeat(40));
     ensureGitignore(ctx);
-    console.log();
-
     await runPostInstall(ctx);
-
     printSummary(ctx);
 
     if (!ctx.dryRun) backup.prune(3);
 
     exitCode = ctx.results.errors > 0 ? 1 : 0;
   } catch (error) {
-    console.error(`\n✗ Installation failed: ${error.message}`);
+    const log = ctx && ctx.ui ? ctx.ui : { error: (m) => console.error(m) };
+    log.error(`Installation failed: ${error.message}`);
     if (ctx && ctx.backupDir && !ctx.dryRun) {
       try {
         backup.restore(ctx.backupDir);
-        console.error('  ↩ Rolled back to the pre-install state from snapshot.');
+        log.error('Rolled back to the pre-install state from snapshot.');
       } catch (restoreError) {
-        console.error(`  ⚠ Rollback failed: ${restoreError.message}`);
-        console.error(`  Manual restore available at: ${ctx.backupDir}`);
+        log.error(`Rollback failed: ${restoreError.message}`);
+        log.error(`Manual restore available at: ${ctx.backupDir}`);
       }
     }
     exitCode = 1;

@@ -1,80 +1,54 @@
 /**
  * Phase: final summary report.
  *
- * Prints install stats (including the new selective-merge counters: unchanged
- * and preserved user-modified files) plus next steps.
+ * Renders install stats (incl. selective-merge counters) + next steps through
+ * ctx.ui, so it appears as a framed clack note/outro when interactive and as
+ * plain text otherwise.
  */
 
 const { PLATFORMS, packageJson } = require('../lib/context');
 
 function printSummary(ctx) {
-  const { results, platforms, options } = ctx;
-  const banner = ctx.dryRun ? 'Dry-run Preview Complete' : 'Installation Complete!';
+  const { results, platforms, options, ui } = ctx;
 
-  console.log('╔════════════════════════════════════════════════════════╗');
-  console.log(`║         ${banner.padEnd(46, ' ')}║`);
-  console.log('╚════════════════════════════════════════════════════════╝');
-  console.log();
-  console.log(`  Copied Files:       ${results.copied}`);
-  console.log(`  Updated Files:      ${results.updated}`);
-  console.log(`  Unchanged Files:    ${results.unchanged}`);
-  console.log(`  Preserved (user):   ${results.preserved}`);
-  console.log(`  CafeKit Version:    ${packageJson.version}`);
-  console.log(`  Skipped Files:      ${results.skipped}`);
-  console.log(`  Installed Skills:   ${results.installedSkills > 0 ? 'Yes ✓' : 'No'}`);
-  console.log(`  Missing Deps:       ${results.missingDependencies}`);
-  console.log(`  Target Directories: ${results.targets.join(', ')}`);
-  if (results.errors > 0) {
-    console.log(`  Errors:             ${results.errors} ⚠`);
-  }
-  console.log();
+  const stats = [
+    `Copied:      ${results.copied}`,
+    `Updated:     ${results.updated}`,
+    `Unchanged:   ${results.unchanged}`,
+    `Preserved:   ${results.preserved}`,
+    `Skills:      ${results.installedSkills > 0 ? 'yes' : 'no'}`,
+    `CafeKit Version: ${packageJson.version}`,
+    results.missingDependencies > 0 ? `Missing:     ${results.missingDependencies}` : null,
+    results.errors > 0 ? `Errors:      ${results.errors}` : null
+  ].filter(Boolean).join('\n');
+
+  ui.note(stats, ctx.dryRun ? 'Dry-run preview' : 'Installation complete');
 
   if (results.preserved > 0) {
-    console.log(`  ${results.preserved} user-modified file(s) were preserved (not overwritten):`);
-    results.preservedFiles.slice(0, 10).forEach((f) => console.log(`     ⊘ ${f}`));
-    if (results.preservedFiles.length > 10) {
-      console.log(`     ... and ${results.preservedFiles.length - 10} more`);
-    }
-    console.log('  Re-run with --force-overwrite to replace them (a backup is kept under .cafekit-backup/).');
-    console.log();
+    const list = results.preservedFiles.slice(0, 8).map((f) => `  ⊘ ${f}`).join('\n');
+    const more = results.preservedFiles.length > 8 ? `\n  ... and ${results.preservedFiles.length - 8} more` : '';
+    ui.warn(`${results.preserved} user-modified file(s) preserved:\n${list}${more}\n`
+      + 'Re-run with --force-overwrite to replace them (a backup is kept under .cafekit-backup/).');
   }
 
   if (ctx.dryRun) {
-    console.log('No files were changed (dry-run). Re-run without --dry-run to apply.');
-    console.log();
+    ui.outro('Dry-run only — re-run without --dry-run to apply.');
     return;
   }
 
-  console.log('Next steps:');
-  const nextEditorLabel = platforms.length === 1 ? PLATFORMS[platforms[0]].name : 'your AI editor';
-  console.log(`  1. Start ${nextEditorLabel}`);
-
-  for (const platformKey of platforms) {
-    const platform = PLATFORMS[platformKey];
-    console.log(`\n  For ${platform.name}:`);
-    if (platformKey === 'claude') {
-      console.log('     Use skill: /hapo:specs <feature-description>');
-    } else {
-      console.log('     Instruct the agent to start a new feature or brainstorm');
-    }
-  }
-
-  if (platforms.includes('claude')) {
-    console.log('\n  2. Claude Code will automatically sync docs/ (Continuous Documentation)');
-  } else {
-    console.log('\n  2. CafeKit skills and AGENTS.md are installed for the selected runtime');
+  const lines = [];
+  for (const key of platforms) {
+    if (key === 'claude') lines.push('Claude: use /hapo:specs <feature-description>');
+    else lines.push('OpenCode: ask the agent to start a feature or brainstorm');
   }
   const envHosts = platforms.map((key) => `${PLATFORMS[key].folder}/.env`).join(' and ');
-  console.log(`  3. Project API Keys are now securely isolated in ${envHosts}`);
+  lines.push(`API keys isolated in ${envHosts}`);
   if (!options.forceOverwrite) {
-    console.log('  4. To force-refresh user-modified managed files later, run with --force-overwrite');
+    lines.push('Use --force-overwrite to refresh user-modified files');
   }
-  console.log();
-  console.log('Documentation: https://github.com/haposoft/cafekit');
-  if (results.missingDependencies > 0) {
-    console.log('Note: some dependency templates could not be installed. Please check command/agent directories.');
-  }
-  console.log();
+  ui.note(lines.join('\n'), 'Next steps');
+
+  ui.outro(`Done — docs: https://github.com/haposoft/cafekit`);
 }
 
 module.exports = { printSummary };

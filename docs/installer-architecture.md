@@ -14,6 +14,8 @@ bin/install.js              orchestrator: lock → snapshot → phases (try/catc
 bin/lib/
   context.js                PLATFORMS registry, INSTALL_COMMAND, migration-manifest loader,
                             arg parsing, results factory, buildContext()
+  ui.js                     terminal UI (clack when interactive TTY; plain logs otherwise),
+                            ctx.ui — intro/outro/spinner/note + select/text/confirm
   manifest.js               SHA-256 ownership: read / classify / tracker (cafekit-manifest.json)
   managed-writer.js         ownership-aware single-file + tree writer (core of selective update)
   backup.js                 snapshot / restore / prune  (.cafekit-backup/<runId>/)
