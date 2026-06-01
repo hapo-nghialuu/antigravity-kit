@@ -2,15 +2,15 @@
 
 ## Tổng quan
 
-CafeKit hỗ trợ cấu hình xưng hô cho tiếng Việt với **hai mục đích**:
-1. **Nhất quán giao tiếp**: AI xưng hô đúng cách theo phong cách mong muốn
-2. **Phát hiện Context Overflow**: Khi AI đột nhiên đổi cách xưng hô = dấu hiệu context window đã bị compact
+CafeKit cho phép cấu hình **cách AI gọi người dùng** khi giao tiếp tiếng Việt, với **hai mục đích**:
+1. **Cá nhân hóa giao tiếp**: AI gọi đúng theo mong muốn (ví dụ: "anh", "đại ca", "sếp")
+2. **Phát hiện Context Overflow**: Khi AI đột nhiên không còn gọi đúng = dấu hiệu context window đã bị compact
 
 ---
 
 ## Cách hoạt động
 
-Quy tắc xưng hô được **ghi trực tiếp vào `CLAUDE.md`** khi cài đặt CafeKit. Mỗi session mới, Claude Code tự động đọc CLAUDE.md và AI sẽ tuân thủ quy tắc xưng hô. Khi context bị tràn và compact, AI sẽ quên quy tắc này → dấu hiệu rõ ràng để user biết cần `/clear`.
+Quy tắc xưng hô được **ghi trực tiếp vào `CLAUDE.md`** khi cài đặt CafeKit. Mỗi session mới, Claude Code tự động đọc CLAUDE.md và AI sẽ gọi người dùng theo cấu hình. Khi context bị tràn và compact, AI sẽ quên quy tắc này → dấu hiệu rõ ràng để user biết cần `/clear`.
 
 ---
 
@@ -18,17 +18,15 @@ Quy tắc xưng hô được **ghi trực tiếp vào `CLAUDE.md`** khi cài đ�
 
 ### Khi cài đặt CafeKit
 
-Installer sẽ hỏi:
+Installer sẽ hỏi một câu duy nhất:
 ```
 🎯 Xưng hô (Addressing Configuration)
-  • Để trống = dùng mặc định (em/anh)
+  • Để trống = bỏ qua (không thiết lập xưng hô)
 
-AI xưng gì? (ví dụ: em, mình, tôi, con - Enter=em): 
-AI hô user là gì? (ví dụ: anh, bạn, thầy - Enter=anh): 
-Bật xưng hô? (Y/n, Enter=Y): 
+AI gọi bạn là gì? (ví dụ: anh, chị, đại ca, sếp - Enter=bỏ qua):
 ```
 
-Installer sẽ **ghi trực tiếp vào `.claude/CLAUDE.md`** theo input của user.
+Installer sẽ **ghi trực tiếp vào `.claude/CLAUDE.md`** theo input của user. Để trống = bỏ qua, không thêm section xưng hô.
 
 ### Thay đổi sau khi cài đặt
 
@@ -39,9 +37,7 @@ Mở file `.claude/CLAUDE.md` và sửa section:
 ```markdown
 ## Xưng hô (Addressing - Context Overflow Indicator)
 
-Khi giao tiếp bằng tiếng Việt:
-- Luôn xưng "mình" (bản thân AI)      ← SỬA ĐÂY
-- Luôn hô "bạn" (người dùng)          ← SỬA ĐÂY
+Khi giao tiếp bằng tiếng Việt, AI luôn gọi người dùng là "đại ca".    ← SỬA ĐÂY
 ```
 
 Sau đó chạy `/clear` để reset session.
@@ -52,15 +48,7 @@ Sau đó chạy `/clear` để reset session.
 npx @haposoft/cafekit
 ```
 
-Chọn lại xưng hô mới.
-
-**Các preset phổ biến:**
-
-| Preset | firstPerson | secondPerson | Phù hợp |
-|--------|-------------|--------------|---------|
-| Formal | `em` | `anh` | Công việc chuyên nghiệp |
-| Casual | `mình` | `bạn` | Dự án cá nhân |
-| Respectful | `con` | `bố/thầy` | Môi trường gia đình/giáo dục |
+Nhập lại cách gọi mới.
 
 ---
 
@@ -69,8 +57,7 @@ Chọn lại xưng hô mới.
 ### Dấu hiệu
 
 Khi AI đột nhiên:
-- Chuyển từ "em/anh" sang "tôi/bạn"
-- Không còn nhất quán trong xưng hô
+- Không còn gọi user theo cấu hình (ví dụ: từ "anh" sang "bạn")
 - Trả lời lạc đề
 
 → **Context đã bị compact**
@@ -79,7 +66,7 @@ Khi AI đột nhiên:
 
 AI sẽ tự thông báo:
 ```
-⚠️ Em nhận thấy context có thể đã bị compact. 
+⚠️ Context có thể đã bị compact.
 Anh có thể cần /clear để reset session.
 ```
 
@@ -92,52 +79,42 @@ User nên:
 
 ## Tắt xưng hô
 
-Nếu không cần, xóa hoặc comment section "Xưng hô" trong `.claude/CLAUDE.md`:
-
-```markdown
-<!-- ## Xưng hô (Addressing - Context Overflow Indicator)
-... toàn bộ section ...
--->
-```
-
-Hoặc chạy lại installer và chọn "n" khi hỏi "Bật xưng hô?".
+Nếu không cần, xóa section "Xưng hô" trong `.claude/CLAUDE.md`, hoặc chạy lại installer và để trống khi được hỏi.
 
 ---
 
 ## Technical Details
 
-- **Không dùng hook**: Quy tắc được định nghĩa trực tiếp trong `CLAUDE.md`
+- **Không dùng hook**: Quy tắc được ghi trực tiếp vào `CLAUDE.md`
 - **Ghi vào CLAUDE.md khi install**: Installer modify file theo user input
-- **Mặc định enabled**: `true` khi cài đặt mới
+- **Chỉ 1 ngôi xưng**: Cấu hình cách AI gọi user (không cấu hình AI tự xưng)
+- **Để trống = bỏ qua**: Không thêm section nếu user không nhập
 - **Canary signal**: Pattern dễ nhận biết để phát hiện context overflow sớm
-- **Validation**: Installer chỉ chấp nhận chữ cái tiếng Việt (a-z, À-ỹ)
+- **Validation**: Chỉ chấp nhận chữ cái tiếng Việt (a-z, À-ỹ) và khoảng trắng
 
 ---
 
 ## FAQ
 
-**Q: Có tốn thêm tokens không?**  
-A: Không, vì quy tắc nằm trong CLAUDE.md (đã được load sẵn mỗi session).
+**Q: Có tốn thêm tokens không?**
+A: Không đáng kể, vì quy tắc nằm trong CLAUDE.md (đã được load sẵn mỗi session).
 
-**Q: Có thể dùng cho ngôn ngữ khác không?**  
-A: Có! Bất kỳ ngôn ngữ nào có hệ thống xưng hô đều dùng được. Chỉnh sửa trực tiếp CLAUDE.md.
+**Q: Có thể nhập cụm từ nhiều từ không?**
+A: Có. Ví dụ "đại ca", "chị hai", "sếp lớn" đều hợp lệ.
 
-**Q: Tại sao không dùng hook?**  
+**Q: Tại sao không dùng hook?**
 A: CLAUDE.md đã đủ mạnh để AI nhớ và tuân thủ. Hook chỉ thêm phức tạp không cần thiết.
 
-**Q: Nếu nhập sai khi install thì sao?**  
-A: Chỉnh sửa trực tiếp `.claude/CLAUDE.md` hoặc chạy lại installer.
-
-**Q: Có thể nhập ký tự đặc biệt không?**  
-A: Không. Installer chỉ chấp nhận chữ cái tiếng Việt (a-z, À-ỹ) và khoảng trắng.
+**Q: Có thể nhập ký tự đặc biệt/số không?**
+A: Không. Chỉ chấp nhận chữ cái tiếng Việt và khoảng trắng. Input không hợp lệ sẽ bị bỏ qua.
 
 ---
 
 ## Changelog
 
 ### v0.9.4
-- ✨ Thêm tính năng xưng hô
+- ✨ Thêm tính năng xưng hô (cấu hình cách AI gọi user)
 - 🎯 Hỗ trợ context overflow detection
-- 📝 Installer prompt với validation
+- 📝 Installer prompt 1 câu với validation
 - 📚 Ghi trực tiếp vào CLAUDE.md (không dùng hook)
-- ✅ Mặc định enabled với preset "em/anh"
+- ✅ Để trống = bỏ qua thiết lập

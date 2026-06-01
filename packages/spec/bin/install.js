@@ -1025,46 +1025,30 @@ async function promptAddressingConfig() {
   });
 
   console.log('\n🎯 Xưng hô (Addressing Configuration)');
-  console.log('  CafeKit có thể cấu hình cách AI xưng hô khi giao tiếp tiếng Việt');
+  console.log('  CafeKit có thể cấu hình cách AI gọi bạn khi giao tiếp tiếng Việt');
   console.log('  • Mục đích: Phát hiện context overflow (khi AI đột nhiên đổi cách xưng hô)');
-  console.log('  • Để trống = dùng mặc định (em/anh)');
+  console.log('  • Để trống = bỏ qua (không thiết lập xưng hô)');
   console.log();
 
   return new Promise((resolve) => {
-    rl.question('AI xưng gì? (ví dụ: em, mình, tôi, con - Enter=em): ', (firstAnswer) => {
-      let firstPerson = firstAnswer.trim();
+    rl.question('AI gọi bạn là gì? (ví dụ: anh, chị, đại ca, sếp - Enter=bỏ qua): ', (answer) => {
+      rl.close();
+      const userAddress = answer.trim();
 
-      // Validate: không rỗng và chỉ chứa chữ cái tiếng Việt
-      if (!firstPerson || firstPerson.length === 0 || /[^a-zA-ZÀ-ỹ\s]/.test(firstPerson)) {
-        if (firstAnswer.trim().length > 0) {
-          console.log('  ⚠ Xưng hô không hợp lệ, dùng mặc định: em');
-        }
-        firstPerson = 'em';
+      // Để trống = bỏ qua, không thiết lập
+      if (!userAddress || userAddress.length === 0) {
+        resolve({ enabled: false, userAddress: '' });
+        return;
       }
 
-      rl.question('AI hô user là gì? (ví dụ: anh, bạn, thầy - Enter=anh): ', (secondAnswer) => {
-        let secondPerson = secondAnswer.trim();
+      // Validate: chỉ chứa chữ cái tiếng Việt và khoảng trắng
+      if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
+        console.log('  ⚠ Xưng hô không hợp lệ (chỉ dùng chữ cái), bỏ qua thiết lập');
+        resolve({ enabled: false, userAddress: '' });
+        return;
+      }
 
-        // Validate: không rỗng và chỉ chứa chữ cái tiếng Việt
-        if (!secondPerson || secondPerson.length === 0 || /[^a-zA-ZÀ-ỹ\s]/.test(secondPerson)) {
-          if (secondAnswer.trim().length > 0) {
-            console.log('  ⚠ Xưng hô không hợp lệ, dùng mặc định: anh');
-          }
-          secondPerson = 'anh';
-        }
-
-        rl.question('Bật xưng hô? (Y/n, Enter=Y): ', (enableAnswer) => {
-          rl.close();
-          const enabled = enableAnswer.trim().toLowerCase();
-          const isEnabled = enabled === '' || enabled === 'y' || enabled === 'yes';
-
-          resolve({
-            enabled: isEnabled,
-            firstPerson: firstPerson,
-            secondPerson: secondPerson
-          });
-        });
-      });
+      resolve({ enabled: true, userAddress: userAddress });
     });
   });
 }
@@ -1078,14 +1062,20 @@ function configureAddressing(addressingConfig, platforms = ['claude']) {
     targets.push('.claude');
   }
 
-  // Helper function to safely capitalize
+  // Helper function to safely capitalize first letter
   function capitalize(str) {
     if (!str || str.length === 0) return str;
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-  const firstPersonCap = capitalize(addressingConfig.firstPerson);
-  const secondPersonCap = capitalize(addressingConfig.secondPerson);
+  // Skip if addressing not enabled (user left blank or invalid input)
+  if (!addressingConfig.enabled || !addressingConfig.userAddress) {
+    console.log('  → Bỏ qua thiết lập xưng hô');
+    return;
+  }
+
+  const userAddress = addressingConfig.userAddress;
+  const userAddressCap = capitalize(userAddress);
 
   for (const folder of targets) {
     try {
@@ -1102,21 +1092,18 @@ function configureAddressing(addressingConfig, platforms = ['claude']) {
       // Build the addressing section
       const addressingSection = `## Xưng hô (Addressing - Context Overflow Indicator)
 
-Khi giao tiếp bằng tiếng Việt:
-- Luôn xưng "${addressingConfig.firstPerson}" (bản thân AI)
-- Luôn hô "${addressingConfig.secondPerson}" (người dùng)
-- Duy trì xưng hô nhất quán trong toàn bộ conversation
+Khi giao tiếp bằng tiếng Việt, AI luôn gọi người dùng là "${userAddress}".
+Duy trì cách gọi này nhất quán trong toàn bộ conversation.
 
-**Ví dụ:** "${firstPersonCap} đã đọc file này và ${addressingConfig.firstPerson} thấy ${addressingConfig.secondPerson} cần sửa dòng 45."
+**Ví dụ:** "${userAddressCap} cần sửa dòng 45 trong file này."
 
 **⚠️ Context Overflow Detection:**
-Nếu bạn (AI) đột nhiên không thể nhớ hoặc tuân thủ quy tắc xưng hô này, đây là dấu hiệu context window đã bị compact/truncate. Hãy thông báo ngay:
-"${firstPersonCap} nhận thấy context có thể đã bị compact. ${secondPersonCap} có thể cần /clear để reset session."
+Nếu AI đột nhiên không còn gọi người dùng là "${userAddress}", đây là dấu hiệu context window đã bị compact/truncate. Hãy thông báo ngay:
+"Context có thể đã bị compact. ${userAddressCap} có thể cần /clear để reset session."
 
 **Lưu ý:** Xưng hô được thiết lập khi cài đặt CafeKit và lưu trực tiếp trong file CLAUDE.md này. Để thay đổi, chỉnh sửa section này hoặc chạy lại installer.`;
 
-      // Match from ## Xưng hô to the end of section (including any trailing newlines)
-      // This regex matches the entire section including the final newline after "Lưu ý:" paragraph
+      // Match from ## Xưng hô to the next ## header or end of file
       const regex = /## Xưng hô \(Addressing - Context Overflow Indicator\)[\s\S]*?(?=\n##|\n*$)/;
 
       if (regex.test(content)) {
@@ -1131,12 +1118,7 @@ Nếu bạn (AI) đột nhiên không thể nhớ hoặc tuân thủ quy tắc x
       }
 
       fs.writeFileSync(claudeMdFile, content, 'utf8');
-
-      if (addressingConfig.enabled) {
-        console.log(`  ✓ Xưng hô configured in CLAUDE.md: ${addressingConfig.firstPerson}/${addressingConfig.secondPerson}`);
-      } else {
-        console.log(`  ✓ Xưng hô disabled in CLAUDE.md`);
-      }
+      console.log(`  ✓ Xưng hô configured in CLAUDE.md: AI gọi user là "${userAddress}"`);
     } catch (error) {
       console.error(`  ✗ Failed to configure addressing in ${folder}/CLAUDE.md`);
       console.error(`     Error: ${error.message}`);
