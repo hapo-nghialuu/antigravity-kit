@@ -81,9 +81,20 @@ function npmInstall(dir) {
   return run('npm', ['install', '--no-audit', '--no-fund'], { cwd: dir }).ok;
 }
 
-/** Download the Puppeteer Chromium browser for chrome-devtools. */
+/**
+ * Download the Puppeteer Chromium browser for chrome-devtools.
+ * Prefer puppeteer's own install script (cache-aware, same as its postinstall);
+ * fall back to the bundled @puppeteer/browsers CLI. `npx puppeteer ...` is
+ * avoided — puppeteer ships no `puppeteer` bin under that invocation and `--yes`
+ * would refetch from the registry.
+ */
 function installChromium(scriptsDir) {
-  return run('npx', ['--yes', 'puppeteer', 'browsers', 'install', 'chrome'], { cwd: scriptsDir }).ok;
+  // Absolute path so it resolves regardless of the child process cwd.
+  const installMjs = path.resolve(scriptsDir, 'node_modules', 'puppeteer', 'install.mjs');
+  if (fs.existsSync(installMjs)) {
+    return run('node', [installMjs], { cwd: scriptsDir }).ok;
+  }
+  return run('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], { cwd: scriptsDir }).ok;
 }
 
 /** Does a skill scripts dir declare a given npm dependency? */

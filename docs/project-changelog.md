@@ -3,6 +3,20 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.10.3] - 2026-06-01
+
+### Fixed
+- **Chromium download for chrome-devtools** now works. The previous
+  `npx puppeteer browsers install chrome` invocation failed (puppeteer ships no
+  such bin and `--yes` refetched from the registry); switched to puppeteer's own
+  `install.mjs` (cache-aware), with `@puppeteer/browsers` as fallback.
+
+### Removed
+- **Gemini API key prompt dropped from install.** With gemini-cli gone, the key
+  served only the `ai-multimodal` skill — which documents it in its own
+  `.env.example`. Users set `GEMINI_API_KEY` there if/when they use that skill,
+  instead of being prompted on every install.
+
 ## [0.10.2] - 2026-06-01
 
 ### Added

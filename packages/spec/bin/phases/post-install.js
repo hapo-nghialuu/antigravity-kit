@@ -1,51 +1,23 @@
 /**
  * Phase: post-install runtime configuration.
  *
- * OpenCode model, optional Gemini API key, and addressing config. Interactive
- * prompts use ctx.ui (clack); in non-interactive/dry-run they are skipped via
- * fallbacks so spawned/CI runs never hang. Writes (.env, CLAUDE.md,
- * opencode.json) happen only when a value is actually provided.
+ * OpenCode model + addressing config. Interactive prompts use ctx.ui (clack);
+ * in non-interactive/dry-run they are skipped via fallbacks so spawned/CI runs
+ * never hang.
  *
- * Note: CafeKit no longer installs the `gemini-cli` (the upstream package was
- * removed). We only configure GEMINI_API_KEY, which the SDK-based skills
- * (e.g. hapo:ai-multimodal) read directly.
+ * Note: CafeKit no longer prompts for a Gemini API key. The upstream gemini-cli
+ * was removed, and the key now serves only the ai-multimodal skill — which
+ * documents it in its own `.env.example`. Users set GEMINI_API_KEY there when
+ * (and only if) they use that skill.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { PLATFORMS } = require('../lib/context');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
 
 /** Human assistant name for the active platform(s). */
 function assistantName(ctx) {
   return ctx.platforms.includes('claude') ? 'Claude Code' : 'OpenCode';
-}
-
-function configureGeminiKey(ctx, apiKey, platforms) {
-  const envBody = `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`;
-  const targets = platforms.filter((key) => PLATFORMS[key]).map((key) => PLATFORMS[key].folder);
-  if (targets.length === 0) targets.push('.claude');
-
-  for (const folder of targets) {
-    try {
-      const targetDir = path.join(process.cwd(), folder);
-      if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-      fs.writeFileSync(path.join(targetDir, '.env'), envBody, { mode: 0o600 });
-      ctx.ui.success(`Gemini API key stored in ${folder}/.env (0600)`);
-    } catch (error) {
-      ctx.ui.error(`Failed to configure Gemini API key: ${error.message}`);
-    }
-  }
-}
-
-async function setupGeminiKey(ctx) {
-  const apiKey = await ctx.ui.text(
-    { message: 'Gemini API key for AI skills (Enter to skip)', placeholder: 'aistudio.google.com/apikey' },
-    ''
-  );
-  if (apiKey && typeof apiKey === 'string' && apiKey.trim()) {
-    configureGeminiKey(ctx, apiKey.trim(), ctx.platforms);
-  }
 }
 
 function configureAddressing(ctx, userAddress) {
@@ -92,7 +64,7 @@ async function setupAddressing(ctx) {
 /** Run the post-install configuration sequence. */
 async function runPostInstall(ctx) {
   if (ctx.dryRun) {
-    ctx.ui.info('[dry-run] Skipping OpenCode model / Gemini / addressing setup');
+    ctx.ui.info('[dry-run] Skipping OpenCode model / addressing setup');
     return ctx;
   }
 
@@ -103,7 +75,6 @@ async function runPostInstall(ctx) {
     await setupOpenCodeModel(ctx.platforms, ctx.results);
   }
 
-  await setupGeminiKey(ctx);
   await setupAddressing(ctx);
 
   // Re-record CLAUDE.md baseline so the installer-managed file (template +
@@ -115,4 +86,4 @@ async function runPostInstall(ctx) {
   return ctx;
 }
 
-module.exports = { configureGeminiKey, configureAddressing, runPostInstall };
+module.exports = { configureAddressing, runPostInstall };
