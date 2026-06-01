@@ -3,7 +3,7 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.10.0] - 2026-06-01
 
 ### Changed
 - **Installer rewritten into a phase architecture.** `packages/spec/bin/install.js`
