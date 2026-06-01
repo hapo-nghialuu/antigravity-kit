@@ -1,38 +1,24 @@
 /**
  * Phase: post-install runtime configuration.
  *
- * OpenCode model, optional Gemini CLI install + API key, and addressing config.
- * Interactive prompts use ctx.ui (clack); in non-interactive/dry-run they are
- * skipped via fallbacks so spawned/CI runs never hang. Writes (.env, CLAUDE.md,
+ * OpenCode model, optional Gemini API key, and addressing config. Interactive
+ * prompts use ctx.ui (clack); in non-interactive/dry-run they are skipped via
+ * fallbacks so spawned/CI runs never hang. Writes (.env, CLAUDE.md,
  * opencode.json) happen only when a value is actually provided.
+ *
+ * Note: CafeKit no longer installs the `gemini-cli` (the upstream package was
+ * removed). We only configure GEMINI_API_KEY, which the SDK-based skills
+ * (e.g. hapo:ai-multimodal) read directly.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const { PLATFORMS } = require('../lib/context');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
 
-function checkGeminiCLI() {
-  try {
-    execSync('which gemini', { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function installGeminiCLI(ctx) {
-  ctx.ui.startSpinner('Installing gemini-cli...');
-  try {
-    execSync('npm install -g @google/gemini-cli', { stdio: 'ignore' });
-    ctx.ui.stopSpinner('gemini-cli installed');
-    return true;
-  } catch {
-    ctx.ui.stopSpinner('Could not install gemini-cli automatically');
-    ctx.ui.warn('Run manually: npm install -g @google/gemini-cli');
-    return false;
-  }
+/** Human assistant name for the active platform(s). */
+function assistantName(ctx) {
+  return ctx.platforms.includes('claude') ? 'Claude Code' : 'OpenCode';
 }
 
 function configureGeminiKey(ctx, apiKey, platforms) {
@@ -52,19 +38,9 @@ function configureGeminiKey(ctx, apiKey, platforms) {
   }
 }
 
-async function setupGemini(ctx) {
-  if (checkGeminiCLI()) {
-    ctx.ui.info('gemini-cli already installed');
-  } else if (ctx.interactive) {
-    const yes = await ctx.ui.confirm(
-      { message: 'Install gemini-cli? (enables hapo:inspect ext mode)', initialValue: false },
-      false
-    );
-    if (yes === true) installGeminiCLI(ctx);
-  }
-
+async function setupGeminiKey(ctx) {
   const apiKey = await ctx.ui.text(
-    { message: 'Gemini API key (Enter to skip)', placeholder: 'aistudio.google.com/apikey' },
+    { message: 'Gemini API key for AI skills (Enter to skip)', placeholder: 'aistudio.google.com/apikey' },
     ''
   );
   if (apiKey && typeof apiKey === 'string' && apiKey.trim()) {
@@ -79,10 +55,11 @@ function configureAddressing(ctx, userAddress) {
     return;
   }
 
+  const name = assistantName(ctx);
   let content = fs.readFileSync(claudeMdFile, 'utf8');
   const addressingSection = `## Addressing (Context Overflow Indicator)
 
-The AI always addresses the user as "${userAddress}" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
+${name} always addresses the user as "${userAddress}" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
   // Idempotent: replace existing section (shared marker) or append.
   const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
@@ -91,14 +68,14 @@ The AI always addresses the user as "${userAddress}" throughout the conversation
     : `${content.endsWith('\n') ? content : `${content}\n`}\n${addressingSection}\n`;
 
   fs.writeFileSync(claudeMdFile, content, 'utf8');
-  ctx.ui.success(`Addressing set: AI will call you "${userAddress}"`);
+  ctx.ui.success(`${name} will call you "${userAddress}"`);
 }
 
 async function setupAddressing(ctx) {
   if (!ctx.platforms.includes('claude')) return;
 
   const answer = await ctx.ui.text(
-    { message: 'How should the AI address you? (e.g. boss, sir — Enter to skip)', placeholder: 'Enter to skip' },
+    { message: 'How should the AI address you?', placeholder: 'e.g. boss, sir — Enter to skip' },
     ''
   );
   if (ctx.ui.isCancel(answer)) return;
@@ -126,7 +103,7 @@ async function runPostInstall(ctx) {
     await setupOpenCodeModel(ctx.platforms, ctx.results);
   }
 
-  await setupGemini(ctx);
+  await setupGeminiKey(ctx);
   await setupAddressing(ctx);
 
   // Re-record CLAUDE.md baseline so the installer-managed file (template +
@@ -138,4 +115,4 @@ async function runPostInstall(ctx) {
   return ctx;
 }
 
-module.exports = { checkGeminiCLI, configureGeminiKey, configureAddressing, runPostInstall };
+module.exports = { configureGeminiKey, configureAddressing, runPostInstall };

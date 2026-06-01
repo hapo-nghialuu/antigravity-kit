@@ -3,6 +3,27 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.0] - 2026-06-01
+
+### Added
+- **Opt-in skill dependency setup** (`bin/phases/skills-setup.js`, `bin/lib/skill-deps.js`).
+  During install (interactive prompt) or via `--with-skills-deps`, CafeKit can now
+  provision the parts a file-copy can't: a Python venv at `<skillsDir>/.venv` +
+  `pip install` each skill's `scripts/requirements.txt`, skill-local `npm install`,
+  and the Puppeteer Chromium binary. Cross-platform, no sudo, all steps non-fatal.
+- **Detect-and-guide for system tools.** Missing `ffmpeg`/`poppler`/`librsvg`/
+  `tesseract` and global npm CLIs (agent-browser) are detected and printed with
+  per-OS install commands — never auto-installed.
+
+### Changed
+- **Addressing message is platform-aware**: now reads "Claude Code will call you …"
+  (or "OpenCode" for OpenCode installs) instead of "AI".
+
+### Removed
+- **Gemini CLI auto-install dropped.** The upstream `@google/gemini-cli` package was
+  removed by Google, so the installer no longer attempts to install it. The Gemini
+  **API key** prompt remains (SDK-based skills like ai-multimodal read it directly).
+
 ## [0.10.0] - 2026-06-01
 
 ### Changed

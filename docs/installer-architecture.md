@@ -30,8 +30,11 @@ bin/phases/
   opencode-runtime.js       delegates to opencode-install.js (plugins, commands, AGENTS, config)
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
-  post-install.js           OpenCode model, Gemini CLI/key, addressing
+  post-install.js           OpenCode model, Gemini API key, addressing (platform-aware)
+  skills-setup.js           opt-in: venv+pip, skill npm, Chromium; detect+guide system tools
   summary.js / report.js    summary output + per-action reporting helper
+bin/lib/
+  skill-deps.js             cross-platform setup primitives (venv/pip/npm/chromium/detect)
 ```
 
 ## Run sequence

@@ -183,7 +183,8 @@ function parseInstallerArgs(argv) {
   const args = {
     forceOverwrite: false,
     dryRun: false,
-    yes: false
+    yes: false,
+    withSkillsDeps: false
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -195,6 +196,8 @@ function parseInstallerArgs(argv) {
       args.dryRun = true;
     } else if (arg === '--yes' || arg === '-y') {
       args.yes = true;
+    } else if (arg === '--with-skills-deps') {
+      args.withSkillsDeps = true;
     }
   }
 

@@ -34,6 +34,7 @@ const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
 const { ensureGitignore } = require('./phases/root-config');
 const { runPostInstall } = require('./phases/post-install');
+const { setupSkillDeps } = require('./phases/skills-setup');
 const { printSummary } = require('./phases/summary');
 
 /** Install a single platform: payload + runtime + metadata, under one spinner. */
@@ -85,7 +86,7 @@ async function main() {
 
   try {
     ctx = buildContext(process.argv, `${Date.now()}`);
-    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))} Installer v${packageJson.version} · Multi-platform SDD`);
+    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}Installer v${packageJson.version} · Multi-platform SDD`);
     if (got.reclaimed) ctx.ui.info('Reclaimed a stale install lock from a dead process.');
 
     await resolvePlatforms(ctx);
@@ -108,6 +109,7 @@ async function main() {
 
     ensureGitignore(ctx);
     await runPostInstall(ctx);
+    await setupSkillDeps(ctx);
     printSummary(ctx);
 
     if (!ctx.dryRun) backup.prune(3);
