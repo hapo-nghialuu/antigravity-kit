@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-06-01
+
+### Changed
+- The generated addressing section in `CLAUDE.md` is now written in English (heading `## Addressing (Context Overflow Indicator)` and an English instruction); only the address term itself stays as the user entered it.
+- The section matcher keys off the shared `Context Overflow Indicator` marker, so reinstalling over an older Vietnamese section replaces it in place without duplicating.
+
 ## [0.9.6] - 2026-06-01
 
 ### Fixed

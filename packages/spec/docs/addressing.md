@@ -35,9 +35,9 @@ Installer sẽ **ghi trực tiếp vào `CLAUDE.md`** (ở thư mục gốc dự
 Mở file `CLAUDE.md` (ở thư mục gốc dự án) và sửa section:
 
 ```markdown
-## Xưng hô (Addressing - Context Overflow Indicator)
+## Addressing (Context Overflow Indicator)
 
-AI luôn gọi người dùng là "đại ca" trong suốt conversation.    ← SỬA ĐÂY
+The AI always addresses the user as "đại ca" throughout the conversation.    ← SỬA ĐÂY
 ```
 
 Sau đó chạy `/clear` để reset session.
@@ -79,7 +79,7 @@ User nên:
 
 ## Tắt xưng hô
 
-Nếu không cần, xóa section "Xưng hô" trong `CLAUDE.md` (ở thư mục gốc dự án), hoặc chạy lại installer và để trống khi được hỏi.
+Nếu không cần, xóa section "Addressing" trong `CLAUDE.md` (ở thư mục gốc dự án), hoặc chạy lại installer và để trống khi được hỏi.
 
 ---
 

@@ -127,6 +127,6 @@ When generating specs or structured project output, use the user's preferred lan
 - Do not provide unsolicited code explanations unless asked.
 - Do not apologize; correct the issue and continue.
 
-## Xưng hô (Addressing - Context Overflow Indicator)
+## Addressing (Context Overflow Indicator)
 
-AI luôn gọi người dùng là "anh" trong suốt conversation. Nếu AI ngừng gọi như vậy, đó là dấu hiệu context đã bị compact — hãy báo người dùng cân nhắc `/clear`.
+The AI always addresses the user as "anh" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.

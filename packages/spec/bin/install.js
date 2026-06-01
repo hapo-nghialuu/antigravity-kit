@@ -1073,12 +1073,14 @@ function configureAddressing(addressingConfig, platforms = ['claude']) {
     let content = fs.readFileSync(claudeMdFile, 'utf8');
 
     // Build the addressing section (short instruction + user-chosen term)
-    const addressingSection = `## Xưng hô (Addressing - Context Overflow Indicator)
+    const addressingSection = `## Addressing (Context Overflow Indicator)
 
-AI luôn gọi người dùng là "${userAddress}" trong suốt conversation. Nếu AI ngừng gọi như vậy, đó là dấu hiệu context đã bị compact — hãy báo người dùng cân nhắc \`/clear\`.`;
+The AI always addresses the user as "${userAddress}" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
-    // Match from ## Xưng hô to the next ## header or end of file
-    const regex = /## Xưng hô \(Addressing - Context Overflow Indicator\)[\s\S]*?(?=\n##|\n*$)/;
+    // Match the addressing section by its shared marker ("Context Overflow
+    // Indicator"), covering both the older Vietnamese heading and the new one,
+    // up to the next ## header or end of file. Keeps reinstall idempotent.
+    const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
 
     if (regex.test(content)) {
       // Replace existing section
@@ -1092,7 +1094,7 @@ AI luôn gọi người dùng là "${userAddress}" trong suốt conversation. N�
     }
 
     fs.writeFileSync(claudeMdFile, content, 'utf8');
-    console.log(`  ✓ Xưng hô configured in CLAUDE.md: AI gọi user là "${userAddress}"`);
+    console.log(`  ✓ Addressing configured in CLAUDE.md: AI calls the user "${userAddress}"`);
   } catch (error) {
     console.error('  ✗ Failed to configure addressing in CLAUDE.md');
     console.error(`     Error: ${error.message}`);
