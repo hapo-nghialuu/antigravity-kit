@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-06-01
+
+### Fixed
+- Addressing configuration now writes to the project-root `CLAUDE.md` instead of the non-existent `.claude/CLAUDE.md`, so the term entered during install (`đại ca`, etc.) is actually applied.
+- Shortened the generated addressing section to a single-line instruction; `docs/addressing.md` updated to reference the correct `CLAUDE.md` location.
+
 ## [0.9.5] - 2026-05-31
 
 ### Added

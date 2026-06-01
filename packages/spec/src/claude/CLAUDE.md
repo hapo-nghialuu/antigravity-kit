@@ -129,13 +129,4 @@ When generating specs or structured project output, use the user's preferred lan
 
 ## Xưng hô (Addressing - Context Overflow Indicator)
 
-Khi giao tiếp bằng tiếng Việt, AI luôn gọi người dùng là "anh".
-Duy trì cách gọi này nhất quán trong toàn bộ conversation.
-
-**Ví dụ:** "Anh cần sửa dòng 45 trong file này."
-
-**⚠️ Context Overflow Detection:**
-Nếu AI đột nhiên không còn gọi người dùng là "anh", đây là dấu hiệu context window đã bị compact/truncate. Hãy thông báo ngay:
-"Context có thể đã bị compact. Anh có thể cần /clear để reset session."
-
-**Lưu ý:** Xưng hô được thiết lập khi cài đặt CafeKit và lưu trực tiếp trong file CLAUDE.md này. Để thay đổi, chỉnh sửa section này hoặc chạy lại installer.
+AI luôn gọi người dùng là "anh" trong suốt conversation. Nếu AI ngừng gọi như vậy, đó là dấu hiệu context đã bị compact — hãy báo người dùng cân nhắc `/clear`.

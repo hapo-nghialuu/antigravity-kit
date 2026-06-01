@@ -26,18 +26,18 @@ Installer sẽ hỏi một câu duy nhất:
 AI gọi bạn là gì? (ví dụ: anh, chị, đại ca, sếp - Enter=bỏ qua):
 ```
 
-Installer sẽ **ghi trực tiếp vào `.claude/CLAUDE.md`** theo input của user. Để trống = bỏ qua, không thêm section xưng hô.
+Installer sẽ **ghi trực tiếp vào `CLAUDE.md`** (ở thư mục gốc dự án) theo input của user. Để trống = bỏ qua, không thêm section xưng hô.
 
 ### Thay đổi sau khi cài đặt
 
 **Cách 1: Chỉnh sửa trực tiếp CLAUDE.md**
 
-Mở file `.claude/CLAUDE.md` và sửa section:
+Mở file `CLAUDE.md` (ở thư mục gốc dự án) và sửa section:
 
 ```markdown
 ## Xưng hô (Addressing - Context Overflow Indicator)
 
-Khi giao tiếp bằng tiếng Việt, AI luôn gọi người dùng là "đại ca".    ← SỬA ĐÂY
+AI luôn gọi người dùng là "đại ca" trong suốt conversation.    ← SỬA ĐÂY
 ```
 
 Sau đó chạy `/clear` để reset session.
@@ -79,7 +79,7 @@ User nên:
 
 ## Tắt xưng hô
 
-Nếu không cần, xóa section "Xưng hô" trong `.claude/CLAUDE.md`, hoặc chạy lại installer và để trống khi được hỏi.
+Nếu không cần, xóa section "Xưng hô" trong `CLAUDE.md` (ở thư mục gốc dự án), hoặc chạy lại installer và để trống khi được hỏi.
 
 ---
 

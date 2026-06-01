@@ -1048,18 +1048,10 @@ async function promptAddressingConfig() {
 }
 
 function configureAddressing(addressingConfig, platforms = ['claude']) {
-  const targets = platforms
-    .filter(key => PLATFORMS[key])
-    .map(key => PLATFORMS[key].folder);
-
-  if (targets.length === 0) {
-    targets.push('.claude');
-  }
-
-  // Helper function to safely capitalize first letter
-  function capitalize(str) {
-    if (!str || str.length === 0) return str;
-    return str.charAt(0).toUpperCase() + str.slice(1);
+  // CLAUDE.md is installed at the project root (see copyClaudeMdFile),
+  // and only the Claude platform ships it. Skip if Claude isn't installed.
+  if (!platforms.includes('claude')) {
+    return;
   }
 
   // Skip if addressing not enabled (user left blank or invalid input)
@@ -1069,56 +1061,43 @@ function configureAddressing(addressingConfig, platforms = ['claude']) {
   }
 
   const userAddress = addressingConfig.userAddress;
-  const userAddressCap = capitalize(userAddress);
 
-  for (const folder of targets) {
-    try {
-      const targetDir = path.join(process.cwd(), folder);
-      const claudeMdFile = path.join(targetDir, 'CLAUDE.md');
+  try {
+    const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
 
-      if (!fs.existsSync(claudeMdFile)) {
-        console.log(`  ⚠ CLAUDE.md not found in ${folder}/`);
-        continue;
+    if (!fs.existsSync(claudeMdFile)) {
+      console.log('  ⚠ CLAUDE.md not found at project root');
+      return;
+    }
+
+    let content = fs.readFileSync(claudeMdFile, 'utf8');
+
+    // Build the addressing section (short instruction + user-chosen term)
+    const addressingSection = `## Xưng hô (Addressing - Context Overflow Indicator)
+
+AI luôn gọi người dùng là "${userAddress}" trong suốt conversation. Nếu AI ngừng gọi như vậy, đó là dấu hiệu context đã bị compact — hãy báo người dùng cân nhắc \`/clear\`.`;
+
+    // Match from ## Xưng hô to the next ## header or end of file
+    const regex = /## Xưng hô \(Addressing - Context Overflow Indicator\)[\s\S]*?(?=\n##|\n*$)/;
+
+    if (regex.test(content)) {
+      // Replace existing section
+      content = content.replace(regex, addressingSection);
+    } else {
+      // Append at the end
+      if (!content.endsWith('\n')) {
+        content += '\n';
       }
+      content += '\n' + addressingSection + '\n';
+    }
 
-      let content = fs.readFileSync(claudeMdFile, 'utf8');
-
-      // Build the addressing section
-      const addressingSection = `## Xưng hô (Addressing - Context Overflow Indicator)
-
-Khi giao tiếp bằng tiếng Việt, AI luôn gọi người dùng là "${userAddress}".
-Duy trì cách gọi này nhất quán trong toàn bộ conversation.
-
-**Ví dụ:** "${userAddressCap} cần sửa dòng 45 trong file này."
-
-**⚠️ Context Overflow Detection:**
-Nếu AI đột nhiên không còn gọi người dùng là "${userAddress}", đây là dấu hiệu context window đã bị compact/truncate. Hãy thông báo ngay:
-"Context có thể đã bị compact. ${userAddressCap} có thể cần /clear để reset session."
-
-**Lưu ý:** Xưng hô được thiết lập khi cài đặt CafeKit và lưu trực tiếp trong file CLAUDE.md này. Để thay đổi, chỉnh sửa section này hoặc chạy lại installer.`;
-
-      // Match from ## Xưng hô to the next ## header or end of file
-      const regex = /## Xưng hô \(Addressing - Context Overflow Indicator\)[\s\S]*?(?=\n##|\n*$)/;
-
-      if (regex.test(content)) {
-        // Replace existing section
-        content = content.replace(regex, addressingSection);
-      } else {
-        // Append at the end
-        if (!content.endsWith('\n')) {
-          content += '\n';
-        }
-        content += '\n' + addressingSection + '\n';
-      }
-
-      fs.writeFileSync(claudeMdFile, content, 'utf8');
-      console.log(`  ✓ Xưng hô configured in CLAUDE.md: AI gọi user là "${userAddress}"`);
-    } catch (error) {
-      console.error(`  ✗ Failed to configure addressing in ${folder}/CLAUDE.md`);
-      console.error(`     Error: ${error.message}`);
-      if (process.env.DEBUG) {
-        console.error(error.stack);
-      }
+    fs.writeFileSync(claudeMdFile, content, 'utf8');
+    console.log(`  ✓ Xưng hô configured in CLAUDE.md: AI gọi user là "${userAddress}"`);
+  } catch (error) {
+    console.error('  ✗ Failed to configure addressing in CLAUDE.md');
+    console.error(`     Error: ${error.message}`);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
     }
   }
 }
