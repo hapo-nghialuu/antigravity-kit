@@ -95,7 +95,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer syncs spec-state template and drops init template",
-      file: "bin/install.js",
+      file: "bin/phases/copy-payload.js",
       assert: (content) =>
         content.includes("'spec-state.json'") &&
         content.includes("Removed legacy template") &&
@@ -103,7 +103,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer writes CafeKit version metadata",
-      file: "bin/install.js",
+      files: ["bin/phases/write-metadata.js", "bin/phases/summary.js", "bin/lib/context.js"],
       assert: (content) =>
         content.includes("cafekit.json") &&
         content.includes("writePlatformVersionMetadata") &&
@@ -113,7 +113,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer offers OpenCode as secondary runtime",
-      files: ["bin/install.js", "bin/lib/opencode-install.js"],
+      files: ["bin/lib/context.js", "bin/phases/copy-payload.js", "bin/phases/opencode-runtime.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
         content.includes("id: 'opencode'") &&
         content.includes("name: 'OpenCode'") &&
@@ -133,7 +133,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "OpenCode install is self-contained under .opencode/",
-      files: ["bin/install.js", "bin/lib/opencode-install.js"],
+      files: ["bin/lib/context.js", "bin/phases/copy-payload.js", "bin/phases/claude-runtime.js", "bin/lib/opencode-install.js"],
       assert: (content) =>
         content.includes("skillsDir: '.opencode/skills'") &&
         content.includes("skillsRef: '.opencode/skills'") &&
@@ -162,7 +162,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer maps Claude gitignore template to dotfile",
-      file: "bin/install.js",
+      file: "bin/phases/claude-runtime.js",
       assert: (content) =>
         content.includes("relPath === 'gitignore' ? '.gitignore' : relPath"),
     },
@@ -743,13 +743,13 @@ async function runStaticSemanticTests() {
     },
     {
       label: "CafeKit installer cleans obsolete skill router runtime and settings hooks",
-      file: "bin/install.js",
+      files: ["bin/phases/claude-runtime.js", "bin/phases/claude-settings.js"],
       assert: (content) =>
         content.includes("function removeObsoleteClaudeRuntimeFiles") &&
         content.includes("function pruneObsoleteSettingsHooks") &&
         content.includes("settingsHookCommandSubstrings") &&
         content.includes("fs.rmSync(targetPath, { force: true })") &&
-        content.includes("removeObsoleteClaudeRuntimeFiles(platformKey, results)"),
+        content.includes("removeObsoleteClaudeRuntimeFiles(ctx, platformKey)"),
     },
     {
       label: "CafeKit rules hook injects routing rule references",

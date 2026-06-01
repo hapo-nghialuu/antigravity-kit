@@ -27,6 +27,11 @@ __pycache__/*
 dist/
 bin/
 
+# CafeKit ships its CLI source under packages/spec/bin — that is package
+# source, not build output, so it must be tracked despite the bin/ rule above.
+!packages/spec/bin/
+!packages/spec/bin/**
+
 # production
 /build
 
@@ -103,3 +108,4 @@ apps/go-gateway/main
 plans/
 !plans/templates/
 .env*.local
+.sync_hash

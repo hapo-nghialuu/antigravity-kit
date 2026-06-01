@@ -1,0 +1,273 @@
+/**
+ * CafeKit installer shared context + constants.
+ *
+ * Holds the platform registry, version constants, migration-manifest loader,
+ * platform helper functions, CLI arg parsing, and the run-context factory.
+ * Phase handlers import what they need from here so each phase stays focused.
+ *
+ * The context object (`ctx`) is threaded through every phase: `(ctx) => ctx`.
+ * Phases mutate `ctx.results` counters and may set `ctx.cancelled` to stop the
+ * pipeline early.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const packageJson = require('../../package.json');
+const { getOpenCodeCopyOptions } = require('./opencode-install');
+const { isInteractive, createUI } = require('./ui');
+
+const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
+
+// ═══════════════════════════════════════════════════════════
+// MIGRATION MANIFEST
+// ═══════════════════════════════════════════════════════════
+
+function validateManifestV2(manifest) {
+  if (!manifest || manifest.version !== 2) return false;
+  if (!manifest.runtime?.files || !Array.isArray(manifest.runtime.files)) return false;
+  if (!manifest.settings?.template) return false;
+  return true;
+}
+
+function loadClaudeMigrationManifest() {
+  const manifestPath = path.join(__dirname, '../../src/claude/migration-manifest.json');
+
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+    if (!validateManifestV2(manifest)) {
+      console.error('✗ Invalid manifest v2 schema - missing required fields');
+      console.error('  Expected: version=2, runtime.files[], settings.template');
+      process.exit(1);
+    }
+
+    return manifest;
+  } catch (error) {
+    console.warn(`⚠ Failed to parse Claude migration manifest: ${error.message}`);
+    return null;
+  }
+}
+
+const DEPENDENCY_TEMPLATES = {
+  commands: {
+    claude: {},
+    opencode: {}
+  },
+  agents: {
+    claude: {},
+    opencode: {}
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// PLATFORM REGISTRY - Add new platforms here
+// ═══════════════════════════════════════════════════════════
+const PLATFORMS = {
+  claude: {
+    id: 'claude',
+    name: 'Claude Code',
+    description: 'Anthropic\'s Claude Code CLI',
+    folder: '.claude',
+    commandsDir: '.claude/commands',
+    skillsDir: '.claude/skills',
+    agentsDir: '.claude/agents',
+    skillsRef: '.claude/skills',
+    commandPrefix: '/',
+    sourceDir: 'claude',       // Maps to src/claude/
+    sourceSubdir: 'commands'   // Source subfolder within src/claude/
+  },
+  opencode: {
+    id: 'opencode',
+    name: 'OpenCode',
+    description: 'OpenCode terminal AI coding agent',
+    folder: '.opencode',
+    detectFiles: ['.opencode', 'opencode.json', 'opencode.jsonc'],
+    commandsDir: '.opencode/commands',
+    skillsDir: '.opencode/skills',
+    agentsDir: '.opencode/agents',
+    skillsRef: '.opencode/skills',
+    commandPrefix: '/',
+    sourceDir: 'claude',
+    sourceSubdir: 'archive-command'
+  }
+  // Add new platforms here:
+  // cursor: {
+  //   id: 'cursor',
+  //   name: 'Cursor',
+  //   description: 'Cursor IDE',
+  //   folder: '.cursor',
+  //   commandsDir: '.cursor/commands',
+  //   sourceDir: 'cursor',
+  //   sourceSubdir: 'commands'
+  // }
+};
+
+// ═══════════════════════════════════════════════════════════
+// DETECTION + PLATFORM HELPERS
+// ═══════════════════════════════════════════════════════════
+
+function detectPlatforms() {
+  const detected = [];
+
+  for (const [key, config] of Object.entries(PLATFORMS)) {
+    const markers = Array.isArray(config.detectFiles) ? config.detectFiles : [config.folder];
+    if (markers.some(marker => fs.existsSync(marker))) {
+      detected.push(key);
+    }
+  }
+
+  return detected;
+}
+
+function formatPlatformList() {
+  return Object.entries(PLATFORMS)
+    .map(([key, config], index) => {
+      return `${index + 1}) ${config.name} (${config.folder}/)\n   ${config.description}`;
+    })
+    .join('\n');
+}
+
+function getPlatformKeys() {
+  return Object.keys(PLATFORMS);
+}
+
+function isClaudeCompatibleRuntime(platformKey) {
+  return platformKey === 'claude' || platformKey === 'opencode';
+}
+
+function getRuntimeSupportTargetDir(platformKey, subdir) {
+  return path.join(PLATFORMS[platformKey].folder, subdir);
+}
+
+// Warn opencode-only installs when a legacy .claude/ folder remains from
+// pre-0.9.0 installs (when OpenCode shared the .claude/ runtime). We do not
+// delete anything; user must remove it explicitly to opt in.
+function warnLegacyClaudeFolder(platforms) {
+  if (!platforms.includes('opencode')) return;
+  if (platforms.includes('claude')) return;
+  if (!fs.existsSync('.claude')) return;
+
+  console.log('');
+  console.log('⚠ Legacy .claude/ folder detected.');
+  console.log('  As of CafeKit 0.9.0, OpenCode installs are self-contained under .opencode/.');
+  console.log('  The .claude/ folder from older installs is no longer used by OpenCode.');
+  console.log('  After this install finishes you can remove it: rm -rf .claude');
+  console.log('');
+}
+
+function getCopyOptions(platformKey, baseOptions = {}) {
+  if (platformKey === 'opencode') {
+    return getOpenCodeCopyOptions(baseOptions);
+  }
+  return baseOptions;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLI ARGS + RUN CONTEXT
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Parse installer CLI flags.
+ *  --upgrade / -u / --force / -f / --force-overwrite → forceOverwrite:true
+ *      (overwrite user-modified managed files, backing up the user copy first)
+ *  --dry-run                                         → dryRun:true
+ *
+ * `upgrade` is kept as an alias of `forceOverwrite` for backward compatibility
+ * with existing docs and muscle memory.
+ */
+function parseInstallerArgs(argv) {
+  const args = {
+    forceOverwrite: false,
+    dryRun: false,
+    yes: false
+  };
+
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i];
+
+    if (arg === '--upgrade' || arg === '-u' || arg === '--force' || arg === '-f' || arg === '--force-overwrite') {
+      args.forceOverwrite = true;
+    } else if (arg === '--dry-run') {
+      args.dryRun = true;
+    } else if (arg === '--yes' || arg === '-y') {
+      args.yes = true;
+    }
+  }
+
+  // Back-compat alias used throughout the phases.
+  args.upgrade = args.forceOverwrite;
+  return args;
+}
+
+/**
+ * Fresh results counters for a run.
+ *  copied/updated/skipped/...: legacy counters (preserved for summary parity)
+ *  preserved: user-modified/user-created files left untouched
+ *  unchanged: files identical to payload, skipped by selective merge
+ *  preservedFiles: paths reported in the summary
+ */
+function createResults() {
+  return {
+    copied: 0,
+    updated: 0,
+    skipped: 0,
+    unchanged: 0,
+    preserved: 0,
+    installedSkills: 0,
+    dependencyChecks: 0,
+    installedDependencies: 0,
+    missingDependencies: 0,
+    errors: 0,
+    targets: [],
+    preservedFiles: []
+  };
+}
+
+/**
+ * Build the run context threaded through all phases.
+ *
+ * @param {string[]} argv     process.argv
+ * @param {string}   runId    unique id for this run (timestamp-based)
+ */
+function buildContext(argv, runId) {
+  const options = parseInstallerArgs(argv);
+  // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
+  const interactive = isInteractive() && !options.yes;
+  return {
+    argv,
+    runId,
+    options,
+    dryRun: options.dryRun,
+    interactive,
+    ui: createUI(interactive),
+    manifest: loadClaudeMigrationManifest(),  // migration manifest (skills/agents/runtime lists)
+    platforms: [],
+    results: createResults(),
+    trackers: {},    // platformKey → ownership tracker, set per platform
+    ownership: {},   // platformFolder → ownership manifest read at run start
+    cancelled: false
+  };
+}
+
+module.exports = {
+  packageJson,
+  INSTALL_COMMAND,
+  DEPENDENCY_TEMPLATES,
+  PLATFORMS,
+  validateManifestV2,
+  loadClaudeMigrationManifest,
+  detectPlatforms,
+  formatPlatformList,
+  getPlatformKeys,
+  isClaudeCompatibleRuntime,
+  getRuntimeSupportTargetDir,
+  warnLegacyClaudeFolder,
+  getCopyOptions,
+  parseInstallerArgs,
+  createResults,
+  buildContext
+};

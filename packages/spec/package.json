@@ -1,6 +1,6 @@
 {
   "name": "@haposoft/cafekit",
-  "version": "0.9.7",
+  "version": "0.10.0",
   "description": "Claude Code-first spec-driven workflow for AI coding assistants. Bundles CafeKit hapo: skills, runtime hooks, agents, and installer scaffolding.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
@@ -46,5 +46,9 @@
   },
   "devDependencies": {
     "@opencode-ai/plugin": "1.15.11"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.5.0",
+    "picocolors": "^1.1.1"
   }
 }
