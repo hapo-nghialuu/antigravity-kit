@@ -6,7 +6,22 @@
  * plain text otherwise.
  */
 
+const fs = require('fs');
+const path = require('path');
 const { PLATFORMS, packageJson } = require('../lib/context');
+
+/** Installed skills that ship a .env.example (i.e. need API keys configured). */
+function skillsNeedingKeys(platforms) {
+  const found = new Set();
+  for (const key of platforms) {
+    const skillsDir = PLATFORMS[key].skillsDir;
+    if (!fs.existsSync(skillsDir)) continue;
+    for (const skill of fs.readdirSync(skillsDir)) {
+      if (fs.existsSync(path.join(skillsDir, skill, '.env.example'))) found.add(skill);
+    }
+  }
+  return [...found].sort();
+}
 
 function printSummary(ctx) {
   const { results, platforms, options, ui } = ctx;
@@ -41,7 +56,10 @@ function printSummary(ctx) {
     if (key === 'claude') lines.push('Claude: use /hapo:specs <feature-description>');
     else lines.push('OpenCode: ask the agent to start a feature or brainstorm');
   }
-  lines.push('Skill API keys: set per-skill (e.g. ai-multimodal → GEMINI_API_KEY via its .env.example)');
+  const keySkills = skillsNeedingKeys(platforms);
+  if (keySkills.length > 0) {
+    lines.push(`Some skills need keys: ${keySkills.join(', ')} — copy <skill>/.env.example → .env and fill in`);
+  }
   if (!options.forceOverwrite) {
     lines.push('Use --force-overwrite to refresh user-modified files');
   }

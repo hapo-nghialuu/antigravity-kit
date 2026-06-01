@@ -72,7 +72,40 @@ function installPlatform(ctx, platformKey) {
   ctx.results.targets.push(platform.commandsDir);
 }
 
+function printHelp() {
+  console.log(`CafeKit installer (cafekit) v${packageJson.version}
+
+Usage: npx @haposoft/cafekit [options]
+
+Installs CafeKit skills, agents, rules and runtime into the current project
+(.claude/ and/or .opencode/). Re-runs are selective: managed files are updated,
+your edits are preserved.
+
+Options:
+  --dry-run            Preview changes; write nothing
+  --force-overwrite    Overwrite user-modified managed files (backup kept)
+  -u, --upgrade, -f, --force   Alias of --force-overwrite
+  --with-skills-deps   Install skill dependencies (Python venv + pip, npm,
+                       Chromium/Playwright). Otherwise prompted interactively.
+  -y, --yes            Non-interactive: skip prompts, use defaults (CI)
+  -h, --help           Show this help
+  -v, --version        Print version
+
+Docs: https://github.com/haposoft/cafekit`);
+}
+
 async function main() {
+  // Info flags short-circuit before any side effects.
+  const argv = process.argv.slice(2);
+  if (argv.includes('--help') || argv.includes('-h')) {
+    printHelp();
+    process.exit(0);
+  }
+  if (argv.includes('--version') || argv.includes('-v')) {
+    console.log(packageJson.version);
+    process.exit(0);
+  }
+
   // ── Concurrency guard (before context; plain output) ────
   const got = lock.acquire();
   if (!got.acquired) {

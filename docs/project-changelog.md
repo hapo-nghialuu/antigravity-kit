@@ -5,6 +5,12 @@ All notable changes to CafeKit are documented here, following
 
 ## [0.10.3] - 2026-06-01
 
+### Added
+- **`--help` / `-h` and `--version` / `-v`** flags so the installer's options
+  (`--dry-run`, `--force-overwrite`, `--with-skills-deps`, `--yes`) are discoverable.
+- **Summary surfaces skills needing keys**: lists installed skills that ship a
+  `.env.example` (e.g. ai-multimodal, devops) so users know to copy it to `.env`.
+
 ### Fixed
 - **Chromium download for chrome-devtools** now works. The previous
   `npx puppeteer browsers install chrome` invocation failed (puppeteer ships no
