@@ -41,8 +41,7 @@ function printSummary(ctx) {
     if (key === 'claude') lines.push('Claude: use /hapo:specs <feature-description>');
     else lines.push('OpenCode: ask the agent to start a feature or brainstorm');
   }
-  const envHosts = platforms.map((key) => `${PLATFORMS[key].folder}/.env`).join(' and ');
-  lines.push(`API keys isolated in ${envHosts}`);
+  lines.push('Skill API keys: set per-skill (e.g. ai-multimodal → GEMINI_API_KEY via its .env.example)');
   if (!options.forceOverwrite) {
     lines.push('Use --force-overwrite to refresh user-modified files');
   }
