@@ -6,8 +6,14 @@ All notable changes to CafeKit are documented here, following
 ## [0.10.3] - 2026-06-01
 
 ### Added
+- **Installer i18n (en / ja / vi).** Language is chosen as the first step
+  (interactive) or via `--lang <en|ja|vi>`; prompts, milestones, summary and
+  next-steps render in that language. Non-interactive defaults to English; an
+  unknown code falls back to Japanese. The choice is written to the installed
+  `runtime.json` (`locale.responseLanguage`) so the AI responds in it. New
+  `bin/lib/i18n.js`. Addressing input now accepts any-script names (Unicode).
 - **`--help` / `-h` and `--version` / `-v`** flags so the installer's options
-  (`--dry-run`, `--force-overwrite`, `--with-skills-deps`, `--yes`) are discoverable.
+  (`--dry-run`, `--force-overwrite`, `--with-skills-deps`, `--yes`, `--lang`) are discoverable.
 - **Summary surfaces skills needing keys**: lists installed skills that ship a
   `.env.example` (e.g. ai-multimodal, devops) so users know to copy it to `.env`.
 

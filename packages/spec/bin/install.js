@@ -20,7 +20,7 @@ const lock = require('./lib/lock');
 const backup = require('./lib/backup');
 const manifestLib = require('./lib/manifest');
 
-const { resolvePlatforms } = require('./phases/select-platform');
+const { selectLanguage, resolvePlatforms } = require('./phases/select-platform');
 const { copyPlatformFiles } = require('./phases/copy-payload');
 const {
   copyRoutingFile,
@@ -66,8 +66,10 @@ function installPlatform(ctx, platformKey) {
   writePlatformVersionMetadata(ctx, platformKey);
 
   const wrote = (ctx.results.copied - before.copied) + (ctx.results.updated - before.updated);
-  const verb = ctx.dryRun ? 'would install' : 'installed';
-  ctx.ui.stopSpinner(`${platform.name} ${verb} — ${wrote} file(s), ${ctx.results.installedSkills - before.skills} skill(s)`);
+  const skills = ctx.results.installedSkills - before.skills;
+  ctx.ui.stopSpinner(ctx.t(ctx.dryRun ? 'platformDryInstalled' : 'platformInstalled', {
+    name: platform.name, files: wrote, skills
+  }));
 
   ctx.results.targets.push(platform.commandsDir);
 }
@@ -122,6 +124,7 @@ async function main() {
     ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}Installer v${packageJson.version} · Multi-platform SDD`);
     if (got.reclaimed) ctx.ui.info('Reclaimed a stale install lock from a dead process.');
 
+    await selectLanguage(ctx);
     await resolvePlatforms(ctx);
     if (ctx.cancelled) {
       lock.release();

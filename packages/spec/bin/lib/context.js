@@ -15,6 +15,7 @@ const path = require('path');
 const packageJson = require('../../package.json');
 const { getOpenCodeCopyOptions } = require('./opencode-install');
 const { isInteractive, createUI } = require('./ui');
+const { resolveLang, createTranslator } = require('./i18n');
 
 const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
@@ -198,6 +199,10 @@ function parseInstallerArgs(argv) {
       args.yes = true;
     } else if (arg === '--with-skills-deps') {
       args.withSkillsDeps = true;
+    } else if (arg === '--lang') {
+      args.lang = argv[++i];
+    } else if (arg.startsWith('--lang=')) {
+      args.lang = arg.slice('--lang='.length);
     }
   }
 
@@ -240,6 +245,8 @@ function buildContext(argv, runId) {
   const options = parseInstallerArgs(argv);
   // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
   const interactive = isInteractive() && !options.yes;
+  // Language: --lang wins; otherwise English (an interactive prompt may change it).
+  const lang = options.lang ? resolveLang(options.lang) : 'en';
   return {
     argv,
     runId,
@@ -247,6 +254,13 @@ function buildContext(argv, runId) {
     dryRun: options.dryRun,
     interactive,
     ui: createUI(interactive),
+    lang,
+    t: createTranslator(lang),
+    /** Update the active language + translator (used by the language prompt). */
+    setLang(code) {
+      this.lang = resolveLang(code);
+      this.t = createTranslator(this.lang);
+    },
     manifest: loadClaudeMigrationManifest(),  // migration manifest (skills/agents/runtime lists)
     platforms: [],
     results: createResults(),

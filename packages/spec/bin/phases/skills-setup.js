@@ -23,7 +23,7 @@ async function shouldRun(ctx) {
   if (ctx.options.withSkillsDeps) return true;
   if (!ctx.interactive) return false;
   const yes = await ctx.ui.confirm(
-    { message: 'Install skill dependencies now? (Python venv + pip + Chromium — slower)', initialValue: false },
+    { message: ctx.t('skillDepsConfirm'), initialValue: false },
     false
   );
   return yes === true;
@@ -95,13 +95,13 @@ function guideManual(ctx) {
   const lines = [];
   for (const t of missingTools) lines.push(`${t.cmd}  — ${t.why}\n   ${dep.systemHint(t)}`);
   for (const g of missingNpm) lines.push(`${g.cmd}  — ${g.why}\n   npm install -g ${g.pkg}`);
-  ctx.ui.note(lines.join('\n'), 'Optional tools to install manually');
+  ctx.ui.note(lines.join('\n'), ctx.t('optionalToolsTitle'));
 }
 
 async function setupSkillDeps(ctx) {
   if (!(await shouldRun(ctx))) {
     if (!ctx.dryRun) {
-      ctx.ui.info('Skill dependencies skipped — run later with: npx @haposoft/cafekit --with-skills-deps');
+      ctx.ui.info(ctx.t('skillsSkipped'));
     }
     return ctx;
   }

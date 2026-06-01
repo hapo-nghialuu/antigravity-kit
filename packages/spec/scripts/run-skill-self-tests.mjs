@@ -103,7 +103,7 @@ async function runStaticSemanticTests() {
     },
     {
       label: "installer writes CafeKit version metadata",
-      files: ["bin/phases/write-metadata.js", "bin/phases/summary.js", "bin/lib/context.js"],
+      files: ["bin/phases/write-metadata.js", "bin/phases/summary.js", "bin/lib/context.js", "bin/lib/i18n.js"],
       assert: (content) =>
         content.includes("cafekit.json") &&
         content.includes("writePlatformVersionMetadata") &&

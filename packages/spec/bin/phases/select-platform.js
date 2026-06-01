@@ -1,10 +1,9 @@
 /**
- * Phase: platform detection + selection.
+ * Phase: language + platform selection.
  *
- * Resolves which platforms to install for: auto-detect existing folders, or
- * prompt (clack) when interactive. In non-interactive mode it uses detection
- * only and defaults to Claude when nothing is found — never blocks on input.
- * Sets ctx.platforms, or ctx.cancelled if the user backs out.
+ * Language is chosen first (interactive) so the rest of the installer renders in
+ * it; non-interactive uses --lang or English. Then platforms are auto-detected
+ * or prompted. Sets ctx.platforms, or ctx.cancelled if the user backs out.
  */
 
 const {
@@ -13,6 +12,23 @@ const {
   getPlatformKeys,
   warnLegacyClaudeFolder
 } = require('../lib/context');
+const { SUPPORTED, LANGUAGE_LABELS } = require('../lib/i18n');
+
+/** First step: pick the installer/UI language (interactive only). */
+async function selectLanguage(ctx) {
+  // Honor an explicit --lang or non-interactive default (English) without prompting.
+  if (!ctx.interactive || ctx.options.lang) return ctx;
+
+  const r = await ctx.ui.select(
+    {
+      message: 'Select language · 言語を選択 · Chọn ngôn ngữ',
+      options: SUPPORTED.map((code) => ({ value: code, label: LANGUAGE_LABELS[code] }))
+    },
+    ctx.lang
+  );
+  if (!ctx.ui.isCancel(r)) ctx.setLang(r);
+  return ctx;
+}
 
 /** clack select: which platform(s) to install for. */
 async function promptPlatformSelection(ctx) {
@@ -22,12 +38,9 @@ async function promptPlatformSelection(ctx) {
       label: PLATFORMS[key].name,
       hint: `${PLATFORMS[key].folder}/`
     })),
-    { value: getPlatformKeys(), label: 'All platforms' }
+    { value: getPlatformKeys(), label: ctx.t('allPlatforms') }
   ];
-  const r = await ctx.ui.select(
-    { message: 'Select which platform(s) to install for', options },
-    []
-  );
+  const r = await ctx.ui.select({ message: ctx.t('selectPlatform'), options }, []);
   if (ctx.ui.isCancel(r)) return [];
   return r;
 }
@@ -36,7 +49,7 @@ async function promptPlatformSelection(ctx) {
 async function confirmAllDetected(ctx, detected) {
   const names = detected.map((key) => PLATFORMS[key].name).join(', ');
   const r = await ctx.ui.confirm(
-    { message: `Install for all detected platforms? (${names})`, initialValue: true },
+    { message: ctx.t('confirmAllDetected', { names }), initialValue: true },
     true
   );
   if (ctx.ui.isCancel(r)) return false;
@@ -53,12 +66,11 @@ async function resolvePlatforms(ctx) {
     if (ctx.interactive) {
       platforms = await promptPlatformSelection(ctx);
       if (platforms.length === 0) {
-        ctx.ui.outro('Installation cancelled.');
+        ctx.ui.outro(ctx.t('cancelled'));
         ctx.cancelled = true;
         return ctx;
       }
     } else {
-      // Non-interactive with nothing detected → sensible default, never block.
       platforms = ['claude'];
       ctx.ui.info('No platform detected; defaulting to Claude Code (.claude/).');
     }
@@ -67,7 +79,7 @@ async function resolvePlatforms(ctx) {
     if (!proceed) {
       platforms = await promptPlatformSelection(ctx);
       if (platforms.length === 0) {
-        ctx.ui.outro('Installation cancelled.');
+        ctx.ui.outro(ctx.t('cancelled'));
         ctx.cancelled = true;
         return ctx;
       }
@@ -77,18 +89,18 @@ async function resolvePlatforms(ctx) {
   ctx.platforms = platforms;
 
   const platformNames = platforms.map((key) => PLATFORMS[key].name).join(', ');
-  ctx.ui.info(`Installing for: ${platformNames}`);
+  ctx.ui.info(ctx.t('installingFor', { names: platformNames }));
   warnLegacyClaudeFolder(platforms);
 
   if (ctx.options.forceOverwrite) {
-    ctx.ui.info('Mode: force-overwrite (replace user-modified files; backup kept)');
+    ctx.ui.info(ctx.t('modeForce'));
   } else if (ctx.dryRun) {
-    ctx.ui.info('Mode: dry-run (preview only, no changes written)');
+    ctx.ui.info(ctx.t('modeDryRun'));
   } else {
-    ctx.ui.info('Mode: install/update (selective; preserves user-modified files)');
+    ctx.ui.info(ctx.t('modeInstall'));
   }
 
   return ctx;
 }
 
-module.exports = { promptPlatformSelection, resolvePlatforms };
+module.exports = { selectLanguage, promptPlatformSelection, resolvePlatforms };

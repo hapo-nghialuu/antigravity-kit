@@ -13,7 +13,31 @@
 
 const fs = require('fs');
 const path = require('path');
+const { PLATFORMS } = require('../lib/context');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
+
+/**
+ * Persist the chosen UI language into each platform's runtime.json
+ * (locale.responseLanguage) so the AI keeps responding in it. Re-records the
+ * file in the platform tracker so the ownership baseline stays accurate.
+ */
+function patchRuntimeLocale(ctx) {
+  for (const key of ctx.platforms) {
+    const rtPath = path.join(PLATFORMS[key].folder, 'runtime.json');
+    if (!fs.existsSync(rtPath)) continue;
+    let data;
+    try {
+      data = JSON.parse(fs.readFileSync(rtPath, 'utf8'));
+    } catch {
+      continue;
+    }
+    data.locale = data.locale || {};
+    if (data.locale.responseLanguage === ctx.lang) continue;
+    data.locale.responseLanguage = ctx.lang;
+    fs.writeFileSync(rtPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+    if (ctx.trackers[key]) ctx.trackers[key].record(rtPath);
+  }
+}
 
 /** Human assistant name for the active platform(s). */
 function assistantName(ctx) {
@@ -40,22 +64,23 @@ ${name} always addresses the user as "${userAddress}" throughout the conversatio
     : `${content.endsWith('\n') ? content : `${content}\n`}\n${addressingSection}\n`;
 
   fs.writeFileSync(claudeMdFile, content, 'utf8');
-  ctx.ui.success(`${name} will call you "${userAddress}"`);
+  ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
 }
 
 async function setupAddressing(ctx) {
   if (!ctx.platforms.includes('claude')) return;
 
   const answer = await ctx.ui.text(
-    { message: 'How should the AI address you?', placeholder: 'e.g. boss, sir — Enter to skip' },
+    { message: ctx.t('addressingQuestion'), placeholder: ctx.t('addressingPlaceholder') },
     ''
   );
   if (ctx.ui.isCancel(answer)) return;
   const userAddress = (answer || '').trim();
   if (!userAddress) return;
 
-  if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
-    ctx.ui.warn('Invalid input (letters only); skipped addressing');
+  // Allow letters from any script (incl. Japanese) + spaces; reject digits/symbols.
+  if (/[^\p{L}\s]/u.test(userAddress)) {
+    ctx.ui.warn(ctx.t('addressingInvalid'));
     return;
   }
   configureAddressing(ctx, userAddress);
@@ -77,11 +102,16 @@ async function runPostInstall(ctx) {
 
   await setupAddressing(ctx);
 
-  // Re-record CLAUDE.md baseline so the installer-managed file (template +
-  // addressing) stays "pristine" and keeps receiving upstream updates.
+  // Persist chosen language into each platform's runtime.json (records in tracker).
+  patchRuntimeLocale(ctx);
+
+  // Re-record post-write baselines so installer-managed files stay "pristine",
+  // then flush each touched platform tracker.
   if (ctx.platforms.includes('claude') && ctx.trackers.claude && fs.existsSync('CLAUDE.md')) {
     ctx.trackers.claude.record('CLAUDE.md');
-    ctx.trackers.claude.write();
+  }
+  for (const key of ctx.platforms) {
+    if (ctx.trackers[key]) ctx.trackers[key].write();
   }
   return ctx;
 }
