@@ -1024,26 +1024,20 @@ async function promptAddressingConfig() {
     output: process.stdout
   });
 
-  console.log('\n🎯 Xưng hô (Addressing Configuration)');
-  console.log('  CafeKit có thể cấu hình cách AI gọi bạn khi giao tiếp tiếng Việt');
-  console.log('  • Mục đích: Phát hiện context overflow (khi AI đột nhiên đổi cách xưng hô)');
-  console.log('  • Để trống = bỏ qua (không thiết lập xưng hô)');
-  console.log();
-
   return new Promise((resolve) => {
-    rl.question('AI gọi bạn là gì? (ví dụ: anh, chị, đại ca, sếp - Enter=bỏ qua): ', (answer) => {
+    rl.question('\nHow should the AI address you? (e.g. boss, sir, master - Enter to skip): ', (answer) => {
       rl.close();
       const userAddress = answer.trim();
 
-      // Để trống = bỏ qua, không thiết lập
+      // Blank = skip, no addressing configured
       if (!userAddress || userAddress.length === 0) {
         resolve({ enabled: false, userAddress: '' });
         return;
       }
 
-      // Validate: chỉ chứa chữ cái tiếng Việt và khoảng trắng
+      // Validate: letters and spaces only
       if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
-        console.log('  ⚠ Xưng hô không hợp lệ (chỉ dùng chữ cái), bỏ qua thiết lập');
+        console.log('  ⚠ Invalid input (letters only), skipping addressing setup');
         resolve({ enabled: false, userAddress: '' });
         return;
       }
