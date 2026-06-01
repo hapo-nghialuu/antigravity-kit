@@ -16,14 +16,20 @@ const YELLOW = '\x1b[33m';
 const MAGENTA = '\x1b[35m';
 const CYAN = '\x1b[36m';
 
-// Detect color support at module load (cached)
-// Claude Code statusline runs via pipe but output displays in TTY - default to true
-const shouldUseColor = (() => {
+function detectColorDefault() {
   if (process.env.NO_COLOR) return false;
   if (process.env.FORCE_COLOR) return true;
   // Default true for statusline context (Claude Code handles TTY display)
   return true;
-})();
+}
+
+// Detect color support at module load (cached)
+// Claude Code statusline runs via pipe but output displays in TTY - default to true
+let shouldUseColor = detectColorDefault();
+
+function setColorEnabled(enabled) {
+  shouldUseColor = enabled === false ? false : detectColorDefault();
+}
 
 // Detect 256-color support via COLORTERM
 const has256Color = (() => {
@@ -90,6 +96,7 @@ module.exports = {
   dim,
   getContextColor,
   coloredBar,
-  shouldUseColor,
+  get shouldUseColor() { return shouldUseColor; },
+  setColorEnabled,
   has256Color
 };

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-06-01
+
+### Changed
+- The generated addressing section in `CLAUDE.md` is now written in English (heading `## Addressing (Context Overflow Indicator)` and an English instruction); only the address term itself stays as the user entered it.
+- The section matcher keys off the shared `Context Overflow Indicator` marker, so reinstalling over an older Vietnamese section replaces it in place without duplicating.
+
+## [0.9.6] - 2026-06-01
+
+### Fixed
+- Addressing configuration now writes to the project-root `CLAUDE.md` instead of the non-existent `.claude/CLAUDE.md`, so the term entered during install (`đại ca`, etc.) is actually applied.
+- Shortened the generated addressing section to a single-line instruction; `docs/addressing.md` updated to reference the correct `CLAUDE.md` location.
+
+## [0.9.5] - 2026-05-31
+
+### Added
+- Addressing (xưng hô) configuration as a context-overflow indicator:
+  - Installer asks a single question for how the AI should address the user (e.g. `boss`, `sir`, `anh`, `đại ca`), writing the rule directly into the runtime `CLAUDE.md`. Leaving it blank skips the section entirely.
+  - When the model stops addressing the user as configured mid-session, it signals that the context window has likely been compacted/truncated and suggests `/clear`.
+  - Input is validated to letters and spaces; invalid entries are skipped.
+- `docs/addressing.md` documents the feature, configuration, and overflow-detection behavior.
+
 ## [0.9.3] - 2026-05-29
 
 ### Added

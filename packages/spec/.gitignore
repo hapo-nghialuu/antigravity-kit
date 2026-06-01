@@ -1,1 +1,6 @@
 .vercel
+
+# CafeKit / Ecosystem
+specs/_shared/
+plans/
+!plans/templates/

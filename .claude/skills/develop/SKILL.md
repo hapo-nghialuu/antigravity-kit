@@ -1,7 +1,7 @@
 ---
 name: hapo:develop
-description: "Code execution engine: Reads specs and implements code end-to-end with automatic code review and self-healing."
-argument-hint: "[feature-name|specs-directory-path]"
+description: "Code execution engine: Reads specs and implements code end-to-end with automatic code review, self-healing, and visual implementation notes."
+argument-hint: "[feature-name|specs-directory-path] [task-file] [--flash] [--no-notes]"
 ---
 
 # Develop — Feature Implementation (Task-Orchestrated Build)
@@ -16,6 +16,9 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 /hapo:develop <feature name>
 /hapo:develop specs/<feature-name>
 /hapo:develop <feature name> <specific-task-file.md>
+/hapo:develop <feature name> --flash
+/hapo:develop <feature name> <specific-task-file.md> --flash
+/hapo:develop <feature name> --no-notes
 ```
 
 ## Execution Modes
@@ -25,7 +28,7 @@ Triggered by `/hapo:develop <feature> <task-file>`.
 
 - Load exactly one task file.
 - Implement only that task packet.
-- STOP immediately after the task is verified and synchronized.
+- STOP immediately after the task is verified and synchronized, or flash-synchronized when `--flash` is active.
 - Never auto-chain into the next task.
 
 ### 2. Full-Spec Mode
@@ -37,6 +40,28 @@ Triggered by `/hapo:develop <feature>` or `/hapo:develop specs/<feature>`.
 - Sync state.
 - Recompute the queue and continue.
 - STOP the overall run on the first blocked task, unresolved gate failure, or missing proof.
+- In `--flash` mode, missing full test proof does not stop the loop; record `FLASH_UNVERIFIED` and continue to the next unblocked task.
+
+### 3. Flash Mode
+Triggered by adding `--flash` to either specific-task or full-spec mode.
+
+- Optimize for fast implementation, not full verification.
+- Still load the approved spec, scout every task, obey scope, and implement real code.
+- Skip dedicated test suites, E2E/browser/manual QA loops, full task evidence execution, and code-review retry loops.
+- Run only cheap preflight checks when available and fast: syntax, typecheck, or build commands that do not require installing dependencies or starting external services.
+- Never weaken, delete, or rewrite tests to avoid running them.
+- Sync completed implementation with an explicit `FLASH_UNVERIFIED` receipt; do not claim production-ready quality.
+- Final output MUST recommend `/hapo:test <feature>` before merge, release, or publish.
+
+### 4. Implementation Notes
+Enabled by default for all develop modes. Disable only with `--no-notes`.
+
+- Maintain `specs/<feature-name>/implementation-notes.html`.
+- Use `references/implementation-notes-template.html` when the file does not exist.
+- Keep the file self-contained: inline CSS, no JS, no external fonts, no network assets.
+- Style notes as readable Claude Code-like blocks: compact cards, left accent bars, category badges, monospace file paths, and a task timeline.
+- Record decisions and caveats while implementing, not only at the end.
+- Do not use notes to justify scope changes that alter the approved contract. If the contract changes, stop and route back to `/hapo:specs update`.
 
 <HARD-GATE>
 DO NOT write implementation code until an approved spec exists.
@@ -46,6 +71,7 @@ DO NOT write implementation code until an approved spec exists.
 <DEFINITION-OF-DONE>
 A task is NOT done because code compiles or a placeholder renders.
 A task is done only when the task file's Completion Criteria AND Evidence section are satisfied with real execution proof. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`; treat those as the same contract.
+`--flash` is the only exception: it records fast implementation closeout with `FLASH_UNVERIFIED`, not full Definition of Done.
 </DEFINITION-OF-DONE>
 
 <CONTRACT-FIDELITY>
@@ -73,9 +99,13 @@ flowchart TD
     B -->|Missing| Z[Stop: Run /hapo:specs]
     B -->|Ready| C[Step 2: Task-Aware Scout (inspector)]
     C --> D[Step 3: Implement Code (god-developer)]
-    D --> E[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
-    E -->|Fail| D
-    E -->|Pass| F[Step 5: State Sync + Incremental Docs Sync]
+    D --> E{Flash Mode?}
+    E -->|No| Q[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
+    E -->|Yes| R[Step 4F: Flash Gate: Minimal Preflight + Scope Sanity]
+    Q -->|Fail| D
+    Q -->|Pass| F[Step 5: State Sync + Incremental Docs Sync]
+    R -->|Syntax/compile fail| D
+    R -->|Flash closeout| F
     F --> H{More tasks?}
     H -->|Yes| B
     H -->|No| G[Final Integration Scout + Report Completion]
@@ -85,6 +115,10 @@ flowchart TD
 - Identify input: Open `specs/<feature-name>/spec.json`.
 - Check `ready_for_implementation` status. If not ready, notify user.
 - Load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
+- Unless `--no-notes` is present, initialize or update `specs/<feature-name>/implementation-notes.html`:
+  - If missing, create it from `references/implementation-notes-template.html`.
+  - Replace template placeholders for feature name, spec path, creation timestamp, and current mode.
+  - If present, preserve existing note cards and update the summary/timeline/status fields.
 - **Task Scoping (CRITICAL):**
   - If the user specifies a particular task file (e.g., `task-R0-02...md`), load **ONLY** that specific file into working memory.
   - If no specific task is mentioned, DO NOT load all tasks into working memory. Resolve the next single unblocked `pending` task from `task_registry` and load only that task packet.
@@ -121,6 +155,14 @@ flowchart TD
 - Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - You MUST use the Step 2 scout report as implementation context. If code reality contradicts the task packet, stop and reconcile the spec before coding.
+- Unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
+  - `decision`: a necessary implementation choice not specified by the spec
+  - `spec-gap`: missing or ambiguous spec detail discovered during implementation
+  - `codebase-reality`: existing code requires a different integration path than the task implied
+  - `tradeoff`: a conscious simplicity, performance, UX, or maintainability tradeoff
+  - `scope-escape`: a file or behavior outside Related Files must be touched for reachability/compile/integration
+  - `risk`: known residual risk, edge case, or deferred follow-up
+  - `verification`: command result, skipped check, manual proof, or evidence caveat
 - Progress tracking: Temporarily change `[ ]` to `[/]` in Spec files while coding is in progress. Do NOT mark `[x]` before Step 4 passes.
 - **Task Boundary Protocol (CRITICAL):**
   - Default editable scope is `Related Files` from the task packet.
@@ -141,6 +183,8 @@ flowchart TD
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
 **Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
 
+If `--flash` is active, use **Step 4F: Flash Gate** instead of the full automatic review loop.
+
 - Passing Step 4 requires ALL of the following:
   1. Automated verification passes, including preflight compile/typecheck/build health and every exact command named in the task's `Evidence` section (or `Task Test Plan & Verification Evidence` / legacy `Verification & Evidence`)
   2. Spec compliance review passes: every scoped requirement and active task criterion is implemented, with no extras and no omissions
@@ -153,8 +197,28 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 - If the implementation silently replaced a named contract choice or relies on cross-service process-local stand-ins, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
+### Step 4F: Flash Gate (`--flash` only)
+Flash mode is an explicit speed trade-off requested by the user.
+
+- Skip:
+  - dedicated test commands from task Evidence
+  - full test-runner delegation
+  - E2E/browser/manual QA loops
+  - full code-auditor retry loop
+  - screenshot, accessibility, performance, and visual verification unless the active task is purely visual and can be checked cheaply
+- Still perform:
+  - task-aware scout from Step 2
+  - active task scope sanity check against Completion Criteria
+  - reachability sanity check for runtime-facing files: imported, mounted, registered, routed, or invoked where applicable
+  - cheap compile/syntax/typecheck/build command when it is already available and expected to run quickly
+- If the cheap preflight fails, return to Step 3 and fix before syncing.
+- If no cheap preflight exists or it would require slow setup/external services, record `Preflight: skipped in --flash mode`.
+- Flash output MUST log: `⚡ Step 4 Flash Gate: tests skipped by --flash; preflight=<pass|skipped>; evidence=FLASH_UNVERIFIED`.
+- Flash output MUST NOT say `Test PASS`, `Evidence PASS`, `Auto-Approved`, or `production-ready`.
+
 ### Step 5: State Sync + Task-Level Docs Sync
 - Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps/task_registry.
+- In `--flash` mode, Step 4F may sync the task only as a fast implementation closeout with an explicit `FLASH_UNVERIFIED` receipt.
 - If verification is partial or blocked by environment, keep the task in `pending` or `in_progress` and record the blocker instead of pretending completion.
 - A completed task MUST leave behind:
   - markdown `**Status:** done`
@@ -162,7 +226,14 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
   - a human-readable verification receipt inside the task's `Evidence` section showing which commands ran, their outcomes, and what proof was observed
+- In `--flash` mode, the receipt MUST include `Mode: --flash`, `Tests: skipped by user request`, `Evidence: FLASH_UNVERIFIED`, and `Next verification: /hapo:test <feature>`.
 - Verification receipts with `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation intentionally simplified a named contract MUST NOT be synchronized as `done`.
+- Exception: `FLASH_UNVERIFIED` is allowed only when `--flash` is explicitly present. It records fast implementation completion, not full verification completion.
+- Unless `--no-notes` is present, update `implementation-notes.html` before reporting the task:
+  - Mark the task block as `done`, `blocked`, or `flash_unverified`.
+  - Add a `verification` note with exact commands run or `Tests skipped by --flash`.
+  - If no implementation note was needed for the task, add a compact `decision` note: `No spec gaps, tradeoffs, scope escapes, or deferred risks recorded for this task.`
+  - Add `Next verification: /hapo:test <feature>` when any evidence is skipped, partial, or `FLASH_UNVERIFIED`.
 - After syncing the active task, run a **Task Closeout Docs Checkpoint**
 - Task Closeout Docs Checkpoint:
   - Evaluate `Docs impact: none | minor | major` based on real behavior changes from the just-completed task
@@ -183,3 +254,4 @@ The moment you finish coding, DO NOT proceed further. Switch to `references/qual
 ## Attached References
 - `references/quality-gate.md` - Rules for the Code Review loop.
 - `references/subagent-patterns.md` - Standard prompts for calling subagents.
+- `references/implementation-notes-template.html` - Self-contained visual implementation notes template.

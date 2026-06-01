@@ -137,6 +137,7 @@ The system MUST NOT execute Steps 1-8. Instead, load `references/review.md` and 
 5. **MUST NOT create implementation code files** (`.ts`, `.js`, `.py`, etc.). The validate workflow produces ONLY markdown spec documents and reports. If a fix requires a new shared module, describe it in the relevant task file instead of creating the actual code file.
 6. **MUST NOT over-engineer fixes.** Apply YAGNI — if user says "configure later", add an abstraction note to the task, do NOT generate 4 concrete provider implementations.
 7. **MUST follow auto-decision table exactly.** Count task files + scan for keywords → pick mode. No self-justification to override the table result.
+8. **MUST run deterministic validator.** Before reporting validation PASS, run `node .claude/scripts/validate-spec-output.cjs specs/<feature>`. If it exits non-zero, validation is FAIL/BLOCKED, `ready_for_implementation` remains `false`, and output MUST NOT suggest `/hapo:develop`.
 
 ## Workflow Diagram
 
@@ -183,6 +184,7 @@ flowchart TD
 ## Detailed Workflow
 
 ### Step 1: Analyze Description
+- Load `references/ask-user-question-gates.md` before asking user questions. Ask only at documented gates; do not ask questions that repo evidence or official/current docs can answer.
 - Assess clarity and complexity of the description
 - Route to `hapo:brainstorm` before creating files when:
   - the expected output or acceptance criteria are not concrete
@@ -208,6 +210,7 @@ Load: `references/cross-spec-dependency.md`
 
 ### Step 3: Complexity Assessment & Scope Inquiry
 Load: `references/scope-inquiry.md`
+- Also load `references/ask-user-question-gates.md` when scope, evidence, contract, or architecture decisions require user input.
 - Evaluate the request across **5 dimensions**: Semantic Intent, Implementation Hypothesis, Gap Sizing, Risk/Uncertainty (Cynefin), and Blast Radius
 - If Risk = **Chaotic** → exit spec workflow, redirect to `hapo:hotfix`
 - If Risk = **Complex** → include spike/prototype tasks in the spec
@@ -251,6 +254,8 @@ Load: `references/scope-inquiry.md`
 - Read `spec.json` — stop if requirements haven't completed
 - Pick discovery mode: `minimal` / `light` / `full` based on complexity. **Default: `light`** unless certain it is simple UI (minimal) or complex integration (full).
 - Load `rules/design-principles.md`
+- Load `rules/phase-decision-matrix.md` to define implementation slices, task clusters, foundation boundaries, spike needs, integration gates, and verification gates before task generation.
+- Load `references/ask-user-question-gates.md` if a design decision would change scope, contract, provider/platform, or implementation safety.
 - Load `rules/design-discovery-[mode].md`:
   - **minimal**: UI-only or simple CRUD
   - **light**: extending existing system
@@ -266,6 +271,9 @@ Load: `references/scope-inquiry.md`
 - Read `spec.json` — stop if `requirements.md` or `design.md` missing
 - Respect `scope_lock` — only use valid requirement IDs within `in_scope`
 - Load `rules/tasks-generation.md` for core principles
+- Load `rules/phase-decision-matrix.md` before generating task files. Treat "phase" as an implementation slice/task cluster, not a `phase-XX.md` artifact.
+- Load `rules/task-scoring-rubric.md` for every candidate task to decide priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
+- Load `references/ask-user-question-gates.md`; if scoring reveals unapproved scope expansion or an unresolved user-owned choice, pause before writing task files.
 - Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
 - `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
@@ -321,12 +329,15 @@ Each task file MUST be **self-contained and implementation-ready** — detailed 
 
 **Structure per task file:**
 1. **Context** — why this task exists, current state, target outcome, relevant exact files.
-2. **Steps** — concise implementation checklist with business intent and code-level detail.
-3. **Requirements** — list requirement IDs and acceptance criteria covered by this task.
-4. **Related Files** — table with exact paths, action type, and descriptions when paths are known; otherwise run scout first.
-5. **Completion Criteria** — observable, testable criteria.
-6. **Evidence** — automated command(s), artifact/runtime proof, negative-path proof, and runtime reachability proof.
-7. **Risk Assessment** — table with risk, severity, mitigation.
+2. **Constraints** — MUST / SHOULD / MUST NOT / SCOPE guardrails.
+3. **Steps** — concise implementation checklist with business intent and code-level detail.
+4. **Requirements** — list requirement IDs and acceptance criteria covered by this task.
+5. **Related Files** — table with exact paths, action type, and descriptions when paths are known; otherwise run scout first.
+6. **Completion Criteria** — observable, testable criteria.
+7. **Evidence** — automated command(s), artifact/runtime proof, negative-path proof, and runtime reachability proof.
+8. **Risk Assessment** — table with risk, severity, mitigation.
+
+**Template fidelity is mandatory:** preserve the task template headings exactly. Do NOT rename `## Context` to `## Objective`, do NOT replace `## Completion Criteria` with prose, do NOT remove `## Related Files`, `## Constraints`, or `## Risk Assessment`, and do NOT collapse `## Evidence` into generic QA scenarios. Compact wording is fine; missing sections are invalid.
 
 **Parallel markers:** Append `(P)` to tasks that can run concurrently (no data dependency, no shared files, no prerequisite approval from another task). Tasks serving DIFFERENT requirements are often parallelizable.
 
@@ -341,6 +352,7 @@ Load: `references/task-hydration.md`
 
 ### Step 9: Validation Review (Optional)
 Load: `references/review.md` + `rules/design-review.md`
+- Load `references/ask-user-question-gates.md` before applying validation or red-team changes. User approval is required when findings modify approved scope, requirements, canonical contracts, design decisions, or task behavior.
 - System auto-evaluates spec complexity and decides review depth:
   - **< 3 task files, no security concerns** → Validate only (lightweight interview)
   - **>= 5 task files OR security/migration keywords** → Red Team first, then Validate
@@ -350,6 +362,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
 - **Reconciliation Rule:** `validation.status = "completed"` is forbidden until all accepted findings and validation decisions are physically propagated into `requirements.md`, `design.md`, `tasks/*.md`, and `spec.json` where applicable.
+- **Deterministic Gate:** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` after all fixes and before final output. Script failure overrides any LLM checklist result and blocks `ready_for_implementation = true`.
 
 ### Step 9.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)
@@ -366,6 +379,7 @@ Load: `references/review.md` + `rules/design-review.md`
 - FAIL if a task creates runtime-facing artifacts but neither proves reachability from an entrypoint/caller nor names a later integration task responsible for wiring them.
 - FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or final integration section.
 - FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`, canonical contracts, or requirements text).
+- FAIL if any generated task replaces the required task template with a reduced `Objective` / `Steps` / `Evidence` shape. `Context`, `Constraints`, `Related Files`, `Completion Criteria`, `Evidence`, and `Risk Assessment` must all remain present.
 - FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
   1. hard-delete with no re-registration lock, or
@@ -437,7 +451,7 @@ Task paths that omit the `task-` prefix or use non-padded sequence numbers (for 
 6. `task_registry` matches the real filesystem and does not omit any task file
 7. If `design_context.validation_recommended = true`, `validation.status = "completed"` (or another explicit user-accepted risk state that is recorded)
 
-If any approval is `false`, `ready_for_implementation` MUST remain `false`.
+If any approval is `false`, `ready_for_implementation` MUST remain `false`. If the spec has 5+ task files, `ready_for_implementation` MUST remain `false` until `/hapo:specs <feature> --validate` completes Red Team + Validate and writes `validation.status = "completed"`.
 
 ## Output Structure
 
@@ -545,10 +559,13 @@ Before finalizing any specification, assert all the following:
 - `design-discovery-full.md` — Full research workflow
 - `design-discovery-light.md` — Lightweight research workflow
 - `design-review.md` — Design review GO/NO-GO process
+- `phase-decision-matrix.md` — Implementation slice/task-cluster boundary rules
 - `tasks-generation.md` — Task generation rules (includes spike task rules)
 - `tasks-parallel-analysis.md` — Parallel task analysis
+- `task-scoring-rubric.md` — Task priority, split/merge, spike, dependency, and evidence-depth scoring
 
 ### References (`references/`)
+- `ask-user-question-gates.md` — AskUserQuestion gate matrix for user-owned decisions
 - `cross-spec-dependency.md` — Cross-spec dependency detection
 - `scope-inquiry.md` — 5-Dimension Complexity Assessment (Semantic, Hypothesis, Gap, Risk/Cynefin, Blast Radius)
 - `research-strategy.md` — Research strategy (7 tools)

@@ -1018,6 +1018,92 @@ function configureGeminiKey(apiKey, platforms = ['claude']) {
   return success;
 }
 
+async function promptAddressingConfig() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question('\nHow should the AI address you? (e.g. boss, sir, master - Enter to skip): ', (answer) => {
+      rl.close();
+      const userAddress = answer.trim();
+
+      // Blank = skip, no addressing configured
+      if (!userAddress || userAddress.length === 0) {
+        resolve({ enabled: false, userAddress: '' });
+        return;
+      }
+
+      // Validate: letters and spaces only
+      if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
+        console.log('  ⚠ Invalid input (letters only), skipping addressing setup');
+        resolve({ enabled: false, userAddress: '' });
+        return;
+      }
+
+      resolve({ enabled: true, userAddress: userAddress });
+    });
+  });
+}
+
+function configureAddressing(addressingConfig, platforms = ['claude']) {
+  // CLAUDE.md is installed at the project root (see copyClaudeMdFile),
+  // and only the Claude platform ships it. Skip if Claude isn't installed.
+  if (!platforms.includes('claude')) {
+    return;
+  }
+
+  // Skip if addressing not enabled (user left blank or invalid input)
+  if (!addressingConfig.enabled || !addressingConfig.userAddress) {
+    console.log('  → Bỏ qua thiết lập xưng hô');
+    return;
+  }
+
+  const userAddress = addressingConfig.userAddress;
+
+  try {
+    const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
+
+    if (!fs.existsSync(claudeMdFile)) {
+      console.log('  ⚠ CLAUDE.md not found at project root');
+      return;
+    }
+
+    let content = fs.readFileSync(claudeMdFile, 'utf8');
+
+    // Build the addressing section (short instruction + user-chosen term)
+    const addressingSection = `## Addressing (Context Overflow Indicator)
+
+The AI always addresses the user as "${userAddress}" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
+
+    // Match the addressing section by its shared marker ("Context Overflow
+    // Indicator"), covering both the older Vietnamese heading and the new one,
+    // up to the next ## header or end of file. Keeps reinstall idempotent.
+    const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
+
+    if (regex.test(content)) {
+      // Replace existing section
+      content = content.replace(regex, addressingSection);
+    } else {
+      // Append at the end
+      if (!content.endsWith('\n')) {
+        content += '\n';
+      }
+      content += '\n' + addressingSection + '\n';
+    }
+
+    fs.writeFileSync(claudeMdFile, content, 'utf8');
+    console.log(`  ✓ Addressing configured in CLAUDE.md: AI calls the user "${userAddress}"`);
+  } catch (error) {
+    console.error('  ✗ Failed to configure addressing in CLAUDE.md');
+    console.error(`     Error: ${error.message}`);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+  }
+}
+
 async function setupGeminiCLI(platforms) {
   const hasGemini = checkGeminiCLI();
 
@@ -1146,6 +1232,10 @@ async function main() {
     // Setup runtime-specific optional model/API configuration
     await setupOpenCodeModel(platforms, results);
     await setupGeminiCLI(platforms);
+
+    // Setup addressing configuration
+    const addressingConfig = await promptAddressingConfig();
+    configureAddressing(addressingConfig, platforms);
 
     // Summary
     console.log('╔════════════════════════════════════════════════════════╗');

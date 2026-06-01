@@ -16,17 +16,37 @@ Debugging is diagnosis, not repair. Find the source of the failure before changi
 - `--frontend` - Include browser console, screenshot, accessibility tree, network, and responsive checks
 - `--perf` - Include baseline measurements, bottleneck layer, profiling, and before/after targets
 
-Default: systematic diagnosis with no product-code edits.
+Default: systematic diagnosis with no product-code edits, scout first.
 
-<HARD-GATE>
-Do NOT implement a fix inside `hapo:debug`.
+<DIAGNOSTIC-ONLY-GATE>
+`hapo:debug` is read-only for product code.
+Do NOT edit product code, apply fixes, create migrations, or add regression tests as implementation.
+Do NOT change config, dependency versions, generated assets, or test snapshots to make the failure disappear.
+Temporary instrumentation is allowed only when it is the minimal way to observe hidden state; record the file/line, capture the proof, remove it before finishing, and report `Temporary instrumentation: removed`.
+</DIAGNOSTIC-ONLY-GATE>
+
+<HARD-GATE-SCOUT-FIRST>
+Before hypotheses, inspect the actual codebase context.
+You must identify:
+- project type, language, framework, runtime, and test runner
+- affected files/modules and exact symptom location
+- direct callers, dependents, and data/config boundaries
+- related tests and reproduction commands
+- recent commits touching affected paths
+- adjacent known-good implementation patterns
+
+After scout, provide a 3-6 bullet codebase-context summary before evidence capture.
+Do not ask generic questions before this step unless the issue cannot be located from the prompt or repository.
+</HARD-GATE-SCOUT-FIRST>
+
+<ROOT-CAUSE-GATE>
 Do NOT recommend a fix until the root-cause contract is complete.
 Do NOT stop at the first plausible explanation. Test hypotheses against evidence.
 If 2+ hypotheses are refuted, change strategy before continuing.
-If evidence is insufficient, report `Root cause: unknown` with the missing evidence needed.
-</HARD-GATE>
+If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `hapo:hotfix` as ready.
+</ROOT-CAUSE-GATE>
 
-Temporary instrumentation is allowed only when it is the minimal way to observe hidden state. Remove it before finishing and report what was instrumented.
+If the user asks to fix while still inside `hapo:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `hapo:hotfix`.
 
 ## Process Flow
 
@@ -53,15 +73,18 @@ flowchart TD
 Understand the affected code before forming hypotheses.
 
 **Action:** Activate `hapo:inspect` for the relevant scope.
+If `hapo:inspect` is unavailable, use direct read-only reconnaissance (`rg`, file reads, test discovery, and `git log`) and state that fallback.
 
 **Checklist:**
+- [ ] Project type, language, framework, runtime, and test runner identified
 - [ ] Affected files and modules identified
 - [ ] Direct dependencies and call paths mapped
+- [ ] Inputs/outputs, data boundaries, and config/env boundaries mapped
 - [ ] Related tests located
 - [ ] Recent changes checked: `git log --oneline -10 -- <affected-files>`
 - [ ] Existing working examples or adjacent patterns identified
 
-**Output:** `✓ Step 1: Scouted - [N] files, [M] deps, [K] tests`
+**Output:** `✓ Step 1: Scouted - [N] files, [M] deps, [K] tests` plus a 3-6 bullet context summary.
 
 ---
 
@@ -77,9 +100,9 @@ Create a baseline that can later prove whether the issue changed.
 - Environment facts: runtime, dependency versions, OS, browser, CI runner, config
 - Whether the issue reproduces consistently or intermittently
 
-For frontend issues, use `references/debugger/frontend-verification.md`.
-For CI/log issues, use `references/debugger/log-ci-analysis.md`.
-For performance issues, use `references/debugger/performance-diagnostics.md`.
+For frontend issues, use `.claude/references/debugger/frontend-verification.md`.
+For CI/log issues, use `.claude/references/debugger/log-ci-analysis.md`.
+For performance issues, use `.claude/references/debugger/performance-diagnostics.md`.
 
 **Output:** `✓ Step 2: Evidence captured - baseline command/symptom recorded`
 
@@ -115,7 +138,7 @@ Result: confirmed | refuted | inconclusive
 Rules:
 - Never batch unrelated changes as a test.
 - Prefer read-only evidence: logs, grep, stack traces, DB queries, browser traces.
-- For flaky async tests, use `references/debugger/condition-based-waiting.md`.
+- For flaky async tests, use `.claude/references/debugger/condition-based-waiting.md`.
 - If 2+ hypotheses are refuted, use inversion: ask what evidence would make the current explanation impossible.
 
 **Output:** `✓ Step 4: Hypotheses tested - [confirmed/refuted counts]`
@@ -156,7 +179,7 @@ Prepare the handoff to `hapo:hotfix` or the user.
 - Affected-module tests
 - Typecheck/lint/build commands when relevant
 - UI screenshot/console/network checks when relevant
-- Side-effect sweep from `references/debugger/side-effect-gate.md`
+- Side-effect sweep from `.claude/references/debugger/side-effect-gate.md`
 
 **Output:** `✓ Step 6: Verification planned - [commands/scenarios]`
 
@@ -189,8 +212,17 @@ Prepare the handoff to `hapo:hotfix` or the user.
 - Regression guard:
 - Side-effect sweep:
 
+### Temporary Instrumentation
+- none | removed: [file:line, purpose, proof captured]
+
 ### Recommended Fix Direction
 [Smallest root-cause fix, or "insufficient evidence"]
+
+### Missing Evidence
+- [Only when root cause is unknown]
+
+### Next Diagnostic Action
+- [Only when root cause is unknown]
 
 ### Unresolved Questions
 - [Only if any]
@@ -199,18 +231,19 @@ Prepare the handoff to `hapo:hotfix` or the user.
 ## Relationship To Hotfix
 
 - Use `hapo:debug` to determine what is wrong.
-- Use `hapo:hotfix` to change code after the root-cause contract is complete.
+- Use `hapo:hotfix` to change code only after the root-cause contract is complete.
+- A `Root cause: unknown` report is not ready for hotfix; continue diagnosis or ask for the missing artifact.
 - If `hapo:hotfix` verification fails, return to `hapo:debug` with the new evidence.
 
 ## References
 
 Load as needed:
-- `references/debugger/core-philosophy.md` - Anti-guessing discipline
-- `references/debugger/root-cause-tracing.md` - Backward trace to origin
-- `references/debugger/verification-protocol.md` - Fresh evidence requirements
-- `references/debugger/log-ci-analysis.md` - Logs and CI/CD failure analysis
-- `references/debugger/parallel-agent-hydration.md` - Parallel reconnaissance
-- `references/debugger/frontend-verification.md` - Browser/UI verification
-- `references/debugger/performance-diagnostics.md` - Performance investigation
-- `references/debugger/condition-based-waiting.md` - Flaky async test diagnosis
-- `references/debugger/side-effect-gate.md` - Regression and blast-radius checks
+- `.claude/references/debugger/core-philosophy.md` - Anti-guessing discipline
+- `.claude/references/debugger/root-cause-tracing.md` - Backward trace to origin
+- `.claude/references/debugger/verification-protocol.md` - Fresh evidence requirements
+- `.claude/references/debugger/log-ci-analysis.md` - Logs and CI/CD failure analysis
+- `.claude/references/debugger/parallel-agent-hydration.md` - Parallel reconnaissance
+- `.claude/references/debugger/frontend-verification.md` - Browser/UI verification
+- `.claude/references/debugger/performance-diagnostics.md` - Performance investigation
+- `.claude/references/debugger/condition-based-waiting.md` - Flaky async test diagnosis
+- `.claude/references/debugger/side-effect-gate.md` - Regression and blast-radius checks

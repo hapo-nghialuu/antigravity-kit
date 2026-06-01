@@ -126,3 +126,7 @@ When generating specs or structured project output, use the user's preferred lan
 - State tradeoffs and assumptions when they affect decisions.
 - Do not provide unsolicited code explanations unless asked.
 - Do not apologize; correct the issue and continue.
+
+## Addressing (Context Overflow Indicator)
+
+The AI always addresses the user as "anh" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.

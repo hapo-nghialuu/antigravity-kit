@@ -42,7 +42,8 @@ function checkBrokenLinks(docsDir) {
 }
 
 function main() {
-  const docsDir = path.resolve(process.cwd(), 'docs');
+  const docsArg = process.argv[2] || 'docs';
+  const docsDir = path.resolve(process.cwd(), docsArg);
   console.log(`[Docs Validator] Auditing bounds directory: ${docsDir}`);
   
   if (!fs.existsSync(docsDir)) {

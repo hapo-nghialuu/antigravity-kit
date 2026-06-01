@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "packageName": "@haposoft/cafekit",
+  "version": "0.9.7",
+  "platform": "claude",
+  "platformName": "Claude Code",
+  "installedAt": "2026-06-01T03:15:51.817Z",
+  "lastInstalledAt": "2026-06-01T03:15:51.817Z",
+  "installCommand": "npx @haposoft/cafekit@0.9.7"
+}

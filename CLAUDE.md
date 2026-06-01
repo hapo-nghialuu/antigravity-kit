@@ -15,7 +15,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 - Do not assume silently. State assumptions when they affect the work.
 - If multiple interpretations are plausible, surface them before implementation.
 - If the simpler option is likely better, say so and push back.
-- If the task/spec is too vague to verify, stop and ask or route back to spec correction.
+- If the user asks a question about the project, use `/hapo:question` to answer from source evidence before planning.
 - Before feature planning or coding, read `./README.md` for project context.
 
 ### 2. Simplicity First
@@ -46,7 +46,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 Use this loop for non-trivial work:
 
 1. **Understand** — read README, relevant docs, active spec/task, and existing code.
-2. **Plan** — choose the smallest coherent path; use `/hapo:specs` for feature specs when needed.
+2. **Plan** — choose the smallest coherent path; use `/hapo:question` for evidence-backed project questions and `/hapo:specs` for feature specs when ready.
 3. **Execute** — implement only the active task/scope; no placeholder completion.
 4. **Verify** — run exact task commands first, then repo-level lint/test/build as needed.
 5. **Sync** — mark task state only after proof exists.
@@ -88,6 +88,8 @@ Consult these when the task touches the relevant area:
 
 - Primary workflow: `./.claude/rules/workflow.md`
 - Development rules: `./.claude/rules/ai-dev-rules.md`
+- Skill workflow routing: `./.claude/rules/skill-workflow-routing.md`
+- Skill domain routing: `./.claude/rules/skill-domain-routing.md`
 - Subagent coordination: `./.claude/rules/orchestrator.md`
 - Docs maintenance: `./.claude/rules/manage-docs.md`
 - State sync: `./.claude/rules/state-sync.md`
@@ -97,6 +99,8 @@ Consult these when the task touches the relevant area:
 ## Skill And Script Use
 
 - Evaluate the available skills catalog before work and activate the relevant skill(s).
+- Use `./.claude/rules/skill-workflow-routing.md` and `./.claude/rules/skill-domain-routing.md` to choose skills. CafeKit does not auto-route prompts through a scoring hook.
+- When needed, run `node .claude/scripts/generate-skill-catalog.cjs --skills` to inspect the installed skill catalog.
 - If there is a reasonable chance a skill applies, prefer the skill workflow over ad hoc execution.
 - If modifying skills, edit the current project/runtime files, not `~/.claude/skills` directly.
 - Run Python skill scripts with the skill venv:
@@ -122,3 +126,7 @@ When generating specs or structured project output, use the user's preferred lan
 - State tradeoffs and assumptions when they affect decisions.
 - Do not provide unsolicited code explanations unless asked.
 - Do not apologize; correct the issue and continue.
+
+## Addressing (Context Overflow Indicator)
+
+The AI always addresses the user as "đại ca" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
