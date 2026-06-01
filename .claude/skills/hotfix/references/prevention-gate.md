@@ -1,6 +1,6 @@
 # Prevention Gate
 
-After a fix is verified, apply defense-in-depth to prevent the same bug class from recurring. Prevention is not the same as side-effect safety; run `references/debugger/side-effect-gate.md` before claiming completion.
+After a fix is verified, apply defense-in-depth to prevent the same bug class from recurring. Prevention is not the same as side-effect safety; run the Step 5 side-effect sweep in `../SKILL.md` before claiming completion.
 
 ## Mandatory Prevention Checklist
 

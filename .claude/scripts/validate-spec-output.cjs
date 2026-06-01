@@ -86,23 +86,31 @@ function extractRequirementIds(requirementsText) {
 }
 
 function validateTaskSections(taskPath, content, errors) {
-  const hasContext =
-    hasHeading(content, 'Context') ||
-    hasHeading(content, 'Objective') ||
-    hasHeading(content, 'Goal');
+  const hasContext = hasHeading(content, 'Context');
+  const hasConstraints = hasHeading(content, 'Constraints');
   const hasSteps =
     hasHeading(content, 'Steps') || hasHeading(content, 'Implementation Steps');
   const hasRequirements =
-    hasHeading(content, 'Requirements') || /^\*\*Requirement:\*\*/m.test(content);
+    hasHeading(content, 'Requirements') || /_Requirements:\s*[^_\n]+_/i.test(content);
+  const hasRelatedFiles = hasHeading(content, 'Related Files');
+  const hasCompletionCriteria = hasHeading(content, 'Completion Criteria');
   const hasEvidence =
     hasHeading(content, 'Evidence') ||
     hasHeading(content, 'Task Test Plan & Verification Evidence') ||
     hasHeading(content, 'Verification & Evidence');
+  const hasRiskAssessment = hasHeading(content, 'Risk Assessment');
 
-  if (!hasContext) errors.push(`${taskPath}: missing Context/Objective/Goal`);
+  if (!hasContext) errors.push(`${taskPath}: missing Context`);
+  if (!hasConstraints) errors.push(`${taskPath}: missing Constraints`);
   if (!hasSteps) errors.push(`${taskPath}: missing Steps/Implementation Steps`);
   if (!hasRequirements) errors.push(`${taskPath}: missing Requirements mapping`);
+  if (!hasRelatedFiles) errors.push(`${taskPath}: missing Related Files`);
+  if (!hasCompletionCriteria) errors.push(`${taskPath}: missing Completion Criteria`);
   if (!hasEvidence) errors.push(`${taskPath}: missing Evidence or task test plan`);
+  if (!hasRiskAssessment) errors.push(`${taskPath}: missing Risk Assessment`);
+  if (hasEvidence && !/Runtime reachability verification/i.test(content)) {
+    errors.push(`${taskPath}: missing Runtime reachability verification`);
+  }
 }
 
 function validateSpec(specDir) {
@@ -185,6 +193,28 @@ function validateSpec(specDir) {
 
   if (taskFiles.length > 2 && taskFiles.every((taskFile) => /^tasks\/task-R0-/.test(taskFile))) {
     errors.push('tasks/: feature work cannot be entirely R0; reserve R0 for shared foundation tasks');
+  }
+
+  const validationRecommended = spec.design_context?.validation_recommended === true;
+  if (taskFiles.length >= 5 && !validationRecommended) {
+    errors.push('spec.json.design_context.validation_recommended: must be true for specs with 5+ task files');
+  }
+  if (
+    (validationRecommended || taskFiles.length >= 5) &&
+    spec.ready_for_implementation === true &&
+    spec.validation?.status !== 'completed'
+  ) {
+    errors.push(
+      'spec.json.ready_for_implementation: cannot be true when validation is recommended but validation.status is not completed',
+    );
+  }
+  if (spec.validation?.status === 'completed') {
+    if (!spec.timestamps?.validation_done) {
+      errors.push('spec.json.timestamps.validation_done: required when validation.status is completed');
+    }
+    if (taskFiles.length >= 5 && !spec.timestamps?.review_done) {
+      errors.push('spec.json.timestamps.review_done: required for 5+ task specs after validation');
+    }
   }
 
   const requirementsPath = path.join(specDir, 'requirements.md');

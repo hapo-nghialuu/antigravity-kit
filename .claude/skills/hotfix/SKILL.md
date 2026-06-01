@@ -11,11 +11,11 @@ Kill bugs systematically. No guessing. Evidence first, fix second.
 
 ## Arguments
 
-- `--quick` - Fast track for trivial issues (lint, type errors, syntax)
+- `--quick` - Reduced-depth path for trivial issues (lint, type errors, syntax); still scout-first
 - `--parallel` - Spawn multiple `god-developer` agents for independent issues
 - `--from-debug` - Start from an existing `hapo:debug` report and validate its root-cause contract
 
-Default: Autonomous mode — auto-approve when confidence is high.
+Default: deterministic scout-first hotfix. There is no initial mode selection step.
 
 <HARD-GATE>
 Do NOT propose or implement fixes before completing Steps 1-2 (Scout + `hapo:debug` diagnosis).
@@ -23,8 +23,35 @@ Symptom fixes are FAILURE. Find the root cause first.
 The exact root-cause contract is mandatory: symptom, reproduction, expected/actual, root cause file:line or config/env source, why now, evidence chain, blast radius.
 The side-effect gate is mandatory before completion.
 If 3+ fix attempts fail → STOP. Question the architecture. Discuss with user.
-Exception: `--quick` mode allows abbreviated scout→diagnose→fix for trivial issues.
+Exception: `--quick` mode only abbreviates depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.
 </HARD-GATE>
+
+<HARD-GATE-SCOUT-FIRST>
+Hotfix ALWAYS scouts before asking broad clarification questions, forming hypotheses, or changing files.
+Collect these scout outputs first:
+1. Project type, language(s), framework(s), and package/test runner from repo files.
+2. Exact file(s) where the symptom surfaces and their direct callers/dependents.
+3. Related tests covering the affected area.
+4. Recent commits touching affected files: `git log --oneline -10 -- <affected-files>`.
+5. Existing patterns/conventions for this kind of fix.
+Then state a concise 3-6 bullet codebase-context summary before Step 2.
+</HARD-GATE-SCOUT-FIRST>
+
+<HARD-GATE-NO-SIDE-EFFECTS>
+The fix is not done until Step 5 proves:
+1. The original symptom no longer reproduces with the exact pre-fix command/user flow.
+2. Modified files and transitively affected modules still pass relevant tests.
+3. Blast-radius workflows have no business-logic regression.
+4. No new lint/type/build errors were introduced.
+5. Public contracts are unchanged unless intentionally called out: function signatures, exported types, response shapes, DB schemas, env vars.
+
+If verification reveals a side effect or regression, STOP and present 2-4 concrete options to the user:
+- Revert this fix and try a different root-cause angle.
+- Narrow the fix scope to remove the regression.
+- Keep the fix and update named dependent files/contracts.
+- Accept the behavior change intentionally.
+Do not silently patch around the regression.
+</HARD-GATE-NO-SIDE-EFFECTS>
 
 ## Anti-Rationalization
 
@@ -35,6 +62,7 @@ Exception: `--quick` mode allows abbreviated scout→diagnose→fix for trivial 
 | "Just try changing X" | Random fixes waste time and create new bugs. Diagnose first. |
 | "It's probably X" | "Probably" = guessing. Use structured diagnosis. |
 | "One more fix attempt" (after 2+) | 3+ failures = wrong approach. Question architecture. |
+| "Quick mode means skip process" | Quick mode only reduces depth. Scout, diagnosis, and before/after proof remain mandatory. |
 
 ## Process Flow
 
@@ -43,7 +71,7 @@ flowchart TD
     A[Issue Input] --> B[Step 1: Scout via hapo:inspect]
     B --> C[Step 2: Diagnose via hapo:debug]
     C --> D[Step 3: Classify Complexity]
-    D -->|Trivial| E[Quick Fix]
+    D -->|Trivial| E[Quick Fix after scout+diagnose]
     D -->|Standard| F[Standard Fix]
     D -->|Complex| G[Deep Fix + Subagents]
     D -->|Multiple Issues| H[Parallel Fix]
@@ -70,17 +98,22 @@ flowchart TD
 
 **Action:** Activate `hapo:inspect` skill to map the blast radius.
 
-| Mode | Scout Depth |
+Do not ask generic questions before this step unless there is no repo, no error text, and no observable artifact to inspect.
+
+| Path | Scout Depth |
 |------|-------------|
-| `--quick` | Minimal — locate affected file(s) and direct dependencies only |
-| Standard | Full — map module boundaries, test coverage, call chains |
+| `--quick` | Minimal — project type, affected file(s), direct callers/dependents, related tests, recent commits |
+| Standard | Full — project type, module boundaries, test coverage, call chains, recent changes, existing patterns |
 | `--parallel` | Per-issue independent scouts |
 
 **Checklist:**
+- [ ] Project type, language, framework, package manager, and test runner identified
 - [ ] Affected files identified
-- [ ] Direct dependencies mapped (imports/exports)
+- [ ] Direct callers/dependents mapped (imports/exports, route registrations, provider wiring, consumers)
 - [ ] Related tests located
 - [ ] Recent git changes checked: `git log --oneline -10 -- <affected-files>`
+- [ ] Existing local patterns for this code path identified
+- [ ] 3-6 bullet codebase-context summary reported before diagnosis
 
 **Output:** `✓ Step 1: Scouted — [N] files mapped, [M] dependencies, [K] tests found`
 
@@ -115,6 +148,8 @@ Use `hapo:debug` or validate an existing debug report when `--from-debug` is pro
 - Evidence chain: observations proving the cause
 - Blast radius: affected files, modules, tests, users, workflows, or release paths
 
+If any field is vague (`probably`, `maybe`, `I think`, or missing file:line/config/env evidence), keep diagnosing or ask the user for the specific missing artifact. Do not implement.
+
 **Output:** `✓ Step 2: Diagnosed — Root cause: [summary], Evidence: [brief], Scope: [N files]`
 
 ---
@@ -131,6 +166,7 @@ Use `hapo:debug` or validate an existing debug report when `--from-debug` is pro
 **Task Orchestration (Standard+ only):**
 - Use `TaskCreate` with dependencies to track fix phases
 - Skip for Trivial (overhead exceeds benefit)
+- If `TaskCreate` / `TaskUpdate` are unavailable, use a concise markdown checklist or `TodoWrite` fallback. Do not block the hotfix because structured task tools are missing.
 
 **Output:** `✓ Step 3: [Complexity] detected — [workflow] selected`
 
@@ -144,8 +180,9 @@ Use `hapo:debug` or validate an existing debug report when `--from-debug` is pro
 - One logical change per commit boundary.
 
 ### Quick Workflow
-1. Apply the obvious fix directly from diagnosis
-2. Run typecheck/lint immediately
+1. Apply the minimal fix directly from completed scout + diagnosis
+2. Run exact pre-fix command plus typecheck/lint immediately
+3. Report before/after proof
 
 ### Standard Workflow
 1. Implement fix targeting root cause
@@ -178,12 +215,19 @@ Use `hapo:debug` or validate an existing debug report when `--from-debug` is pro
 2. **Regression test:** The test MUST fail without the fix and pass with it.
 3. **Parallel verification:** Run typecheck + lint + build + test simultaneously via `Bash`. See `references/parallel-patterns.md` Pattern C.
 4. **Prevention guard (Standard+ only):** See `references/prevention-gate.md`.
-5. **Side-effect gate:** Run the sweep in `references/debugger/side-effect-gate.md`.
-6. **Code review:** Trigger `hapo:code-review` and handle results per `references/review-cycle.md` (autonomous auto-approve loop or HITL depending on fix criticality).
+5. **Side-effect gate:** Sweep the full blast radius identified in Step 2:
+   - Modified files and direct dependents pass relevant tests
+   - Affected user/API/CLI workflows still work
+   - Public contracts unchanged unless intentionally called out
+   - No new lint/type/build errors
+6. **Code review:** Trigger `hapo:code-review`; never auto-approve blocking security, auth, data-loss, resource-exhaustion, or public-contract issues.
 
 **If verification fails:**
 - < 3 attempts → Loop back to Step 2 (re-diagnose with new evidence)
 - 3+ attempts → STOP. Question architecture. Discuss with user.
+
+**If a side effect appears:**
+- STOP and present concrete options to the user. Do not silently broaden the fix.
 
 **Output:** `✓ Step 5: Verified + Prevented — [before/after comparison], [N] tests added`
 
@@ -191,7 +235,7 @@ Use `hapo:debug` or validate an existing debug report when `--from-debug` is pro
 
 ## Step 6: Finalize (MANDATORY — never skip)
 
-1. **Report:** Confidence score, root cause, changes made, files affected, prevention measures
+1. **Report:** Confidence score, root cause, changes made, files affected, prevention measures, side-effect sweep result
 2. **Docs update:** If API/behavior changed → delegate to `docs-keeper` subagent
 3. **Task cleanup:** `TaskUpdate` → mark all tasks `completed` (skip if no tasks created)
 4. **Commit:** Ask user if ready to commit via `git-ops` subagent
@@ -227,16 +271,23 @@ Unified step markers (emit after each step):
 | `docs-keeper` | Update docs if behavior changed (Step 6) |
 | `god-developer` | Parallel independent issues (each gets own agent) |
 
+## Specialized Paths
+
+Use `references/workflow-specialized.md` as an overlay after Step 1 scout:
+- CI/CD failures
+- Test suite failures
+- TypeScript type errors
+- UI / visual issues
+- Application log errors
+
+Specialized paths do not replace the 6-step hotfix process.
+
 ## References
 
 Load as needed:
 - `references/diagnosis-protocol.md` — Structured root cause analysis methodology
 - `references/escalation-tactics.md` — What to do when hypotheses fail (Inversion, Scale Game)
 - `references/prevention-gate.md` — Defense-in-depth validation after fix
-- `references/review-cycle.md` — Autonomous approval loop + HITL review handling
+- `references/review-cycle.md` — Review handling and required user-pause conditions
 - `references/parallel-patterns.md` — Parallel Explore/Bash/Task coordination with code templates
 - `references/workflow-specialized.md` — CI/CD, test, TypeScript, UI-specific workflows
-- `references/debugger/frontend-verification.md` — Browser/UI evidence and visual verification
-- `references/debugger/performance-diagnostics.md` — Baseline-driven performance diagnosis
-- `references/debugger/condition-based-waiting.md` — Flaky async test diagnosis
-- `references/debugger/side-effect-gate.md` — Regression and blast-radius sweep

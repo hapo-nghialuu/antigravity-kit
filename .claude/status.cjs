@@ -14,7 +14,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Import modular components
-const { green, yellow, red, cyan, magenta, dim, coloredBar, RESET, shouldUseColor } = require('./hooks/lib/color.cjs');
+const colors = require('./hooks/lib/color.cjs');
+const { green, yellow, red, cyan, magenta, dim, coloredBar, RESET } = colors;
 const { parseTranscript } = require('./hooks/lib/parser.cjs');
 const { countConfigs } = require('./hooks/lib/counter.cjs');
 const { loadConfig } = require('./hooks/lib/config.cjs');
@@ -358,7 +359,7 @@ function render(ctx, singleLineMode = false) {
 
   // Output all lines with non-breaking spaces for alignment
   for (const line of lines) {
-    const outputLine = shouldUseColor ? `${RESET}${line.replace(/ /g, '\u00A0')}` : line;
+    const outputLine = colors.shouldUseColor ? `${RESET}${line.replace(/ /g, '\u00A0')}` : line;
     console.log(outputLine);
   }
 }
@@ -509,6 +510,7 @@ async function main() {
     // Load config and get statusline mode
     const config = loadConfig({ includeProject: false, includeAssertions: false, includeLocale: false });
     const statuslineMode = config.statusline || 'full';
+    colors.setColorEnabled(config.statuslineColors !== false);
 
     // Render based on mode
     switch (statuslineMode) {
