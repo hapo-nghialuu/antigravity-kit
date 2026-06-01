@@ -14,6 +14,10 @@ All notable changes to CafeKit are documented here, following
 - **Detect-and-guide for system tools.** Missing `ffmpeg`/`poppler`/`librsvg`/
   `tesseract` and global npm CLIs (agent-browser) are detected and printed with
   per-OS install commands — never auto-installed.
+- **Dependency manifests for `pdf`, `docx`, `pptx` skills** (`scripts/requirements.txt`
+  and `scripts/package.json`) so their pip/npm deps are auto-installed by the setup
+  (previously declared only in SKILL.md prose). Playwright browser is fetched for the
+  pptx html2pptx workflow.
 
 ### Changed
 - **Addressing message is platform-aware**: now reads "Claude Code will call you …"

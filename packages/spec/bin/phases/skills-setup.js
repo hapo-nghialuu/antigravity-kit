@@ -65,7 +65,16 @@ function setupNode(ctx, skillsDir) {
     ctx.ui.startSpinner(`Installing npm deps: ${skill}...`);
     const ok = dep.npmInstall(dir);
     ctx.ui.stopSpinner(ok ? `${skill}: npm deps installed` : `${skill}: npm install failed`);
-    if (!ok) ctx.ui.warn(`npm install failed in ${dir} — retry manually.`);
+    if (!ok) {
+      ctx.ui.warn(`npm install failed in ${dir} — retry manually.`);
+      continue;
+    }
+    // Skills using Playwright (e.g. pptx html2pptx) need a browser binary too.
+    if (dep.pkgHasDep(dir, 'playwright')) {
+      ctx.ui.startSpinner(`Downloading Playwright browser for ${skill}...`);
+      const pw = dep.installPlaywrightBrowser(dir);
+      ctx.ui.stopSpinner(pw ? `${skill}: Playwright browser ready` : `${skill}: Playwright browser skipped`);
+    }
   }
 
   const chromeScripts = path.join(skillsDir, 'chrome-devtools', 'scripts');

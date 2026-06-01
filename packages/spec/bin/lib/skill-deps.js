@@ -86,6 +86,21 @@ function installChromium(scriptsDir) {
   return run('npx', ['--yes', 'puppeteer', 'browsers', 'install', 'chrome'], { cwd: scriptsDir }).ok;
 }
 
+/** Does a skill scripts dir declare a given npm dependency? */
+function pkgHasDep(scriptsDir, name) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(scriptsDir, 'package.json'), 'utf8'));
+    return Boolean((pkg.dependencies && pkg.dependencies[name]) || (pkg.devDependencies && pkg.devDependencies[name]));
+  } catch {
+    return false;
+  }
+}
+
+/** Download the Playwright Chromium browser (for the pptx html2pptx workflow). */
+function installPlaywrightBrowser(scriptsDir) {
+  return run('npx', ['--yes', 'playwright', 'install', 'chromium'], { cwd: scriptsDir }).ok;
+}
+
 /**
  * List installed skills that ship a runnable scripts/requirements.txt
  * (excludes the tests/ requirements). Returns [{ skill, file }].
@@ -150,6 +165,8 @@ module.exports = {
   installChromium,
   collectRequirements,
   collectSkillPackages,
+  pkgHasDep,
+  installPlaywrightBrowser,
   SYSTEM_TOOLS,
   GLOBAL_NPM,
   systemHint
