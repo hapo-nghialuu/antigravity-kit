@@ -3,7 +3,7 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.11.0] - 2026-06-01
+## [0.10.2] - 2026-06-01
 
 ### Added
 - **Opt-in skill dependency setup** (`bin/phases/skills-setup.js`, `bin/lib/skill-deps.js`).
