@@ -3,6 +3,14 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.2] - 2026-06-02
+
+### Added
+- **Update check on session start**: `session.cjs` calls the npm registry on each
+  new conversation and prints a banner when a newer version is available.
+  Result is cached in `.claude/.cafekit-update-cache.json` for **12 hours** to
+  avoid spamming the network. Cache file added to `.claude/gitignore`.
+
 ## [0.11.1] - 2026-06-02
 
 ### Added
