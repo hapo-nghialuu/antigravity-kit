@@ -56,7 +56,9 @@ function patchLanguageSection(ctx) {
 
   const newSection = `## Language Consistency <!-- cafekit:lang -->
 
-Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.`;
+Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.
+
+`;
 
   let content = fs.readFileSync(claudeMdFile, 'utf8');
   // Replace if marker present, else replace the generic section.
