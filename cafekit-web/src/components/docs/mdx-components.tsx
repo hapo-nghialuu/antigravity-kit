@@ -7,6 +7,7 @@ import { MainSkillIndex, SupportSkillCatalog } from './skill-overview';
 import { SddArtifactMap, SddCompareVisual, SddHeroVisual, SddLoopVisual } from './sdd-overview-visuals';
 import { SpecArtifactGrid, SpecLifecycleMap, SpecReadinessGrid } from './spec-lifecycle-visuals';
 import { CommandFlow, DocsHero, QualityGate, RuntimeBundle } from './workflow-visuals';
+import { TutorialGuide } from './tutorial-guide';
 
 export const MDXComponents = {
   ...proseComponents,
@@ -34,4 +35,5 @@ export const MDXComponents = {
   SkillConstellation,
   AgentGrid,
   PlatformMatrix,
+  TutorialGuide,
 };

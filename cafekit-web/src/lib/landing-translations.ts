@@ -37,6 +37,9 @@ type LandingTranslations = {
     copied: string;
     copy: string;
     comments: string[];
+    tutorialHeading: string;
+    tutorialBody: string;
+    tutorialCta: string;
   };
   contactForm: {
     heading: string;
@@ -261,6 +264,9 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 4. Verify and review the release candidate",
         "# 5. Commit, push, and deploy",
       ],
+      tutorialHeading: "New to CafeKit?",
+      tutorialBody: "Start from zero — step-by-step from no install to your first verified feature.",
+      tutorialCta: "Start tutorial",
     },
     contactForm: {
       heading: "Get in touch",
@@ -485,6 +491,9 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 4. Verify và review release candidate",
         "# 5. Commit, push và deploy",
       ],
+      tutorialHeading: "Mới biết CafeKit?",
+      tutorialBody: "Bắt đầu từ con số 0 — từng bước từ chưa cài gì đến feature đầu tiên đã verify.",
+      tutorialCta: "Bắt đầu hướng dẫn",
     },
     contactForm: {
       heading: "Liên hệ với chúng tôi",
@@ -703,6 +712,9 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 4. verify と review で候補を固める",
         "# 5. commit, push, deploy",
       ],
+      tutorialHeading: "CafeKit が初めてですか？",
+      tutorialBody: "ゼロから始めましょう — 未インストールから最初の verified feature まで案内します。",
+      tutorialCta: "チュートリアルを開始",
     },
     contactForm: {
       heading: "お問い合わせ",
