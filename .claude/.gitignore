@@ -17,3 +17,4 @@ hooks/.logs/
 agent-memory/
 settings.bak.json
 .mcp.json
+.cafekit-update-cache.json

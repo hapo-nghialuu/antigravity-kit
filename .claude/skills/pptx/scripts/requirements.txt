@@ -1,0 +1,4 @@
+# PPTX skill Python dependencies (installed by `cafekit --with-skills-deps`)
+
+# Extract text from presentations
+markitdown[pptx]>=0.0.1

@@ -4,3 +4,5 @@
 specs/_shared/
 plans/
 !plans/templates/
+.cafekit-backup/
+.cafekit.lock

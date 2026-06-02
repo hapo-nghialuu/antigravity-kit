@@ -1,0 +1,5 @@
+# DOCX skill Python dependencies (installed by `cafekit --with-skills-deps`)
+# Used by the OOXML editing path (document.py / utilities.py).
+
+# Secure XML parsing for existing .docx files
+defusedxml>=0.7.1

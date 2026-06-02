@@ -1,0 +1,40 @@
+{
+  "scope": "{{SCOPE}}",
+  "generated_at": "{{ISO_TIMESTAMP}}",
+  "status": "draft",
+  "docs_root": "{{DOCS_ROOT}}/as-is/{{SCOPE_SLUG}}",
+  "source_revision": "{{SOURCE_REVISION_OR_UNAVAILABLE_REASON}}",
+  "source_branch": "{{SOURCE_BRANCH_OR_UNAVAILABLE_REASON}}",
+  "evidence_policy": "observed-inferred-unknown",
+  "review_gate": "human_review_required",
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "approved_for_specs": false,
+  "source_scope": [
+    "{{SCOPE}}"
+  ],
+  "documents": [
+    "overview.html",
+    "system-overview.md",
+    "requirements-as-is.md",
+    "roles-and-permissions.md",
+    "entities-and-statuses.md",
+    "business-rules.md",
+    "integrations.md",
+    "architecture-c4.md",
+    "constraints-risks-and-decisions.md",
+    "glossary.md",
+    "evidence-map.md",
+    "unknowns-and-assumptions.md"
+  ],
+  "counts": {
+    "requirements": 0,
+    "evidence_items": 0,
+    "observed": 0,
+    "inferred": 0,
+    "unknown": 0,
+    "open_unknowns": 0
+  },
+  "next_recommended_step": "human_review"
+}

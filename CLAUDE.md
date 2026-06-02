@@ -116,9 +116,10 @@ Consult these when the task touches the relevant area:
 - Keep commits focused on actual changes.
 - Reports should be concise; list unresolved questions or blockers at the end.
 
-## Language Consistency
+## Language Consistency <!-- cafekit:lang -->
 
-When generating specs or structured project output, use the user's preferred language consistently across the whole spec workspace. Technical terms, code samples, and file paths may remain English.
+Always respond in **Tiếng Việt**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in Tiếng Việt.
+
 
 ## Communication
 
@@ -129,4 +130,4 @@ When generating specs or structured project output, use the user's preferred lan
 
 ## Addressing (Context Overflow Indicator)
 
-The AI always addresses the user as "đại ca" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
+Claude Code always addresses the user as "đại ca" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
