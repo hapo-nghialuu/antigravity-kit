@@ -141,13 +141,37 @@ try {
   /**
    * Check for a newer CafeKit version and return an update notice string,
    * or an empty string if already up to date or check fails.
+   * Result is cached in .claude/.cafekit-update-cache.json for 12 hours.
    */
   async function checkCafeKitUpdate(cwd) {
     const installed = getInstalledVersion(cwd);
-    if (!installed) return '';                    // not a CafeKit project
+    if (!installed) return '';
+
+    const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+    const cachePath = path.join(cwd, '.claude', '.cafekit-update-cache.json');
+
+    // Return cached result if still fresh.
+    try {
+      if (fs.existsSync(cachePath)) {
+        const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        if (Date.now() - (cache.ts || 0) < CACHE_TTL) {
+          return cache.notice || '';
+        }
+      }
+    } catch { /* stale or corrupt — refetch */ }
+
+    // Fetch from npm registry.
     const latest = await fetchLatestVersion();
-    if (!latest || !isNewer(installed, latest)) return '';
-    return `\n⚡ CafeKit update available: ${installed} → ${latest}\n   Run: npx @haposoft/cafekit\n`;
+    const notice = (latest && isNewer(installed, latest))
+      ? `\n⚡ CafeKit update available: ${installed} → ${latest}\n   Run: npx @haposoft/cafekit\n`
+      : '';
+
+    // Persist cache (fail-open if write fails).
+    try {
+      fs.writeFileSync(cachePath, JSON.stringify({ ts: Date.now(), notice }), 'utf8');
+    } catch { /* fail-open */ }
+
+    return notice;
   }
 
   // ── Main ──────────────────────────────────────────────────────────────────
