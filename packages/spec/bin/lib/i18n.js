@@ -1,143 +1,244 @@
 /**
- * Installer i18n (en / ja / vi).
+ * Installer i18n — English / 日本語 / Tiếng Việt.
  *
- * Localizes the user-facing installer strings (prompts, milestones, summary,
- * next steps). High-frequency detail/spinner logs stay English by design.
+ * Covers every user-visible string: prompts, spinners, warnings, summary and
+ * next steps. High-frequency internal debug logs stay English.
  *
- * The chosen language is also written to the installed runtime.json
- * (locale.responseLanguage) so the AI continues in that language afterwards.
- *
- * Usage: const t = createTranslator(lang); t('installingFor', { names });
+ * Tone: concise, friendly, action-oriented. No ellipsis abuse (…); imperative
+ * verbs; consistent capitalisation per language norms.
  */
 
 const SUPPORTED = ['en', 'ja', 'vi'];
 
-// Per-language label shown in the language picker (in the language's own script).
 const LANGUAGE_LABELS = { en: 'English', ja: '日本語', vi: 'Tiếng Việt' };
 
 const MESSAGES = {
+  // ─── English ───────────────────────────────────────────────────────────────
   en: {
-    installingFor: 'Installing for: {names}',
-    modeForce: 'Mode: force-overwrite (replace user-modified files; backup kept)',
-    modeDryRun: 'Mode: dry-run (preview only, no changes written)',
-    modeInstall: 'Mode: install/update (selective; preserves user-modified files)',
-    selectPlatform: 'Select which platform(s) to install for',
-    allPlatforms: 'All platforms',
-    confirmAllDetected: 'Install for all detected platforms? ({names})',
-    cancelled: 'Installation cancelled.',
-    platformInstalled: '{name} installed — {files} file(s), {skills} skill(s)',
-    platformDryInstalled: '{name} would install — {files} file(s), {skills} skill(s)',
-    addressingQuestion: 'How should the AI address you?',
-    addressingPlaceholder: 'e.g. boss, sir — Enter to skip',
-    addressingSet: '{name} will call you "{addr}"',
-    addressingInvalid: 'Invalid input (letters only); skipped addressing',
-    skillDepsConfirm: 'Install skill dependencies now? (Python venv + pip + Chromium — slower)',
-    skillsSkipped: 'Skill dependencies skipped — run later with: npx @haposoft/cafekit --with-skills-deps',
-    optionalToolsTitle: 'Optional tools to install manually',
-    summaryTitle: 'Installation complete',
+    // Banner / lock / rollback
+    reclaimed:       'Stale install lock reclaimed (previous process was gone).',
+    lockHeld:        'Another install is already running (pid {pid}, started {since}).\n  If that process has ended, delete .cafekit.lock and try again.',
+    installFailed:   'Installation failed: {reason}',
+    rolledBack:      'Changes rolled back to the pre-install state.',
+    rollbackFailed:  'Rollback failed: {reason}\n  Manual restore available at: {dir}',
+    dryRunBanner:    'Dry-run — no files will be written.',
+
+    // Language / platform selection
+    selectLanguage:      'Select language',
+    selectPlatform:      'Select platform(s) to install',
+    allPlatforms:        'All platforms',
+    confirmAllDetected:  'Found existing configs: {names}. Install for all?',
+    defaultedToClaude:   'No existing config detected — defaulting to Claude Code.',
+    cancelled:           'Installation cancelled.',
+
+    // Mode banner
+    modeForce:    'Mode: force-overwrite  •  user-modified files will be replaced (backup kept)',
+    modeDryRun:   'Mode: dry-run  •  no changes will be written',
+    modeInstall:  'Mode: install / update  •  your customisations are preserved',
+
+    // Platform install spinner
+    installingPlatform:    'Installing {name}',
+    platformInstalled:     '{name} — {files} file(s), {skills} skill(s)',
+    platformDryInstalled:  '{name} — {files} file(s), {skills} skill(s)  [dry-run]',
+
+    // Addressing
+    addressingQuestion:    'What should the AI call you?',
+    addressingPlaceholder: 'e.g. boss, friend — Enter to skip',
+    addressingSet:         '{name} will address you as "{addr}"',
+    addressingInvalid:     'Letters only please — addressing skipped.',
+
+    // Skills / deps setup
+    skillDepsConfirm:      'Install skill dependencies? (Python venv, pip, npm, Chromium — takes a few minutes)',
+    skillsSkipped:         'Skill dependencies skipped.\n  Run later: npx @haposoft/cafekit --with-skills-deps',
+    venvCreating:          'Setting up Python environment',
+    venvReady:             'Python environment ready',
+    venvFailed:            'Could not create Python environment — check your Python 3 installation.',
+    venvNoHost:            'Python 3 not found. Install it, then re-run with --with-skills-deps.',
+    pipInstalling:         'Installing Python packages: {skill}',
+    pipInstalled:          '{skill} — Python packages ready',
+    pipFailed:             '{skill} — some packages failed. Retry:\n  {cmd}',
+    npmInstalling:         'Installing Node packages: {skill}',
+    npmInstalled:          '{skill} — Node packages ready',
+    npmFailed:             '{skill} — npm install failed. Check the log and retry in: {dir}',
+    playwrightInstalling:  'Downloading Playwright browser for {skill}',
+    playwrightReady:       '{skill} — Playwright browser ready',
+    playwrightSkipped:     '{skill} — Playwright browser download skipped',
+    chromiumInstalling:    'Downloading Chromium for chrome-devtools',
+    chromiumReady:         'Chromium ready',
+    chromiumSkipped:       'Chromium download skipped — chrome-devtools will prompt on first use.',
+    optionalToolsTitle:    'Optional tools to install manually',
+
+    // Summary stats
+    summaryTitle:    'Installation complete',
     summaryDryTitle: 'Dry-run preview',
-    labelCopied: 'Copied',
-    labelUpdated: 'Updated',
-    labelUnchanged: 'Unchanged',
-    labelPreserved: 'Preserved',
-    labelSkills: 'Skills',
-    labelVersion: 'CafeKit Version',
-    labelMissing: 'Missing',
-    labelErrors: 'Errors',
-    yes: 'yes',
-    no: 'no',
-    preservedNote: '{n} user-modified file(s) preserved. Re-run with --force-overwrite to replace them (backup kept under .cafekit-backup/).',
-    nextStepsTitle: 'Next steps',
-    nsClaude: 'Claude: use /hapo:specs <feature-description>',
-    nsOpencode: 'OpenCode: ask the agent to start a feature or brainstorm',
-    nsKeys: 'Some skills need keys: {skills} — copy <skill>/.env.example → .env and fill in',
-    nsForce: 'Use --force-overwrite to refresh user-modified files',
-    dryRunOnly: 'Dry-run only — re-run without --dry-run to apply.',
-    outroDone: 'Done — docs: https://github.com/haposoft/cafekit'
+    labelCopied:     'Installed',
+    labelUpdated:    'Updated',
+    labelUnchanged:  'Unchanged',
+    labelPreserved:  'Preserved',
+    labelSkills:     'Skills',
+    labelVersion:    'CafeKit Version',
+    labelMissing:    'Missing',
+    labelErrors:     'Errors',
+    yes:             'yes',
+    no:              'no',
+    preservedNote:   '{n} file(s) you edited were kept as-is.\n  Re-run with --force-overwrite to reset them (a backup is saved to .cafekit-backup/).',
+
+    // Next steps
+    nextStepsTitle:  'Next steps',
+    nsClaude:        'Start coding: /hapo:specs <feature>',
+    nsOpencode:      'Start coding: ask the agent to begin a new feature or brainstorm',
+    nsKeys:          'Some skills need API keys: {skills}\n  Copy <skill>/.env.example → .env and fill in the values',
+    nsForce:         'To force-refresh managed files: npx @haposoft/cafekit --force-overwrite',
+    dryRunOnly:      'Dry-run complete — no files were changed.\n  Re-run without --dry-run to apply.',
+    outroDone:       'Done!  docs: https://github.com/haposoft/cafekit'
   },
 
+  // ─── 日本語 ─────────────────────────────────────────────────────────────────
   ja: {
-    installingFor: 'インストール対象: {names}',
-    modeForce: 'モード: 強制上書き（ユーザー変更ファイルを置換、バックアップ保持）',
-    modeDryRun: 'モード: ドライラン（プレビューのみ、変更なし）',
-    modeInstall: 'モード: インストール/更新（選択的・ユーザー変更を保持）',
-    selectPlatform: 'インストールするプラットフォームを選択',
-    allPlatforms: 'すべてのプラットフォーム',
-    confirmAllDetected: '検出された全プラットフォームにインストールしますか？（{names}）',
-    cancelled: 'インストールを中止しました。',
-    platformInstalled: '{name} をインストール — {files} ファイル、{skills} スキル',
-    platformDryInstalled: '{name} をインストール予定 — {files} ファイル、{skills} スキル',
-    addressingQuestion: 'AI からどう呼ばれたいですか？',
-    addressingPlaceholder: '例: boss, sir — Enter でスキップ',
-    addressingSet: '{name} はあなたを「{addr}」と呼びます',
-    addressingInvalid: '無効な入力（文字のみ）。呼称設定をスキップしました',
-    skillDepsConfirm: 'スキルの依存関係を今すぐインストールしますか？（Python venv + pip + Chromium、時間がかかります）',
-    skillsSkipped: 'スキル依存関係をスキップしました。後で実行: npx @haposoft/cafekit --with-skills-deps',
-    optionalToolsTitle: '手動でインストールする任意ツール',
-    summaryTitle: 'インストール完了',
+    reclaimed:       '前のプロセスが終了したため、ロックを解除しました。',
+    lockHeld:        '別のインストールが実行中です（pid {pid}、開始: {since}）。\n  そのプロセスが終了している場合は .cafekit.lock を削除して再試行してください。',
+    installFailed:   'インストールに失敗しました: {reason}',
+    rolledBack:      'インストール前の状態に戻しました。',
+    rollbackFailed:  'ロールバックに失敗しました: {reason}\n  手動復元可能: {dir}',
+    dryRunBanner:    'ドライラン — ファイルへの書き込みは行いません。',
+
+    selectLanguage:      '言語を選択してください',
+    selectPlatform:      'インストールするプラットフォームを選択',
+    allPlatforms:        'すべてのプラットフォーム',
+    confirmAllDetected:  '既存の設定が見つかりました: {names}。すべてにインストールしますか？',
+    defaultedToClaude:   '既存の設定が見つかりません — Claude Code をデフォルトで使用します。',
+    cancelled:           'インストールをキャンセルしました。',
+
+    modeForce:    'モード: 強制上書き  •  編集済みファイルを置換します（バックアップあり）',
+    modeDryRun:   'モード: ドライラン  •  ファイルへの変更はありません',
+    modeInstall:  'モード: インストール / 更新  •  カスタマイズは保持されます',
+
+    installingPlatform:    '{name} をインストール中',
+    platformInstalled:     '{name} — {files} ファイル、{skills} スキル',
+    platformDryInstalled:  '{name} — {files} ファイル、{skills} スキル  [ドライラン]',
+
+    addressingQuestion:    'AI にどう呼ばれたいですか？',
+    addressingPlaceholder: '例: さん、くん — Enter でスキップ',
+    addressingSet:         '{name} はあなたを「{addr}」とお呼びします',
+    addressingInvalid:     '文字のみ入力できます — 呼称の設定をスキップしました。',
+
+    skillDepsConfirm:      'スキルの依存関係をインストールしますか？（Python venv、pip、npm、Chromium — 数分かかります）',
+    skillsSkipped:         'スキルの依存関係をスキップしました。\n  後で実行: npx @haposoft/cafekit --with-skills-deps',
+    venvCreating:          'Python 環境を準備しています',
+    venvReady:             'Python 環境の準備ができました',
+    venvFailed:            'Python 環境を作成できませんでした — Python 3 のインストールを確認してください。',
+    venvNoHost:            'Python 3 が見つかりません。インストール後、--with-skills-deps で再実行してください。',
+    pipInstalling:         'Python パッケージをインストール中: {skill}',
+    pipInstalled:          '{skill} — Python パッケージの準備ができました',
+    pipFailed:             '{skill} — 一部のパッケージが失敗しました。再試行:\n  {cmd}',
+    npmInstalling:         'Node パッケージをインストール中: {skill}',
+    npmInstalled:          '{skill} — Node パッケージの準備ができました',
+    npmFailed:             '{skill} — npm install に失敗しました。{dir} で手動再試行してください。',
+    playwrightInstalling:  '{skill} 用の Playwright ブラウザをダウンロード中',
+    playwrightReady:       '{skill} — Playwright ブラウザの準備ができました',
+    playwrightSkipped:     '{skill} — Playwright ブラウザのダウンロードをスキップしました',
+    chromiumInstalling:    'chrome-devtools 用 Chromium をダウンロード中',
+    chromiumReady:         'Chromium の準備ができました',
+    chromiumSkipped:       'Chromium のダウンロードをスキップ — 初回使用時に chrome-devtools が自動取得します。',
+    optionalToolsTitle:    '手動でインストールが必要なオプションツール',
+
+    summaryTitle:    'インストール完了',
     summaryDryTitle: 'ドライラン プレビュー',
-    labelCopied: 'コピー',
-    labelUpdated: '更新',
-    labelUnchanged: '変更なし',
-    labelPreserved: '保持',
-    labelSkills: 'スキル',
-    labelVersion: 'CafeKit バージョン',
-    labelMissing: '不足',
-    labelErrors: 'エラー',
-    yes: 'はい',
-    no: 'いいえ',
-    preservedNote: 'ユーザー変更ファイル {n} 件を保持しました。置換するには --force-overwrite で再実行（バックアップは .cafekit-backup/ に保持）。',
-    nextStepsTitle: '次のステップ',
-    nsClaude: 'Claude: /hapo:specs <機能の説明> を使用',
-    nsOpencode: 'OpenCode: エージェントに機能開始やブレストを依頼',
-    nsKeys: '一部のスキルはキーが必要: {skills} — <skill>/.env.example を .env にコピーして記入',
-    nsForce: 'ユーザー変更ファイルを更新するには --force-overwrite を使用',
-    dryRunOnly: 'ドライランのみ — 適用するには --dry-run なしで再実行してください。',
-    outroDone: '完了 — ドキュメント: https://github.com/haposoft/cafekit'
+    labelCopied:     'インストール',
+    labelUpdated:    '更新',
+    labelUnchanged:  '変更なし',
+    labelPreserved:  '保持',
+    labelSkills:     'スキル',
+    labelVersion:    'CafeKit Version',
+    labelMissing:    '不足',
+    labelErrors:     'エラー',
+    yes:             'はい',
+    no:              'いいえ',
+    preservedNote:   '編集済みファイル {n} 件はそのままにしました。\n  --force-overwrite で再実行するとリセットできます（.cafekit-backup/ にバックアップ保存）。',
+
+    nextStepsTitle:  '次のステップ',
+    nsClaude:        'コーディング開始: /hapo:specs <機能名>',
+    nsOpencode:      'コーディング開始: エージェントに新機能の開始またはブレストを依頼',
+    nsKeys:          '一部のスキルに API キーが必要です: {skills}\n  <skill>/.env.example を .env にコピーし、値を入力してください',
+    nsForce:         '管理ファイルを強制更新: npx @haposoft/cafekit --force-overwrite',
+    dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
+    outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit'
   },
 
+  // ─── Tiếng Việt ─────────────────────────────────────────────────────────────
   vi: {
-    installingFor: 'Cài cho: {names}',
-    modeForce: 'Chế độ: ghi đè (thay file người dùng đã sửa; có backup)',
-    modeDryRun: 'Chế độ: dry-run (chỉ xem trước, không ghi gì)',
-    modeInstall: 'Chế độ: cài/cập nhật (chọn lọc; giữ file người dùng đã sửa)',
-    selectPlatform: 'Chọn (các) nền tảng để cài',
-    allPlatforms: 'Tất cả nền tảng',
-    confirmAllDetected: 'Cài cho tất cả nền tảng đã phát hiện? ({names})',
-    cancelled: 'Đã hủy cài đặt.',
-    platformInstalled: 'Đã cài {name} — {files} tệp, {skills} skill',
-    platformDryInstalled: 'Sẽ cài {name} — {files} tệp, {skills} skill',
-    addressingQuestion: 'AI nên xưng hô với bạn thế nào?',
+    reclaimed:       'Khóa cài đặt cũ đã được thu hồi (tiến trình trước đã kết thúc).',
+    lockHeld:        'Có một phiên cài đặt khác đang chạy (pid {pid}, bắt đầu: {since}).\n  Nếu tiến trình đó đã kết thúc, hãy xóa .cafekit.lock rồi thử lại.',
+    installFailed:   'Cài đặt thất bại: {reason}',
+    rolledBack:      'Đã hoàn tác về trạng thái trước khi cài đặt.',
+    rollbackFailed:  'Hoàn tác thất bại: {reason}\n  Bản sao lưu thủ công: {dir}',
+    dryRunBanner:    'Dry-run — sẽ không có tệp nào được ghi.',
+
+    selectLanguage:      'Chọn ngôn ngữ',
+    selectPlatform:      'Chọn (các) nền tảng cần cài',
+    allPlatforms:        'Tất cả nền tảng',
+    confirmAllDetected:  'Phát hiện cấu hình sẵn: {names}. Cài cho tất cả?',
+    defaultedToClaude:   'Không tìm thấy cấu hình sẵn — mặc định dùng Claude Code.',
+    cancelled:           'Đã hủy cài đặt.',
+
+    modeForce:    'Chế độ: ghi đè  •  file bạn đã sửa sẽ bị thay (có bản sao lưu)',
+    modeDryRun:   'Chế độ: dry-run  •  sẽ không thay đổi bất kỳ tệp nào',
+    modeInstall:  'Chế độ: cài / cập nhật  •  nội dung bạn tuỳ chỉnh được giữ nguyên',
+
+    installingPlatform:    'Đang cài {name}',
+    platformInstalled:     '{name} — {files} tệp, {skills} skill',
+    platformDryInstalled:  '{name} — {files} tệp, {skills} skill  [dry-run]',
+
+    addressingQuestion:    'Bạn muốn AI gọi bạn là gì?',
     addressingPlaceholder: 'vd: sếp, đại ca — Enter để bỏ qua',
-    addressingSet: '{name} sẽ gọi bạn là "{addr}"',
-    addressingInvalid: 'Nhập không hợp lệ (chỉ chữ cái); bỏ qua xưng hô',
-    skillDepsConfirm: 'Cài dependencies cho skill ngay? (Python venv + pip + Chromium — chậm hơn)',
-    skillsSkipped: 'Đã bỏ qua dependencies skill — chạy sau: npx @haposoft/cafekit --with-skills-deps',
-    optionalToolsTitle: 'Công cụ tùy chọn cần cài thủ công',
-    summaryTitle: 'Cài đặt hoàn tất',
+    addressingSet:         '{name} sẽ gọi bạn là "{addr}"',
+    addressingInvalid:     'Chỉ nhập chữ cái — bỏ qua thiết lập xưng hô.',
+
+    skillDepsConfirm:      'Cài dependencies cho skill ngay? (Python venv, pip, npm, Chromium — mất vài phút)',
+    skillsSkipped:         'Đã bỏ qua dependencies skill.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-skills-deps',
+    venvCreating:          'Đang thiết lập môi trường Python',
+    venvReady:             'Môi trường Python đã sẵn sàng',
+    venvFailed:            'Không thể tạo môi trường Python — hãy kiểm tra cài đặt Python 3.',
+    venvNoHost:            'Không tìm thấy Python 3. Hãy cài Python 3 rồi chạy lại với --with-skills-deps.',
+    pipInstalling:         'Đang cài gói Python: {skill}',
+    pipInstalled:          '{skill} — gói Python đã sẵn sàng',
+    pipFailed:             '{skill} — một số gói cài thất bại. Chạy lại thủ công:\n  {cmd}',
+    npmInstalling:         'Đang cài gói Node: {skill}',
+    npmInstalled:          '{skill} — gói Node đã sẵn sàng',
+    npmFailed:             '{skill} — npm install thất bại. Hãy thử lại trong: {dir}',
+    playwrightInstalling:  'Đang tải Playwright browser cho {skill}',
+    playwrightReady:       '{skill} — Playwright browser đã sẵn sàng',
+    playwrightSkipped:     '{skill} — đã bỏ qua tải Playwright browser',
+    chromiumInstalling:    'Đang tải Chromium cho chrome-devtools',
+    chromiumReady:         'Chromium đã sẵn sàng',
+    chromiumSkipped:       'Bỏ qua tải Chromium — chrome-devtools sẽ tự tải khi dùng lần đầu.',
+    optionalToolsTitle:    'Công cụ tuỳ chọn cần cài thủ công',
+
+    summaryTitle:    'Cài đặt hoàn tất',
     summaryDryTitle: 'Xem trước dry-run',
-    labelCopied: 'Đã chép',
-    labelUpdated: 'Đã cập nhật',
-    labelUnchanged: 'Không đổi',
-    labelPreserved: 'Đã giữ',
-    labelSkills: 'Skill',
-    labelVersion: 'Phiên bản CafeKit',
-    labelMissing: 'Thiếu',
-    labelErrors: 'Lỗi',
-    yes: 'có',
-    no: 'không',
-    preservedNote: 'Đã giữ {n} tệp người dùng sửa. Chạy lại với --force-overwrite để thay (backup ở .cafekit-backup/).',
-    nextStepsTitle: 'Bước tiếp theo',
-    nsClaude: 'Claude: dùng /hapo:specs <mô-tả-tính-năng>',
-    nsOpencode: 'OpenCode: yêu cầu agent bắt đầu tính năng hoặc brainstorm',
-    nsKeys: 'Một số skill cần key: {skills} — chép <skill>/.env.example → .env và điền vào',
-    nsForce: 'Dùng --force-overwrite để làm mới file người dùng đã sửa',
-    dryRunOnly: 'Chỉ dry-run — chạy lại không có --dry-run để áp dụng.',
-    outroDone: 'Xong — tài liệu: https://github.com/haposoft/cafekit'
+    labelCopied:     'Đã cài',
+    labelUpdated:    'Đã cập nhật',
+    labelUnchanged:  'Không đổi',
+    labelPreserved:  'Đã giữ',
+    labelSkills:     'Skill',
+    labelVersion:    'CafeKit Version',
+    labelMissing:    'Thiếu',
+    labelErrors:     'Lỗi',
+    yes:             'có',
+    no:              'không',
+    preservedNote:   '{n} tệp bạn đã chỉnh sửa được giữ nguyên.\n  Chạy lại với --force-overwrite để cài đè (bản sao lưu ở .cafekit-backup/).',
+
+    nextStepsTitle:  'Bước tiếp theo',
+    nsClaude:        'Bắt đầu code: /hapo:specs <mô-tả-tính-năng>',
+    nsOpencode:      'Bắt đầu code: yêu cầu agent khởi động tính năng mới hoặc brainstorm',
+    nsKeys:          'Một số skill cần API key: {skills}\n  Sao chép <skill>/.env.example → .env rồi điền giá trị',
+    nsForce:         'Làm mới file được quản lý: npx @haposoft/cafekit --force-overwrite',
+    dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',
+    outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit'
   }
 };
 
-/** Normalize a language code to a supported one; unknown → 'ja' (per project choice). */
+/** Normalize a language code to a supported one; unknown → 'ja'. */
 function resolveLang(code) {
   if (!code) return 'en';
   const lc = String(code).toLowerCase().slice(0, 2);

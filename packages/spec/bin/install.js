@@ -46,7 +46,7 @@ function installPlatform(ctx, platformKey) {
   ctx.trackers[platformKey] = manifestLib.createTracker(platform.folder, packageJson.version);
 
   const before = { copied: ctx.results.copied, updated: ctx.results.updated, skills: ctx.results.installedSkills };
-  ctx.ui.startSpinner(`Installing ${platform.name} (${platform.folder}/)`);
+  ctx.ui.startSpinner(ctx.t('installingPlatform', { name: platform.name }));
 
   copyPlatformFiles(ctx, platformKey);
 
@@ -122,7 +122,7 @@ async function main() {
   try {
     ctx = buildContext(process.argv, `${Date.now()}`);
     ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}Installer v${packageJson.version} · Multi-platform SDD`);
-    if (got.reclaimed) ctx.ui.info('Reclaimed a stale install lock from a dead process.');
+    if (got.reclaimed) ctx.ui.info(ctx.t('reclaimed'));
 
     await selectLanguage(ctx);
     await resolvePlatforms(ctx);
@@ -153,14 +153,14 @@ async function main() {
     exitCode = ctx.results.errors > 0 ? 1 : 0;
   } catch (error) {
     const log = ctx && ctx.ui ? ctx.ui : { error: (m) => console.error(m) };
-    log.error(`Installation failed: ${error.message}`);
+    const t = ctx ? ctx.t : (k) => k;
+    log.error(t('installFailed', { reason: error.message }));
     if (ctx && ctx.backupDir && !ctx.dryRun) {
       try {
         backup.restore(ctx.backupDir);
-        log.error('Rolled back to the pre-install state from snapshot.');
+        log.error(t('rolledBack'));
       } catch (restoreError) {
-        log.error(`Rollback failed: ${restoreError.message}`);
-        log.error(`Manual restore available at: ${ctx.backupDir}`);
+        log.error(t('rollbackFailed', { reason: restoreError.message, dir: ctx.backupDir }));
       }
     }
     exitCode = 1;

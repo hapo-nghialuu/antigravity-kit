@@ -5,6 +5,7 @@
  *  - Python venv at <skillsDir>/.venv + pip install each skill's requirements
  *  - skill-local `npm install` (scripts/package.json without node_modules)
  *  - Puppeteer Chromium binary (chrome-devtools)
+ *  - Playwright browser binary (pptx html2pptx)
  *
  * System binaries (ffmpeg, poppler, librsvg, tesseract) and global npm CLIs are
  * NOT auto-installed — they are detected and printed as guidance. All steps are
@@ -36,80 +37,80 @@ function setupPython(ctx, skillsDir) {
 
   const py = dep.findPython();
   if (!py) {
-    ctx.ui.warn('Python 3 not found — skipped venv. Install Python 3, then re-run with --with-skills-deps.');
+    ctx.ui.warn(ctx.t('venvNoHost'));
     return;
   }
 
-  ctx.ui.startSpinner('Creating Python venv...');
+  ctx.ui.startSpinner(ctx.t('venvCreating'));
   if (!dep.createVenv(skillsDir, py)) {
-    ctx.ui.stopSpinner('Could not create Python venv');
-    ctx.ui.warn(`venv creation failed at ${dep.venvDir(skillsDir)} — check your Python install.`);
+    ctx.ui.stopSpinner(ctx.t('venvFailed'));
+    ctx.ui.warn(ctx.t('venvFailed'));
     return;
   }
   dep.pipUpgrade(skillsDir);
-  ctx.ui.stopSpinner(`Python venv ready (${dep.venvDir(skillsDir)})`);
+  ctx.ui.stopSpinner(`${ctx.t('venvReady')} (${dep.venvDir(skillsDir)})`);
 
   for (const { skill, file } of reqs) {
-    ctx.ui.startSpinner(`Installing Python deps: ${skill}...`);
+    ctx.ui.startSpinner(ctx.t('pipInstalling', { skill }));
     const ok = dep.pipInstall(skillsDir, file);
-    ctx.ui.stopSpinner(ok ? `${skill}: Python deps installed` : `${skill}: some Python deps failed`);
-    if (!ok) {
-      ctx.ui.warn(`pip failed for ${skill}. Retry: "${dep.venvPython(skillsDir)}" -m pip install -r "${file}"`);
+    if (ok) {
+      ctx.ui.stopSpinner(ctx.t('pipInstalled', { skill }));
+    } else {
+      ctx.ui.stopSpinner(ctx.t('pipFailed', { skill, cmd: `"${dep.venvPython(skillsDir)}" -m pip install -r "${file}"` }));
     }
   }
 }
 
-/** Run skill-local npm installs + Chromium for a platform's skills. */
+/** Run skill-local npm installs + browser binaries for a platform's skills. */
 function setupNode(ctx, skillsDir) {
   for (const { skill, dir } of dep.collectSkillPackages(skillsDir)) {
-    ctx.ui.startSpinner(`Installing npm deps: ${skill}...`);
+    ctx.ui.startSpinner(ctx.t('npmInstalling', { skill }));
     const ok = dep.npmInstall(dir);
-    ctx.ui.stopSpinner(ok ? `${skill}: npm deps installed` : `${skill}: npm install failed`);
-    if (!ok) {
-      ctx.ui.warn(`npm install failed in ${dir} — retry manually.`);
+    if (ok) {
+      ctx.ui.stopSpinner(ctx.t('npmInstalled', { skill }));
+    } else {
+      ctx.ui.stopSpinner(ctx.t('npmFailed', { skill, dir }));
       continue;
     }
-    // Skills using Playwright (e.g. pptx html2pptx) need a browser binary too.
+
+    // Skills using Playwright (e.g. pptx) also need a browser binary.
     if (dep.pkgHasDep(dir, 'playwright')) {
-      ctx.ui.startSpinner(`Downloading Playwright browser for ${skill}...`);
+      ctx.ui.startSpinner(ctx.t('playwrightInstalling', { skill }));
       const pw = dep.installPlaywrightBrowser(dir);
-      ctx.ui.stopSpinner(pw ? `${skill}: Playwright browser ready` : `${skill}: Playwright browser skipped`);
+      ctx.ui.stopSpinner(pw ? ctx.t('playwrightReady', { skill }) : ctx.t('playwrightSkipped', { skill }));
     }
   }
 
+  // Chromium for chrome-devtools (puppeteer-based).
   const chromeScripts = path.join(skillsDir, 'chrome-devtools', 'scripts');
   if (fs.existsSync(path.join(chromeScripts, 'package.json'))) {
-    ctx.ui.startSpinner('Downloading Chromium for chrome-devtools...');
+    ctx.ui.startSpinner(ctx.t('chromiumInstalling'));
     const ok = dep.installChromium(chromeScripts);
-    ctx.ui.stopSpinner(ok ? 'Chromium ready' : 'Chromium download skipped/failed');
-    if (!ok) ctx.ui.warn('Chromium not downloaded — chrome-devtools may prompt on first use.');
+    ctx.ui.stopSpinner(ok ? ctx.t('chromiumReady') : ctx.t('chromiumSkipped'));
   }
 }
 
 /** Detect (don't install) system binaries + global npm CLIs and print guidance. */
 function guideManual(ctx) {
   const missingTools = dep.SYSTEM_TOOLS.filter((t) => !dep.hasCmd(t.cmd));
-  const missingNpm = dep.GLOBAL_NPM.filter((g) => !dep.hasCmd(g.cmd));
+  const missingNpm   = dep.GLOBAL_NPM.filter((g) => !dep.hasCmd(g.cmd));
   if (missingTools.length === 0 && missingNpm.length === 0) return;
 
   const lines = [];
   for (const t of missingTools) lines.push(`${t.cmd}  — ${t.why}\n   ${dep.systemHint(t)}`);
-  for (const g of missingNpm) lines.push(`${g.cmd}  — ${g.why}\n   npm install -g ${g.pkg}`);
+  for (const g of missingNpm)   lines.push(`${g.cmd}  — ${g.why}\n   npm install -g ${g.pkg}`);
   ctx.ui.note(lines.join('\n'), ctx.t('optionalToolsTitle'));
 }
 
 async function setupSkillDeps(ctx) {
   if (!(await shouldRun(ctx))) {
-    if (!ctx.dryRun) {
-      ctx.ui.info(ctx.t('skillsSkipped'));
-    }
+    if (!ctx.dryRun) ctx.ui.info(ctx.t('skillsSkipped'));
     return ctx;
   }
 
   for (const key of ctx.platforms) {
-    const skillsDir = PLATFORMS[key].skillsDir;
-    setupPython(ctx, skillsDir);
-    setupNode(ctx, skillsDir);
+    setupPython(ctx, PLATFORMS[key].skillsDir);
+    setupNode(ctx, PLATFORMS[key].skillsDir);
   }
 
   guideManual(ctx);
