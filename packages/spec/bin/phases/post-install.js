@@ -17,10 +17,42 @@ const { PLATFORMS } = require('../lib/context');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
 
 /**
- * Persist the chosen UI language into each platform's runtime.json
- * (locale.responseLanguage) so the AI keeps responding in it. Re-records the
- * file in the platform tracker so the ownership baseline stays accurate.
+ * Patch the "## Language Consistency" section in CLAUDE.md with the chosen
+ * language so every AI session knows which language to respond in — without
+ * relying on hooks reading runtime.json.
+ *
+ * The section is identified by a stable marker comment so subsequent installs
+ * can update it idempotently.
  */
+function patchLanguageSection(ctx) {
+  if (!ctx.platforms.includes('claude')) return;
+  if (ctx.lang === 'en') return; // English is the default — no override needed.
+
+  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
+  if (!fs.existsSync(claudeMdFile)) return;
+
+  const LANG_LABEL = { vi: 'Vietnamese', ja: 'Japanese', en: 'English' };
+  const label = LANG_LABEL[ctx.lang] || ctx.lang;
+
+  const newSection = `## Language Consistency <!-- cafekit:lang -->
+
+Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.`;
+
+  let content = fs.readFileSync(claudeMdFile, 'utf8');
+  // Replace if marker present, else replace the generic section.
+  const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
+  const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
+
+  if (markerRe.test(content)) {
+    content = content.replace(markerRe, newSection);
+  } else if (genericRe.test(content)) {
+    content = content.replace(genericRe, newSection);
+  } else {
+    content += `\n${newSection}\n`;
+  }
+
+  fs.writeFileSync(claudeMdFile, content, 'utf8');
+}
 function patchRuntimeLocale(ctx) {
   for (const key of ctx.platforms) {
     const rtPath = path.join(PLATFORMS[key].folder, 'runtime.json');
@@ -101,6 +133,9 @@ async function runPostInstall(ctx) {
   }
 
   await setupAddressing(ctx);
+
+  // Patch Language Consistency section in CLAUDE.md so AI responds in the chosen language.
+  patchLanguageSection(ctx);
 
   // Persist chosen language into each platform's runtime.json (records in tracker).
   patchRuntimeLocale(ctx);
