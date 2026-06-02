@@ -3,7 +3,42 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.10.3] - 2026-06-01
+## [0.11.0] - 2026-06-02
+
+### Added
+- **Installer i18n (en / ja / vi)**: language picker as first step; all prompts,
+  spinners, summary and next-steps render in the chosen language. Stored in
+  `runtime.json`, `CLAUDE.md` (Language Consistency section) and `settings.json`.
+- **`--lang <code>`** flag for non-interactive / CI installs.
+- **Opt-in skill dependency setup** (`--with-skills-deps`): Python venv + pip,
+  skill-local npm, Chromium (chrome-devtools) and Playwright browser (pptx).
+  Re-runs now upgrade existing packages (`pip install --upgrade`, `npm update`).
+- **Dependency manifests for pdf, docx, pptx skills** so `--with-skills-deps`
+  auto-provisions them (previously only ai-multimodal and chrome-devtools).
+- **`--help` / `-h` and `--version` / `-v`** flags.
+- **Summary surfaces skills needing API keys** dynamically from `.env.example`.
+- **Version check before install**: same version → "already up to date" + exit;
+  downgrade → confirm or abort; upgrade → proceeds normally.
+
+### Fixed
+- **Chromium download** (`chrome-devtools`): switched to puppeteer's own
+  `install.mjs` (cache-aware); previous `npx puppeteer browsers install chrome`
+  had no such bin and silently failed.
+- **Manifest prune**: `removeObsoleteClaudeRuntimeFiles` now also removes the
+  deleted files' entries from `cafekit-manifest.json`, preventing zombie entries.
+- **Gemini API key prompt removed** (upstream `@google/gemini-cli` was removed).
+  `GEMINI_API_KEY` is documented in `ai-multimodal/.env.example` instead.
+- **`API keys isolated in .env` next-step line** corrected (no longer valid after
+  removing the Gemini prompt).
+- Addressing regex upgraded to Unicode `\p{L}` — accepts Japanese, Vietnamese
+  and any-script names.
+- `CLAUDE.md`/`rules/` no longer force-overwrite user edits (tracked since 0.10.0).
+
+### Changed
+- **Addressing label is platform-aware**: "Claude Code will call you…" / "OpenCode
+  will call you…" instead of "AI".
+
+
 
 ### Added
 - **Installer i18n (en / ja / vi).** Language is chosen as the first step
