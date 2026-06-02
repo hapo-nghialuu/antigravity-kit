@@ -18,8 +18,6 @@ try {
   const { execSync } = require('child_process');
 
   // ── Utilities ─────────────────────────────────────────────────────────────
-
-  /** Run a shell command safely, return stdout or fallback */
   function run(cmd, fallback = '') {
     try {
       return execSync(cmd, {
@@ -88,14 +86,82 @@ try {
     return '';
   }
 
+  // ── CafeKit Update Check ──────────────────────────────────────────────────
+
+  /**
+   * Fetch the latest published version of @haposoft/cafekit from the npm registry.
+   * Returns a string (e.g. "0.11.2") or null on any failure. Timeout: 3 s.
+   */
+  function fetchLatestVersion() {
+    try {
+      const https = require('https');
+      return new Promise((resolve) => {
+        const req = https.get(
+          'https://registry.npmjs.org/@haposoft/cafekit/latest',
+          { timeout: 3000, headers: { Accept: 'application/json' } },
+          (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+              try { resolve(JSON.parse(body).version || null); }
+              catch { resolve(null); }
+            });
+          }
+        );
+        req.on('error', () => resolve(null));
+        req.on('timeout', () => { req.destroy(); resolve(null); });
+      });
+    } catch { return Promise.resolve(null); }
+  }
+
+  /** Simple semver compare: returns true when b > a. */
+  function isNewer(a, b) {
+    const n = (v) => String(v).split('.').map((x) => parseInt(x, 10) || 0);
+    const [aN, bN] = [n(a), n(b)];
+    for (let i = 0; i < 3; i++) {
+      if (bN[i] > aN[i]) return true;
+      if (bN[i] < aN[i]) return false;
+    }
+    return false;
+  }
+
+  /**
+   * Read the installed CafeKit version from .claude/cafekit.json.
+   * Returns null if not found.
+   */
+  function getInstalledVersion(cwd) {
+    try {
+      const p = path.join(cwd, '.claude', 'cafekit.json');
+      if (!fs.existsSync(p)) return null;
+      const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
+      return typeof meta.version === 'string' ? meta.version : null;
+    } catch { return null; }
+  }
+
+  /**
+   * Check for a newer CafeKit version and return an update notice string,
+   * or an empty string if already up to date or check fails.
+   */
+  async function checkCafeKitUpdate(cwd) {
+    const installed = getInstalledVersion(cwd);
+    if (!installed) return '';                    // not a CafeKit project
+    const latest = await fetchLatestVersion();
+    if (!latest || !isNewer(installed, latest)) return '';
+    return `\n⚡ CafeKit update available: ${installed} → ${latest}\n   Run: npx @haposoft/cafekit\n`;
+  }
+
   // ── Main ──────────────────────────────────────────────────────────────────
 
+  (async () => {
   const stdin   = fs.readFileSync(0, 'utf8').trim();
   const payload = stdin ? JSON.parse(stdin) : {};
   const source  = payload.source || 'unknown';
   const envFile = process.env.CLAUDE_ENV_FILE;
   const cwd     = process.cwd();
   const runtime = readRuntime(cwd);
+
+  // Check CafeKit update in parallel with project detection (async, fail-open).
+  const updateCheckPromise = checkCafeKitUpdate(cwd);
 
   // Project detection
   const projectType = runtime.project?.type !== 'auto'
@@ -137,14 +203,15 @@ try {
     writeEnv(envFile, 'LOCALE',          process.env.LANG || '');
   }
 
-  // Session summary
+  // Session summary + update notice
+  const updateNotice = await updateCheckPromise;
   const parts = [];
   if (projectType)    parts.push(`Type: ${projectType}`);
   if (packageManager) parts.push(`PM: ${packageManager}`);
   if (framework)      parts.push(`Framework: ${framework}`);
   if (gitBranch)      parts.push(`Branch: ${gitBranch}`);
 
-  console.log(`Session ${source}. ${parts.length ? parts.join(' | ') : 'No project info detected.'}`);
+  console.log(`Session ${source}. ${parts.length ? parts.join(' | ') : 'No project info detected.'}${updateNotice}`);
 
   // Compact warning — context compaction can lose pending approval state
   if (source === 'compact') {
@@ -155,6 +222,7 @@ try {
   }
 
   process.exit(0);
+  })(); // end async IIFE
 
 } catch (e) {
   try {
