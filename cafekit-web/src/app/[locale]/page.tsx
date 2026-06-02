@@ -7,6 +7,7 @@ import { OutcomeComparison } from "@/components/landing/outcome-comparison";
 import { RuntimeInstallSurface } from "@/components/landing/runtime-install-surface";
 import { ArtifactPreview } from "@/components/landing/artifact-preview";
 import { QuickStart } from "@/components/landing/quick-start";
+import { ContactFormSection } from "@/components/landing/contact-form-section";
 import { SUPPORTED_LOCALES, isSupportedLocale } from "@/lib/locale-utils";
 
 export function generateStaticParams() {
@@ -33,6 +34,7 @@ export default async function LocaleHomePage({
       <RuntimeInstallSurface />
       <QuickStart />
       <ArtifactPreview />
+      <ContactFormSection />
       <Footer />
     </div>
   );
