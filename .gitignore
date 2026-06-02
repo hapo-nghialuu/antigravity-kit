@@ -109,3 +109,5 @@ plans/
 !plans/templates/
 .env*.local
 .sync_hash
+.cafekit-backup/
+.cafekit.lock
