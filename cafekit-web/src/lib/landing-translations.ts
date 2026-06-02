@@ -38,6 +38,37 @@ type LandingTranslations = {
     copy: string;
     comments: string[];
   };
+  contactForm: {
+    heading: string;
+    subheading: string;
+    fullnameLabel: string;
+    fullnamePlaceholder: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    phoneLabel: string;
+    phonePlaceholder: string;
+    jobtitleLabel: string;
+    jobtitlePlaceholder: string;
+    companyLabel: string;
+    companyPlaceholder: string;
+    messageLabel: string;
+    messagePlaceholder: string;
+    submit: string;
+    submitting: string;
+    successTitle: string;
+    successMessage: string;
+    errorTitle: string;
+    errorMessage: string;
+    reset: string;
+    validation: {
+      fullnameRequired: string;
+      emailRequired: string;
+      emailInvalid: string;
+      phoneRequired: string;
+      companyRequired: string;
+      messageTooLong: string;
+    };
+  };
 };
 
 const translations: Record<Locale, LandingTranslations> = {
@@ -230,6 +261,37 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 4. Verify and review the release candidate",
         "# 5. Commit, push, and deploy",
       ],
+    },
+    contactForm: {
+      heading: "Get in touch",
+      subheading: "Tell us about your project or ask anything. We usually reply within one business day.",
+      fullnameLabel: "Full name",
+      fullnamePlaceholder: "Alex Rivera",
+      emailLabel: "Email address",
+      emailPlaceholder: "you@company.com",
+      phoneLabel: "Phone number",
+      phonePlaceholder: "+1 (555) 123-4567",
+      jobtitleLabel: "Job title",
+      jobtitlePlaceholder: "Engineering Manager",
+      companyLabel: "Company",
+      companyPlaceholder: "Acme Corp",
+      messageLabel: "Message",
+      messagePlaceholder: "Tell us about your use case, timeline, or questions...",
+      submit: "Send message",
+      submitting: "Sending...",
+      successTitle: "Thank you!",
+      successMessage: "Your message has been sent. We'll get back to you within one business day.",
+      errorTitle: "Something went wrong",
+      errorMessage: "We couldn't send your message right now. Please try again in a moment.",
+      reset: "Send another message",
+      validation: {
+        fullnameRequired: "Full name is required",
+        emailRequired: "Email address is required",
+        emailInvalid: "Please enter a valid email address",
+        phoneRequired: "Phone number is required",
+        companyRequired: "Company is required",
+        messageTooLong: "Message must be 10000 characters or less",
+      },
     },
   },
   vi: {
@@ -424,6 +486,37 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 5. Commit, push và deploy",
       ],
     },
+    contactForm: {
+      heading: "Liên hệ với chúng tôi",
+      subheading: "Kể về dự án của bạn hoặc đặt câu hỏi. Chúng tôi thường trả lời trong một ngày làm việc.",
+      fullnameLabel: "Họ và tên",
+      fullnamePlaceholder: "Nguyễn Văn A",
+      emailLabel: "Địa chỉ email",
+      emailPlaceholder: "ban@congty.com",
+      phoneLabel: "Số điện thoại",
+      phonePlaceholder: "+84 901 234 567",
+      jobtitleLabel: "Chức vụ",
+      jobtitlePlaceholder: "Quản lý Kỹ thuật",
+      companyLabel: "Công ty",
+      companyPlaceholder: "Công ty Acme",
+      messageLabel: "Tin nhắn",
+      messagePlaceholder: "Mô tả trường hợp sử dụng, thời gian hoặc câu hỏi của bạn...",
+      submit: "Gửi tin nhắn",
+      submitting: "Đang gửi...",
+      successTitle: "Cảm ơn bạn!",
+      successMessage: "Tin nhắn của bạn đã được gửi. Chúng tôi sẽ phản hồi trong một ngày làm việc.",
+      errorTitle: "Đã xảy ra lỗi",
+      errorMessage: "Chúng tôi không thể gửi tin nhắn lúc này. Vui lòng thử lại sau.",
+      reset: "Gửi tin nhắn khác",
+      validation: {
+        fullnameRequired: "Họ và tên là bắt buộc",
+        emailRequired: "Email là bắt buộc",
+        emailInvalid: "Vui lòng nhập địa chỉ email hợp lệ",
+        phoneRequired: "Số điện thoại là bắt buộc",
+        companyRequired: "Tên công ty là bắt buộc",
+        messageTooLong: "Tin nhắn phải tối đa 2000 ký tự",
+      },
+    },
   },
   ja: {
     hero: {
@@ -610,6 +703,37 @@ const translations: Record<Locale, LandingTranslations> = {
         "# 4. verify と review で候補を固める",
         "# 5. commit, push, deploy",
       ],
+    },
+    contactForm: {
+      heading: "お問い合わせ",
+      subheading: "プロジェクトについてお知らせいただくか、ご質問をお寄せください。通常1営業日以内にご返信いたします。",
+      fullnameLabel: "お名前",
+      fullnamePlaceholder: "山田 太郎",
+      emailLabel: "メールアドレス",
+      emailPlaceholder: "you@company.com",
+      phoneLabel: "電話番号",
+      phonePlaceholder: "+81 90-1234-5678",
+      jobtitleLabel: "役職",
+      jobtitlePlaceholder: "エンジニアリングマネージャー",
+      companyLabel: "会社名",
+      companyPlaceholder: "株式会社Acme",
+      messageLabel: "メッセージ",
+      messagePlaceholder: "ユースケース、タイムライン、質問などをご記入ください...",
+      submit: "メッセージを送信",
+      submitting: "送信中...",
+      successTitle: "ありがとうございます！",
+      successMessage: "メッセージを送信しました。1営業日以内にご連絡いたします。",
+      errorTitle: "エラーが発生しました",
+      errorMessage: "現在メッセージを送信できません。しばらくしてから再度お試しください。",
+      reset: "別のメッセージを送信",
+      validation: {
+        fullnameRequired: "お名前は必須です",
+        emailRequired: "メールアドレスは必須です",
+        emailInvalid: "有効なメールアドレスを入力してください",
+        phoneRequired: "電話番号は必須です",
+        companyRequired: "会社名は必須です",
+        messageTooLong: "メッセージは2000文字以下である必要があります",
+      },
     },
   },
 };
