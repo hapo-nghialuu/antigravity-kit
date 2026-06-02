@@ -26,8 +26,8 @@ export function TutorialGuide({ locale }: Props) {
 
   return (
     <div className="not-prose space-y-8">
-      {/* Page hero */}
-      <section className="overflow-hidden rounded-[28px] border border-[#101820]/10 bg-[#101820] p-6 text-white shadow-[0_30px_90px_-50px_rgba(16,24,32,0.85)] sm:p-8">
+      {/* Page hero — `relative` required so absolute inset-0 overlay stays inside this section */}
+      <section className="relative overflow-hidden rounded-[28px] border border-[#101820]/10 bg-[#101820] p-6 text-white shadow-[0_30px_90px_-50px_rgba(16,24,32,0.85)] sm:p-8">
         <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.6)_1px,transparent_1px)] [background-size:28px_28px]" />
         <div className="relative">
           <div className="mb-4 inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[#F2EA9D]">

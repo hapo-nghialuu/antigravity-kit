@@ -15,7 +15,7 @@ export type DocsNavSection = {
 
 type DocsLabels = {
   mainNav: Record<"docs" | "quickstart" | "reference", string>;
-  sections: Record<"start" | "runtime" | "catalog" | "reference", string>;
+  sections: Record<"start" | "tutorials" | "runtime" | "catalog" | "reference", string>;
   pages: Record<string, Omit<DocsNavItem, "href">>;
 };
 
@@ -42,8 +42,10 @@ const routes = {
     ["specDriven", "/docs/spec-driven-development"],
     ["installation", "/docs/installation"],
     ["quickstart", "/docs/quickstart"],
-    ["tutorial", "/docs/tutorial"],
     ["coreWorkflow", "/docs/core-workflow"],
+  ],
+  tutorials: [
+    ["tutorial", "/docs/tutorial"],
   ],
   runtime: [
     ["runtime", "/docs/runtime"],
@@ -67,7 +69,7 @@ const routes = {
 const labels: Record<Locale, DocsLabels> = {
   en: {
     mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
-    sections: { start: "Start here", runtime: "Runtime model", catalog: "Catalog", reference: "Reference" },
+    sections: { start: "Docs", tutorials: "Tutorials", runtime: "Runtime model", catalog: "Catalog", reference: "Reference" },
     pages: {
       overview: page("Overview", "What CafeKit is, who it is for, and how the docs are organized.", "overview what is cafekit"),
       specDriven: page("Spec-driven development", "The simple visual guide to CafeKit SDD: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
@@ -101,7 +103,7 @@ const labels: Record<Locale, DocsLabels> = {
   },
   vi: {
     mainNav: { docs: "Tài liệu", quickstart: "Bắt đầu nhanh", reference: "Tham khảo" },
-    sections: { start: "Bắt đầu", runtime: "Runtime", catalog: "Catalog", reference: "Tham khảo" },
+    sections: { start: "Tài liệu", tutorials: "Hướng dẫn", runtime: "Runtime", catalog: "Catalog", reference: "Tham khảo" },
     pages: {
       overview: page("Tổng quan", "CafeKit là gì, dành cho ai, và nên đọc docs theo thứ tự nào.", "tong quan cafekit"),
       specDriven: page("Spec-driven development", "Trang giải thích trực quan về SDD của CafeKit: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
@@ -135,7 +137,7 @@ const labels: Record<Locale, DocsLabels> = {
   },
   ja: {
     mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
-    sections: { start: "はじめに", runtime: "Runtime", catalog: "Catalog", reference: "Reference" },
+    sections: { start: "Docs", tutorials: "Tutorials", runtime: "Runtime", catalog: "Catalog", reference: "Reference" },
     pages: {
       overview: page("概要", "CafeKit の役割、対象ユーザー、読む順番を説明します。", "overview cafekit"),
       specDriven: page("Spec-driven development", "CafeKit SDD: spec、develop、verify、sync の visual guide。", "sdd specification driven development visual guide"),
