@@ -30,8 +30,9 @@ function patchSettingsLanguage(ctx) {
     return;
   }
 
-  const label = LANGUAGE_LABELS[ctx.lang] || ctx.lang;
-  if (settings.language === label) return; // already up to date
+  // Use locale (freeform label) so "Korean" shows correctly, not just "en".
+  const label = ctx.locale || LANGUAGE_LABELS[ctx.lang] || ctx.lang;
+  if (settings.language === label) return;
   settings.language = label;
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
 }
@@ -46,13 +47,16 @@ function patchSettingsLanguage(ctx) {
  */
 function patchLanguageSection(ctx) {
   if (!ctx.platforms.includes('claude')) return;
-  if (ctx.lang === 'en') return; // English is the default — no override needed.
+  // Skip when locale is English (default — no override needed in CLAUDE.md).
+  const locale = ctx.locale || ctx.lang;
+  if (!locale || locale === 'en' || locale === 'English') return;
 
   const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
   if (!fs.existsSync(claudeMdFile)) return;
 
   const LANG_LABEL = { vi: 'Vietnamese', ja: 'Japanese', en: 'English' };
-  const label = LANG_LABEL[ctx.lang] || ctx.lang;
+  // Use locale directly when set (e.g. "Korean"), or map from lang code.
+  const label = locale in LANG_LABEL ? LANG_LABEL[locale] : locale;
 
   const newSection = `## Language Consistency <!-- cafekit:lang -->
 
@@ -86,8 +90,10 @@ function patchRuntimeLocale(ctx) {
       continue;
     }
     data.locale = data.locale || {};
-    if (data.locale.responseLanguage === ctx.lang) continue;
-    data.locale.responseLanguage = ctx.lang;
+    // Use locale (freeform label) so custom languages propagate to the AI hook.
+    const locale = ctx.locale || ctx.lang;
+    if (data.locale.responseLanguage === locale) continue;
+    data.locale.responseLanguage = locale;
     fs.writeFileSync(rtPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
     if (ctx.trackers[key]) ctx.trackers[key].record(rtPath);
   }

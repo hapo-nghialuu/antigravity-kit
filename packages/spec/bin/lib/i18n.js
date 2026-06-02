@@ -11,6 +11,7 @@
 const SUPPORTED = ['en', 'ja', 'vi'];
 
 const LANGUAGE_LABELS = { en: 'English', ja: '日本語', vi: 'Tiếng Việt' };
+const OTHER_LABEL = { en: 'Other...', ja: 'その他...', vi: 'Ngôn ngữ khác...' };
 
 const MESSAGES = {
   // ─── English ───────────────────────────────────────────────────────────────
@@ -264,4 +265,4 @@ function createTranslator(lang) {
   };
 }
 
-module.exports = { SUPPORTED, LANGUAGE_LABELS, MESSAGES, resolveLang, createTranslator };
+module.exports = { SUPPORTED, LANGUAGE_LABELS, OTHER_LABEL, MESSAGES, resolveLang, createTranslator };

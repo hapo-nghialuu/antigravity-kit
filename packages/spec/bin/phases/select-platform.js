@@ -12,21 +12,38 @@ const {
   getPlatformKeys,
   warnLegacyClaudeFolder
 } = require('../lib/context');
-const { SUPPORTED, LANGUAGE_LABELS } = require('../lib/i18n');
+const { SUPPORTED, LANGUAGE_LABELS, OTHER_LABEL } = require('../lib/i18n');
+
+const OTHER = '__other__';
 
 /** First step: pick the installer/UI language (interactive only). */
 async function selectLanguage(ctx) {
-  // Honor an explicit --lang or non-interactive default (English) without prompting.
   if (!ctx.interactive || ctx.options.lang) return ctx;
 
+  const options = [
+    ...SUPPORTED.map((code) => ({ value: code, label: LANGUAGE_LABELS[code] })),
+    { value: OTHER, label: OTHER_LABEL.en + ' / その他 / Ngôn ngữ khác' }
+  ];
+
   const r = await ctx.ui.select(
-    {
-      message: 'Select language · 言語を選択 · Chọn ngôn ngữ',
-      options: SUPPORTED.map((code) => ({ value: code, label: LANGUAGE_LABELS[code] }))
-    },
+    { message: 'Select language · 言語を選択 · Chọn ngôn ngữ', options },
     ctx.lang
   );
-  if (!ctx.ui.isCancel(r)) ctx.setLang(r);
+  if (ctx.ui.isCancel(r)) return ctx;
+
+  if (r === OTHER) {
+    // User types their language name — UI stays English, AI responds in that language.
+    const typed = await ctx.ui.text(
+      { message: 'Enter your language (e.g. Korean, French, Spanish…)', placeholder: 'Language name in English' },
+      ''
+    );
+    if (!ctx.ui.isCancel(typed) && typed && typed.trim()) {
+      ctx.setLang('en', typed.trim()); // UI = English, locale = user's label
+    }
+  } else {
+    ctx.setLang(r, LANGUAGE_LABELS[r]);
+  }
+
   return ctx;
 }
 

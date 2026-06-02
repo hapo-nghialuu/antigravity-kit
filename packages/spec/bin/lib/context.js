@@ -247,6 +247,9 @@ function buildContext(argv, runId) {
   const interactive = isInteractive() && !options.yes;
   // Language: --lang wins; otherwise English (an interactive prompt may change it).
   const lang = options.lang ? resolveLang(options.lang) : 'en';
+  // ctx.locale = the string that gets written to CLAUDE.md / runtime.json as the AI's response language.
+  // For known codes it mirrors lang; for "other", it's set later by setLang.
+  const locale = options.lang || 'en';
   return {
     argv,
     runId,
@@ -254,11 +257,13 @@ function buildContext(argv, runId) {
     dryRun: options.dryRun,
     interactive,
     ui: createUI(interactive),
-    lang,
+    lang,        // UI language (one of SUPPORTED)
+    locale,      // AI response language label (may be freeform, e.g. "Korean")
     t: createTranslator(lang),
-    /** Update the active language + translator (used by the language prompt). */
-    setLang(code) {
+    /** Update UI lang + AI locale. rawLabel is the freeform label when user picks "Other". */
+    setLang(code, rawLabel) {
       this.lang = resolveLang(code);
+      this.locale = rawLabel || LANGUAGE_LABELS[this.lang] || this.lang;
       this.t = createTranslator(this.lang);
     },
     manifest: loadClaudeMigrationManifest(),  // migration manifest (skills/agents/runtime lists)
