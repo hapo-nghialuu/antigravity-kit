@@ -41,18 +41,21 @@ export const tutorialContentJa: TutorialContent = {
       label: "インストール",
       title: "プロジェクトに CafeKit をインストール",
       narrative: [
-        "ターミナルを開き、プロジェクトフォルダに移動してからインストーラーを実行します。CafeKit は .claude/ に runtime bundle を書き込みます — skills、agents、hooks、workflow ルールが含まれます。",
+        "ターミナルを開き、プロジェクトフォルダに移動してからインストーラーを実行します。言語選択や addressing、依存関係のセットアップなど対話式で進みます。CafeKit は .claude/ に runtime bundle を書き込みます — skills、agents、hooks、workflow ルールが含まれます。",
       ],
       command: "npx @haposoft/cafekit",
       outputs: [
-        { kind: "output", text: "プロジェクトタイプを検出中…" },
-        { kind: "output", text: "Claude Code runtime bundle をインストール中…" },
-        { kind: "success", text: "✓ skills   agents   hooks   statusline" },
-        { kind: "success", text: "✓ runtime 準備完了 — /hapo:specs で開始" },
+        { kind: "output", text: "Select language · 言語を選択 · Chọn ngôn ngữ" },
+        { kind: "output", text: "platform を選択中…" },
+        { kind: "output", text: "Claude Code — 67 ファイル, 30 skills" },
+        { kind: "output", text: "addressing を設定中…" },
+        { kind: "success", text: "✓ skill dependencies ready (Python venv, pip, npm, Chromium)" },
+        { kind: "success", text: "✓ インストール完了 — installed: 67  updated: 1  unchanged: 6" },
       ],
       youWillSee: [
+        "対話式プロンプト: 言語選択, platform, addressing, skill deps",
         "プロジェクトルートに新しい .claude/ フォルダ",
-        "中に: skills/, agents/, hooks/, runtime.json, settings.json",
+        "中に: skills/, agents/, hooks/, runtime.json, settings.json, cafekit-manifest.json",
         "workflow ルールが入った CLAUDE.md ファイル",
       ],
       troubleshooting: [

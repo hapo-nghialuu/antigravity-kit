@@ -41,18 +41,21 @@ export const tutorialContentVi: TutorialContent = {
       label: "Cài đặt",
       title: "Cài CafeKit vào dự án",
       narrative: [
-        "Mở terminal, vào thư mục dự án của bạn rồi chạy lệnh cài đặt. CafeKit ghi một runtime bundle vào .claude/ — gồm skills, agents, hooks và quy tắc workflow mà Claude Code sẽ dùng.",
+        "Mở terminal, vào thư mục dự án của bạn rồi chạy lệnh cài đặt. Trình cài đặt sẽ hỏi bạn vài câu (ngôn ngữ, xưng hô, cài dependencies). CafeKit ghi runtime bundle vào .claude/ — gồm skills, agents, hooks và quy tắc workflow.",
       ],
       command: "npx @haposoft/cafekit",
       outputs: [
-        { kind: "output", text: "đang nhận diện loại dự án…" },
-        { kind: "output", text: "đang cài runtime bundle cho Claude Code…" },
-        { kind: "success", text: "✓ skills   agents   hooks   statusline" },
-        { kind: "success", text: "✓ runtime sẵn sàng — chạy /hapo:specs để bắt đầu" },
+        { kind: "output", text: "Select language · 言語を選択 · Chọn ngôn ngữ" },
+        { kind: "output", text: "Chọn (các) nền tảng cần cài…" },
+        { kind: "output", text: "Claude Code — 67 tệp, 30 skill" },
+        { kind: "output", text: "Bạn muốn AI gọi bạn là gì?" },
+        { kind: "success", text: "✓ skill dependencies ready (Python venv, pip, npm, Chromium)" },
+        { kind: "success", text: "✓ cài đặt hoàn tất — đã cài: 67  đã cập nhật: 1  không đổi: 6" },
       ],
       youWillSee: [
+        "Các bước tương tác: chọn ngôn ngữ, nền tảng, xưng hô, cài skill deps",
         "Thư mục .claude/ mới xuất hiện trong project root",
-        "Bên trong: skills/, agents/, hooks/, runtime.json, settings.json",
+        "Bên trong: skills/, agents/, hooks/, runtime.json, settings.json, cafekit-manifest.json",
         "File CLAUDE.md chứa quy tắc workflow",
       ],
       troubleshooting: [
