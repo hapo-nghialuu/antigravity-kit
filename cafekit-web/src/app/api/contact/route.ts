@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   const data = parseResult.data;
   const lang = data.language ?? "en";
 
-  const targetEndpoint = process.env.CONTACT_API_ENDPOINT || 'https://sms.haposoft.com/api/homepage/contacts';
+  const targetEndpoint = process.env.CONTACT_API_ENDPOINT;
 
   if (!targetEndpoint) {
     return Response.json(
