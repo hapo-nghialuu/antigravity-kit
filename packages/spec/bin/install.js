@@ -32,6 +32,7 @@ const {
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
+const { checkVersions } = require('./lib/version-check');
 const { ensureGitignore } = require('./phases/root-config');
 const { runPostInstall } = require('./phases/post-install');
 const { setupSkillDeps } = require('./phases/skills-setup');
@@ -126,10 +127,11 @@ async function main() {
 
     await selectLanguage(ctx);
     await resolvePlatforms(ctx);
-    if (ctx.cancelled) {
-      lock.release();
-      process.exit(0);
-    }
+    if (ctx.cancelled) { lock.release(); process.exit(0); }
+
+    // Version check: same → exit, downgrade → confirm
+    await checkVersions(ctx);
+    if (ctx.cancelled) { lock.release(); process.exit(0); }
 
     // ── Pre-run snapshot for rollback ─────────────────────
     // Capture platform folders AND the root files the pipeline mutates

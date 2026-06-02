@@ -69,16 +69,17 @@ function pipUpgrade(skillsDir) {
   return run(venvPython(skillsDir), ['-m', 'pip', 'install', '--upgrade', 'pip', '--prefer-binary']).ok;
 }
 
-/** Install a requirements.txt into the venv (wheels first). Returns true on success. */
-function pipInstall(skillsDir, requirementsPath) {
-  return run(venvPython(skillsDir), [
-    '-m', 'pip', 'install', '-r', requirementsPath, '--prefer-binary'
-  ]).ok;
+/** Install or upgrade pip requirements in the venv. */
+function pipInstall(skillsDir, requirementsPath, upgrade = false) {
+  const args = ['-m', 'pip', 'install', '-r', requirementsPath, '--prefer-binary'];
+  if (upgrade) args.push('--upgrade');
+  return run(venvPython(skillsDir), args).ok;
 }
 
-/** `npm install` in a skill scripts dir. Returns true on success. */
-function npmInstall(dir) {
-  return run('npm', ['install', '--no-audit', '--no-fund'], { cwd: dir }).ok;
+/** `npm install` (fresh) or `npm update` (existing) in a skill scripts dir. */
+function npmInstall(dir, upgrade = false) {
+  const args = upgrade ? ['update', '--no-audit', '--no-fund'] : ['install', '--no-audit', '--no-fund'];
+  return run('npm', args, { cwd: dir }).ok;
 }
 
 /**
@@ -115,6 +116,7 @@ function installPlaywrightBrowser(scriptsDir) {
 /**
  * List installed skills that ship a runnable scripts/requirements.txt
  * (excludes the tests/ requirements). Returns [{ skill, file }].
+ * Always returned regardless of whether venv already exists (caller decides upgrade vs fresh).
  */
 function collectRequirements(skillsDir) {
   const out = [];
@@ -127,16 +129,16 @@ function collectRequirements(skillsDir) {
 }
 
 /**
- * List installed skills with a scripts/package.json that still needs installing
- * (no node_modules present). Returns [{ skill, dir }].
+ * List installed skills with a scripts/package.json.
+ * Returns [{ skill, dir, hasNodeModules }] — always, so caller can upgrade existing installs.
  */
 function collectSkillPackages(skillsDir) {
   const out = [];
   if (!fs.existsSync(skillsDir)) return out;
   for (const skill of fs.readdirSync(skillsDir)) {
     const dir = path.join(skillsDir, skill, 'scripts');
-    if (fs.existsSync(path.join(dir, 'package.json')) && !fs.existsSync(path.join(dir, 'node_modules'))) {
-      out.push({ skill, dir });
+    if (fs.existsSync(path.join(dir, 'package.json'))) {
+      out.push({ skill, dir, hasNodeModules: fs.existsSync(path.join(dir, 'node_modules')) });
     }
   }
   return out;

@@ -90,7 +90,11 @@ const MESSAGES = {
     nsKeys:          'Some skills need API keys: {skills}\n  Copy <skill>/.env.example → .env and fill in the values',
     nsForce:         'To force-refresh managed files: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run complete — no files were changed.\n  Re-run without --dry-run to apply.',
-    outroDone:       'Done!  docs: https://github.com/haposoft/cafekit'
+    outroDone:       'Done!  docs: https://github.com/haposoft/cafekit',
+
+    // Version check
+    versionUpToDate:  'Already up to date ({v}). Use --force-overwrite to reinstall.',
+    versionDowngrade: 'Downgrading {from} → {to}. Features may be removed. Continue?'
   },
 
   // ─── 日本語 ─────────────────────────────────────────────────────────────────
@@ -162,7 +166,10 @@ const MESSAGES = {
     nsKeys:          '一部のスキルに API キーが必要です: {skills}\n  <skill>/.env.example を .env にコピーし、値を入力してください',
     nsForce:         '管理ファイルを強制更新: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
-    outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit'
+    outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit',
+
+    versionUpToDate:  '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
+    versionDowngrade: '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？'
   },
 
   // ─── Tiếng Việt ─────────────────────────────────────────────────────────────
@@ -234,7 +241,10 @@ const MESSAGES = {
     nsKeys:          'Một số skill cần API key: {skills}\n  Sao chép <skill>/.env.example → .env rồi điền giá trị',
     nsForce:         'Làm mới file được quản lý: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',
-    outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit'
+    outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit',
+
+    versionUpToDate:  'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
+    versionDowngrade: 'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?'
   }
 };
 

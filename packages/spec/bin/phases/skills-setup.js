@@ -30,7 +30,7 @@ async function shouldRun(ctx) {
   return yes === true;
 }
 
-/** Provision Python venv + pip requirements for a platform's skills. */
+/** Provision or upgrade Python venv + pip requirements for a platform's skills. */
 function setupPython(ctx, skillsDir) {
   const reqs = dep.collectRequirements(skillsDir);
   if (reqs.length === 0) return;
@@ -41,6 +41,7 @@ function setupPython(ctx, skillsDir) {
     return;
   }
 
+  const alreadyExists = dep.venvValid(skillsDir);
   ctx.ui.startSpinner(ctx.t('venvCreating'));
   if (!dep.createVenv(skillsDir, py)) {
     ctx.ui.stopSpinner(ctx.t('venvFailed'));
@@ -50,9 +51,11 @@ function setupPython(ctx, skillsDir) {
   dep.pipUpgrade(skillsDir);
   ctx.ui.stopSpinner(`${ctx.t('venvReady')} (${dep.venvDir(skillsDir)})`);
 
+  // Upgrade packages if venv already existed (update run), install fresh otherwise.
+  const upgrade = alreadyExists;
   for (const { skill, file } of reqs) {
-    ctx.ui.startSpinner(ctx.t('pipInstalling', { skill }));
-    const ok = dep.pipInstall(skillsDir, file);
+    ctx.ui.startSpinner(ctx.t(upgrade ? 'pipInstalling' : 'pipInstalling', { skill }));
+    const ok = dep.pipInstall(skillsDir, file, upgrade);
     if (ok) {
       ctx.ui.stopSpinner(ctx.t('pipInstalled', { skill }));
     } else {
@@ -61,11 +64,11 @@ function setupPython(ctx, skillsDir) {
   }
 }
 
-/** Run skill-local npm installs + browser binaries for a platform's skills. */
+/** Run skill-local npm installs/upgrades + browser binaries for a platform's skills. */
 function setupNode(ctx, skillsDir) {
-  for (const { skill, dir } of dep.collectSkillPackages(skillsDir)) {
+  for (const { skill, dir, hasNodeModules } of dep.collectSkillPackages(skillsDir)) {
     ctx.ui.startSpinner(ctx.t('npmInstalling', { skill }));
-    const ok = dep.npmInstall(dir);
+    const ok = dep.npmInstall(dir, hasNodeModules); // upgrade if node_modules exists
     if (ok) {
       ctx.ui.stopSpinner(ctx.t('npmInstalled', { skill }));
     } else {
