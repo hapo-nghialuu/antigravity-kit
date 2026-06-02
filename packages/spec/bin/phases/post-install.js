@@ -14,7 +14,27 @@
 const fs = require('fs');
 const path = require('path');
 const { PLATFORMS } = require('../lib/context');
+const { LANGUAGE_LABELS } = require('../lib/i18n');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
+
+/** Write `"language"` field into .claude/settings.json so it's visible at a glance. */
+function patchSettingsLanguage(ctx) {
+  if (!ctx.platforms.includes('claude')) return;
+  const settingsPath = path.join(process.cwd(), '.claude', 'settings.json');
+  if (!fs.existsSync(settingsPath)) return;
+
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  } catch {
+    return;
+  }
+
+  const label = LANGUAGE_LABELS[ctx.lang] || ctx.lang;
+  if (settings.language === label) return; // already up to date
+  settings.language = label;
+  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+}
 
 /**
  * Patch the "## Language Consistency" section in CLAUDE.md with the chosen
@@ -139,6 +159,9 @@ async function runPostInstall(ctx) {
 
   // Persist chosen language into each platform's runtime.json (records in tracker).
   patchRuntimeLocale(ctx);
+
+  // Write "language" field into .claude/settings.json for visibility.
+  patchSettingsLanguage(ctx);
 
   // Re-record post-write baselines so installer-managed files stay "pristine",
   // then flush each touched platform tracker.
