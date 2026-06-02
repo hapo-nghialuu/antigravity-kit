@@ -3,6 +3,14 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.1] - 2026-06-02
+
+### Added
+- **"Other…" option in language picker**: user can type any language name freely
+  (e.g. Korean, French, Spanish). UI installer stays English; the chosen label is
+  written to `CLAUDE.md`, `runtime.json` and `settings.json` so the AI responds
+  in that language. Separates `ctx.lang` (UI) from `ctx.locale` (AI response).
+
 ## [0.11.0] - 2026-06-02
 
 ### Added
