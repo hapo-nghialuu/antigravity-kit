@@ -77,6 +77,39 @@ function formatElapsed(startTime, endTime) {
 }
 
 /**
+ * Find the active spec by scanning <baseDir>/<specsDir> for a spec.json whose
+ * status is in_progress. Returns the spec folder slug, or '' when none is active.
+ * Mirrors the active-spec discovery in hooks/spec-state.cjs (first match wins).
+ */
+function detectActiveSpec(baseDir) {
+  try {
+    // Resolve specs dir from runtime.json (default 'specs')
+    let specsRel = 'specs';
+    const runtimePath = path.join(baseDir, '.claude', 'runtime.json');
+    if (fs.existsSync(runtimePath)) {
+      const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
+      specsRel = runtime.paths?.specs || 'specs';
+    }
+
+    const specsPath = path.join(baseDir, specsRel);
+    if (!fs.existsSync(specsPath)) return '';
+
+    for (const entry of fs.readdirSync(specsPath, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const specFile = path.join(specsPath, entry.name, 'spec.json');
+      if (!fs.existsSync(specFile)) continue;
+      try {
+        const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
+        if (spec.status === 'in_progress' || spec.status === 'in-progress') {
+          return entry.name; // first active spec wins
+        }
+      } catch { /* skip bad JSON */ }
+    }
+  } catch { /* fail-open: no spec indicator */ }
+  return '';
+}
+
+/**
  * Read stdin asynchronously
  */
 async function readStdin() {
@@ -131,9 +164,8 @@ function renderSessionLines(ctx) {
     }
   }
 
-  // Active plan indicator (disabled for now - code preserved)
-  // const planPart = ctx.activePlan ? `📋 ${ctx.activePlan}` : '';
-  const planPart = '';
+  // Active spec indicator: 📋 <spec-slug> when a spec is in progress
+  const planPart = ctx.activeSpec ? `📋 ${ctx.activeSpec}` : '';
 
   // Combined location (dir + branch + plan)
   let locationPart = branchPart ? `${dirPart}  ${branchPart}` : dirPart;
@@ -393,23 +425,9 @@ async function main() {
     const gitAhead = gitInfo?.ahead || 0;
     const gitBehind = gitInfo?.behind || 0;
 
-    // Active plan detection - read from session temp file
-    let activePlan = '';
-    try {
-      const sessionId = data.session_id;
-      if (sessionId) {
-        const sessionPath = path.join(os.tmpdir(), `ck-session-${sessionId}.json`);
-        if (fs.existsSync(sessionPath)) {
-          const session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
-          const planPath = session.activePlan?.trim();
-          if (planPath) {
-            // Extract slug from path like "specs/auth-login" or legacy "plans/260106-1554-feature"
-            const match = planPath.match(/(?:specs|plans)\/(?:\d+-\d+-)?(.+?)(?:\/|$)/);
-            activePlan = match ? match[1] : planPath.split('/').pop();
-          }
-        }
-      }
-    } catch {}
+    // Active spec detection - scan specs/*/spec.json for status in_progress.
+    // Use the launch dir (project_dir) so specs resolve from the project root.
+    const activeSpec = detectActiveSpec(data.workspace?.project_dir || rawDir);
 
     // Context window - use current_usage fields with AUTOCOMPACT_BUFFER
     const usage = data.context_window?.current_usage || {};
@@ -496,7 +514,7 @@ async function main() {
       gitStaged,
       gitAhead,
       gitBehind,
-      activePlan,
+      activeSpec,
       contextPercent,
       sessionText,
       usagePercent,
