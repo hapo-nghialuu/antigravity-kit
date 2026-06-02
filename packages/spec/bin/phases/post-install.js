@@ -1,75 +1,107 @@
 /**
  * Phase: post-install runtime configuration.
  *
- * OpenCode model, optional Gemini CLI install + API key, and addressing config.
- * Interactive prompts use ctx.ui (clack); in non-interactive/dry-run they are
- * skipped via fallbacks so spawned/CI runs never hang. Writes (.env, CLAUDE.md,
- * opencode.json) happen only when a value is actually provided.
+ * OpenCode model + addressing config. Interactive prompts use ctx.ui (clack);
+ * in non-interactive/dry-run they are skipped via fallbacks so spawned/CI runs
+ * never hang.
+ *
+ * Note: CafeKit no longer prompts for a Gemini API key. The upstream gemini-cli
+ * was removed, and the key now serves only the ai-multimodal skill — which
+ * documents it in its own `.env.example`. Users set GEMINI_API_KEY there when
+ * (and only if) they use that skill.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const { PLATFORMS } = require('../lib/context');
+const { LANGUAGE_LABELS } = require('../lib/i18n');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
 
-function checkGeminiCLI() {
+/** Write `"language"` field into .claude/settings.json so it's visible at a glance. */
+function patchSettingsLanguage(ctx) {
+  if (!ctx.platforms.includes('claude')) return;
+  const settingsPath = path.join(process.cwd(), '.claude', 'settings.json');
+  if (!fs.existsSync(settingsPath)) return;
+
+  let settings;
   try {
-    execSync('which gemini', { stdio: 'ignore' });
-    return true;
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
   } catch {
-    return false;
+    return;
   }
+
+  // Use locale (freeform label) so "Korean" shows correctly, not just "en".
+  const label = ctx.locale || LANGUAGE_LABELS[ctx.lang] || ctx.lang;
+  if (settings.language === label) return;
+  settings.language = label;
+  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
 }
 
-function installGeminiCLI(ctx) {
-  ctx.ui.startSpinner('Installing gemini-cli...');
-  try {
-    execSync('npm install -g @google/gemini-cli', { stdio: 'ignore' });
-    ctx.ui.stopSpinner('gemini-cli installed');
-    return true;
-  } catch {
-    ctx.ui.stopSpinner('Could not install gemini-cli automatically');
-    ctx.ui.warn('Run manually: npm install -g @google/gemini-cli');
-    return false;
+/**
+ * Patch the "## Language Consistency" section in CLAUDE.md with the chosen
+ * language so every AI session knows which language to respond in — without
+ * relying on hooks reading runtime.json.
+ *
+ * The section is identified by a stable marker comment so subsequent installs
+ * can update it idempotently.
+ */
+function patchLanguageSection(ctx) {
+  if (!ctx.platforms.includes('claude')) return;
+  // Skip when locale is English (default — no override needed in CLAUDE.md).
+  const locale = ctx.locale || ctx.lang;
+  if (!locale || locale === 'en' || locale === 'English') return;
+
+  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
+  if (!fs.existsSync(claudeMdFile)) return;
+
+  const LANG_LABEL = { vi: 'Vietnamese', ja: 'Japanese', en: 'English' };
+  // Use locale directly when set (e.g. "Korean"), or map from lang code.
+  const label = locale in LANG_LABEL ? LANG_LABEL[locale] : locale;
+
+  const newSection = `## Language Consistency <!-- cafekit:lang -->
+
+Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.
+
+`;
+
+  let content = fs.readFileSync(claudeMdFile, 'utf8');
+  // Replace if marker present, else replace the generic section.
+  const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
+  const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
+
+  if (markerRe.test(content)) {
+    content = content.replace(markerRe, newSection);
+  } else if (genericRe.test(content)) {
+    content = content.replace(genericRe, newSection);
+  } else {
+    content += `\n${newSection}\n`;
   }
+
+  fs.writeFileSync(claudeMdFile, content, 'utf8');
 }
-
-function configureGeminiKey(ctx, apiKey, platforms) {
-  const envBody = `GEMINI_API_KEY=${apiKey}\nVISUAL_MODEL=gemma-4-31b-it\nSEARCH_MODEL=gemini-2.5-pro\n`;
-  const targets = platforms.filter((key) => PLATFORMS[key]).map((key) => PLATFORMS[key].folder);
-  if (targets.length === 0) targets.push('.claude');
-
-  for (const folder of targets) {
+function patchRuntimeLocale(ctx) {
+  for (const key of ctx.platforms) {
+    const rtPath = path.join(PLATFORMS[key].folder, 'runtime.json');
+    if (!fs.existsSync(rtPath)) continue;
+    let data;
     try {
-      const targetDir = path.join(process.cwd(), folder);
-      if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-      fs.writeFileSync(path.join(targetDir, '.env'), envBody, { mode: 0o600 });
-      ctx.ui.success(`Gemini API key stored in ${folder}/.env (0600)`);
-    } catch (error) {
-      ctx.ui.error(`Failed to configure Gemini API key: ${error.message}`);
+      data = JSON.parse(fs.readFileSync(rtPath, 'utf8'));
+    } catch {
+      continue;
     }
+    data.locale = data.locale || {};
+    // Use locale (freeform label) so custom languages propagate to the AI hook.
+    const locale = ctx.locale || ctx.lang;
+    if (data.locale.responseLanguage === locale) continue;
+    data.locale.responseLanguage = locale;
+    fs.writeFileSync(rtPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+    if (ctx.trackers[key]) ctx.trackers[key].record(rtPath);
   }
 }
 
-async function setupGemini(ctx) {
-  if (checkGeminiCLI()) {
-    ctx.ui.info('gemini-cli already installed');
-  } else if (ctx.interactive) {
-    const yes = await ctx.ui.confirm(
-      { message: 'Install gemini-cli? (enables hapo:inspect ext mode)', initialValue: false },
-      false
-    );
-    if (yes === true) installGeminiCLI(ctx);
-  }
-
-  const apiKey = await ctx.ui.text(
-    { message: 'Gemini API key (Enter to skip)', placeholder: 'aistudio.google.com/apikey' },
-    ''
-  );
-  if (apiKey && typeof apiKey === 'string' && apiKey.trim()) {
-    configureGeminiKey(ctx, apiKey.trim(), ctx.platforms);
-  }
+/** Human assistant name for the active platform(s). */
+function assistantName(ctx) {
+  return ctx.platforms.includes('claude') ? 'Claude Code' : 'OpenCode';
 }
 
 function configureAddressing(ctx, userAddress) {
@@ -79,10 +111,11 @@ function configureAddressing(ctx, userAddress) {
     return;
   }
 
+  const name = assistantName(ctx);
   let content = fs.readFileSync(claudeMdFile, 'utf8');
   const addressingSection = `## Addressing (Context Overflow Indicator)
 
-The AI always addresses the user as "${userAddress}" throughout the conversation. If the AI stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
+${name} always addresses the user as "${userAddress}" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
   // Idempotent: replace existing section (shared marker) or append.
   const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
@@ -91,22 +124,23 @@ The AI always addresses the user as "${userAddress}" throughout the conversation
     : `${content.endsWith('\n') ? content : `${content}\n`}\n${addressingSection}\n`;
 
   fs.writeFileSync(claudeMdFile, content, 'utf8');
-  ctx.ui.success(`Addressing set: AI will call you "${userAddress}"`);
+  ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
 }
 
 async function setupAddressing(ctx) {
   if (!ctx.platforms.includes('claude')) return;
 
   const answer = await ctx.ui.text(
-    { message: 'How should the AI address you? (e.g. boss, sir — Enter to skip)', placeholder: 'Enter to skip' },
+    { message: ctx.t('addressingQuestion'), placeholder: ctx.t('addressingPlaceholder') },
     ''
   );
   if (ctx.ui.isCancel(answer)) return;
   const userAddress = (answer || '').trim();
   if (!userAddress) return;
 
-  if (/[^a-zA-ZÀ-ỹ\s]/.test(userAddress)) {
-    ctx.ui.warn('Invalid input (letters only); skipped addressing');
+  // Allow letters from any script (incl. Japanese) + spaces; reject digits/symbols.
+  if (/[^\p{L}\s]/u.test(userAddress)) {
+    ctx.ui.warn(ctx.t('addressingInvalid'));
     return;
   }
   configureAddressing(ctx, userAddress);
@@ -115,7 +149,7 @@ async function setupAddressing(ctx) {
 /** Run the post-install configuration sequence. */
 async function runPostInstall(ctx) {
   if (ctx.dryRun) {
-    ctx.ui.info('[dry-run] Skipping OpenCode model / Gemini / addressing setup');
+    ctx.ui.info('[dry-run] Skipping OpenCode model / addressing setup');
     return ctx;
   }
 
@@ -126,16 +160,26 @@ async function runPostInstall(ctx) {
     await setupOpenCodeModel(ctx.platforms, ctx.results);
   }
 
-  await setupGemini(ctx);
   await setupAddressing(ctx);
 
-  // Re-record CLAUDE.md baseline so the installer-managed file (template +
-  // addressing) stays "pristine" and keeps receiving upstream updates.
+  // Patch Language Consistency section in CLAUDE.md so AI responds in the chosen language.
+  patchLanguageSection(ctx);
+
+  // Persist chosen language into each platform's runtime.json (records in tracker).
+  patchRuntimeLocale(ctx);
+
+  // Write "language" field into .claude/settings.json for visibility.
+  patchSettingsLanguage(ctx);
+
+  // Re-record post-write baselines so installer-managed files stay "pristine",
+  // then flush each touched platform tracker.
   if (ctx.platforms.includes('claude') && ctx.trackers.claude && fs.existsSync('CLAUDE.md')) {
     ctx.trackers.claude.record('CLAUDE.md');
-    ctx.trackers.claude.write();
+  }
+  for (const key of ctx.platforms) {
+    if (ctx.trackers[key]) ctx.trackers[key].write();
   }
   return ctx;
 }
 
-module.exports = { checkGeminiCLI, configureGeminiKey, configureAddressing, runPostInstall };
+module.exports = { configureAddressing, runPostInstall };

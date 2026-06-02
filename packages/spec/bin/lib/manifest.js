@@ -95,6 +95,16 @@ function createTracker(platformFolder, version) {
       return Object.keys(files).length;
     },
 
+    /** Keys explicitly pruned this run — must not survive the merge into the prior manifest. */
+    _pruned: new Set(),
+
+    /** Remove a relPath from this run's tracked files (e.g. after obsolete removal). */
+    prune(rel) {
+      const key = rel.replace(/\\/g, '/');
+      delete files[key];
+      this._pruned.add(key);
+    },
+
     /** Recorded hash for a relPath written earlier this run, or null. */
     recorded(rel) {
       const key = rel.replace(/\\/g, '/');
@@ -107,7 +117,10 @@ function createTracker(platformFolder, version) {
      */
     write() {
       const prior = read(platformFolder);
-      const merged = { ...prior.files, ...files };
+      // Start from prior, delete pruned entries, then overlay this run's files.
+      const merged = { ...prior.files };
+      for (const key of this._pruned) delete merged[key];
+      Object.assign(merged, files);
       const out = {
         schemaVersion: SCHEMA_VERSION,
         version,

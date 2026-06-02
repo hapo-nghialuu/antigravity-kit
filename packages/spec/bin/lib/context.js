@@ -15,6 +15,7 @@ const path = require('path');
 const packageJson = require('../../package.json');
 const { getOpenCodeCopyOptions } = require('./opencode-install');
 const { isInteractive, createUI } = require('./ui');
+const { resolveLang, createTranslator } = require('./i18n');
 
 const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
@@ -183,7 +184,8 @@ function parseInstallerArgs(argv) {
   const args = {
     forceOverwrite: false,
     dryRun: false,
-    yes: false
+    yes: false,
+    withSkillsDeps: false
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -195,6 +197,12 @@ function parseInstallerArgs(argv) {
       args.dryRun = true;
     } else if (arg === '--yes' || arg === '-y') {
       args.yes = true;
+    } else if (arg === '--with-skills-deps') {
+      args.withSkillsDeps = true;
+    } else if (arg === '--lang') {
+      args.lang = argv[++i];
+    } else if (arg.startsWith('--lang=')) {
+      args.lang = arg.slice('--lang='.length);
     }
   }
 
@@ -237,6 +245,11 @@ function buildContext(argv, runId) {
   const options = parseInstallerArgs(argv);
   // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
   const interactive = isInteractive() && !options.yes;
+  // Language: --lang wins; otherwise English (an interactive prompt may change it).
+  const lang = options.lang ? resolveLang(options.lang) : 'en';
+  // ctx.locale = the string that gets written to CLAUDE.md / runtime.json as the AI's response language.
+  // For known codes it mirrors lang; for "other", it's set later by setLang.
+  const locale = options.lang || 'en';
   return {
     argv,
     runId,
@@ -244,6 +257,15 @@ function buildContext(argv, runId) {
     dryRun: options.dryRun,
     interactive,
     ui: createUI(interactive),
+    lang,        // UI language (one of SUPPORTED)
+    locale,      // AI response language label (may be freeform, e.g. "Korean")
+    t: createTranslator(lang),
+    /** Update UI lang + AI locale. rawLabel is the freeform label when user picks "Other". */
+    setLang(code, rawLabel) {
+      this.lang = resolveLang(code);
+      this.locale = rawLabel || LANGUAGE_LABELS[this.lang] || this.lang;
+      this.t = createTranslator(this.lang);
+    },
     manifest: loadClaudeMigrationManifest(),  // migration manifest (skills/agents/runtime lists)
     platforms: [],
     results: createResults(),

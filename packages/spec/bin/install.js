@@ -20,7 +20,7 @@ const lock = require('./lib/lock');
 const backup = require('./lib/backup');
 const manifestLib = require('./lib/manifest');
 
-const { resolvePlatforms } = require('./phases/select-platform');
+const { selectLanguage, resolvePlatforms } = require('./phases/select-platform');
 const { copyPlatformFiles } = require('./phases/copy-payload');
 const {
   copyRoutingFile,
@@ -32,8 +32,10 @@ const {
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
+const { checkVersions } = require('./lib/version-check');
 const { ensureGitignore } = require('./phases/root-config');
 const { runPostInstall } = require('./phases/post-install');
+const { setupSkillDeps } = require('./phases/skills-setup');
 const { printSummary } = require('./phases/summary');
 
 /** Install a single platform: payload + runtime + metadata, under one spinner. */
@@ -45,7 +47,7 @@ function installPlatform(ctx, platformKey) {
   ctx.trackers[platformKey] = manifestLib.createTracker(platform.folder, packageJson.version);
 
   const before = { copied: ctx.results.copied, updated: ctx.results.updated, skills: ctx.results.installedSkills };
-  ctx.ui.startSpinner(`Installing ${platform.name} (${platform.folder}/)`);
+  ctx.ui.startSpinner(ctx.t('installingPlatform', { name: platform.name }));
 
   copyPlatformFiles(ctx, platformKey);
 
@@ -65,13 +67,48 @@ function installPlatform(ctx, platformKey) {
   writePlatformVersionMetadata(ctx, platformKey);
 
   const wrote = (ctx.results.copied - before.copied) + (ctx.results.updated - before.updated);
-  const verb = ctx.dryRun ? 'would install' : 'installed';
-  ctx.ui.stopSpinner(`${platform.name} ${verb} — ${wrote} file(s), ${ctx.results.installedSkills - before.skills} skill(s)`);
+  const skills = ctx.results.installedSkills - before.skills;
+  ctx.ui.stopSpinner(ctx.t(ctx.dryRun ? 'platformDryInstalled' : 'platformInstalled', {
+    name: platform.name, files: wrote, skills
+  }));
 
   ctx.results.targets.push(platform.commandsDir);
 }
 
+function printHelp() {
+  console.log(`CafeKit installer (cafekit) v${packageJson.version}
+
+Usage: npx @haposoft/cafekit [options]
+
+Installs CafeKit skills, agents, rules and runtime into the current project
+(.claude/ and/or .opencode/). Re-runs are selective: managed files are updated,
+your edits are preserved.
+
+Options:
+  --dry-run            Preview changes; write nothing
+  --force-overwrite    Overwrite user-modified managed files (backup kept)
+  -u, --upgrade, -f, --force   Alias of --force-overwrite
+  --with-skills-deps   Install skill dependencies (Python venv + pip, npm,
+                       Chromium/Playwright). Otherwise prompted interactively.
+  -y, --yes            Non-interactive: skip prompts, use defaults (CI)
+  -h, --help           Show this help
+  -v, --version        Print version
+
+Docs: https://github.com/haposoft/cafekit`);
+}
+
 async function main() {
+  // Info flags short-circuit before any side effects.
+  const argv = process.argv.slice(2);
+  if (argv.includes('--help') || argv.includes('-h')) {
+    printHelp();
+    process.exit(0);
+  }
+  if (argv.includes('--version') || argv.includes('-v')) {
+    console.log(packageJson.version);
+    process.exit(0);
+  }
+
   // ── Concurrency guard (before context; plain output) ────
   const got = lock.acquire();
   if (!got.acquired) {
@@ -85,14 +122,16 @@ async function main() {
 
   try {
     ctx = buildContext(process.argv, `${Date.now()}`);
-    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))} Installer v${packageJson.version} · Multi-platform SDD`);
-    if (got.reclaimed) ctx.ui.info('Reclaimed a stale install lock from a dead process.');
+    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}Installer v${packageJson.version} · Multi-platform SDD`);
+    if (got.reclaimed) ctx.ui.info(ctx.t('reclaimed'));
 
+    await selectLanguage(ctx);
     await resolvePlatforms(ctx);
-    if (ctx.cancelled) {
-      lock.release();
-      process.exit(0);
-    }
+    if (ctx.cancelled) { lock.release(); process.exit(0); }
+
+    // Version check: same → exit, downgrade → confirm
+    await checkVersions(ctx);
+    if (ctx.cancelled) { lock.release(); process.exit(0); }
 
     // ── Pre-run snapshot for rollback ─────────────────────
     // Capture platform folders AND the root files the pipeline mutates
@@ -108,6 +147,7 @@ async function main() {
 
     ensureGitignore(ctx);
     await runPostInstall(ctx);
+    await setupSkillDeps(ctx);
     printSummary(ctx);
 
     if (!ctx.dryRun) backup.prune(3);
@@ -115,14 +155,14 @@ async function main() {
     exitCode = ctx.results.errors > 0 ? 1 : 0;
   } catch (error) {
     const log = ctx && ctx.ui ? ctx.ui : { error: (m) => console.error(m) };
-    log.error(`Installation failed: ${error.message}`);
+    const t = ctx ? ctx.t : (k) => k;
+    log.error(t('installFailed', { reason: error.message }));
     if (ctx && ctx.backupDir && !ctx.dryRun) {
       try {
         backup.restore(ctx.backupDir);
-        log.error('Rolled back to the pre-install state from snapshot.');
+        log.error(t('rolledBack'));
       } catch (restoreError) {
-        log.error(`Rollback failed: ${restoreError.message}`);
-        log.error(`Manual restore available at: ${ctx.backupDir}`);
+        log.error(t('rollbackFailed', { reason: restoreError.message, dir: ctx.backupDir }));
       }
     }
     exitCode = 1;

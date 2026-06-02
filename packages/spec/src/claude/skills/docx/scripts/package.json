@@ -1,0 +1,9 @@
+{
+  "name": "cafekit-skill-docx",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node dependencies for the CafeKit docx skill (docx-js authoring).",
+  "dependencies": {
+    "docx": "^9.0.0"
+  }
+}
