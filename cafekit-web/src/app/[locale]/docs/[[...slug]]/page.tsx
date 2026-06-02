@@ -111,7 +111,7 @@ function renderDoc(mdxContent: MDXContent, slug: string[] | undefined, locale: L
       </article>
 
       {tocHeadings.length > 0 && (
-        <aside className="hidden xl:block w-64 shrink-0 sticky top-[82px] h-[calc(100vh-5rem)] overflow-y-auto rounded-[24px] border border-border/70 bg-background/70 p-4 backdrop-blur">
+        <aside className="hidden xl:block w-64 shrink-0 sticky top-[64px] h-[calc(100vh-4rem)] overflow-y-auto rounded-[24px] border border-border/70 bg-background/70 p-4 backdrop-blur">
           <TableOfContents headings={tocHeadings} />
         </aside>
       )}
