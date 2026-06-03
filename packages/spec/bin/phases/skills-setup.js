@@ -65,7 +65,7 @@ function setupPython(ctx, skillsDir) {
 }
 
 /** Run skill-local npm installs/upgrades + browser binaries for a platform's skills. */
-function setupNode(ctx, skillsDir) {
+async function setupNode(ctx, skillsDir) {
   // Detect system Chrome before npm install — skip ~300MB Chromium download if found
   const chromeScripts = path.join(skillsDir, 'chrome-devtools', 'scripts');
   const hasChromePkg = fs.existsSync(path.join(chromeScripts, 'package.json'));
@@ -78,7 +78,7 @@ function setupNode(ctx, skillsDir) {
     const extraEnv = (skill === 'chrome-devtools' && systemChrome)
       ? { PUPPETEER_SKIP_DOWNLOAD: 'true' }
       : {};
-    const ok = dep.npmInstall(dir, hasNodeModules, extraEnv);
+    const ok = await dep.npmInstall(dir, hasNodeModules, extraEnv);
 
     if (ok) {
       ctx.ui.stopSpinner(ctx.t('npmInstalled', { skill }));
@@ -90,7 +90,7 @@ function setupNode(ctx, skillsDir) {
     // Skills using Playwright (e.g. pptx) also need a browser binary.
     if (dep.pkgHasDep(dir, 'playwright')) {
       ctx.ui.startSpinner(ctx.t('playwrightInstalling', { skill }));
-      const pw = dep.installPlaywrightBrowser(dir);
+      const pw = await dep.installPlaywrightBrowser(dir);
       ctx.ui.stopSpinner(pw ? ctx.t('playwrightReady', { skill }) : ctx.t('playwrightSkipped', { skill }));
     }
   }
@@ -102,7 +102,7 @@ function setupNode(ctx, skillsDir) {
       ctx.ui.info(ctx.t('chromiumSystemChromeFound', { path: systemChrome }));
     } else {
       ctx.ui.info(ctx.t('chromiumInstalling'));
-      const ok = dep.installChromium(chromeScripts, true);
+      const ok = await dep.installChromium(chromeScripts, true);
       ctx.ui.info(ok ? '✓ ' + ctx.t('chromiumReady') : ctx.t('chromiumSkipped'));
     }
   }
@@ -128,7 +128,7 @@ async function setupSkillDeps(ctx) {
 
   for (const key of ctx.platforms) {
     setupPython(ctx, PLATFORMS[key].skillsDir);
-    setupNode(ctx, PLATFORMS[key].skillsDir);
+    await setupNode(ctx, PLATFORMS[key].skillsDir);
   }
 
   guideManual(ctx);

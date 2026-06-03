@@ -13,11 +13,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 
 const isWindows = process.platform === 'win32';
 
-/** Run a command, return { ok, stdout, stderr, status }. Never throws. */
+/** Run a command synchronously, return { ok, stdout, stderr, status }. Never throws. */
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: 'utf8', ...opts });
   return {
@@ -26,6 +26,31 @@ function run(cmd, args, opts = {}) {
     stdout: r.stdout || '',
     stderr: r.stderr || ''
   };
+}
+
+/**
+ * Run a command asynchronously — keeps the event loop alive so spinners can animate.
+ * Returns a Promise<{ ok, stdout, stderr, status }>. Never rejects.
+ */
+function runAsync(cmd, args, opts = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { stdio: 'pipe', ...opts });
+    let stdout = '';
+    let stderr = '';
+    if (child.stdout) child.stdout.on('data', (d) => { stdout += d.toString(); });
+    if (child.stderr) child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.on('close', (code) => {
+      resolve({
+        ok: code === 0,
+        status: code,
+        stdout,
+        stderr
+      });
+    });
+    child.on('error', (err) => {
+      resolve({ ok: false, status: null, stdout, stderr: stderr || err.message });
+    });
+  });
 }
 
 /** Is a command available on PATH? */
@@ -76,35 +101,37 @@ function pipInstall(skillsDir, requirementsPath, upgrade = false) {
   return run(venvPython(skillsDir), args).ok;
 }
 
-/** `npm install` (fresh) or `npm update` (existing) in a skill scripts dir. */
-function npmInstall(dir, upgrade = false, extraEnv = {}) {
+/** `npm install` (fresh) or `npm update` (existing) in a skill scripts dir. Async — keeps spinner alive. */
+async function npmInstall(dir, upgrade = false, extraEnv = {}) {
   const args = upgrade ? ['update', '--no-audit', '--no-fund'] : ['install', '--no-audit', '--no-fund'];
   const env = { ...process.env, ...extraEnv };
-  return run('npm', args, { cwd: dir, env }).ok;
+  const r = await runAsync('npm', args, { cwd: dir, env });
+  return r.ok;
 }
 
 /**
  * Download the Puppeteer Chromium browser for chrome-devtools.
  * Prefer puppeteer's own install script (cache-aware, same as its postinstall);
- * fall back to the bundled @puppeteer/browsers CLI. `npx puppeteer ...` is
- * avoided — puppeteer ships no `puppeteer` bin under that invocation and `--yes`
- * would refetch from the registry.
+ * fall back to the bundled @puppeteer/browsers CLI.
  *
- * When `interactive` is true, stdio is inherited so the native progress bar
- * renders directly on the user's terminal (TTY-only, no pipe capture).
+ * Non-interactive (default): async — keeps spinner alive during download.
+ * Interactive: sync with stdio inherit — native progress bar renders in TTY.
  */
-function installChromium(scriptsDir, interactive = false) {
-  const stdioOpt = interactive ? 'inherit' : 'pipe';
+async function installChromium(scriptsDir, interactive = false) {
   // Absolute path so it resolves regardless of the child process cwd.
   const installMjs = path.resolve(scriptsDir, 'node_modules', 'puppeteer', 'install.mjs');
   if (fs.existsSync(installMjs)) {
-    const opts = { cwd: scriptsDir, stdio: stdioOpt };
-    if (interactive) opts.encoding = 'utf8';
-    return run('node', [installMjs], opts).ok;
+    if (interactive) {
+      return run('node', [installMjs], { cwd: scriptsDir, stdio: 'inherit' }).ok;
+    }
+    const r = await runAsync('node', [installMjs], { cwd: scriptsDir });
+    return r.ok;
   }
-  const opts = { cwd: scriptsDir, stdio: stdioOpt };
-  if (interactive) opts.encoding = 'utf8';
-  return run('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], opts).ok;
+  if (interactive) {
+    return run('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], { cwd: scriptsDir, stdio: 'inherit' }).ok;
+  }
+  const r = await runAsync('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], { cwd: scriptsDir });
+  return r.ok;
 }
 
 /** Does a skill scripts dir declare a given npm dependency? */
@@ -117,9 +144,10 @@ function pkgHasDep(scriptsDir, name) {
   }
 }
 
-/** Download the Playwright Chromium browser (for the pptx html2pptx workflow). */
-function installPlaywrightBrowser(scriptsDir) {
-  return run('npx', ['--yes', 'playwright', 'install', 'chromium'], { cwd: scriptsDir }).ok;
+/** Download the Playwright Chromium browser (for the pptx html2pptx workflow). Async — keeps spinner alive. */
+async function installPlaywrightBrowser(scriptsDir) {
+  const r = await runAsync('npx', ['--yes', 'playwright', 'install', 'chromium'], { cwd: scriptsDir });
+  return r.ok;
 }
 
 /**
