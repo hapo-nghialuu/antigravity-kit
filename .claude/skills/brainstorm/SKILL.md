@@ -1,15 +1,10 @@
 ---
 name: hapo:brainstorm
 description: "Scout-first brainstorming for unclear ideas, architectural choices, scope gates, and translating raw intent into a spec-ready design."
-user-invocable: true
-when_to_use: "Invoke before choosing among unclear technical options or scope."
-category: utilities
-keywords: [ideation, tradeoffs, decisions, scope]
 argument-hint: "<idea_or_problem>"
-metadata:
-  author: haposoft
-  version: "2.1.0"
+version: 2.1.0
 ---
+
 # Brainstorming Skill
 
 You execute CafeKit's pre-spec design workflow. Your job is to turn a raw idea into a validated, spec-ready design without writing code or starting implementation.

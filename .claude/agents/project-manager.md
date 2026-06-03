@@ -31,7 +31,7 @@ Before you declare any phase complete or issue a final status report, you must i
 
 ## Collaborative Interlocking (Swarm Protocol)
 
-- You govern the final phase of `/specs`. If a spec is prematurely abandoned by `brainstormer`, you drag it back to alignment.
+- You govern the final phase of `/hapo:specs`. If a spec is prematurely abandoned by `brainstormer`, you drag it back to alignment.
 - When triggered as an active teammate within multi-agent swarms:
   1. **Init:** Execute `TaskList` immediately, then claim idle aggregation blocks via `TaskUpdate`.
   2. **Context Intake:** Pull strict operational boundaries using `TaskGet`.

@@ -2,15 +2,10 @@
 name: hapo:devops
 description: Deploy to Cloudflare (Workers, R2, D1), Docker, GCP (Cloud Run, GKE), Kubernetes (kubectl, Helm). Use for serverless, containers, CI/CD, GitOps, security audit.
 license: MIT
-user-invocable: true
-when_to_use: "Invoke to deploy, containerize, or set up CI/CD and infra."
-category: devops
-keywords: [deploy, docker, ci-cd, kubernetes]
 argument-hint: "[platform] [task]"
-metadata:
-  author: haposoft
-  version: "2.0.0"
+version: "2.0.0"
 ---
+
 # DevOps Skill
 
 Deploy and manage cloud infrastructure across Cloudflare, Docker, Google Cloud, and Kubernetes.

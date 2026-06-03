@@ -1,14 +1,12 @@
 ---
 name: hapo:generate-graph
 description: >-
-user-invocable: true
-when_to_use: "Invoke to build a queryable graph or diagram from code or data."
-category: utilities
-keywords: [graph, visualization, diagram, analysis]
-metadata:
-  author: haposoft
-  version: "1.0.0"
+  Use when the user wants to create any technical diagram - architecture, data
+  flow, flowchart, sequence, agent/memory, or concept map - and export as
+  SVG+PNG. Trigger on: "generate diagram" "draw diagram" "visualize" or any
+  system/flow description the user wants illustrated.
 ---
+
 # Generate Graph
 
 Generate production-quality SVG technical diagrams exported as PNG via `rsvg-convert`.

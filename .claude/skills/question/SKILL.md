@@ -1,15 +1,10 @@
 ---
 name: hapo:question
 description: "Answer questions with evidence. Use when the user asks about project behavior, source code, specs, docs, configuration, dependencies, or external technical information; inspect the repo first, use internet/current docs when repo evidence is insufficient, and ask back only when the question cannot be answered safely."
-user-invocable: true
-when_to_use: "Invoke to answer project or technical questions with repo-first evidence."
-category: utilities
-keywords: [question, evidence, answer, research]
 argument-hint: "<question> [--repo|--web|--both|--brief|--deep]"
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: 1.0.0
 ---
+
 # Question Skill
 
 `hapo:question` is an evidence-backed question-answering skill. It answers user questions by checking the local project first, then external/current sources when the repository cannot answer the question.

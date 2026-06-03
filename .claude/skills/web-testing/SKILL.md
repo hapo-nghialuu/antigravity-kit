@@ -2,15 +2,10 @@
 name: hapo:web-testing
 description: Web testing with Playwright, Vitest, k6. E2E/unit/integration/load/security/visual/a11y testing. Use for test automation, flakiness, Core Web Vitals, mobile gestures, cross-browser.
 license: Apache-2.0
-user-invocable: true
-when_to_use: "Invoke to test web flows in a real browser end-to-end."
-category: testing
-keywords: [web-testing, e2e, browser, validation]
 argument-hint: "[test-type] [target]"
-metadata:
-  author: haposoft
-  version: "3.0.0"
+version: "3.0.0"
 ---
+
 # Web Testing Skill
 
 Comprehensive web testing: unit, integration, E2E, load, security, visual regression, accessibility.

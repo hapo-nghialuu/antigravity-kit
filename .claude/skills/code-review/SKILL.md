@@ -1,15 +1,10 @@
 ---
 name: hapo:code-review
 description: "Adversarial code review with technical rigor. Supports 3-Stage Protocol with ai-multimodal injection for multimodal spec compliance. Red-team analysis finds security holes, logic gaps, and architecture violations."
-user-invocable: true
-when_to_use: "Invoke to review a diff for correctness and quality before merge."
-category: dev-tools
-keywords: [review, diff, quality, correctness]
 argument-hint: "[#PR | COMMIT | --pending | scope]"
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: 1.0.0
 ---
+
 # Code Review
 
 Adversarial code review with technical rigor, evidence-based claims, and visual/document intelligence via the `hapo:ai-multimodal` Hub.

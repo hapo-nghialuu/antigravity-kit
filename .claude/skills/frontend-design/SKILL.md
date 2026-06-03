@@ -2,14 +2,9 @@
 name: hapo:frontend-design
 description: Create polished frontend interfaces from designs/screenshots/videos. Use for web components, 3D experiences, replicating UI designs, quick prototypes, immersive interfaces, avoiding AI slop.
 license: Complete terms in LICENSE.txt
-user-invocable: true
-when_to_use: "Invoke to translate mockups or screenshots into UI implementation."
-category: frontend
-keywords: [design, mockup, ui, replication]
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: "1.0.0"
 ---
+
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
 
 **IMPORTANT**: MUST follow Design Thinking, Frontend Aesthetics Guidelines, Asset & Analysis References, and Anti-Patterns (AI Slop) sections below. DO NOT skip these rules.

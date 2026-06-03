@@ -2,14 +2,11 @@
 name: hapo:xlsx
 description: Create, edit, analyze spreadsheets (.xlsx, .csv, .tsv). Use for Excel formulas, data analysis, visualization, formatting, pivot tables, charts, formula recalculation.
 license: Proprietary. LICENSE.txt has complete terms
-user-invocable: true
-when_to_use: "Invoke to read, create, or edit Excel .xlsx spreadsheets."
-category: document-skills
-keywords: [xlsx, excel, spreadsheet, office]
 metadata:
   author: haposoft
   version: "1.0.0"
 ---
+
 # Requirements for Outputs
 
 ## All Excel files

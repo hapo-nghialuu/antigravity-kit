@@ -1,15 +1,9 @@
 ---
 name: hapo:develop
 description: "Code execution engine: Reads specs and implements code end-to-end with automatic code review, self-healing, and visual implementation notes."
-user-invocable: true
-when_to_use: "Invoke to implement specs and tasks end-to-end after scope is clear."
-category: utilities
-keywords: [implementation, specs, build, orchestration]
 argument-hint: "[feature-name|specs-directory-path] [task-file] [--flash] [--no-notes]"
-metadata:
-  author: haposoft
-  version: "1.0.0"
 ---
+
 # Develop — Feature Implementation (Task-Orchestrated Build)
 
 Reads the project specification (`hapo:specs`) and implements code through a disciplined task loop. In specific-task mode it behaves like a surgical executor. In full-spec mode it behaves like a sequential orchestrator, processing one unblocked task at a time and syncing state after every verified task.

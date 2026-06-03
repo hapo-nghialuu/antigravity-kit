@@ -2,7 +2,7 @@
 
 ## Single Source of Truth
 
-In any Spec-driven workflow (`specs`), the state of the project is physically persisted in **two layers**:
+In any Spec-driven workflow (`hapo:specs`), the state of the project is physically persisted in **two layers**:
 1. **Machine Layer (`spec.json`)**: Tracks phase, status, overall completion, and per-task machine state via `task_registry`.
 2. **Human Layer (`tasks/task-*.md`)**: Checkboxes indicating granular execution progress.
 

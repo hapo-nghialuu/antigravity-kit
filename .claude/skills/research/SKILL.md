@@ -1,15 +1,10 @@
 ---
 name: hapo:research
 description: "Research technical solutions and analyze architectures. Acts as a command facade to trigger the 'researcher' subagent for multi-source verification and deep report synthesis."
-user-invocable: true
-when_to_use: "Invoke for deep technical research and solution evaluation before building."
-category: research
-keywords: [research, evaluation, analysis, solutions]
 argument-hint: "<topic_or_question>"
-metadata:
-  author: haposoft
-  version: "2.0.0"
+version: 2.0.0
 ---
+
 # Research (Delegation Facade)
 
 **Mantra:** YAGNI, KISS, DRY. Be brutal, straight to the point, and strictly authoritative.

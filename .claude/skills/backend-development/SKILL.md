@@ -2,15 +2,10 @@
 name: hapo:backend-development
 description: Build backends with Node.js, Python, Go (NestJS, FastAPI, Django). Use for REST/GraphQL/gRPC APIs, auth (OAuth, JWT), databases, microservices, security (OWASP), Docker/K8s.
 license: MIT
-user-invocable: true
-when_to_use: "Invoke to build or modify server APIs, services, and data layers."
-category: backend
-keywords: [backend, api, server, database]
 argument-hint: "[framework] [task]"
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: "1.0.0"
 ---
+
 # Backend Development Skill
 
 Production-ready backend development with modern technologies, best practices, and proven patterns.

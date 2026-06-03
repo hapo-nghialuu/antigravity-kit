@@ -1,15 +1,10 @@
 ---
 name: hapo:debug
 description: "Use before fixing any bug, failing test, CI/CD failure, production incident, performance issue, UI regression, flaky test, or unexpected behavior. Diagnostic-only root-cause workflow with evidence, hypotheses, blast-radius mapping, and verification plan."
-user-invocable: true
-when_to_use: "Invoke for evidence-first root-cause diagnosis before any fix."
-category: dev-tools
-keywords: [debug, diagnosis, root-cause, evidence]
 argument-hint: "[issue] --quick|--ci|--frontend|--perf"
-metadata:
-  author: haposoft
-  version: "1.0.0"
+version: "1.0.0"
 ---
+
 # Debug - Evidence-First Root Cause Analysis
 
 Debugging is diagnosis, not repair. Find the source of the failure before changing product code.

@@ -2,14 +2,11 @@
 name: hapo:pptx
 description: Create, edit, analyze .pptx PowerPoint files. Use for presentations, slides, layouts, speaker notes, template modification, content extraction, slide generation.
 license: Proprietary. LICENSE.txt has complete terms
-user-invocable: true
-when_to_use: "Invoke to read, create, or edit PowerPoint .pptx slides."
-category: document-skills
-keywords: [pptx, powerpoint, slides, office]
 metadata:
   author: haposoft
   version: "1.0.0"
 ---
+
 # PPTX creation, editing, and analysis
 
 ## Overview

@@ -57,7 +57,7 @@ Use [Keep a Changelog](https://keepachangelog.com/) convention:
 ## Specification & Execution Tracker (Hapo Protocol)
 
 ### Where Specs Live
-Hapo does not use chaotic plan folders. Requirements and architecture are centralized into a machine-readable Specification structure via `specs`.
+Hapo does not use chaotic plan folders. Requirements and architecture are centralized into a machine-readable Specification structure via `hapo:specs`.
 
 All specifications exist strictly in `./specs/<feature-slug>/`.
 

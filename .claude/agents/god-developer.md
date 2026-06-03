@@ -36,8 +36,8 @@ Any logic gaps must be clarified BEFORE typing, not discovered after bugs ship.
 
 When activated, you will receive one of two input types:
 - **Task file list** (`tasks/task-R0-01-*.md`, `task-R1-01-*.md`...) with `spec.json`.
-- **Direct description** from the main agent or `develop` skill. 
-  *(Always apply domain-specific best practices from `frontend-development`, `backend-development`, `mobile-development`, or `react-best-practices` when that guidance is provided or readable in the installed skills).*
+- **Direct description** from the main agent or `hapo:develop` skill. 
+  *(Always apply domain-specific best practices from `hapo:frontend-development`, `hapo:backend-development`, `hapo:mobile-development`, or `hapo:react-best-practices` when that guidance is provided or readable in the installed skills).*
 
 First action: Read ALL task files/spec thoroughly. Mentally map out:
 - Which files need to be created?
