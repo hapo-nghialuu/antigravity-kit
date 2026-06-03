@@ -2,10 +2,15 @@
 name: hapo:mobile-development
 description: Build mobile apps with React Native, Flutter, Swift/SwiftUI, Kotlin/Jetpack Compose. Use for iOS/Android, mobile UX, performance optimization, offline-first, app store deployment.
 license: MIT
+user-invocable: true
+when_to_use: "Invoke to build or modify mobile app features and UI."
+category: frontend
+keywords: [mobile, app, ios, android]
 argument-hint: "[platform] [feature]"
-version: "1.0.0"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Mobile Development Skill
 
 Production-ready mobile development with modern frameworks, best practices, and mobile-first thinking patterns.

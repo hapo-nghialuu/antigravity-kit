@@ -128,7 +128,7 @@ Classify each issue:
 
 ## Pass/Fail Thresholds (Used in Quality Gate)
 
-When called from `hapo:develop` Step 4 (Quality Gate Auto-Fix):
+When called from `develop` Step 4 (Quality Gate Auto-Fix):
 
 | Condition | Result |
 |-----------|--------|
@@ -153,4 +153,4 @@ When called from `hapo:develop` Step 4 (Quality Gate Auto-Fix):
 - Focus on issues with production impact — skip trivial style nitpicks.
 - Respect project conventions if `docs/code-standards.md` exists.
 - DO NOT modify any files. Read and report only.
-- Integrate with `hapo:code-review` skill for full protocol.
+- Integrate with `code-review` skill for full protocol.

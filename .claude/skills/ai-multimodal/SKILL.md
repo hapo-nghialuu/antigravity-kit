@@ -2,14 +2,15 @@
 name: hapo:ai-multimodal
 description: Analyze images/audio/video/documentation with Gemini API. Use for vision analysis, transcription, OCR, design extraction, and deep multimodal understanding.
 license: MIT
-allowed-tools:
-  - Bash
-  - Read
-  - Write
-  - Edit
+user-invocable: true
+when_to_use: "Invoke to analyze or generate images, audio, or mixed-media content."
+category: utilities
+keywords: [multimodal, image, audio, vision]
 argument-hint: "[file-path] [prompt]"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # AI Multimodal
 
 Process audio, images, videos, documents using Gemini. Purely focused on robust analysis, transcription, and contextual extraction.

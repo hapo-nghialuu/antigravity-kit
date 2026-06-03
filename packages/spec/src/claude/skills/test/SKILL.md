@@ -1,10 +1,15 @@
 ---
 name: hapo:test
 description: "Run and verify project tests across all scopes: unit, integration, e2e, and UI. Blast-radius scoping for speed, chrome-devtools for UI verification, structured verdicts for downstream automation."
+user-invocable: true
+when_to_use: "Invoke to run and verify unit, integration, e2e, and UI tests."
+category: testing
+keywords: [test, unit, integration, e2e]
 argument-hint: "[scope|--full|--ui <url>|--ui-auth <url>|--ui-flow <url>]"
-version: 2.0.0
+metadata:
+  author: haposoft
+  version: "2.0.0"
 ---
-
 # Test — Verify Implementation Quality
 
 Run the project's test suite, analyze results, and return a structured verdict.

@@ -573,8 +573,8 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("skill-workflow-routing.md") &&
         content.includes("skill-domain-routing.md") &&
-        content.includes("does not auto-route prompts through a scoring hook") &&
-        content.includes("generate-skill-catalog.cjs --skills"),
+        content.includes("Analyze the skills catalog and activate the skills") &&
+        content.includes("advisory routing when choosing a skill"),
     },
     {
       label: "CafeKit skill routing workflow rule maps core flows",

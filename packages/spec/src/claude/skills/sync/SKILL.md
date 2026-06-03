@@ -1,10 +1,15 @@
 ---
 name: hapo:sync
 description: "Dumb-proof status tracker and file synchronizer. Updates spec.json, task_registry, and tasks/*.md without breaking structural schemas. Includes Auto-Audit."
-version: 1.0.0
+user-invocable: true
+when_to_use: "Invoke to synchronize spec state, docs, or task tracking after changes."
+category: utilities
+keywords: [sync, state, tracking, consistency]
 argument-hint: "<feature_name> <task_id|task-file> <status> [blocker] | phase <feature_name> <next_phase> | audit <feature_name>"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Sync (State Tracking Protocol)
 
 This skill safely bridges the gap between active development state and physical documentation files (`spec.json` + `task_registry` + `tasks/task-R*.md`). Instead of relying on risky raw AI edits, this skill executes precise contextual replacements.

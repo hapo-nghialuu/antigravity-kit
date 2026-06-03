@@ -33,7 +33,7 @@ Before packaging your report, verify:
 ## Responsibilities
 - Provide a file list with brief context descriptions — fast and concise.
 - Target the right directories, skip noise.
-- For `hapo:develop`, scout PER ACTIVE TASK. Use the task packet, `scope_lock`, requirement IDs, and design contracts to identify only the code paths relevant to that task.
+- For `develop`, scout PER ACTIVE TASK. Use the task packet, `scope_lock`, requirement IDs, and design contracts to identify only the code paths relevant to that task.
 - Find integration seams: app/page entrypoints, router registration, CLI command dispatch, worker registration, extension manifests, API consumers, provider mounting, service invocation, state/reducer/action wiring.
 - Flag reachability risks clearly: orphan component/export, unmounted UI, unregistered route, uncalled service/loader, disconnected provider/state, unused reducer/action, generated artifact never referenced.
 - Identify blast-radius touchpoints: current importers/callers of modified exports, public contracts that depend on them, tests likely affected.

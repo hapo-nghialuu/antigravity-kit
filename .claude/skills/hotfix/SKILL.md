@@ -1,10 +1,15 @@
 ---
 name: hapo:hotfix
 description: "ALWAYS activate this skill when you are asked to FIX a bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Uses hapo:debug for evidence-first diagnosis before any code change."
+user-invocable: true
+when_to_use: "Invoke to fix a bug or failure with scout-first diagnosis before change."
+category: dev-tools
+keywords: [hotfix, fix, bug, diagnosis]
 argument-hint: "[issue] --quick|--parallel|--from-debug"
-version: "1.0.0"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Hotfix - Structured Bug Elimination
 
 Kill bugs systematically. No guessing. Evidence first, fix second.

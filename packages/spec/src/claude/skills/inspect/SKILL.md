@@ -1,10 +1,15 @@
 ---
 name: hapo:inspect
 description: "Fast codebase discovery using parallel agents. Use for file discovery, task context gathering, quick searches across directories. Supports internal (Explore) and external (Gemini) agents."
-version: 2.0.0
+user-invocable: true
+when_to_use: "Invoke for fast parallel codebase discovery and file location."
+category: discovery
+keywords: [discovery, search, explore, context]
 argument-hint: "[search-target] [ext]"
+metadata:
+  author: haposoft
+  version: "2.0.0"
 ---
-
 # Inspect
 
 Fast, token-efficient codebase discovery using parallel agents to find files needed for tasks.

@@ -1,10 +1,15 @@
 ---
-name: impact-analysis
+name: hapo:impact-analysis
 description: "Analyze code change impacts and generate test scenarios. Use after code changes, before commit, or when checking for regressions. Automatically detects affected files, dependencies, and edge cases."
+user-invocable: true
+when_to_use: "Invoke after code changes to map regression impact and test scenarios."
+category: dev-tools
+keywords: [impact, regression, dependencies, testing]
 argument-hint: "[files] OR auto"
-version: 1.0.0
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Impact Analysis - Impact Analysis & Test Guidance
 
 Analyze the impact of code changes and provide detailed test guidance to prevent regression bugs.

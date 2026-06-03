@@ -1,10 +1,15 @@
 ---
 name: hapo:frontend-development
 description: Build React/TypeScript frontends with modern patterns. Use for components, Suspense, lazy loading, useSuspenseQuery, MUI v7 styling, TanStack Router, performance optimization.
+user-invocable: true
+when_to_use: "Invoke to build React/TS components with best practices."
+category: frontend
+keywords: [frontend, react, typescript, components]
 argument-hint: "[component or feature]"
-version: "1.0.0"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Frontend Development Guidelines
 
 ## Purpose
