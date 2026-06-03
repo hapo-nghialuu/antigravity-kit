@@ -31,7 +31,7 @@ async function shouldRun(ctx) {
 }
 
 /** Provision or upgrade Python venv + pip requirements for a platform's skills. */
-function setupPython(ctx, skillsDir) {
+async function setupPython(ctx, skillsDir) {
   const reqs = dep.collectRequirements(skillsDir);
   if (reqs.length === 0) return;
 
@@ -43,19 +43,20 @@ function setupPython(ctx, skillsDir) {
 
   const alreadyExists = dep.venvValid(skillsDir);
   ctx.ui.startSpinner(ctx.t('venvCreating'));
-  if (!dep.createVenv(skillsDir, py)) {
+  const venvOk = await dep.createVenv(skillsDir, py);
+  if (!venvOk) {
     ctx.ui.stopSpinner(ctx.t('venvFailed'));
     ctx.ui.warn(ctx.t('venvFailed'));
     return;
   }
-  dep.pipUpgrade(skillsDir);
+  await dep.pipUpgrade(skillsDir);
   ctx.ui.stopSpinner(`${ctx.t('venvReady')} (${dep.venvDir(skillsDir)})`);
 
   // Upgrade packages if venv already existed (update run), install fresh otherwise.
   const upgrade = alreadyExists;
   for (const { skill, file } of reqs) {
     ctx.ui.startSpinner(ctx.t(upgrade ? 'pipInstalling' : 'pipInstalling', { skill }));
-    const ok = dep.pipInstall(skillsDir, file, upgrade);
+    const ok = await dep.pipInstall(skillsDir, file, upgrade);
     if (ok) {
       ctx.ui.stopSpinner(ctx.t('pipInstalled', { skill }));
     } else {
@@ -127,7 +128,7 @@ async function setupSkillDeps(ctx) {
   }
 
   for (const key of ctx.platforms) {
-    setupPython(ctx, PLATFORMS[key].skillsDir);
+    await setupPython(ctx, PLATFORMS[key].skillsDir);
     await setupNode(ctx, PLATFORMS[key].skillsDir);
   }
 

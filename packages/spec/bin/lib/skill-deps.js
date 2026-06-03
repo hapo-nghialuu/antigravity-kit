@@ -82,23 +82,26 @@ function venvValid(skillsDir) {
   return fs.existsSync(venvPython(skillsDir));
 }
 
-/** Create the venv (idempotent: skips if already valid). Returns true on success. */
-function createVenv(skillsDir, py) {
+/** Create the venv (idempotent: skips if already valid). Async — keeps spinner alive. */
+async function createVenv(skillsDir, py) {
   if (venvValid(skillsDir)) return true;
   fs.mkdirSync(skillsDir, { recursive: true });
-  return run(py, ['-m', 'venv', venvDir(skillsDir)]).ok;
+  const r = await runAsync(py, ['-m', 'venv', venvDir(skillsDir)]);
+  return r.ok;
 }
 
-/** Upgrade pip inside the venv (best-effort). */
-function pipUpgrade(skillsDir) {
-  return run(venvPython(skillsDir), ['-m', 'pip', 'install', '--upgrade', 'pip', '--prefer-binary']).ok;
+/** Upgrade pip inside the venv (best-effort). Async — keeps spinner alive. */
+async function pipUpgrade(skillsDir) {
+  const r = await runAsync(venvPython(skillsDir), ['-m', 'pip', 'install', '--upgrade', 'pip', '--prefer-binary']);
+  return r.ok;
 }
 
-/** Install or upgrade pip requirements in the venv. */
-function pipInstall(skillsDir, requirementsPath, upgrade = false) {
+/** Install or upgrade pip requirements in the venv. Async — keeps spinner alive. */
+async function pipInstall(skillsDir, requirementsPath, upgrade = false) {
   const args = ['-m', 'pip', 'install', '-r', requirementsPath, '--prefer-binary'];
   if (upgrade) args.push('--upgrade');
-  return run(venvPython(skillsDir), args).ok;
+  const r = await runAsync(venvPython(skillsDir), args);
+  return r.ok;
 }
 
 /** `npm install` (fresh) or `npm update` (existing) in a skill scripts dir. Async — keeps spinner alive. */
