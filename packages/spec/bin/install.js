@@ -122,7 +122,7 @@ async function main() {
 
   try {
     ctx = buildContext(process.argv, `${Date.now()}`);
-    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}Installer v${packageJson.version} · Multi-platform SDD`);
+    ctx.ui.intro(`${ctx.ui.pc.bgCyan(ctx.ui.pc.black(' CafeKit '))}${ctx.ui.pc.gray(' Installer')} v${packageJson.version}\n  ${ctx.ui.pc.dim('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')}\n  ${ctx.ui.pc.blue('📦 ' + (ctx.t ? ctx.t('introDesc') : 'AI-native development workflow'))}`);
     if (got.reclaimed) ctx.ui.info(ctx.t('reclaimed'));
 
     await selectLanguage(ctx);

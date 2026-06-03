@@ -141,13 +141,13 @@ try {
   /**
    * Check for a newer CafeKit version and return an update notice string,
    * or an empty string if already up to date or check fails.
-   * Result is cached in .claude/.cafekit-update-cache.json for 12 hours.
+   * Result is cached in .claude/.cafekit-update-cache.json for 1 hour.
    */
   async function checkCafeKitUpdate(cwd) {
     const installed = getInstalledVersion(cwd);
     if (!installed) return '';
 
-    const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+    const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 hour
     const cachePath = path.join(cwd, '.claude', '.cafekit-update-cache.json');
 
     // Return cached result if still fresh.

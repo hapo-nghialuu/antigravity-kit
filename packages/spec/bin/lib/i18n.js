@@ -37,6 +37,9 @@ const MESSAGES = {
     modeDryRun:   'Mode: dry-run  •  no changes will be written',
     modeInstall:  'Mode: install / update  •  your customisations are preserved',
 
+    // Intro
+    introDesc:    'AI-native development workflow for Claude Code',
+
     // Platform install spinner
     installingPlatform:    'Installing {name}',
     platformInstalled:     '{name} — {files} file(s), {skills} skill(s)',
@@ -94,8 +97,15 @@ const MESSAGES = {
     outroDone:       'Done!  docs: https://github.com/haposoft/cafekit',
 
     // Version check
-    versionUpToDate:  'Already up to date ({v}). Use --force-overwrite to reinstall.',
-    versionDowngrade: 'Downgrading {from} → {to}. Features may be removed. Continue?'
+    versionUpToDate:      'Already up to date ({v}). Use --force-overwrite to reinstall.',
+    versionDowngrade:     'Downgrading {from} → {to}. Features may be removed. Continue?',
+    versionSamePrompt:    'CafeKit {v} is already installed. What would you like to do?',
+    versionForceReinstall: 'Reinstalling CafeKit {v} (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: Update available!',
+    updateOption:         'Update to {v}',
+    reinstallOption:      'Reinstall (overwrite managed files)',
+    reinstallCurrentOption: 'Reinstall {v}',
+    skipOption:           'Skip (exit)'
   },
 
   // ─── 日本語 ─────────────────────────────────────────────────────────────────
@@ -117,6 +127,9 @@ const MESSAGES = {
     modeForce:    'モード: 強制上書き  •  編集済みファイルを置換します（バックアップあり）',
     modeDryRun:   'モード: ドライラン  •  ファイルへの変更はありません',
     modeInstall:  'モード: インストール / 更新  •  カスタマイズは保持されます',
+
+    // Intro
+    introDesc:    'Claude Code 向け AI ネイティブ開発ワークフロー',
 
     installingPlatform:    '{name} をインストール中',
     platformInstalled:     '{name} — {files} ファイル、{skills} スキル',
@@ -169,8 +182,15 @@ const MESSAGES = {
     dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
     outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit',
 
-    versionUpToDate:  '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
-    versionDowngrade: '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？'
+    versionUpToDate:      '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
+    versionDowngrade:     '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？',
+    versionSamePrompt:    'CafeKit {v} は既にインストールされています。何をしますか？',
+    versionForceReinstall: 'CafeKit {v} を再インストール中 (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: アップデートが利用可能です！',
+    updateOption:         '{v} にアップデート',
+    reinstallOption:      '再インストール（管理対象ファイルを上書き）',
+    reinstallCurrentOption: '{v} を再インストール',
+    skipOption:           'スキップ（終了）'
   },
 
   // ─── Tiếng Việt ─────────────────────────────────────────────────────────────
@@ -192,6 +212,9 @@ const MESSAGES = {
     modeForce:    'Chế độ: ghi đè  •  file bạn đã sửa sẽ bị thay (có bản sao lưu)',
     modeDryRun:   'Chế độ: dry-run  •  sẽ không thay đổi bất kỳ tệp nào',
     modeInstall:  'Chế độ: cài / cập nhật  •  nội dung bạn tuỳ chỉnh được giữ nguyên',
+
+    // Intro
+    introDesc:    'Quy trình phát triển AI-native cho Claude Code',
 
     installingPlatform:    'Đang cài {name}',
     platformInstalled:     '{name} — {files} tệp, {skills} skill',
@@ -244,8 +267,15 @@ const MESSAGES = {
     dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',
     outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit',
 
-    versionUpToDate:  'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
-    versionDowngrade: 'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?'
+    versionUpToDate:      'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
+    versionDowngrade:     'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?',
+    versionSamePrompt:    'CafeKit {v} đã được cài đặt. Bạn muốn làm gì?',
+    versionForceReinstall: 'Đang cài lại CafeKit {v} (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: Có bản cập nhật mới!',
+    updateOption:         'Cập nhật lên {v}',
+    reinstallOption:      'Cài lại (ghi đè file được quản lý)',
+    reinstallCurrentOption: 'Cài lại {v}',
+    skipOption:           'Bỏ qua (thoát)'
   }
 };
 

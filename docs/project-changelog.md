@@ -3,6 +3,23 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.4] - 2026-06-03
+
+### Added
+- **Interactive version upgrade prompt**: When CafeKit is already installed, the installer now displays:
+  - Current version installed
+  - Version available to update
+  - Interactive options: "Update to X", "Reinstall", "Skip"
+  - Clear information about what will happen in each case
+- **New version check flow**:
+  - Same version: Prompts "CafeKit X is already installed. What would you like to do?" with options to Reinstall or Skip
+  - Upgrade available: Shows "CafeKit X → Y: Update available!" with options to Update, Reinstall current, or Skip
+  - Downgrade: Warns and asks for confirmation
+- **Enhanced installer intro**: Redesigned intro banner with cleaner visual style and description "AI-native development workflow for Claude Code"
+
+### Changed
+- **Update check cache TTL**: Reduced from 12 hours to 1 hour for faster detection of new versions
+
 ## [0.11.3] - 2026-06-03
 
 ### Changed
