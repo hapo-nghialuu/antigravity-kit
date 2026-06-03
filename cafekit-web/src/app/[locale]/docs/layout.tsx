@@ -35,7 +35,7 @@ export default async function LocaleDocsLayout({
               <DocsSidebar locale={locale} />
             </aside>
 
-            <main className="min-w-0 flex-1 py-6 lg:py-8">
+            <main className="min-w-0 flex-1">
               {children}
             </main>
           </div>
