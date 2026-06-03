@@ -36,11 +36,11 @@ const translations: Record<Locale, SiteShellTranslations> = {
   en: {
     header: {
       workflow: "Workflow",
-      whyItWorks: "Why it works",
+      whyItWorks: "What's different",
       artifacts: "Artifacts",
       quickstart: "Quickstart",
       github: "GitHub",
-      tryQuickstart: "Try quickstart",
+      tryQuickstart: "Quickstart",
     },
     footer: {
       description:
@@ -67,12 +67,12 @@ const translations: Record<Locale, SiteShellTranslations> = {
   },
   vi: {
     header: {
-      workflow: "Workflow",
+      workflow: "Quy trình",
       whyItWorks: "Điểm khác biệt",
-      artifacts: "Artifacts",
+      artifacts: "Kết quả",
       quickstart: "Bắt đầu nhanh",
       github: "GitHub",
-      tryQuickstart: "Chạy quickstart",
+      tryQuickstart: "Bắt đầu nhanh",
     },
     footer: {
       description:
@@ -99,12 +99,12 @@ const translations: Record<Locale, SiteShellTranslations> = {
   },
   ja: {
     header: {
-      workflow: "Workflow",
-      whyItWorks: "なぜ機能するか",
+      workflow: "ワークフロー",
+      whyItWorks: "違い",
       artifacts: "Artifacts",
-      quickstart: "Quickstart",
+      quickstart: "クイックスタート",
       github: "GitHub",
-      tryQuickstart: "Quickstart を試す",
+      tryQuickstart: "クイックスタート",
     },
     footer: {
       description:

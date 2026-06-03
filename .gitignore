@@ -111,3 +111,6 @@ plans/
 .sync_hash
 .cafekit-backup/
 .cafekit.lock
+.claude
+.agents
+.codex
