@@ -75,6 +75,7 @@ const MESSAGES = {
     chromiumInstalling:    'Downloading Chromium for chrome-devtools',
     chromiumReady:         'Chromium ready',
     chromiumSkipped:       'Chromium download skipped — chrome-devtools will prompt on first use.',
+    chromiumSystemChromeFound: 'System Chrome detected ({path}), skipping download',
     optionalToolsTitle:    'Optional tools to install manually',
 
     // Summary stats
@@ -180,6 +181,7 @@ const MESSAGES = {
     chromiumInstalling:    'chrome-devtools 用 Chromium をダウンロード中',
     chromiumReady:         'Chromium の準備ができました',
     chromiumSkipped:       'Chromium のダウンロードをスキップ — 初回使用時に chrome-devtools が自動取得します。',
+    chromiumSystemChromeFound: 'システムChromeを検出 ({path})、ダウンロードをスキップします',
     optionalToolsTitle:    '手動でインストールが必要なオプションツール',
 
     summaryTitle:    'インストール完了',
@@ -282,6 +284,7 @@ const MESSAGES = {
     chromiumInstalling:    'Đang tải Chromium cho chrome-devtools',
     chromiumReady:         'Chromium đã sẵn sàng',
     chromiumSkipped:       'Bỏ qua tải Chromium — chrome-devtools sẽ tự tải khi dùng lần đầu.',
+    chromiumSystemChromeFound: 'Đã phát hiện Chrome hệ thống ({path}), bỏ qua tải Chromium',
     optionalToolsTitle:    'Công cụ tuỳ chọn cần cài thủ công',
 
     summaryTitle:    'Cài đặt hoàn tất',

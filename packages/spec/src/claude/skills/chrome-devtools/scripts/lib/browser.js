@@ -49,6 +49,63 @@ export function resolveHeadless(value) {
 }
 
 /**
+ * Resolve Chrome/Chromium executable path.
+ * Fallback chain: CHROME_EXECUTABLE_PATH → PUPPETEER_EXECUTABLE_PATH →
+ * OS auto-detect → undefined (puppeteer bundled Chromium).
+ * @returns {string|undefined}
+ */
+export function resolveExecutablePath() {
+  // 1. Env-var overrides (CafeKit + Puppeteer conventions)
+  for (const key of ['CHROME_EXECUTABLE_PATH', 'PUPPETEER_EXECUTABLE_PATH']) {
+    const p = process.env[key];
+    if (!p) continue;
+    try {
+      if (fs.existsSync(p)) { log(`Chrome (${key}): ${p}`); return p; }
+      log(`${key} set but not found: ${p}`);
+    } catch { /* permission error — skip */ }
+  }
+
+  // 2. OS auto-detection
+  const candidates = (() => {
+    switch (process.platform) {
+      case 'darwin':
+        return [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+          '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        ];
+      case 'win32': {
+        const pf = process.env.PROGRAMFILES;
+        const pf86 = process.env['PROGRAMFILES(X86)'];
+        const local = process.env.LOCALAPPDATA;
+        return [
+          pf && `${pf}\\Google\\Chrome\\Application\\chrome.exe`,
+          pf86 && `${pf86}\\Google\\Chrome\\Application\\chrome.exe`,
+          local && `${local}\\Google\\Chrome\\Application\\chrome.exe`,
+        ].filter(Boolean);
+      }
+      default: // Linux & others
+        return [
+          '/usr/bin/google-chrome-stable',
+          '/usr/bin/google-chrome',
+          '/usr/bin/chromium-browser',
+          '/usr/bin/chromium',
+          '/snap/bin/chromium',
+        ];
+    }
+  })();
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) { log(`Chrome auto-detected: ${p}`); return p; }
+    } catch { /* skip */ }
+  }
+
+  // 3. Bundled Chromium fallback
+  log('No system Chrome found, using bundled Chromium');
+  return undefined;
+}
+
+/**
  * Get default Chrome profile path based on OS
  * @returns {string} - Path to Chrome's default user data directory
  */
@@ -253,12 +310,16 @@ export async function getBrowser(options = {}) {
     log(`Using default Chrome profile: ${userDataDir}`);
   }
 
+  // Resolve Chrome executable — env var or OS auto-detect (fallback: bundled Chromium)
+  const executablePath = resolveExecutablePath();
+
   // Destructure known properties — only pass Puppeteer-valid options to launch()
   const { headless, args: extraArgs, viewport, useDefaultProfile, profile, browserUrl, wsEndpoint: _ws, userDataDir: _udd, ...restOptions } = options;
 
   // Launch new browser
   const launchOptions = {
     headless: resolveHeadless(headless),
+    ...(executablePath && { executablePath }),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

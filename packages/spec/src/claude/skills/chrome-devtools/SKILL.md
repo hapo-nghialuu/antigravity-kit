@@ -191,6 +191,39 @@ node "$SKILL_DIR/navigate.js" --url https://example.com
 
 **Linux/WSL only**: Run `"$SKILL_DIR/install-deps.sh"` first for Chrome system libraries.
 
+## Chrome/Chromium Configuration
+
+By default, chrome-devtools bundles Chromium via puppeteer (~300MB download on first install). To use your existing Chrome installation instead:
+
+### Auto-Detection
+
+chrome-devtools auto-detects Chrome at standard OS paths and uses it automatically:
+
+| OS | Checked Paths |
+|----|---------------|
+| macOS | `/Applications/Google Chrome.app/...`, `/Applications/Chromium.app/...` |
+| Windows | `%PROGRAMFILES%\Google\Chrome\...`, `%PROGRAMFILES(X86)%\...`, `%LOCALAPPDATA%\...` |
+| Linux | `/usr/bin/google-chrome*`, `/usr/bin/chromium*`, `/snap/bin/chromium` |
+
+### Manual Configuration
+
+To force a specific Chrome installation, copy `.env.example` to `.env` and set `CHROME_EXECUTABLE_PATH`:
+
+```bash
+cp "$SKILL_DIR/.env.example" "$SKILL_DIR/.env"
+# Edit .env and set CHROME_EXECUTABLE_PATH to your Chrome executable
+```
+
+### Skip Chromium Download
+
+To skip the ~300MB download during `npm install` when Chrome is already available:
+
+```bash
+PUPPETEER_SKIP_DOWNLOAD=true npm install --prefix "$SKILL_DIR"
+```
+
+If no system Chrome is found, puppeteer's bundled Chromium is used as a fallback.
+
 ## Session Persistence
 
 Browser state persists across script executions via WebSocket endpoint file (`.browser-session.json`).

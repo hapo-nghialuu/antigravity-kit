@@ -66,9 +66,20 @@ function setupPython(ctx, skillsDir) {
 
 /** Run skill-local npm installs/upgrades + browser binaries for a platform's skills. */
 function setupNode(ctx, skillsDir) {
+  // Detect system Chrome before npm install — skip ~300MB Chromium download if found
+  const chromeScripts = path.join(skillsDir, 'chrome-devtools', 'scripts');
+  const hasChromePkg = fs.existsSync(path.join(chromeScripts, 'package.json'));
+  const systemChrome = hasChromePkg ? dep.detectSystemChrome() : null;
+
   for (const { skill, dir, hasNodeModules } of dep.collectSkillPackages(skillsDir)) {
     ctx.ui.startSpinner(ctx.t('npmInstalling', { skill }));
-    const ok = dep.npmInstall(dir, hasNodeModules); // upgrade if node_modules exists
+
+    // chrome-devtools: skip puppeteer postinstall Chromium download if system Chrome exists
+    const extraEnv = (skill === 'chrome-devtools' && systemChrome)
+      ? { PUPPETEER_SKIP_DOWNLOAD: 'true' }
+      : {};
+    const ok = dep.npmInstall(dir, hasNodeModules, extraEnv);
+
     if (ok) {
       ctx.ui.stopSpinner(ctx.t('npmInstalled', { skill }));
     } else {
@@ -84,12 +95,16 @@ function setupNode(ctx, skillsDir) {
     }
   }
 
-  // Chromium for chrome-devtools (puppeteer-based).
-  const chromeScripts = path.join(skillsDir, 'chrome-devtools', 'scripts');
-  if (fs.existsSync(path.join(chromeScripts, 'package.json'))) {
-    ctx.ui.startSpinner(ctx.t('chromiumInstalling'));
-    const ok = dep.installChromium(chromeScripts);
-    ctx.ui.stopSpinner(ok ? ctx.t('chromiumReady') : ctx.t('chromiumSkipped'));
+  // Chromium for chrome-devtools (puppeteer-based, ~300MB).
+  // Uses stdio:inherit for native progress bar when downloading (TTY-only).
+  if (hasChromePkg) {
+    if (systemChrome) {
+      ctx.ui.info(ctx.t('chromiumSystemChromeFound', { path: systemChrome }));
+    } else {
+      ctx.ui.info(ctx.t('chromiumInstalling'));
+      const ok = dep.installChromium(chromeScripts, true);
+      ctx.ui.info(ok ? '✓ ' + ctx.t('chromiumReady') : ctx.t('chromiumSkipped'));
+    }
   }
 }
 

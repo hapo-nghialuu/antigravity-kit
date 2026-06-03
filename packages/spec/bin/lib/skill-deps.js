@@ -77,9 +77,10 @@ function pipInstall(skillsDir, requirementsPath, upgrade = false) {
 }
 
 /** `npm install` (fresh) or `npm update` (existing) in a skill scripts dir. */
-function npmInstall(dir, upgrade = false) {
+function npmInstall(dir, upgrade = false, extraEnv = {}) {
   const args = upgrade ? ['update', '--no-audit', '--no-fund'] : ['install', '--no-audit', '--no-fund'];
-  return run('npm', args, { cwd: dir }).ok;
+  const env = { ...process.env, ...extraEnv };
+  return run('npm', args, { cwd: dir, env }).ok;
 }
 
 /**
@@ -88,14 +89,22 @@ function npmInstall(dir, upgrade = false) {
  * fall back to the bundled @puppeteer/browsers CLI. `npx puppeteer ...` is
  * avoided — puppeteer ships no `puppeteer` bin under that invocation and `--yes`
  * would refetch from the registry.
+ *
+ * When `interactive` is true, stdio is inherited so the native progress bar
+ * renders directly on the user's terminal (TTY-only, no pipe capture).
  */
-function installChromium(scriptsDir) {
+function installChromium(scriptsDir, interactive = false) {
+  const stdioOpt = interactive ? 'inherit' : 'pipe';
   // Absolute path so it resolves regardless of the child process cwd.
   const installMjs = path.resolve(scriptsDir, 'node_modules', 'puppeteer', 'install.mjs');
   if (fs.existsSync(installMjs)) {
-    return run('node', [installMjs], { cwd: scriptsDir }).ok;
+    const opts = { cwd: scriptsDir, stdio: stdioOpt };
+    if (interactive) opts.encoding = 'utf8';
+    return run('node', [installMjs], opts).ok;
   }
-  return run('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], { cwd: scriptsDir }).ok;
+  const opts = { cwd: scriptsDir, stdio: stdioOpt };
+  if (interactive) opts.encoding = 'utf8';
+  return run('npx', ['--yes', '@puppeteer/browsers', 'install', 'chrome'], opts).ok;
 }
 
 /** Does a skill scripts dir declare a given npm dependency? */
@@ -111,6 +120,55 @@ function pkgHasDep(scriptsDir, name) {
 /** Download the Playwright Chromium browser (for the pptx html2pptx workflow). */
 function installPlaywrightBrowser(scriptsDir) {
   return run('npx', ['--yes', 'playwright', 'install', 'chromium'], { cwd: scriptsDir }).ok;
+}
+
+/**
+ * Detect system Chrome/Chromium installation (cross-platform).
+ * Returns the executable path if found, undefined otherwise.
+ * Supports macOS, Windows, Linux (including snap + PATH fallback).
+ */
+function detectSystemChrome() {
+  const candidates = (() => {
+    switch (process.platform) {
+      case 'darwin':
+        return [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+          '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        ];
+      case 'win32': {
+        const pf = process.env.PROGRAMFILES;
+        const pf86 = process.env['PROGRAMFILES(X86)'];
+        const local = process.env.LOCALAPPDATA;
+        return [
+          pf && `${pf}\\Google\\Chrome\\Application\\chrome.exe`,
+          pf86 && `${pf86}\\Google\\Chrome\\Application\\chrome.exe`,
+          local && `${local}\\Google\\Chrome\\Application\\chrome.exe`,
+        ].filter(Boolean);
+      }
+      default: // Linux & others
+        return [
+          '/usr/bin/google-chrome-stable',
+          '/usr/bin/google-chrome',
+          '/usr/bin/chromium-browser',
+          '/usr/bin/chromium',
+          '/snap/bin/chromium',
+        ];
+    }
+  })();
+
+  for (const p of candidates) {
+    try { if (fs.existsSync(p)) return p; } catch { /* skip */ }
+  }
+
+  // Linux: last resort — check PATH
+  if (process.platform === 'linux') {
+    for (const cmd of ['google-chrome', 'google-chrome-stable', 'chromium-browser', 'chromium']) {
+      const r = run(isWindows ? 'where' : 'which', [cmd]);
+      if (r.ok && r.stdout.trim()) return r.stdout.trim();
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -176,6 +234,7 @@ module.exports = {
   pipInstall,
   npmInstall,
   installChromium,
+  detectSystemChrome,
   collectRequirements,
   collectSkillPackages,
   pkgHasDep,
