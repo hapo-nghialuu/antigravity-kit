@@ -51,6 +51,11 @@ const MESSAGES = {
     addressingSet:         '{name} will address you as "{addr}"',
     addressingInvalid:     'Letters only please — addressing skipped.',
 
+    // Addressing update
+    addressingUpdatePrompt: 'You are currently addressed as "{name}". Change it?',
+    keepAddressingOption:  'Keep "{name}"',
+    changeAddressingOption:'Change to something else',
+
     // Skills / deps setup
     skillDepsConfirm:      'Install skill dependencies? (Python venv, pip, npm, Chromium — takes a few minutes)',
     skillsSkipped:         'Skill dependencies skipped.\n  Run later: npx @haposoft/cafekit --with-skills-deps',
@@ -140,6 +145,11 @@ const MESSAGES = {
     addressingSet:         '{name} はあなたを「{addr}」とお呼びします',
     addressingInvalid:     '文字のみ入力できます — 呼称の設定をスキップしました。',
 
+    // Addressing update
+    addressingUpdatePrompt: '現在「{name}」と呼ばれています。変更しますか？',
+    keepAddressingOption:  '「{name}」のまま',
+    changeAddressingOption:'別の名前に変更',
+
     skillDepsConfirm:      'スキルの依存関係をインストールしますか？（Python venv、pip、npm、Chromium — 数分かかります）',
     skillsSkipped:         'スキルの依存関係をスキップしました。\n  後で実行: npx @haposoft/cafekit --with-skills-deps',
     venvCreating:          'Python 環境を準備しています',
@@ -224,6 +234,11 @@ const MESSAGES = {
     addressingPlaceholder: 'vd: sếp, đại ca — Enter để bỏ qua',
     addressingSet:         '{name} sẽ gọi bạn là "{addr}"',
     addressingInvalid:     'Chỉ nhập chữ cái — bỏ qua thiết lập xưng hô.',
+
+    // Addressing update
+    addressingUpdatePrompt: 'Bạn đang được gọi là "{name}". Bạn có muốn đổi không?',
+    keepAddressingOption:  'Giữ "{name}"',
+    changeAddressingOption:'Đổi tên khác',
 
     skillDepsConfirm:      'Cài dependencies cho skill ngay? (Python venv, pip, npm, Chromium — mất vài phút)',
     skillsSkipped:         'Đã bỏ qua dependencies skill.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-skills-deps',

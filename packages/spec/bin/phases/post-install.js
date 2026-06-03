@@ -130,6 +130,34 @@ ${name} always addresses the user as "${userAddress}" throughout the conversatio
 async function setupAddressing(ctx) {
   if (!ctx.platforms.includes('claude')) return;
 
+  // Check if there's already an addressing section in CLAUDE.md
+  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
+  let existingName = null;
+  if (fs.existsSync(claudeMdFile)) {
+    const content = fs.readFileSync(claudeMdFile, 'utf8');
+    const match = content.match(/##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?always addresses the user as "([^"]+)"/);
+    if (match) {
+      existingName = match[1];
+    }
+  }
+
+  // For updates: ask if user wants to keep the existing name
+  if (existingName && ctx.isUpdate) {
+    const options = [
+      { value: 'keep', label: ctx.t('keepAddressingOption', { addr: existingName }) || `Giữ "${existingName}"` },
+      { value: 'change', label: ctx.t('changeAddressingOption') || 'Đổi tên mới' }
+    ];
+
+    const choice = await ctx.ui.select({
+      message: ctx.t('addressingUpdatePrompt') || `Bạn đang dùng "${existingName}" để xưng hô. Muốn đổi không?`,
+      options
+    });
+
+    if (ctx.ui.isCancel(choice)) return;
+    if (choice === 'keep') return;
+    // If 'change', continue to ask for new name
+  }
+
   const answer = await ctx.ui.text(
     { message: ctx.t('addressingQuestion'), placeholder: ctx.t('addressingPlaceholder') },
     ''

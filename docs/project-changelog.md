@@ -3,6 +3,14 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.6] - 2026-06-03
+
+### Changed
+- **Streamlined update flow**: When selecting "Update" in version prompt:
+  - Assistant name (addressing) step shows "Keep X / Change?" instead of re-asking
+  - Skill dependencies setup still runs for re-installing dependencies
+  - Reduces redundant prompts during updates
+
 ## [0.11.5] - 2026-06-03
 
 ### Fixed

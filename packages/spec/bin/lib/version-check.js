@@ -43,6 +43,7 @@ function getInstalledVersion(platformKey) {
 /**
  * Check versions for all selected platforms and decide whether to proceed.
  * Sets ctx.cancelled on same-version (without --force) or unconfirmed downgrade.
+ * Sets ctx.isUpdate = true when upgrading from an older version.
  * Shows interactive prompt when version differs, asking user what to do.
  */
 async function checkVersions(ctx) {
@@ -60,6 +61,7 @@ async function checkVersions(ctx) {
 
   // All fresh installs - skip version check, proceed normally
   if (platformsWithInstall.length === 0) {
+    ctx.isUpdate = false;
     return ctx;
   }
 
@@ -73,6 +75,8 @@ async function checkVersions(ctx) {
 
   // ── Same version ───────────────────────────────────────────────────────────
   if (cmp === 0) {
+    ctx.isUpdate = false;
+
     if (ctx.options.forceOverwrite) {
       ctx.ui.info(ctx.t ? ctx.t('versionForceReinstall', { v: installedVersion }) : `Reinstalling CafeKit ${installedVersion} (--force-overwrite)...`);
       return ctx;
@@ -111,6 +115,8 @@ async function checkVersions(ctx) {
 
   // ── Upgrade available ───────────────────────────────────────────────────────
   if (cmp < 0) {
+    ctx.isUpdate = true;
+
     if (!ctx.interactive) {
       // Non-interactive: proceed with upgrade automatically
       return ctx;
@@ -137,6 +143,7 @@ async function checkVersions(ctx) {
 
     if (answer === 'reinstall') {
       ctx.options.forceOverwrite = true;
+      ctx.isUpdate = false; // Reinstall treats as fresh install
     }
 
     // 'update' proceeds normally (no special flag needed)
@@ -145,6 +152,8 @@ async function checkVersions(ctx) {
 
   // ── Downgrade ──────────────────────────────────────────────────────────────
   if (cmp > 0) {
+    ctx.isUpdate = false;
+
     const msg = ctx.t
       ? ctx.t('versionDowngrade', { from: firstPlatform.installed, to: incoming })
       : `Downgrading ${firstPlatform.installed} → ${incoming}. This may remove features.`;
