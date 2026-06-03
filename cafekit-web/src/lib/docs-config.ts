@@ -15,7 +15,7 @@ export type DocsNavSection = {
 
 type DocsLabels = {
   mainNav: Record<"docs" | "quickstart" | "reference", string>;
-  sections: Record<"start" | "runtime" | "catalog" | "reference", string>;
+  sections: Record<"start" | "tutorials" | "runtime" | "catalog" | "reference", string>;
   pages: Record<string, Omit<DocsNavItem, "href">>;
 };
 
@@ -37,6 +37,9 @@ const skillRoutes = [
 ] as const satisfies readonly RouteItem[];
 
 const routes = {
+  tutorials: [
+    ["tutorial", "/docs/tutorial"],
+  ],
   start: [
     ["overview", "/docs"],
     ["specDriven", "/docs/spec-driven-development"],
@@ -66,12 +69,13 @@ const routes = {
 const labels: Record<Locale, DocsLabels> = {
   en: {
     mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
-    sections: { start: "Start here", runtime: "Runtime model", catalog: "Catalog", reference: "Reference" },
+    sections: { tutorials: "Tutorials", start: "Docs", runtime: "Runtime model", catalog: "Catalog", reference: "Reference" },
     pages: {
       overview: page("Overview", "What CafeKit is, who it is for, and how the docs are organized.", "overview what is cafekit"),
       specDriven: page("Spec-driven development", "The simple visual guide to CafeKit SDD: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
       installation: page("Installation", "Install, upgrade, and verify the CafeKit runtime bundle.", "install npx upgrade package"),
       quickstart: page("Quickstart", "Run the first spec-driven workflow from idea to review.", "quickstart first workflow"),
+      tutorial: page("Tutorial: from zero", "Step-by-step guide from no install to your first verified feature.", "tutorial getting started beginner from zero walkthrough first feature"),
       coreWorkflow: page("Core workflow", "Understand the main CafeKit path from idea to verified change.", "core workflow main workflow specs develop test review"),
       runtime: page("Runtime bundle", "Understand installed files, hooks, state, and safety gates.", "runtime hooks settings statusline"),
       specLifecycle: page("Spec lifecycle", "Understand CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, and develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
@@ -99,12 +103,13 @@ const labels: Record<Locale, DocsLabels> = {
   },
   vi: {
     mainNav: { docs: "Tài liệu", quickstart: "Bắt đầu nhanh", reference: "Tham khảo" },
-    sections: { start: "Bắt đầu", runtime: "Runtime", catalog: "Catalog", reference: "Tham khảo" },
+    sections: { tutorials: "Hướng dẫn", start: "Tài liệu", runtime: "Runtime", catalog: "Catalog", reference: "Tham khảo" },
     pages: {
       overview: page("Tổng quan", "CafeKit là gì, dành cho ai, và nên đọc docs theo thứ tự nào.", "tong quan cafekit"),
       specDriven: page("Spec-driven development", "Trang giải thích trực quan về SDD của CafeKit: spec, develop, verify, sync.", "sdd specification driven development visual guide"),
       installation: page("Cài đặt", "Cài, nâng cấp, và kiểm tra runtime bundle của CafeKit.", "cai dat npx upgrade package"),
       quickstart: page("Bắt đầu nhanh", "Chạy workflow spec-driven đầu tiên từ ý tưởng đến review.", "quickstart workflow dau tien"),
+      tutorial: page("Hướng dẫn từ đầu", "Lộ trình từng bước từ chưa cài gì đến feature đầu tiên đã verify.", "huong dan tutorial bat dau nguoi moi tu dau walkthrough"),
       coreWorkflow: page("Workflow chính", "Hiểu luồng CafeKit chính từ ý tưởng đến thay đổi đã verify.", "workflow chinh core specs develop test review"),
       runtime: page("Runtime bundle", "Hiểu file cài vào repo, hooks, state, và safety gates.", "runtime hooks settings statusline"),
       specLifecycle: page("Vòng đời spec", "Hiểu SDD của CafeKit: scope lock, evidence, requirements, design, task packets, validation, và develop handoff.", "sdd spec json task registry lifecycle specification driven development"),
@@ -132,12 +137,13 @@ const labels: Record<Locale, DocsLabels> = {
   },
   ja: {
     mainNav: { docs: "Docs", quickstart: "Quickstart", reference: "Reference" },
-    sections: { start: "はじめに", runtime: "Runtime", catalog: "Catalog", reference: "Reference" },
+    sections: { tutorials: "Tutorials", start: "はじめに", runtime: "Runtime", catalog: "Catalog", reference: "Reference" },
     pages: {
       overview: page("概要", "CafeKit の役割、対象ユーザー、読む順番を説明します。", "overview cafekit"),
       specDriven: page("Spec-driven development", "CafeKit SDD: spec、develop、verify、sync の visual guide。", "sdd specification driven development visual guide"),
       installation: page("インストール", "CafeKit runtime bundle の導入、更新、確認方法。", "install npx upgrade package"),
       quickstart: page("クイックスタート", "アイデアから review までの最初の spec-driven workflow。", "quickstart workflow"),
+      tutorial: page("チュートリアル（ゼロから）", "未インストールから最初の verified feature までのステップ式ガイド。", "tutorial getting started beginner from zero walkthrough"),
       coreWorkflow: page("Core workflow", "idea から verified change までの CafeKit の主ルートを理解します。", "core workflow specs develop test review"),
       runtime: page("Runtime bundle", "インストールされるファイル、hooks、state、安全ゲートを理解します。", "runtime hooks settings statusline"),
       specLifecycle: page("Spec lifecycle", "CafeKit SDD: scope lock, evidence, requirements, design, task packets, validation, develop handoff。", "sdd spec json task registry lifecycle specification driven development"),

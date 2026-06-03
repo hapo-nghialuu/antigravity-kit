@@ -31,11 +31,11 @@ export default async function LocaleDocsLayout({
         <div className="pointer-events-none absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(16,24,32,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(16,24,32,.06)_1px,transparent_1px)] [background-size:44px_44px] dark:opacity-[0.12]" />
         <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-8 lg:gap-10">
-            <aside className="hidden lg:block w-72 shrink-0 sticky top-[64px] h-[calc(100vh-4rem)] overflow-y-auto py-8 pr-2 scrollbar-thin">
+            <aside className="hidden lg:block w-72 shrink-0 sticky top-[64px] h-[calc(100vh-4rem)] overflow-y-auto py-6 pr-2 scrollbar-thin">
               <DocsSidebar locale={locale} />
             </aside>
 
-            <main className="min-w-0 flex-1 py-8 lg:py-10">
+            <main className="min-w-0 flex-1 py-6 lg:py-8">
               {children}
             </main>
           </div>

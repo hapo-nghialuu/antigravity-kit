@@ -94,7 +94,7 @@ export function QuickStart() {
           <div className="absolute -left-4 -top-4 -z-10 h-24 w-24 rounded-full bg-[#F2EA9D]/28 blur-3xl"></div>
         </div>
 
-        <div className="mt-12 text-center">
+        <div className="mt-12 flex flex-col items-center gap-5">
           <Link
             href={localizeHref(locale, "/docs/quickstart")}
             className="group inline-flex items-center gap-2 text-[#006242] transition-colors hover:text-[#114734] dark:text-[#A7C5EE] dark:hover:text-[#F2EA9D]"
@@ -102,6 +102,21 @@ export function QuickStart() {
             <span className="font-medium">{t.viewGuide}</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
+
+          {/* Tutorial callout for newcomers */}
+          <div className="flex items-center gap-4 rounded-2xl border border-[#006242]/15 bg-white/72 px-5 py-4 shadow-sm backdrop-blur-sm dark:border-[#A7C5EE]/14 dark:bg-[#101820]/55">
+            <div className="text-left">
+              <p className="text-sm font-semibold text-[#101820] dark:text-[#F6FAF7]">{t.tutorialHeading}</p>
+              <p className="mt-0.5 text-sm text-[#456055] dark:text-[#CFE1D9]">{t.tutorialBody}</p>
+            </div>
+            <Link
+              href={localizeHref(locale, "/docs/tutorial")}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#006242] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#114734]"
+            >
+              {t.tutorialCta}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
