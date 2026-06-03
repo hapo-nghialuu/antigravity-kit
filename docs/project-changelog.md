@@ -3,6 +3,12 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.5] - 2026-06-03
+
+### Fixed
+- **Installer version prompt error**: Fixed "select is not a function" error by using `ctx.ui.select()` instead of direct `@clack/prompts` import
+- Added missing `versionForceReinstall` translations (en/ja/vi)
+
 ## [0.11.4] - 2026-06-03
 
 ### Added

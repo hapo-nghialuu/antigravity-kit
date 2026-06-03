@@ -85,22 +85,19 @@ async function checkVersions(ctx) {
     }
 
     // Show current vs new and ask what to do
-    const { isCancel } = await import('@clack/prompts');
-    const { default: select } = await import('@clack/prompts');
-
     const options = [
       { value: 'reinstall', label: ctx.t ? ctx.t('reinstallOption') : 'Reinstall (overwrite managed files)' },
       { value: 'skip', label: ctx.t ? ctx.t('skipOption') : 'Skip (exit)' }
     ];
 
-    const answer = await select({
+    const answer = await ctx.ui.select({
       message: ctx.t
         ? ctx.t('versionSamePrompt', { v: installedVersion })
         : `CafeKit ${installedVersion} is already installed. What do you want to do?`,
       options
     });
 
-    if (isCancel(answer) || answer === 'skip') {
+    if (ctx.ui.isCancel(answer) || answer === 'skip') {
       ctx.cancelled = true;
       return ctx;
     }
@@ -120,23 +117,20 @@ async function checkVersions(ctx) {
     }
 
     // Show current vs new and ask what to do
-    const { isCancel } = await import('@clack/prompts');
-    const { default: select } = await import('@clack/prompts');
-
     const options = [
-      { value: 'update', label: ctx.t ? ctx.t('updateOption') : `Update to ${incoming}` },
+      { value: 'update', label: ctx.t ? ctx.t('updateOption', { v: incoming }) : `Update to ${incoming}` },
       { value: 'reinstall', label: ctx.t ? ctx.t('reinstallCurrentOption', { v: firstPlatform.installed }) : `Reinstall ${firstPlatform.installed}` },
       { value: 'skip', label: ctx.t ? ctx.t('skipOption') : 'Skip (exit)' }
     ];
 
-    const answer = await select({
+    const answer = await ctx.ui.select({
       message: ctx.t
         ? ctx.t('versionUpgradePrompt', { from: firstPlatform.installed, to: incoming })
         : `CafeKit ${firstPlatform.installed} → ${incoming}: Update available!`,
       options
     });
 
-    if (isCancel(answer) || answer === 'skip') {
+    if (ctx.ui.isCancel(answer) || answer === 'skip') {
       ctx.cancelled = true;
       return ctx;
     }
