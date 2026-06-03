@@ -32,8 +32,8 @@ Use this when the issue affects rendering, layout, interaction, hydration, brows
 
 ## Preferred Tools
 
-- `hapo:agent-browser` for visual reproduction, screenshots, and exploratory browser checks
-- `hapo:chrome-devtools` for console, network, CDP, screenshots, ARIA snapshots, and WebSocket debugging
+- `agent-browser` for visual reproduction, screenshots, and exploratory browser checks
+- `chrome-devtools` for console, network, CDP, screenshots, ARIA snapshots, and WebSocket debugging
 - Project-native E2E tooling when it already exists
 
 ## Report Snippet

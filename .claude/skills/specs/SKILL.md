@@ -1,10 +1,15 @@
 ---
 name: hapo:specs
 description: "Structured specification workflow — from vague idea to actionable task list. Includes init, requirements, design, task breakdown, review, and archiving."
-version: 2.0.0
+user-invocable: true
+when_to_use: "Invoke to turn a vague idea into an actionable, gated specification."
+category: utilities
+keywords: [specs, requirements, design, tasks]
 argument-hint: "<feature-description> | status | resume | --validate | archive"
+metadata:
+  author: haposoft
+  version: "2.0.0"
 ---
-
 # Specs (SDD — Specification-Driven Development)
 
 > A structured specification system that turns vague ideas into actionable, implementable task lists.

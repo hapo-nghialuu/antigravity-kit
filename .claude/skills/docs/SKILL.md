@@ -1,10 +1,15 @@
 ---
 name: hapo:docs
 description: "Create, update, summarize, or reconstruct project/system documentation from source code. Use reconstruct mode for as-is documentation of existing or legacy systems with evidence and uncertainty tracking."
-version: 1.0.0
+user-invocable: true
+when_to_use: "Invoke to create, update, or reconstruct project documentation from source."
+category: document-skills
+keywords: [docs, reconstruct, documentation, evidence]
 argument-hint: "[--init|--update|--summarize|--reconstruct] [scope]"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Docs
 
 Project documentation workflow for CafeKit.
