@@ -3,6 +3,16 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.3] - 2026-06-03
+
+### Changed
+- **Skill auto-activation metadata**: All 30 skills now declare `user-invocable`, `when_to_use`, `category`, and `keywords` in frontmatter so Claude Code matches user intent to the right skill at startup, matching the reference ClaudeKit schema.
+- **Normalized version field**: All skills use `metadata.version` instead of top-level `version` for consistency.
+- **Agent activation names**: Agents now reference skills by directory name (`git`) rather than frontmatter name (`hapo:git`) for correct Skill tool resolution.
+- **CLAUDE.md**: Skill activation guidance updated to generic "analyze the skills catalog and activate" pattern.
+- **`impact-analysis` branding fix**: `name: impact-analysis` corrected to `name: hapo:impact-analysis`.
+- **Status line**: Active spec indicator now shows `📋 <slug>` when a spec is `in_progress`, replacing the disabled active-plan lookup.
+
 ## [0.11.2] - 2026-06-02
 
 ### Added
