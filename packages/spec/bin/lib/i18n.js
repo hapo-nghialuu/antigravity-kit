@@ -110,7 +110,19 @@ const MESSAGES = {
     updateOption:         'Update to {v}',
     reinstallOption:      'Reinstall (overwrite managed files)',
     reinstallCurrentOption: 'Reinstall {v}',
-    skipOption:           'Skip (exit)'
+    skipOption:           'Skip (exit)',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'Installing for: {names}',
+    langKept:             'Language: {lang} (saved — skipping prompt)',
+    platformKept:         'Platform: {names} (saved — skipping prompt)',
+
+    // Version picker
+    versionPickPrompt:    'Select CafeKit version to install:',
+    versionPickCurrent:   '(installed)',
+    versionPickLatest:    '(latest)',
+    versionReexec:        'Switching to CafeKit {v}…',
+    versionFetchFailed:   'Could not fetch version list. Using default menu.'
   },
 
   // ─── 日本語 ─────────────────────────────────────────────────────────────────
@@ -200,7 +212,19 @@ const MESSAGES = {
     updateOption:         '{v} にアップデート',
     reinstallOption:      '再インストール（管理対象ファイルを上書き）',
     reinstallCurrentOption: '{v} を再インストール',
-    skipOption:           'スキップ（終了）'
+    skipOption:           'スキップ（終了）',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'インストール先: {names}',
+    langKept:             '言語: {lang} (保存済み — スキップ)',
+    platformKept:         'プラットフォーム: {names} (保存済み — スキップ)',
+
+    // Version picker
+    versionPickPrompt:    'インストールする CafeKit バージョンを選択:',
+    versionPickCurrent:   '(インストール済み)',
+    versionPickLatest:    '(最新)',
+    versionReexec:        'CafeKit {v} に切り替えます…',
+    versionFetchFailed:   'バージョン一覧を取得できませんでした。デフォルトメニューを表示します。'
   },
 
   // ─── Tiếng Việt ─────────────────────────────────────────────────────────────
@@ -290,7 +314,19 @@ const MESSAGES = {
     updateOption:         'Cập nhật lên {v}',
     reinstallOption:      'Cài lại (ghi đè file được quản lý)',
     reinstallCurrentOption: 'Cài lại {v}',
-    skipOption:           'Bỏ qua (thoát)'
+    skipOption:           'Bỏ qua (thoát)',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'Cài cho: {names}',
+    langKept:             'Ngôn ngữ: {lang} (đã lưu — bỏ qua chọn lại)',
+    platformKept:         'Nền tảng: {names} (đã lưu — bỏ qua chọn lại)',
+
+    // Version picker
+    versionPickPrompt:    'Chọn phiên bản CafeKit để cài:',
+    versionPickCurrent:   '(đang cài)',
+    versionPickLatest:    '(mới nhất)',
+    versionReexec:        'Đang chuyển sang cài CafeKit {v}…',
+    versionFetchFailed:   'Không lấy được danh sách phiên bản. Dùng menu mặc định.'
   }
 };
 

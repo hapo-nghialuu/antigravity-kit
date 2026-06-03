@@ -15,6 +15,7 @@
  *  - --dry-run                     — preview only, no filesystem changes.
  */
 
+const { spawnSync } = require('child_process');
 const { buildContext, PLATFORMS, packageJson } = require('./lib/context');
 const lock = require('./lib/lock');
 const backup = require('./lib/backup');
@@ -129,9 +130,26 @@ async function main() {
     await resolvePlatforms(ctx);
     if (ctx.cancelled) { lock.release(); process.exit(0); }
 
-    // Version check: same → exit, downgrade → confirm
+    // Version check: same → exit, downgrade → confirm, upgrade → version picker
     await checkVersions(ctx);
     if (ctx.cancelled) { lock.release(); process.exit(0); }
+
+    // User picked a different version from the picker — re-exec that version
+    if (ctx.reexec) {
+      lock.release();
+      ctx.ui.info(ctx.t('versionReexec', { v: ctx.reexec }));
+      // Forward original flags; add --force-overwrite so the re-exec'd installer
+      // skips the version picker and proceeds directly with installation.
+      const origFlags = process.argv.slice(2).filter(
+        (f) => f !== '--force-overwrite' && f !== '-f' && f !== '-u' && f !== '--upgrade'
+      );
+      const result = spawnSync(
+        'npx',
+        ['-y', `@haposoft/cafekit@${ctx.reexec}`, '--force-overwrite', ...origFlags],
+        { stdio: 'inherit', shell: process.platform === 'win32' }
+      );
+      process.exit(result.status ?? 1);
+    }
 
     // ── Pre-run snapshot for rollback ─────────────────────
     // Capture platform folders AND the root files the pipeline mutates

@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PLATFORMS, packageJson } = require('./context');
+const { fetchRecentVersions } = require('./registry');
 
 /** Simple semver-ish comparison. Returns -1 | 0 | 1. */
 function cmpVersion(a, b) {
@@ -117,13 +118,49 @@ async function checkVersions(ctx) {
   if (cmp < 0) {
     ctx.isUpdate = true;
 
-    if (!ctx.interactive) {
-      // Non-interactive: proceed with upgrade automatically
+    // --force-overwrite or non-interactive: proceed without asking
+    if (!ctx.interactive || ctx.options.forceOverwrite) {
       return ctx;
     }
 
-    // Show current vs new and ask what to do
-    const options = [
+    // Try to fetch recent versions for the picker; fall back to 3-option menu on failure
+    const registry = await fetchRecentVersions();
+
+    if (registry) {
+      // Build picker options: each version labelled with (installed) / (latest) hints
+      const pickerOptions = registry.versions.map((v) => {
+        let hint = '';
+        if (v === firstPlatform.installed) hint = ctx.t ? ctx.t('versionPickCurrent') : '(installed)';
+        else if (v === registry.latest) hint = ctx.t ? ctx.t('versionPickLatest') : '(latest)';
+        const label = hint ? `${v}  ${hint}` : v;
+        return { value: v, label };
+      });
+      pickerOptions.push({ value: 'skip', label: ctx.t ? ctx.t('skipOption') : 'Skip (exit)' });
+
+      const picked = await ctx.ui.select({
+        message: ctx.t ? ctx.t('versionPickPrompt') : 'Select CafeKit version to install:',
+        options: pickerOptions
+      });
+
+      if (ctx.ui.isCancel(picked) || picked === 'skip') {
+        ctx.cancelled = true;
+        return ctx;
+      }
+
+      if (picked !== incoming) {
+        // User chose a version different from the one currently running — signal re-exec
+        ctx.reexec = picked;
+        return ctx;
+      }
+
+      // User confirmed the incoming (latest) version — proceed normally
+      return ctx;
+    }
+
+    // Offline or fetch failed: fall back to the classic 3-option menu
+    ctx.ui.warn(ctx.t ? ctx.t('versionFetchFailed') : 'Could not fetch version list. Using default menu.');
+
+    const fallbackOptions = [
       { value: 'update', label: ctx.t ? ctx.t('updateOption', { v: incoming }) : `Update to ${incoming}` },
       { value: 'reinstall', label: ctx.t ? ctx.t('reinstallCurrentOption', { v: firstPlatform.installed }) : `Reinstall ${firstPlatform.installed}` },
       { value: 'skip', label: ctx.t ? ctx.t('skipOption') : 'Skip (exit)' }
@@ -133,7 +170,7 @@ async function checkVersions(ctx) {
       message: ctx.t
         ? ctx.t('versionUpgradePrompt', { from: firstPlatform.installed, to: incoming })
         : `CafeKit ${firstPlatform.installed} → ${incoming}: Update available!`,
-      options
+      options: fallbackOptions
     });
 
     if (ctx.ui.isCancel(answer) || answer === 'skip') {
@@ -146,7 +183,6 @@ async function checkVersions(ctx) {
       ctx.isUpdate = false; // Reinstall treats as fresh install
     }
 
-    // 'update' proceeds normally (no special flag needed)
     return ctx;
   }
 

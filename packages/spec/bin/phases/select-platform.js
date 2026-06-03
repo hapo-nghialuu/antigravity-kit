@@ -6,6 +6,8 @@
  * or prompted. Sets ctx.platforms, or ctx.cancelled if the user backs out.
  */
 
+const fs = require('fs');
+const path = require('path');
 const {
   PLATFORMS,
   detectPlatforms,
@@ -16,9 +18,33 @@ const { SUPPORTED, LANGUAGE_LABELS, OTHER_LABEL } = require('../lib/i18n');
 
 const OTHER = '__other__';
 
+/**
+ * Read saved locale label from .claude/runtime.json (written by post-install).
+ * Returns the freeform label string (e.g. "Tiếng Việt") or null.
+ */
+function getInstalledLocale() {
+  const runtimeJson = path.join(process.cwd(), '.claude', 'runtime.json');
+  if (!fs.existsSync(runtimeJson)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(runtimeJson, 'utf8'));
+    return (data && data.locale && typeof data.locale.responseLanguage === 'string')
+      ? data.locale.responseLanguage
+      : null;
+  } catch { return null; }
+}
+
 /** First step: pick the installer/UI language (interactive only). */
 async function selectLanguage(ctx) {
   if (!ctx.interactive || ctx.options.lang) return ctx;
+
+  // If already installed, restore saved locale and skip the prompt
+  const savedLocale = getInstalledLocale();
+  if (savedLocale) {
+    const code = Object.keys(LANGUAGE_LABELS).find((k) => LANGUAGE_LABELS[k] === savedLocale) || 'en';
+    ctx.setLang(code, savedLocale); // updates ctx.t to the saved language
+    ctx.ui.info(ctx.t('langKept', { lang: savedLocale }));
+    return ctx;
+  }
 
   const options = [
     ...SUPPORTED.map((code) => ({ value: code, label: LANGUAGE_LABELS[code] })),
@@ -75,8 +101,27 @@ async function confirmAllDetected(ctx, detected) {
 
 /**
  * Resolve ctx.platforms via detection + prompts. Sets ctx.cancelled on backout.
+ * If cafekit.json exists (prior install), reads platform from it to skip prompt.
+ * Note: ctx.isUpdate is set later by checkVersions and cannot be used here.
  */
 async function resolvePlatforms(ctx) {
+  // Skip platform prompt when a prior install is detected via cafekit.json
+  const savedPlatform = getInstalledPlatform();
+  if (savedPlatform) {
+    ctx.platforms = [savedPlatform];
+    const platformNames = PLATFORMS[savedPlatform].name;
+    ctx.ui.info(ctx.t('platformKept', { names: platformNames }));
+
+    if (ctx.options.forceOverwrite) {
+      ctx.ui.info(ctx.t('modeForce'));
+    } else if (ctx.dryRun) {
+      ctx.ui.info(ctx.t('modeDryRun'));
+    } else {
+      ctx.ui.info(ctx.t('modeInstall'));
+    }
+    return ctx;
+  }
+
   let platforms = detectPlatforms();
 
   if (platforms.length === 0) {
@@ -118,6 +163,30 @@ async function resolvePlatforms(ctx) {
   }
 
   return ctx;
+}
+
+/**
+ * Get the installed platform from cafekit.json files.
+ * Returns the platform key (e.g. 'claude', 'opencode') or null.
+ */
+function getInstalledPlatform() {
+  const claudeJson = path.join(process.cwd(), '.claude', 'cafekit.json');
+  if (fs.existsSync(claudeJson)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(claudeJson, 'utf8'));
+      if (data.platform) return data.platform;
+    } catch { /* ignore */ }
+  }
+
+  const opencodeJson = path.join(process.cwd(), '.opencode', 'cafekit.json');
+  if (fs.existsSync(opencodeJson)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(opencodeJson, 'utf8'));
+      if (data.platform) return data.platform;
+    } catch { /* ignore */ }
+  }
+
+  return null;
 }
 
 module.exports = { selectLanguage, promptPlatformSelection, resolvePlatforms };
