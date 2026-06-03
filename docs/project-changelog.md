@@ -3,6 +3,56 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.7] - 2026-06-03
+
+### Added
+- **Version picker on update**: When upgrading, the installer fetches the 5 most recent CafeKit versions from the npm registry and presents an interactive picker. Selecting a different version re-execs `npx @haposoft/cafekit@<chosen>` automatically. Falls back to the classic 3-option menu when offline or registry is unreachable (3 s timeout).
+
+### Changed
+- **Skip language prompt on re-install**: Saved locale is read from `.claude/runtime.json`; the language picker is skipped and the stored language is applied silently.
+- **Skip platform prompt on re-install**: Installed platform is read from `.claude/cafekit.json` or `.opencode/cafekit.json`; the platform confirmation step is skipped. Fixes a latent bug where the guard used `ctx.isUpdate` before it was set.
+
+## [0.11.6] - 2026-06-03
+
+### Changed
+- **Streamlined update flow**: When selecting "Update" in version prompt:
+  - Assistant name (addressing) step shows "Keep X / Change?" instead of re-asking
+  - Skill dependencies setup still runs for re-installing dependencies
+  - Reduces redundant prompts during updates
+
+## [0.11.5] - 2026-06-03
+
+### Fixed
+- **Installer version prompt error**: Fixed "select is not a function" error by using `ctx.ui.select()` instead of direct `@clack/prompts` import
+- Added missing `versionForceReinstall` translations (en/ja/vi)
+
+## [0.11.4] - 2026-06-03
+
+### Added
+- **Interactive version upgrade prompt**: When CafeKit is already installed, the installer now displays:
+  - Current version installed
+  - Version available to update
+  - Interactive options: "Update to X", "Reinstall", "Skip"
+  - Clear information about what will happen in each case
+- **New version check flow**:
+  - Same version: Prompts "CafeKit X is already installed. What would you like to do?" with options to Reinstall or Skip
+  - Upgrade available: Shows "CafeKit X → Y: Update available!" with options to Update, Reinstall current, or Skip
+  - Downgrade: Warns and asks for confirmation
+- **Enhanced installer intro**: Redesigned intro banner with cleaner visual style and description "AI-native development workflow for Claude Code"
+
+### Changed
+- **Update check cache TTL**: Reduced from 12 hours to 1 hour for faster detection of new versions
+
+## [0.11.3] - 2026-06-03
+
+### Changed
+- **Skill auto-activation metadata**: All 30 skills now declare `user-invocable`, `when_to_use`, `category`, and `keywords` in frontmatter so Claude Code matches user intent to the right skill at startup, matching the reference ClaudeKit schema.
+- **Normalized version field**: All skills use `metadata.version` instead of top-level `version` for consistency.
+- **Agent activation names**: Agents now reference skills by directory name (`git`) rather than frontmatter name (`hapo:git`) for correct Skill tool resolution.
+- **CLAUDE.md**: Skill activation guidance updated to generic "analyze the skills catalog and activate" pattern.
+- **`impact-analysis` branding fix**: `name: impact-analysis` corrected to `name: hapo:impact-analysis`.
+- **Status line**: Active spec indicator now shows `📋 <slug>` when a spec is `in_progress`, replacing the disabled active-plan lookup.
+
 ## [0.11.2] - 2026-06-02
 
 ### Added

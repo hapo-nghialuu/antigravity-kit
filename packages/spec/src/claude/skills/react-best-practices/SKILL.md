@@ -1,10 +1,15 @@
 ---
 name: hapo:react-best-practices
 description: React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.
+user-invocable: true
+when_to_use: "Invoke to apply React performance and architecture best practices."
+category: frontend
+keywords: [react, performance, patterns, hooks]
 argument-hint: "[component or pattern]"
-version: "1.0.0"
+metadata:
+  author: haposoft
+  version: "1.0.0"
 ---
-
 # Vercel React Best Practices
 
 Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Contains 45 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.

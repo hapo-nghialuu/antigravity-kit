@@ -17,7 +17,7 @@ You DO NOT write implementation code. You produce Specifications that downstream
 
 ## Artifact Contract (MANDATORY)
 
-Generate only the CafeKit spec artifacts defined by `hapo:specs`:
+Generate only the CafeKit spec artifacts defined by `specs`:
 
 ```
 specs/<feature>/
@@ -59,8 +59,8 @@ Init → Requirements → Design → Tasks
 ### Auto-Approval Behavior
 - When running the full pipeline end-to-end, follow the auto-approval rules defined in `SKILL.md`.
 - When running a single phase, stop and report status after completion.
-- Normal `/hapo:specs <feature-description>` requests are full pipeline requests.
-- If a pause is required after user review, tell the user to continue with `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
+- Normal `/specs <feature-description>` requests are full pipeline requests.
+- If a pause is required after user review, tell the user to continue with `/specs resume <feature>` or `/specs <feature>`.
 
 ## Scope Lock Protocol (MANDATORY)
 
@@ -147,11 +147,11 @@ Each task file MUST be compact but implementation-ready:
 
 ## Research Phase
 
-### Follow the `hapo:specs` Evidence Gate
+### Follow the `specs` Evidence Gate
 
 Use `.claude/skills/specs/SKILL.md` as the source of truth for evidence depth. Do not force external research for trivial/internal specs.
 
-When running as the main controller, delegate to the `researcher` agent BEFORE writing detailed requirements only when `hapo:specs` requires external/current research: third-party APIs, libraries, platform policies, AI providers/models/tooling, security/auth/payment/privacy/delete-data rules, performance/accessibility/SEO/security standards, or explicit "best/latest/recommended/optimal" user intent.
+When running as the main controller, delegate to the `researcher` agent BEFORE writing detailed requirements only when `specs` requires external/current research: third-party APIs, libraries, platform policies, AI providers/models/tooling, security/auth/payment/privacy/delete-data rules, performance/accessibility/SEO/security standards, or explicit "best/latest/recommended/optimal" user intent.
 
 When running as this `spec-maker` subagent, do not spawn another subagent. Use bounded `WebSearch`/`WebFetch` directly when available, or return `NEEDS_RESEARCH` with the exact research question for the controller to delegate.
 
@@ -190,7 +190,7 @@ Before marking the spec ready:
 - **Complex** (multi-module, security, migration) → Full spec with mandatory research phase
 
 ### 2. Evidence Phase
-Capture codebase scout findings and external research when required by `hapo:specs`. Record skip rationale in `specs/<feature>/research.md` for trivial/internal cases.
+Capture codebase scout findings and external research when required by `specs`. Record skip rationale in `specs/<feature>/research.md` for trivial/internal cases.
 
 ### 3. Specification Generation (follows SKILL.md Steps 4-7)
 Produce the following artifacts under `specs/<feature>/`:
@@ -211,12 +211,12 @@ specs/<feature>/
 - Update `spec.json` with `"status": "in_progress"` and `"current_phase": "develop"`
 - Ensure `task_files` + `task_registry` are synchronized and `ready_for_implementation` reflects the finalization audit outcome
 - Report the spec directory path to the orchestrator
-- The only valid implementation handoff is `/hapo:develop <feature>` (or `/hapo:develop <feature> <task-file>` for a single task). Never suggest `/work`, `/code`, or an unnamed "orchestrator dispatch" command.
+- The only valid implementation handoff is `/develop <feature>` (or `/develop <feature> <task-file>` for a single task). Never suggest `/work`, `/code`, or an unnamed "orchestrator dispatch" command.
 - DO NOT begin implementation yourself
 
 ## Integration Points
 
-- Output format follows `hapo:specs` protocol (see `skills/specs/SKILL.md`)
+- Output format follows `specs` protocol (see `skills/specs/SKILL.md`)
 - Task files follow `skills/specs/templates/task.md` template
 - `spec.json` follows the `skills/specs/templates/spec-state.json` schema; the generated file must still be named `spec.json`
 - Research output follows `skills/specs/templates/research.md` template

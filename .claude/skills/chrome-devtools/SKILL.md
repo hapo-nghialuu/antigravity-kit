@@ -2,10 +2,15 @@
 name: hapo:chrome-devtools
 description: Automate browsers with Puppeteer CLI scripts and persistent sessions. Use for screenshots, performance analysis, network monitoring, web scraping, form automation, JavaScript debugging.
 license: Apache-2.0
+user-invocable: true
+when_to_use: "Invoke to inspect, debug, or profile a page via Chrome DevTools."
+category: dev-tools
+keywords: [devtools, chrome, debug, profiling]
 argument-hint: "[url or task]"
-version: "1.1.0"
+metadata:
+  author: haposoft
+  version: "1.1.0"
 ---
-
 # Chrome DevTools Agent Skill
 
 Browser automation via Puppeteer scripts with persistent sessions. All scripts output JSON.

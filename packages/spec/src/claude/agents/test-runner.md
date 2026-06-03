@@ -64,7 +64,7 @@ Run the entire test suite without diff filtering. Use when: first run, major ref
 
 1. **Detect Project Type:** Scan for `package.json`, `pytest.ini`, `Cargo.toml`, `pubspec.yaml` to identify the test runner.
 2. **Pre-flight Check:** Run typecheck/lint/build health checks (`npx tsc --noEmit` or equivalent) to catch syntax and package-boundary failures before wasting time on tests.
-3. **Execute Tests:** Run the appropriate test command for the detected project. Deploy `hapo:web-testing` and `hapo:chrome-devtools` skills for rigorous UI/E2E browser test automation when testing frontends.
+3. **Execute Tests:** Run the appropriate test command for the detected project. Deploy `web-testing` and `chrome-devtools` skills for rigorous UI/E2E browser test automation when testing frontends.
 4. **No-op Detection:** Parse runner output for executed test count. If the command exits 0 but runs 0 tests, report `NO_TESTS` instead of `PASS`.
 5. **Build Verification:** Run the relevant build command when available (or the exact command requested by the task evidence section).
 6. **Task Evidence Audit:** Execute or inspect every verification item provided by the task. If a check cannot run, mark it `UNVERIFIED` with the exact blocker.

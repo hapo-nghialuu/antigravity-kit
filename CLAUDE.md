@@ -15,7 +15,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 - Do not assume silently. State assumptions when they affect the work.
 - If multiple interpretations are plausible, surface them before implementation.
 - If the simpler option is likely better, say so and push back.
-- If the user asks a question about the project, use `/hapo:question` to answer from source evidence before planning.
+- If the user asks a question about the project, use `/question` to answer from source evidence before planning.
 - Before feature planning or coding, read `./README.md` for project context.
 
 ### 2. Simplicity First
@@ -46,7 +46,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 Use this loop for non-trivial work:
 
 1. **Understand** — read README, relevant docs, active spec/task, and existing code.
-2. **Plan** — choose the smallest coherent path; use `/hapo:question` for evidence-backed project questions and `/hapo:specs` for feature specs when ready.
+2. **Plan** — choose the smallest coherent path; use `/question` for evidence-backed project questions and `/specs` for feature specs when ready.
 3. **Execute** — implement only the active task/scope; no placeholder completion.
 4. **Verify** — run exact task commands first, then repo-level lint/test/build as needed.
 5. **Sync** — mark task state only after proof exists.
@@ -98,11 +98,9 @@ Consult these when the task touches the relevant area:
 
 ## Skill And Script Use
 
-- Evaluate the available skills catalog before work and activate the relevant skill(s).
-- Use `./.claude/rules/skill-workflow-routing.md` and `./.claude/rules/skill-domain-routing.md` to choose skills. CafeKit does not auto-route prompts through a scoring hook.
-- When needed, run `node .claude/scripts/generate-skill-catalog.cjs --skills` to inspect the installed skill catalog.
-- If there is a reasonable chance a skill applies, prefer the skill workflow over ad hoc execution.
-- If modifying skills, edit the current project/runtime files, not `~/.claude/skills` directly.
+- **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
+- **IMPORTANT:** DO NOT modify skills in `~/.claude/skills` directly. **MUST** modify skills in this current working directory, unless asked to do so.
+- Use `./.claude/rules/skill-workflow-routing.md` and `./.claude/rules/skill-domain-routing.md` as advisory routing when choosing a skill.
 - Run Python skill scripts with the skill venv:
   - macOS/Linux: `.claude/skills/.venv/bin/python3 scripts/<script>.py`
   - Windows: `.claude\skills\.venv\Scripts\python.exe scripts\<script>.py`

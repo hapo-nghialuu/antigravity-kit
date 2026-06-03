@@ -8,11 +8,11 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 - Read the active spec/task file when one exists.
 - Read and activate any CafeKit skill that likely applies before taking action.
 - Inspect only the code needed to understand the affected area.
-- Use `hapo:inspect` or focused search when structure is unclear.
+- Use `inspect` or focused search when structure is unclear.
 
 ## 2. Plan
 
-- For non-trivial features, use `/hapo:specs` to create or validate the spec.
+- For non-trivial features, use `/specs` to create or validate the spec.
 - For approved specs, work one task file at a time.
 - Extract from the active task:
   - `Context`

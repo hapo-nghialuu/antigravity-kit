@@ -37,6 +37,9 @@ const MESSAGES = {
     modeDryRun:   'Mode: dry-run  •  no changes will be written',
     modeInstall:  'Mode: install / update  •  your customisations are preserved',
 
+    // Intro
+    introDesc:    'AI-native development workflow for Claude Code',
+
     // Platform install spinner
     installingPlatform:    'Installing {name}',
     platformInstalled:     '{name} — {files} file(s), {skills} skill(s)',
@@ -47,6 +50,11 @@ const MESSAGES = {
     addressingPlaceholder: 'e.g. boss, friend — Enter to skip',
     addressingSet:         '{name} will address you as "{addr}"',
     addressingInvalid:     'Letters only please — addressing skipped.',
+
+    // Addressing update
+    addressingUpdatePrompt: 'You are currently addressed as "{name}". Change it?',
+    keepAddressingOption:  'Keep "{name}"',
+    changeAddressingOption:'Change to something else',
 
     // Skills / deps setup
     skillDepsConfirm:      'Install skill dependencies? (Python venv, pip, npm, Chromium — takes a few minutes)',
@@ -94,8 +102,27 @@ const MESSAGES = {
     outroDone:       'Done!  docs: https://github.com/haposoft/cafekit',
 
     // Version check
-    versionUpToDate:  'Already up to date ({v}). Use --force-overwrite to reinstall.',
-    versionDowngrade: 'Downgrading {from} → {to}. Features may be removed. Continue?'
+    versionUpToDate:      'Already up to date ({v}). Use --force-overwrite to reinstall.',
+    versionDowngrade:     'Downgrading {from} → {to}. Features may be removed. Continue?',
+    versionSamePrompt:    'CafeKit {v} is already installed. What would you like to do?',
+    versionForceReinstall: 'Reinstalling CafeKit {v} (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: Update available!',
+    updateOption:         'Update to {v}',
+    reinstallOption:      'Reinstall (overwrite managed files)',
+    reinstallCurrentOption: 'Reinstall {v}',
+    skipOption:           'Skip (exit)',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'Installing for: {names}',
+    langKept:             'Language: {lang} (saved — skipping prompt)',
+    platformKept:         'Platform: {names} (saved — skipping prompt)',
+
+    // Version picker
+    versionPickPrompt:    'Select CafeKit version to install:',
+    versionPickCurrent:   '(installed)',
+    versionPickLatest:    '(latest)',
+    versionReexec:        'Switching to CafeKit {v}…',
+    versionFetchFailed:   'Could not fetch version list. Using default menu.'
   },
 
   // ─── 日本語 ─────────────────────────────────────────────────────────────────
@@ -118,6 +145,9 @@ const MESSAGES = {
     modeDryRun:   'モード: ドライラン  •  ファイルへの変更はありません',
     modeInstall:  'モード: インストール / 更新  •  カスタマイズは保持されます',
 
+    // Intro
+    introDesc:    'Claude Code 向け AI ネイティブ開発ワークフロー',
+
     installingPlatform:    '{name} をインストール中',
     platformInstalled:     '{name} — {files} ファイル、{skills} スキル',
     platformDryInstalled:  '{name} — {files} ファイル、{skills} スキル  [ドライラン]',
@@ -126,6 +156,11 @@ const MESSAGES = {
     addressingPlaceholder: '例: さん、くん — Enter でスキップ',
     addressingSet:         '{name} はあなたを「{addr}」とお呼びします',
     addressingInvalid:     '文字のみ入力できます — 呼称の設定をスキップしました。',
+
+    // Addressing update
+    addressingUpdatePrompt: '現在「{name}」と呼ばれています。変更しますか？',
+    keepAddressingOption:  '「{name}」のまま',
+    changeAddressingOption:'別の名前に変更',
 
     skillDepsConfirm:      'スキルの依存関係をインストールしますか？（Python venv、pip、npm、Chromium — 数分かかります）',
     skillsSkipped:         'スキルの依存関係をスキップしました。\n  後で実行: npx @haposoft/cafekit --with-skills-deps',
@@ -169,8 +204,27 @@ const MESSAGES = {
     dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
     outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit',
 
-    versionUpToDate:  '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
-    versionDowngrade: '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？'
+    versionUpToDate:      '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
+    versionDowngrade:     '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？',
+    versionSamePrompt:    'CafeKit {v} は既にインストールされています。何をしますか？',
+    versionForceReinstall: 'CafeKit {v} を再インストール中 (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: アップデートが利用可能です！',
+    updateOption:         '{v} にアップデート',
+    reinstallOption:      '再インストール（管理対象ファイルを上書き）',
+    reinstallCurrentOption: '{v} を再インストール',
+    skipOption:           'スキップ（終了）',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'インストール先: {names}',
+    langKept:             '言語: {lang} (保存済み — スキップ)',
+    platformKept:         'プラットフォーム: {names} (保存済み — スキップ)',
+
+    // Version picker
+    versionPickPrompt:    'インストールする CafeKit バージョンを選択:',
+    versionPickCurrent:   '(インストール済み)',
+    versionPickLatest:    '(最新)',
+    versionReexec:        'CafeKit {v} に切り替えます…',
+    versionFetchFailed:   'バージョン一覧を取得できませんでした。デフォルトメニューを表示します。'
   },
 
   // ─── Tiếng Việt ─────────────────────────────────────────────────────────────
@@ -193,6 +247,9 @@ const MESSAGES = {
     modeDryRun:   'Chế độ: dry-run  •  sẽ không thay đổi bất kỳ tệp nào',
     modeInstall:  'Chế độ: cài / cập nhật  •  nội dung bạn tuỳ chỉnh được giữ nguyên',
 
+    // Intro
+    introDesc:    'Quy trình phát triển AI-native cho Claude Code',
+
     installingPlatform:    'Đang cài {name}',
     platformInstalled:     '{name} — {files} tệp, {skills} skill',
     platformDryInstalled:  '{name} — {files} tệp, {skills} skill  [dry-run]',
@@ -201,6 +258,11 @@ const MESSAGES = {
     addressingPlaceholder: 'vd: sếp, đại ca — Enter để bỏ qua',
     addressingSet:         '{name} sẽ gọi bạn là "{addr}"',
     addressingInvalid:     'Chỉ nhập chữ cái — bỏ qua thiết lập xưng hô.',
+
+    // Addressing update
+    addressingUpdatePrompt: 'Bạn đang được gọi là "{name}". Bạn có muốn đổi không?',
+    keepAddressingOption:  'Giữ "{name}"',
+    changeAddressingOption:'Đổi tên khác',
 
     skillDepsConfirm:      'Cài dependencies cho skill ngay? (Python venv, pip, npm, Chromium — mất vài phút)',
     skillsSkipped:         'Đã bỏ qua dependencies skill.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-skills-deps',
@@ -244,8 +306,27 @@ const MESSAGES = {
     dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',
     outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit',
 
-    versionUpToDate:  'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
-    versionDowngrade: 'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?'
+    versionUpToDate:      'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
+    versionDowngrade:     'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?',
+    versionSamePrompt:    'CafeKit {v} đã được cài đặt. Bạn muốn làm gì?',
+    versionForceReinstall: 'Đang cài lại CafeKit {v} (--force-overwrite)...',
+    versionUpgradePrompt: 'CafeKit {from} → {to}: Có bản cập nhật mới!',
+    updateOption:         'Cập nhật lên {v}',
+    reinstallOption:      'Cài lại (ghi đè file được quản lý)',
+    reinstallCurrentOption: 'Cài lại {v}',
+    skipOption:           'Bỏ qua (thoát)',
+
+    // Platform/language auto-skip when already installed
+    installingFor:        'Cài cho: {names}',
+    langKept:             'Ngôn ngữ: {lang} (đã lưu — bỏ qua chọn lại)',
+    platformKept:         'Nền tảng: {names} (đã lưu — bỏ qua chọn lại)',
+
+    // Version picker
+    versionPickPrompt:    'Chọn phiên bản CafeKit để cài:',
+    versionPickCurrent:   '(đang cài)',
+    versionPickLatest:    '(mới nhất)',
+    versionReexec:        'Đang chuyển sang cài CafeKit {v}…',
+    versionFetchFailed:   'Không lấy được danh sách phiên bản. Dùng menu mặc định.'
   }
 };
 

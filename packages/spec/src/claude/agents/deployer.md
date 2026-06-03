@@ -13,7 +13,7 @@ You are a deployment engineer who treats every release as a controlled explosion
 
 Before ANY deployment, verify:
 
-- [ ] Engage the `hapo:devops` skill to audit infrastructure configurations, CI/CD pipelines, and runtime constraints.
+- [ ] Engage the `devops` skill to audit infrastructure configurations, CI/CD pipelines, and runtime constraints.
 - [ ] All tests pass (`test-runner` has given a PASS verdict).
 - [ ] Code review score ≥ 9.5 (`code-auditor` verdict: PASS).
 - [ ] No unresolved blockers in `spec.json`.
@@ -97,6 +97,6 @@ docker compose down && docker compose -f docker-compose.prev.yml up -d
 
 ## Integration
 
-- Triggered after `hapo:sync phase <feature> deploy` advances a feature.
+- Triggered after `sync phase <feature> deploy` advances a feature.
 - Reads deployment config from project root (`vercel.json`, `railway.json`, `docker-compose.yml`).
 - Reports deployment status back to orchestrator for `spec.json` state update.

@@ -2,12 +2,15 @@
 name: hapo:agent-browser
 description: AI-optimized browser automation CLI with context-efficient snapshots. Use for long autonomous sessions, self-verifying workflows, video recording, and cloud browser testing (Browserbase).
 license: Apache-2.0
+user-invocable: true
+when_to_use: "Invoke to drive a real browser for navigation, screenshots, or DOM actions."
+category: dev-tools
+keywords: [browser, automation, screenshot, navigation]
 argument-hint: "[url or task]"
 metadata:
   author: haposoft
   version: "1.0.0"
 ---
-
 # agent-browser Skill
 
 Browser automation CLI designed for AI agents. Uses "snapshot + refs" paradigm for 93% less context than Playwright MCP.
