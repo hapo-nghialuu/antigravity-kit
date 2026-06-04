@@ -14,11 +14,6 @@ export function Hero() {
   const t = getLandingTranslations(locale).hero;
   const [copied, setCopied] = useState(false);
   const installCommand = "npx @haposoft/cafekit";
-  const runtimeStats = [
-    { label: "Spec gates", value: "validate first" },
-    { label: "Task state", value: "registry-backed" },
-    { label: "Docs", value: "checkpoint per task" },
-  ] as const;
 
   const handleCopy = async () => {
     try {
@@ -59,9 +54,9 @@ export function Hero() {
           </div>
 
           <h1 className="mb-6 text-5xl font-bold tracking-tight text-[#101820] dark:text-[#F6FAF7] sm:text-6xl md:text-7xl">
-            Claude Code-first
+            {t.headingLead}
             <span className="mt-2 block bg-gradient-to-r from-[#F2EA9D] via-[#006242] to-[#A7C5EE] bg-clip-text text-transparent dark:from-[#F2EA9D] dark:via-[#F6FAF7] dark:to-[#A7C5EE]">
-              CafeKit runtime
+              {t.headingAccent}
             </span>
           </h1>
 
@@ -72,7 +67,7 @@ export function Hero() {
           <div className="mb-8 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#A7C5EE]/40 px-3 py-1 text-xs font-medium text-[#101820] dark:bg-[#A7C5EE]/18 dark:text-[#DDE9F9]">
               <Sparkles className="h-3 w-3" />
-              Claude Code available now
+              {t.availability}
             </span>
           </div>
 
@@ -112,16 +107,16 @@ export function Hero() {
           </div>
 
           <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
-            {runtimeStats.map((item) => (
+            {t.runtimeStats.map((item) => (
               <div
-                key={item.label}
+                key={item.title}
                 className="rounded-2xl border border-[#101820]/8 bg-white/76 px-4 py-3 shadow-[0_14px_36px_-24px_rgba(16,24,32,0.28)] backdrop-blur dark:border-[#A7C5EE]/12 dark:bg-[#101820]/44"
               >
                 <div className="text-xs uppercase tracking-[0.16em] text-[#456055] dark:text-[#8EACD0]">
-                  {item.label}
+                  {item.title}
                 </div>
                 <div className="mt-1 text-sm font-semibold text-[#101820] dark:text-[#F6FAF7]">
-                  {item.value}
+                  {item.description}
                 </div>
               </div>
             ))}

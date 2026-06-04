@@ -7,62 +7,62 @@ import { localizeHref } from "@/lib/locale-utils";
 
 const copy = {
   en: {
-    heading: "See the artifacts, not just the commands",
+    heading: "Real Artifacts after every step",
     subheading:
-      "A new user trusts CafeKit faster when they can picture the files and receipts it leaves behind.",
+      "CafeKit leaves files, registries, and receipts so reviewers can see which tasks are ready and which still lack evidence.",
     cta: "Open documentation",
     items: [
       {
         title: "spec.json",
-        description: "Registry-backed state, validation status, and implementation readiness in one place.",
+        description: "Machine state for phase, validation status, task registry, and readiness gate.",
       },
       {
         title: "task-R*.md",
-        description: "Task packets with objective, completion criteria, and exact verification commands.",
+        description: "Task packets with objective, scope boundary, completion criteria, and Evidence commands.",
       },
       {
         title: "review + test verdict",
-        description: "Structured signals that explain whether work is actually ready to merge and ship.",
+        description: "Structured verdicts that show whether code is ready for merge, Git handoff, or release.",
       },
     ],
   },
   vi: {
-    heading: "Hãy nhìn artifact thật, không chỉ nhìn command",
+    heading: "Artifacts thật sau mỗi bước",
     subheading:
-      "Người mới tin CafeKit nhanh hơn khi họ hình dung được file và receipt mà runtime để lại.",
+      "CafeKit để lại file, registry và receipt để reviewer biết task nào đã sẵn sàng, task nào còn thiếu evidence.",
     cta: "Mở tài liệu",
     items: [
       {
         title: "spec.json",
-        description: "State có registry, validation status và implementation readiness trong một chỗ.",
+        description: "Machine state cho phase, validation status, task registry và readiness gate.",
       },
       {
         title: "task-R*.md",
-        description: "Task packet có objective, completion criteria và exact verification commands.",
+        description: "Task packet có objective, scope boundary, completion criteria và Evidence commands.",
       },
       {
         title: "review + test verdict",
-        description: "Structured signals cho biết code đã thật sự sẵn sàng để merge và ship hay chưa.",
+        description: "Structured verdict cho biết code đã đủ điều kiện merge, Git handoff hoặc release chưa.",
       },
     ],
   },
   ja: {
-    heading: "command だけでなく artifact も見せる",
+    heading: "各ステップ後に残る real Artifacts",
     subheading:
-      "新規ユーザーは、runtime が残す file と receipt を見たときに CafeKit をより早く信頼します。",
+      "CafeKit は files、registry、receipt を残し、reviewer が ready な task と evidence 不足の task を判断できるようにします。",
     cta: "ドキュメントを見る",
     items: [
       {
         title: "spec.json",
-        description: "registry-backed state、validation status、implementation readiness をまとめて保持します。",
+        description: "phase、validation status、task registry、readiness gate の machine state。",
       },
       {
         title: "task-R*.md",
-        description: "objective、completion criteria、exact verification commands を持つ task packet。",
+        description: "objective、scope boundary、completion criteria、Evidence commands を持つ task packet。",
       },
       {
         title: "review + test verdict",
-        description: "merge や ship の準備ができているかを示す structured signal。",
+        description: "merge、Git handoff、release の準備ができているかを示す structured verdict。",
       },
     ],
   },

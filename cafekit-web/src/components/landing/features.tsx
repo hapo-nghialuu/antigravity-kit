@@ -82,10 +82,10 @@ export function Features() {
 
               <div className="rounded-2xl border border-[#006242]/16 bg-white/84 px-4 py-3 shadow-sm dark:border-[#A7C5EE]/12 dark:bg-[#101820]/58">
                 <div className="text-xs uppercase tracking-[0.18em] text-[#456055] dark:text-[#8EACD0]">
-                  Active Loop
+                  {t.activeLoopLabel}
                 </div>
                 <div className="mt-1 text-sm font-semibold text-[#101820] dark:text-[#F6FAF7]">
-                  install → specs → develop → test → review → git → deploy
+                  {t.activeLoopValue}
                 </div>
               </div>
             </div>

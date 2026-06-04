@@ -36,7 +36,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
   en: {
     header: {
       workflow: "Workflow",
-      whyItWorks: "What's different",
+      whyItWorks: "Differentiators",
       artifacts: "Artifacts",
       quickstart: "Quickstart",
       github: "GitHub",
@@ -44,7 +44,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
     },
     footer: {
       description:
-        "Claude Code-first runtime for spec-driven delivery. Install the runtime bundle, validate specs, implement verified task packets, and release with confidence.",
+        "Spec-driven runtime for AI coding agents. Install it into your repo, create spec artifacts, implement task packets with Evidence, then test/review before release handoff.",
       readDocs: "Read docs",
       github: "GitHub",
       product: "Product",
@@ -76,17 +76,17 @@ const translations: Record<Locale, SiteShellTranslations> = {
     },
     footer: {
       description:
-        "Runtime Claude Code-first cho quy trình spec-driven. Cài runtime bundle, validate spec, triển khai task packet đã verify, rồi release với sự tự tin.",
-      readDocs: "Đọc docs",
+        "Runtime spec-driven cho AI coding agents. Cài vào repo, tạo spec artifacts, triển khai từng task packet có Evidence, rồi test/review trước khi release handoff.",
+      readDocs: "Đọc tài liệu",
       github: "GitHub",
       product: "Sản phẩm",
-      workflows: "Workflow",
+      workflows: "Quy trình",
       resources: "Tài nguyên",
       documentation: "Tài liệu",
       installation: "Cài đặt",
       quickstart: "Bắt đầu nhanh",
       commandReference: "Tham chiếu lệnh",
-      coreWorkflow: "Workflow chính",
+      coreWorkflow: "Quy trình chính",
       specs: "/hapo:specs",
       develop: "/hapo:develop",
       testReview: "/hapo:test + /hapo:code-review",
@@ -100,7 +100,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
   ja: {
     header: {
       workflow: "ワークフロー",
-      whyItWorks: "違い",
+      whyItWorks: "差別化ポイント",
       artifacts: "Artifacts",
       quickstart: "クイックスタート",
       github: "GitHub",
@@ -108,17 +108,17 @@ const translations: Record<Locale, SiteShellTranslations> = {
     },
     footer: {
       description:
-        "Claude Code-first の spec-driven runtime。runtime bundle を入れ、spec を validate し、verified task packet を実装して、自信を持って release できます。",
-      readDocs: "Docs を読む",
+        "AI coding agents 向けの spec-driven runtime。repo に導入し、spec artifacts を作り、Evidence 付きの task packet を実装し、release handoff 前に test/review します。",
+      readDocs: "ドキュメントを読む",
       github: "GitHub",
-      product: "Product",
-      workflows: "Workflows",
-      resources: "Resources",
-      documentation: "Documentation",
-      installation: "Installation",
-      quickstart: "Quickstart",
-      commandReference: "Command Reference",
-      coreWorkflow: "Core workflow",
+      product: "プロダクト",
+      workflows: "ワークフロー",
+      resources: "リソース",
+      documentation: "ドキュメント",
+      installation: "インストール",
+      quickstart: "クイックスタート",
+      commandReference: "コマンドリファレンス",
+      coreWorkflow: "メインワークフロー",
       specs: "/hapo:specs",
       develop: "/hapo:develop",
       testReview: "/hapo:test + /hapo:code-review",
