@@ -26,20 +26,20 @@ const copy = {
   vi: {
     heading: "Điểm khác biệt",
     subheading:
-      "CafeKit không cố làm agent thông minh hơn bằng prompt dài. Nó đặt agent vào một runtime có state, artifacts và gates để tiến độ không bị giả xanh.",
+      "CafeKit không cố làm AI thông minh hơn bằng prompt dài. Nó đặt AI vào quy trình có trạng thái, kết quả và cổng kiểm chứng để tiến độ không thể giả xanh.",
     before: "Không có CafeKit",
     after: "Có CafeKit",
     beforeItems: [
-      "Mỗi session phải giải thích lại context, scope và cách làm",
-      "Spec dễ lệch khỏi implementation sau lượt code đầu tiên",
-      "Task có thể bị mark done dù build, test hoặc runtime proof vẫn thiếu",
-      "Docs thường bị dồn cuối, cập nhật thiếu hoặc bỏ qua",
+      "Mỗi phiên làm việc phải giải thích lại ngữ cảnh, phạm vi và cách làm",
+      "Đặc tả dễ lệch khỏi phần triển khai sau lượt code đầu tiên",
+      "Tác vụ có thể bị đánh dấu xong dù build, kiểm thử hoặc bằng chứng chạy thực tế vẫn thiếu",
+      "Tài liệu thường bị dồn cuối, cập nhật thiếu hoặc bỏ qua",
     ],
     afterItems: [
-      "Spec trở thành artifact có validation, task registry và readiness gate",
-      "Implementation đi theo từng task packet đã có completion criteria và Evidence",
-      "Quality gate chặn fake progress trước khi sync state sang done",
-      "Docs checkpoint chạy theo task đã verify thay vì dồn vào cuối release",
+      "Đặc tả trở thành kết quả có kiểm tra, sổ tác vụ và cổng sẵn sàng",
+      "Triển khai đi theo từng gói tác vụ có tiêu chí hoàn thành và bằng chứng",
+      "Cổng chất lượng chặn tiến độ giả trước khi đồng bộ trạng thái sang hoàn tất",
+      "Điểm kiểm tra tài liệu chạy theo tác vụ đã kiểm chứng thay vì dồn vào cuối release",
     ],
   },
   ja: {

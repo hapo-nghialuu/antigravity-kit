@@ -27,22 +27,22 @@ const copy = {
     ],
   },
   vi: {
-    heading: "Artifacts thật sau mỗi bước",
+    heading: "Kết quả thật sau mỗi bước",
     subheading:
-      "CafeKit để lại file, registry và receipt để reviewer biết task nào đã sẵn sàng, task nào còn thiếu evidence.",
+      "CafeKit để lại file, sổ tác vụ và biên nhận để reviewer biết tác vụ nào đã sẵn sàng, tác vụ nào còn thiếu bằng chứng.",
     cta: "Mở tài liệu",
     items: [
       {
         title: "spec.json",
-        description: "Machine state cho phase, validation status, task registry và readiness gate.",
+        description: "Trạng thái máy đọc được cho giai đoạn, trạng thái kiểm tra, sổ tác vụ và cổng sẵn sàng.",
       },
       {
         title: "task-R*.md",
-        description: "Task packet có objective, scope boundary, completion criteria và Evidence commands.",
+        description: "Gói tác vụ có mục tiêu, ranh giới phạm vi, tiêu chí hoàn thành và lệnh bằng chứng.",
       },
       {
         title: "review + test verdict",
-        description: "Structured verdict cho biết code đã đủ điều kiện merge, Git handoff hoặc release chưa.",
+        description: "Kết luận có cấu trúc cho biết code đã đủ điều kiện hợp nhất, bàn giao Git hoặc bàn giao release chưa.",
       },
     ],
   },

@@ -33,32 +33,32 @@ const copy = {
     footer: "No framework lock-in. Re-runs use an ownership manifest to update managed files while preserving your edits.",
   },
   vi: {
-    heading: "CafeKit cài gì vào repo",
+    heading: "CafeKit cài gì vào dự án",
     subheading:
-      "Installer chỉ cài workflow/runtime infrastructure vào `.claude` hoặc `.opencode`. Code ứng dụng không bị chạm cho đến khi bạn chạy workflow cho một feature thật.",
+      "Bộ cài chỉ thêm hạ tầng vận hành vào `.claude` hoặc `.opencode`. Code ứng dụng không bị chạm cho đến khi bạn chạy quy trình cho một tính năng thật.",
     items: [
       {
         title: ".claude/skills",
-        description: "Bộ skill tạo command surface cho question, brainstorm, specs, develop, test, review, docs, sync và git.",
+        description: "Bộ kỹ năng tạo các lệnh cho question, brainstorm, specs, develop, test, review, docs, sync và git.",
       },
       {
         title: ".claude/hooks",
-        description: "Hook nhắc state/spec drift, chặn đọc dữ liệu nhạy cảm, inject context phiên làm việc và cập nhật usage.",
+        description: "Hook nhắc lệch trạng thái hoặc đặc tả, chặn đọc dữ liệu nhạy cảm, nạp ngữ cảnh phiên làm việc và cập nhật mức sử dụng.",
       },
       {
         title: ".claude/agents",
-        description: "Subagent chuyên trách inspect, spec, develop, test, review, docs, git và deployment handoff.",
+        description: "Agent hỗ trợ chuyên trách inspect, spec, develop, test, review, docs, git và bàn giao triển khai.",
       },
       {
         title: ".claude/rules",
-        description: "Rule vận hành giữ scope, spec state, quality gate, docs sync và Git handoff đi cùng nhau.",
+        description: "Quy tắc vận hành giữ phạm vi, trạng thái đặc tả, cổng chất lượng, đồng bộ tài liệu và bàn giao Git đi cùng nhau.",
       },
       {
         title: "Code ứng dụng",
-        description: "Được giữ nguyên trong lúc cài đặt. CafeKit chỉ sửa app khi bạn giao một task implementation rõ ràng.",
+        description: "Được giữ nguyên trong lúc cài đặt. CafeKit chỉ sửa ứng dụng khi bạn giao một tác vụ triển khai rõ ràng.",
       },
     ],
-    footer: "Không khóa framework. Re-run có ownership manifest để cập nhật file managed nhưng vẫn preserve chỉnh sửa của bạn.",
+    footer: "Không khóa framework. Khi chạy lại, manifest sở hữu giúp cập nhật file do CafeKit quản lý mà vẫn giữ chỉnh sửa của bạn.",
   },
   ja: {
     heading: "CafeKit が repo にインストールするもの",

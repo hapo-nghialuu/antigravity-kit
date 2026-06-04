@@ -70,11 +70,11 @@ const terminalCopy = {
   },
   vi: {
     replay: "Chạy lại",
-    labels: ["Cài đặt", "Tạo spec", "Validate", "Develop", "Test"],
+    labels: ["Cài đặt", "Tạo đặc tả", "Kiểm tra", "Triển khai", "Kiểm thử"],
     activeLoop: "Vòng chạy",
-    activeLoopValue: "specs -> develop -> test",
-    taskPacket: "Task packet",
-    taskName: "R0-02 auth setup",
+    activeLoopValue: "đặc tả -> triển khai -> kiểm thử",
+    taskPacket: "Gói tác vụ",
+    taskName: "R0-02 thiết lập xác thực",
   },
   ja: {
     replay: "Replay",

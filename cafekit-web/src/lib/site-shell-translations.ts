@@ -76,7 +76,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
     },
     footer: {
       description:
-        "Runtime spec-driven cho AI coding agents. Cài vào repo, tạo spec artifacts, triển khai từng task packet có Evidence, rồi test/review trước khi release handoff.",
+        "CafeKit là bộ công cụ vận hành cho AI coding agent, cài trực tiếp vào dự án để quản lý quy trình từ đặc tả, triển khai, kiểm thử, review đến bàn giao code.",
       readDocs: "Đọc tài liệu",
       github: "GitHub",
       product: "Sản phẩm",
@@ -94,7 +94,7 @@ const translations: Record<Locale, SiteShellTranslations> = {
       releases: "Releases",
       issues: "Issues",
       faq: "FAQ",
-      copyright: "Dành cho repo thật, không phải prompt demo.",
+      copyright: "Dành cho dự án thật, không phải prompt demo.",
     },
   },
   ja: {

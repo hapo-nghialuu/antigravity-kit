@@ -320,95 +320,95 @@ const translations: Record<Locale, LandingTranslations> = {
   },
   vi: {
     hero: {
-      headingLead: "CafeKit runtime",
-      headingAccent: "cho AI coding có kiểm chứng",
-      badge: "Runtime spec-driven cài ngay trong repo",
+      headingLead: "CafeKit",
+      headingAccent: "cho quy trình AI coding có kiểm chứng",
+      badge: "Bộ công cụ vận hành cài trực tiếp vào dự án",
       subtitle:
-        "Biến prompt rời rạc thành luồng delivery có spec, task boundary, verification gate và state sync. Ưu tiên Claude Code, có hỗ trợ OpenCode.",
+        "Biến prompt rời rạc thành quy trình có đặc tả, tác vụ, cổng kiểm chứng và đồng bộ trạng thái. Ưu tiên Claude Code, có hỗ trợ OpenCode.",
       availability: "Sẵn sàng cho Claude Code",
       runtimeStats: [
-        { title: "Spec gate", description: "validate trước" },
-        { title: "Task registry", description: "state rõ ràng" },
-        { title: "Evidence", description: "proof trước khi done" },
+        { title: "Cổng đặc tả", description: "kiểm tra trước" },
+        { title: "Sổ tác vụ", description: "trạng thái rõ ràng" },
+        { title: "Bằng chứng", description: "đủ chứng cứ mới hoàn tất" },
       ],
       readDocs: "Đọc tài liệu",
       copied: "Đã sao chép",
       copy: "Sao chép",
     },
     features: {
-      heading: "Từ prompt đầu tiên đến release có kiểm chứng",
+      heading: "Từ ý tưởng đầu tiên đến bàn giao code có kiểm chứng",
       subheading:
-        "CafeKit cài một lớp vận hành vào repo: tạo spec, chia task packet, triển khai từng task, chạy test/review, đồng bộ state và bàn giao release bằng stack sẵn có.",
-      workflowLabel: "Luồng runtime",
+        "CafeKit cài vào dự án một bộ công cụ vận hành: tạo đặc tả, chia tác vụ, triển khai từng phần, chạy kiểm thử và review, đồng bộ trạng thái rồi bàn giao qua quy trình sẵn có.",
+      workflowLabel: "Quy trình vận hành",
       activeLoopLabel: "Vòng chạy chính",
-      activeLoopValue: "install -> specs -> develop -> test -> review -> git -> release",
+      activeLoopValue: "cài đặt -> đặc tả -> triển khai -> kiểm thử -> review -> git -> bàn giao",
       detailsLabel: "Cơ chế chính",
       notesLabel: "Điểm cần chốt",
       steps: [
         {
-          tab: "install",
-          title: "Cài runtime vào repo",
+          tab: "cài đặt",
+          title: "Cài bộ công cụ vào dự án",
           description:
-            "Bootstrap CafeKit vào project Claude Code hoặc OpenCode mà không chạm vào code ứng dụng.",
+            "Khởi tạo CafeKit cho dự án Claude Code hoặc OpenCode mà không sửa code ứng dụng.",
           highlights: [
-            "Cài skills, agents, hooks, rules, statusline và workflow context vào `.claude` hoặc `.opencode`.",
-            "Ghi metadata phiên bản và ownership manifest để lần cài sau preserve user edits.",
-            "Đưa repo sang command surface spec-driven thay vì phụ thuộc vào prompt dài.",
+            "Cài bộ kỹ năng, agent hỗ trợ, hook, quy tắc, statusline và ngữ cảnh quy trình vào `.claude` hoặc `.opencode`.",
+            "Ghi thông tin phiên bản và manifest sở hữu để lần cài sau cập nhật phần do CafeKit quản lý mà vẫn giữ chỉnh sửa của bạn.",
+            "Đưa dự án vào quy trình dựa trên đặc tả thay vì phụ thuộc vào prompt dài.",
           ],
           notes: [
             {
               title: "Lệnh cài đặt",
-              description: "Chạy `npx @haposoft/cafekit` ở root của project.",
+              description: "Chạy `npx @haposoft/cafekit` ở thư mục gốc của dự án.",
             },
             {
               title: "Kết quả",
-              description: "Repo sẵn sàng chạy các workflow `hapo:*` với runtime project-local.",
+              description: "Dự án sẵn sàng chạy các quy trình `hapo:*` bằng bộ công cụ vận hành cục bộ.",
             },
           ],
         },
         {
           tab: "/hapo:specs",
-          title: "Tạo contract cho feature",
+          title: "Tạo đặc tả cho tính năng",
           description:
-            "Tạo `spec.json`, requirements, research, design và task packets trước khi implementation bắt đầu.",
+            "Tạo `spec.json`, yêu cầu, nghiên cứu, thiết kế và danh sách tác vụ trước khi bắt đầu triển khai.",
           highlights: [
-            "Tạo `specs/<feature>/` với state machine-readable, task files và task registry.",
-            "Scan spec đang dang dở và dependency giữa specs trước khi mở scope mới.",
-            "Chạy validator để chặn spec chưa đủ điều kiện bàn giao sang develop.",
+            "Tạo `specs/<feature>/` với trạng thái máy đọc được, file tác vụ và sổ tác vụ.",
+            "Rà soát các đặc tả đang dang dở và phụ thuộc giữa đặc tả trước khi mở phạm vi mới.",
+            "Chạy bộ kiểm tra đặc tả để chặn những đặc tả chưa đủ điều kiện bàn giao sang triển khai.",
           ],
           notes: [
             {
               title: "Gate bắt buộc",
               description:
-                "Spec chưa pass validation thì `ready_for_implementation` không được bật.",
+                "Đặc tả chưa qua kiểm tra thì `ready_for_implementation` không được bật.",
             },
             {
-              title: "Task packet",
+              title: "Gói tác vụ",
               description:
-                "Mỗi `task-R*.md` là boundary thực thi cho một lượt develop có thể verify.",
+                "Mỗi `task-R*.md` là ranh giới thực thi cho một lượt triển khai có thể kiểm chứng.",
             },
           ],
         },
         {
           tab: "/hapo:develop",
-          title: "Triển khai theo từng task packet",
+          title: "Triển khai theo từng gói tác vụ",
           description:
-            "Chỉ code khi spec đã sẵn sàng, xử lý một task boundary mỗi lượt và sync state sau khi có proof.",
+            "Chỉ viết code khi đặc tả đã sẵn sàng, xử lý một ranh giới tác vụ mỗi lượt và đồng bộ trạng thái sau khi có bằng chứng.",
           highlights: [
-            "Hỗ trợ full-spec orchestration hoặc chạy chính xác một task file.",
-            "Scout codebase trước khi sửa để tránh orphan code, scope drift và sai entrypoint.",
-            "Không nhận placeholder, fake adapter hoặc đổi contract ngầm làm bằng chứng hoàn thành.",
+            "Hỗ trợ điều phối toàn bộ đặc tả hoặc chạy chính xác một file tác vụ.",
+            "Khảo sát mã nguồn dự án trước khi sửa để tránh code mồ côi, lệch phạm vi và sai điểm vào.",
+            "Không chấp nhận phần dựng tạm, adapter giả hoặc đổi ngầm hợp đồng làm bằng chứng hoàn thành.",
           ],
           notes: [
             {
-              title: "Definition of done",
+              title: "Định nghĩa hoàn tất",
               description:
-                "Task chỉ done khi Completion Criteria và Evidence đều có proof thật.",
+                "Tác vụ chỉ hoàn tất khi tiêu chí hoàn thành và bằng chứng đều có chứng cứ thật.",
             },
             {
-              title: "State sync",
+              title: "Đồng bộ trạng thái",
               description:
-                "`spec.json.task_registry` và task markdown phải đồng bộ trước khi trả kết quả.",
+                "`spec.json.task_registry` và markdown tác vụ phải khớp nhau trước khi trả kết quả.",
             },
           ],
         },
@@ -416,111 +416,111 @@ const translations: Record<Locale, LandingTranslations> = {
           tab: "/hapo:test",
           title: "Xác minh bằng tín hiệu thật",
           description:
-            "Chạy exact evidence commands, precheck, test suite và UI verification theo scope của task.",
+            "Chạy đúng lệnh bằng chứng, kiểm tra trước, bộ kiểm thử và xác minh giao diện theo phạm vi tác vụ.",
           highlights: [
-            "Auto-detect test runner và chọn blast-radius hoặc full suite theo ngữ cảnh.",
-            "`NO_TESTS` và `0 tests` không được coi là pass khi task cần automated proof.",
-            "Trả structured verdict có scope, failures, coverage và runtime reachability.",
+            "Tự nhận diện trình chạy kiểm thử và chọn phạm vi hẹp hoặc toàn bộ bộ kiểm thử theo ngữ cảnh.",
+            "`NO_TESTS` và `0 tests` không được coi là đạt khi tác vụ cần bằng chứng tự động.",
+            "Trả kết luận có cấu trúc với phạm vi, lỗi, độ phủ và khả năng truy cập lúc chạy.",
           ],
           notes: [
             {
-              title: "Exact commands",
+              title: "Lệnh chính xác",
               description:
-                "Verification bắt đầu từ lệnh được ghi trong Evidence của task packet.",
+                "Xác minh bắt đầu từ các lệnh được ghi trong phần bằng chứng của gói tác vụ.",
             },
             {
-              title: "UI mode",
+              title: "Chế độ giao diện",
               description:
-                "Flow có auth có thể dùng `--ui-auth` hoặc `--ui-flow` khi page runtime đã lên.",
+                "Luồng có xác thực có thể dùng `--ui-auth` hoặc `--ui-flow` khi trang chạy thực tế đã sẵn sàng.",
             },
           ],
         },
         {
           tab: "/hapo:code-review",
-          title: "Review đối kháng trước khi merge",
+          title: "Review đối kháng trước khi hợp nhất",
           description:
-            "Kiểm tra spec compliance, code quality, security và regression risk trước khi candidate đi tiếp.",
+            "Kiểm tra độ khớp với đặc tả, chất lượng code, bảo mật và rủi ro hồi quy trước khi bản thay đổi đi tiếp.",
           highlights: [
-            "Stage 1 đối chiếu implementation với spec và task evidence.",
-            "Stage 2 kiểm tra YAGNI, KISS, DRY, maintainability và test gaps.",
-            "Stage 3 red-team security, edge cases, false assumptions và contract drift.",
+            "Giai đoạn 1 đối chiếu phần triển khai với đặc tả và bằng chứng tác vụ.",
+            "Giai đoạn 2 kiểm tra YAGNI, KISS, DRY, khả năng bảo trì và khoảng trống kiểm thử.",
+            "Giai đoạn 3 rà soát bảo mật, trường hợp biên, giả định sai và lệch hợp đồng.",
           ],
           notes: [
             {
-              title: "PASS thật",
-              description: "Review chỉ pass khi score >= 9.5 và không còn Critical finding.",
+              title: "Kết luận đạt",
+              description: "Review chỉ đạt khi điểm >= 9.5 và không còn phát hiện nghiêm trọng.",
             },
             {
-              title: "Release gate",
+              title: "Cổng bàn giao",
               description:
-                "Critical findings phải chặn handoff sang Git và deployment.",
+                "Phát hiện nghiêm trọng phải chặn bàn giao sang Git và triển khai.",
             },
           ],
         },
         {
           tab: "/hapo:git",
-          title: "Commit và handoff an toàn",
+          title: "Commit và bàn giao an toàn",
           description:
-            "Dùng Git operations native cho commit, push, PR prep và worktree sau khi code đã được verify.",
+            "Dùng thao tác Git gốc cho commit, push, chuẩn bị PR và worktree sau khi code đã được kiểm chứng.",
           highlights: [
-            "Hỗ trợ `commit`, `push`, `pr` và sibling worktree flows.",
+            "Hỗ trợ `commit`, `push`, `pr` và luồng worktree song song.",
             "Kiểm tra staged diff để phát hiện giá trị nhạy cảm trước commit.",
-            "Giữ Git handoff nhất quán với task state và verification receipt.",
+            "Giữ bàn giao Git nhất quán với trạng thái tác vụ và biên nhận kiểm chứng.",
           ],
           notes: [
             {
-              title: "Command surface",
+              title: "Bề mặt lệnh",
               description:
                 "Dùng `/hapo:git commit` và `/hapo:git push` sau khi review đã xanh.",
             },
             {
-              title: "Safety",
+              title: "An toàn",
               description:
-                "Conventional commit và kiểm tra giá trị nhạy cảm xảy ra trước khi handoff repo.",
+                "Conventional commit và kiểm tra giá trị nhạy cảm diễn ra trước khi bàn giao dự án.",
             },
           ],
         },
         {
           tab: "/hapo:deploy",
-          title: "Bàn giao release qua stack hiện có",
+          title: "Bàn giao code qua quy trình sẵn có",
           description:
-            "CafeKit không thay thế pipeline deploy; nó giữ release story khép kín sau test, review và Git handoff.",
+            "CafeKit không thay thế quy trình triển khai; nó khép lại phần bàn giao sau kiểm thử, review và Git.",
           highlights: [
-            "Đại diện cho Vercel, CI/CD hoặc pipeline production hiện có của team.",
+            "Đại diện cho Vercel, CI/CD hoặc quy trình production hiện có của đội ngũ.",
             "Chỉ nên chạy sau `hapo:test`, `hapo:code-review` và `hapo:git`.",
-            "Tránh claim native deploy quá mức; đây là release handoff theo stack của bạn.",
+            "Tránh nói quá về triển khai trực tiếp; đây là bước bàn giao qua quy trình của bạn.",
           ],
           notes: [
             {
-              title: "Release handoff",
+              title: "Bàn giao",
               description:
-                "Deploy vẫn thuộc pipeline hiện có; CafeKit cung cấp guardrails trước khi bàn giao.",
+                "Triển khai vẫn thuộc quy trình hiện có; CafeKit cung cấp hàng rào kiểm chứng trước khi bàn giao.",
             },
             {
-              title: "Điều kiện release",
+              title: "Điều kiện bàn giao",
               description:
-                "Chỉ ship code đã qua `hapo:test`, `hapo:code-review` và `hapo:git`.",
+                "Chỉ bàn giao code đã qua `hapo:test`, `hapo:code-review` và `hapo:git`.",
             },
           ],
         },
       ],
     },
     quickStart: {
-      heading: "Cài runtime, chạy flow đầu tiên",
+      heading: "Cài bộ công cụ, chạy quy trình đầu tiên",
       subheading:
-        "Cài CafeKit, tạo spec đã validate, triển khai một task có Evidence, rồi test/review trước khi Git handoff.",
+        "Cài CafeKit, tạo đặc tả đã kiểm tra, triển khai một tác vụ có bằng chứng, rồi kiểm thử và review trước khi bàn giao bằng Git.",
       viewGuide: "Xem hướng dẫn bắt đầu nhanh đầy đủ",
       copied: "Đã sao chép",
       copy: "Sao chép",
       comments: [
         "# 1. Cài đặt CafeKit",
-        "# 2. Tạo và validate spec",
-        "# 3. Triển khai từng task packet",
-        "# 4. Test và review candidate",
-        "# 5. Commit, push và bàn giao release",
+        "# 2. Tạo và kiểm tra đặc tả",
+        "# 3. Triển khai từng gói tác vụ",
+        "# 4. Kiểm thử và review bản thay đổi",
+        "# 5. Commit, push và bàn giao code",
       ],
       tutorialHeading: "Mới biết CafeKit?",
-      tutorialBody: "Đi từ repo chưa cài gì đến feature đầu tiên có spec, task và verification receipt.",
+      tutorialBody: "Đi từ dự án chưa cài gì đến tính năng đầu tiên có đặc tả, tác vụ và biên nhận kiểm chứng.",
       tutorialCta: "Bắt đầu hướng dẫn",
     },
     contactForm: {
