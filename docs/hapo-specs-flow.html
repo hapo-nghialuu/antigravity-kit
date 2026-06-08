@@ -125,6 +125,7 @@
     <a href="#statemachine">State machine 2 lớp</a>
     <a href="#validator">Validator (hard gate)</a>
     <a href="#ready">ready_for_implementation</a>
+    <a href="#mirror">Translation mirror</a>
   </aside>
 
   <!-- ============ MAIN ============ -->
@@ -533,8 +534,25 @@
       <div class="callout stop" style="margin-top:12px"><b>Đặc biệt:</b> spec ≥ 5 task → <code>ready_for_implementation</code> giữ <code>false</code> cho tới khi <code>--validate</code> chạy xong Red Team + Validate và ghi <code>validation.status = "completed"</code>.</div>
     </div>
 
+    <!-- ============ TRANSLATION MIRROR ============ -->
+    <h2 class="sec" id="mirror">Translation Mirror — bản đối chiếu (reference-only)</h2>
+    <div class="card" style="border-color:#3d2a5c">
+      <p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)"><b>English = canonical</b> mọi artifact (kể cả khi session phản hồi tiếng khác). Khi <code>.claude/settings.json → language</code> ≠ English, run <b>interactive</b> hỏi tạo thêm 1 bản duplicate ngôn ngữ đó để đối chiếu.</p>
+      <table>
+        <tr><th>Khía cạnh</th><th>Hành vi</th></tr>
+        <tr><td>Kích hoạt</td><td>lang ≠ English + interactive → <code>AskUserQuestion</code> "tạo bản đối chiếu &lt;lang&gt;?". <code>--auto</code> bỏ qua (không tạo mới)</td></tr>
+        <tr><td>Nội dung</td><td>duplicate <b>toàn bộ</b> docs: <code>requirements/design/research/tasks/*</code> (KHÔNG copy <code>spec.json</code>)</td></tr>
+        <tr><td>Lưu</td><td><code>specs/&lt;feature&gt;/i18n/&lt;lang-code&gt;/</code>, cấu trúc 1:1 với canonical</td></tr>
+        <tr><td>Marker</td><td>mỗi file mở đầu <code>&lt;!-- TRANSLATION MIRROR — reference only --&gt;</code></td></tr>
+        <tr><td>Đồng bộ</td><td><b>always-sync</b>: sau mỗi lần ghi canonical (Step 5–7) → sinh lại mirror + stamp <code>last_synced_at</code></td></tr>
+        <tr><td>EARS</td><td>keyword vẫn English; chỉ dịch phần biến trong mirror</td></tr>
+        <tr><td>Trạng thái</td><td><code>spec.json.translation</code> {enabled, language, language_code, dir, sync, last_synced_at}</td></tr>
+      </table>
+      <div class="callout ok" style="margin-top:12px"><b>Không phải source of truth:</b> validator chỉ chạy canonical; <code>task_files</code>/<code>task_registry</code>/<code>hapo:develop</code> chỉ dùng canonical; <code>i18n/</code> không ảnh hưởng <code>ready_for_implementation</code>. Canonical thắng nếu lệch.</div>
+    </div>
+
     <footer>
-      Sinh từ phiên inspect <code>hapo:specs</code> · CafeKit · Nguồn: <code>SKILL.md</code>, <code>scope-inquiry.md</code>, <code>ask-user-question-gates.md</code>, <code>task-scoring-rubric.md</code>, <code>phase-decision-matrix.md</code>, <code>review.md</code>, <code>ears-format.md</code>, <code>validate-spec-output.cjs</code>, <code>state-sync.md</code>.
+      Sinh từ phiên inspect <code>hapo:specs</code> · CafeKit · Nguồn: <code>SKILL.md</code>, <code>scope-inquiry.md</code>, <code>ask-user-question-gates.md</code>, <code>task-scoring-rubric.md</code>, <code>phase-decision-matrix.md</code>, <code>review.md</code>, <code>ears-format.md</code>, <code>translation-mirror.md</code>, <code>validate-spec-output.cjs</code>, <code>state-sync.md</code>.
     </footer>
   </main>
 </div>
