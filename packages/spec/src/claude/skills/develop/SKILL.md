@@ -71,7 +71,7 @@ Enabled by default for all develop modes. Disable only with `--no-notes`.
 
 <HARD-GATE>
 DO NOT write implementation code until an approved spec exists.
-- If the directory `specs/<feature-name>` DOES NOT EXIST or `spec.json` is not ready, automatically trigger `/hapo:specs <feature-name>` first to create the specification. Do not improvise.
+- If the directory `specs/<feature-name>` DOES NOT EXIST or `spec.json` is not ready, automatically trigger `/hapo:specs <feature-name> --auto` first to create the specification end-to-end (non-interactive). Do not improvise.
 </HARD-GATE>
 
 <DEFINITION-OF-DONE>
