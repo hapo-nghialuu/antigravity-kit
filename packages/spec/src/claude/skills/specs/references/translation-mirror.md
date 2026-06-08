@@ -8,7 +8,7 @@ Optional, reference-only duplicate of a spec in the user's configured language. 
 2. If the label resolves to English (`English` / `en`) → **do not** offer a mirror; there is nothing to duplicate.
 3. If it is any other language AND the run is interactive (no `--auto`) → ask once via `AskUserQuestion`:
    - "Generate a `<language>` reference copy of this spec? (kept in sync, read-only)" → `Yes` / `No`.
-4. `--auto` runs are non-interactive → **skip** the question and do not create a mirror.
+4. `--auto` runs are non-interactive → **skip** the offer (an `--auto` create makes no mirror). If `translation.enabled` is already `true` from an earlier run, always-sync still applies during an `--auto` resume.
 5. Persist the choice in `spec.json.translation` (see Fields).
 
 ## Language Code

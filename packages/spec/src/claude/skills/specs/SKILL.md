@@ -156,7 +156,7 @@ Load `references/translation-mirror.md`. This is the only language feature in th
 
 - Read `.claude/settings.json` → `language`. If it is **not** English and the run is **interactive** (no `--auto`), ask once via `AskUserQuestion`: "Generate a `<language>` reference copy of this spec? (kept in sync, read-only)".
 - On `Yes` → set `spec.json.translation` (`enabled`, `language`, `language_code`, `dir: i18n/<code>`, `sync: always`) and, after each canonical doc is written in Steps 5–7, regenerate the matching file under `i18n/<code>/` with the reference-only marker.
-- `--auto` skips this question and creates no mirror.
+- `--auto` does not prompt for a mirror, so an `--auto` create makes none. But if the spec already has `translation.enabled = true` (set in an earlier interactive run), always-sync still applies: an `--auto` resume keeps regenerating the mirror after each canonical write.
 - The mirror is reference-only: never validated, never a source of truth, ignored by `hapo:develop`.
 
 ### When called WITH `--validate` argument
@@ -648,3 +648,4 @@ Before finalizing any specification, assert all the following:
 - `task-hydration.md` — Task files → Claude Tasks conversion
 - `review.md` — Spec review (auto-decides: red team 8 steps + validate 6 steps)
 - `archive-workflow.md` — Archive workflow (5 steps)
+- `translation-mirror.md` — Optional reference-only translation mirror (detection, layout, sync, fields)
