@@ -56,6 +56,10 @@ An entry/dispatch layer sits in front of the pipeline: four flags (`--auto`, `--
 - `ready_for_implementation` is a hard gate, not a convenience flag. Never set it before the finalization audit passes.
 - Non-trivial specs MUST have an evidence trail in `research.md` before requirements, design, or tasks are finalized. Evidence can be codebase scout findings, external/current research, or an explicit skip rationale.
 
+### Language & Canonical Rules
+- **English is the canonical language for every spec artifact** (`spec.json`, `requirements.md`, `research.md`, `design.md`, `tasks/*.md`) — write them in English regardless of the session's response language.
+- If the configured language (`.claude/settings.json` → `language`) is not English, you MAY additionally generate a **reference-only translation mirror** under `i18n/<lang>/`. See `references/translation-mirror.md`. The mirror never replaces canonical and is never a source of truth.
+
 ### Output Criteria
 - Never implement code — only create spec documents
 - Return file paths and a brief summary
@@ -125,7 +129,7 @@ Goal: ask the user enough to determine **state** and **intent**, then run the ex
    - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
    - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
    - For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
-3. **Creation Mode Gate** (how far to run) — see the dedicated section below. Options: `Auto (→ Tasks)` · `Stop after Design` · `Step by step`.
+3. **Creation Mode Gate** (how far to run) — see the dedicated section below. Options: `Auto (→ Tasks)` · `Stop after Design` · `Step by step`. If `.claude/settings.json` → `language` is not English, also offer the **Translation Mirror** (see below).
 4. **Continue an unfinished spec** → read `spec.json.current_phase`, then `AskUserQuestion` offering the **remaining** stop points (e.g. `→ Design`, `→ Tasks`, `Step by step`) and resume the existing pipeline from that phase. If a message accompanied the call, treat it as added context for the next phase (scope expansion → ask, per `references/ask-user-question-gates.md`).
 5. **Run the chosen scope.** On an early stop, emit the Paused Block (Step 10). Sync `spec.json` per `state-sync.md`.
 
@@ -145,6 +149,15 @@ Rules:
 - `--auto` equals choosing **Auto (→ Tasks)** without showing this gate.
 - **Stop after Design** / **Step by step** leave `ready_for_implementation=false` and emit the Paused Block (Step 10).
 - Continuing later: run `/hapo:specs` again → Interactive State Discovery detects the unfinished spec and offers the remaining stop points. No flag or keyword required.
+
+### Translation Mirror (optional reference copy)
+
+Load `references/translation-mirror.md`. This is the only language feature in the entry layer; canonical artifacts are always English.
+
+- Read `.claude/settings.json` → `language`. If it is **not** English and the run is **interactive** (no `--auto`), ask once via `AskUserQuestion`: "Generate a `<language>` reference copy of this spec? (kept in sync, read-only)".
+- On `Yes` → set `spec.json.translation` (`enabled`, `language`, `language_code`, `dir: i18n/<code>`, `sync: always`) and, after each canonical doc is written in Steps 5–7, regenerate the matching file under `i18n/<code>/` with the reference-only marker.
+- `--auto` skips this question and creates no mirror.
+- The mirror is reference-only: never validated, never a source of truth, ignored by `hapo:develop`.
 
 ### When called WITH `--validate` argument
 
@@ -419,6 +432,7 @@ Load: `references/review.md` + `rules/design-review.md`
   Tasks and requirements must reuse the same policy verbatim; mixed policies are invalid.
 - FAIL if `validation.status = "completed"` but `timestamps.validation_done` / `timestamps.review_done`, `updated_at`, and report metadata are not synchronized with the final reviewed state.
 - If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit accepted-risk state recorded by the user), `ready_for_implementation` MUST remain `false`
+- If `translation.enabled = true`, ensure `i18n/<language_code>/` exists and was re-synced after the final canonical write; the mirror itself is excluded from validation and never blocks `ready_for_implementation`.
 - Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
@@ -487,6 +501,8 @@ Task paths that omit the `task-` prefix or use non-padded sequence numbers (for 
 
 **Validation recommendation:** `design_context.validation_recommended` MUST be `true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs.
 
+**Translation mirror:** `translation` records the optional reference copy (`enabled`, `language`, `language_code`, `dir`, `sync: always`, `last_synced_at`). Canonical artifacts stay English; when `enabled = true`, regenerate `i18n/<language_code>/` after each canonical doc write and stamp `last_synced_at`. The mirror never affects `ready_for_implementation`. See `references/translation-mirror.md`.
+
 **`ready_for_implementation`:** This field MUST only be set to `true` when ALL of the following conditions are met:
 1. `approvals.requirements.approved = true`
 2. `approvals.design.approved = true`
@@ -518,6 +534,17 @@ specs/
         ├── researcher-01.md
         ├── inspect-report.md
         └── red-team-report.md
+```
+
+When `translation.enabled` is true, a reference-only mirror is added alongside (English stays canonical):
+
+```
+specs/<feature-name>/
+└── i18n/<lang-code>/         # reference only — generated from canonical, never validated
+    ├── requirements.md
+    ├── design.md
+    ├── research.md
+    └── tasks/task-R*.md
 ```
 
 ## Subcommands

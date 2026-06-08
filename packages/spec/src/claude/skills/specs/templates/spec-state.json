@@ -2,7 +2,7 @@
   "feature_name": "{{FEATURE_NAME}}",
   "created_at": "{{TIMESTAMP}}",
   "updated_at": "{{TIMESTAMP}}",
-  "language": "vi",
+  "language": "en",
   "status": "in_progress",
   "phase": "initialized",
   "current_phase": "init",
@@ -67,6 +67,14 @@
     "session_count": 0,
     "questions_asked": 0,
     "last_validated_at": null
+  },
+  "translation": {
+    "enabled": false,
+    "language": null,
+    "language_code": null,
+    "dir": null,
+    "sync": "always",
+    "last_synced_at": null
   },
   "ready_for_implementation": false
 }
