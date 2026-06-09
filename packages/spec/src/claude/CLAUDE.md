@@ -116,7 +116,7 @@ Consult these when the task touches the relevant area:
 
 ## Language Consistency
 
-When generating specs or structured project output, use the user's preferred language consistently across the whole spec workspace. Technical terms, code samples, and file paths may remain English.
+Spec artifacts (`spec.json`, `requirements.md`, `research.md`, `design.md`, `tasks/*.md`) are **canonical in English** regardless of the session's response language. When the configured language is not English, `hapo:specs` may additionally generate a reference-only translation mirror under `specs/<feature>/i18n/<lang>/`. Chat replies and other non-spec output still follow the user's preferred language. Technical terms, code samples, and file paths stay English.
 
 ## Communication
 

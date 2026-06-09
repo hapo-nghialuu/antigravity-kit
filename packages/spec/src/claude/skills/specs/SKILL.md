@@ -5,7 +5,7 @@ user-invocable: true
 when_to_use: "Invoke to turn a vague idea into an actionable, gated specification."
 category: utilities
 keywords: [specs, requirements, design, tasks]
-argument-hint: "<feature-description> | status | resume | --validate | archive"
+argument-hint: "[<feature-description>] [--auto] | --status | --validate <feature> | --archive"
 metadata:
   author: haposoft
   version: "2.0.0"
@@ -21,6 +21,8 @@ This skill provides a 10-step workflow to transform ideas into evidence-backed s
 ```
 Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate + Requirements → Design → Tasks → Hydration → Review → Completion
 ```
+
+An entry/dispatch layer sits in front of the pipeline: four flags (`--auto`, `--validate`, `--status`, `--archive`) plus **Interactive State Discovery** (the no-flag path) decide *which part of the pipeline to run and where to stop* — see **Default Behavior**. The pipeline itself is unchanged regardless of how it is invoked.
 
 **CRITICAL:** Before starting, the system MUST:
 1. Scan `specs/` directory for incomplete specs
@@ -39,7 +41,7 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate
 - Each phase (Init → Requirements → Design → Tasks) must complete before the next begins
 - No skipping — don't write design without requirements
 - Exception: simple tasks may merge requirements + design into one step
-- A normal `/hapo:specs <feature-description>` run is an end-to-end spec creation workflow. Do not stop after Init unless the user explicitly asks for init-only behavior.
+- A `/hapo:specs <feature-description>` run defaults to **Interactive State Discovery**: it asks the Creation Mode (Auto / Stop after Design / Step by step) before running. `--auto` runs the full pipeline end-to-end without asking. Either way, phases never skip — each completes before the next begins, and Init is never a stop point.
 
 ### Scope Rules
 - Respect `scope_lock` absolutely once user has confirmed
@@ -53,6 +55,10 @@ Analyze → Dependency Scan → Complexity Assessment → Init → Evidence Gate
 - `task_registry` in `spec.json` MUST exist once task files are generated and MUST contain one entry per task file, keyed by relative path.
 - `ready_for_implementation` is a hard gate, not a convenience flag. Never set it before the finalization audit passes.
 - Non-trivial specs MUST have an evidence trail in `research.md` before requirements, design, or tasks are finalized. Evidence can be codebase scout findings, external/current research, or an explicit skip rationale.
+
+### Language & Canonical Rules
+- **English is the canonical language for every spec artifact** (`spec.json`, `requirements.md`, `research.md`, `design.md`, `tasks/*.md`) — write them in English regardless of the session's response language.
+- If the configured language (`.claude/settings.json` → `language`) is not English, you MAY additionally generate a **reference-only translation mirror** under `i18n/<lang>/`. See `references/translation-mirror.md`. The mirror never replaces canonical and is never a source of truth.
 
 ### Output Criteria
 - Never implement code — only create spec documents
@@ -96,37 +102,62 @@ Forbidden generated artifacts:
 
 ## Default Behavior
 
-### When called WITHOUT arguments
+> **This section is the entry/dispatch layer ONLY.** It decides *which part of the pipeline to run and where to stop*. It does NOT change any pipeline step, the validator, templates, or rules. The detailed Steps 1–10 below are unchanged.
 
-Display selection menu via `AskUserQuestion`:
+`hapo:specs` exposes exactly **four flags**: `--auto`, `--validate`, `--status`, `--archive`. Everything else (which spec, new vs continue, how far to run) is resolved by **Interactive State Discovery**, never by extra flags.
 
-```json
-{
-  "questions": [{
-    "question": "What would you like to do?",
-    "header": "Specs",
-    "options": [
-      { "label": "Create new spec", "description": "Initialize spec from a feature description" },
-      { "label": "status", "description": "View status of all specs in specs/" },
-      { "label": "resume", "description": "Continue an active spec" },
-      { "label": "--validate", "description": "Review spec (auto-decides: red team or validation)" },
-      { "label": "archive", "description": "Archive completed specs + write journal" }
-    ],
-    "multiSelect": false
-  }]
-}
-```
+**Back-compat aliases** (accepted silently, not advertised): bare `status` / `archive` / `resume`, and `--validate` as today. Treat them as their `--flag` equivalents.
 
-### When called WITH a feature description
+### Dispatch order
 
-System auto-analyzes the description:
-- If description is too short (< 20 words) or missing one concrete detail → stop and ask 1-2 clarifying questions
-- If the idea has unresolved architecture choices, unclear acceptance criteria, unclear scope boundaries, or multiple plausible approaches → stop and route to `/hapo:brainstorm <idea>` before creating spec artifacts
-- If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
-- If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
-- For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
-- After user confirms scope, continue through Init → Evidence/Requirements → Design → Tasks → Finalization in the same workflow unless the user explicitly asks for "init only" or "pause after init".
-- If the workflow must pause for manual approval, the continuation command is `/hapo:specs resume <feature>` or `/hapo:specs <feature>`.
+1. `--status` (or bare `status`) → run the status report (see **Subcommands**), then stop.
+2. `--validate <feature>` → jump to **Step 9** (the `--validate` rules below are unchanged).
+3. `--archive` (or bare `archive`) → run the archive workflow, then stop.
+4. `--auto` → **non-interactive run**. If the argument matches an unfinished spec → resume it from `current_phase` and finish to Tasks. Otherwise create new and run the full pipeline (Step 1→10) end-to-end. Either way: auto-approve and skip the Creation Mode question; if a new description is missing, ask only for it; the hard safety gates still apply.
+5. Otherwise (`/hapo:specs` or `/hapo:specs "<description>"`) → **Interactive State Discovery**.
+
+### Interactive State Discovery (no-flag path)
+
+Goal: ask the user enough to determine **state** and **intent**, then run the existing pipeline. This only chooses *what to run and where to stop* — it does not alter any step's logic.
+
+1. **Detect state.** Scan `specs/` for unfinished specs (`status=in_progress` / `ready_for_implementation=false`) and git-branch match.
+   - Found → `AskUserQuestion`: `Continue <spec A> · Continue <spec B> · Create new spec`.
+   - None → default to create-new.
+2. **Create-new + no description yet** → ask for the description, then analyze it (logic unchanged):
+   - If description is too short (< 20 words) or missing one concrete detail → stop and ask 1-2 clarifying questions
+   - If the idea has unresolved architecture choices, unclear acceptance criteria, unclear scope boundaries, or multiple plausible approaches → stop and route to `/hapo:brainstorm <idea>` before creating spec artifacts
+   - If task is simple (small bugfix, config change) → suggest "A spec may not be needed for this. Continue anyway?"
+   - If task is complex (multi-module, security/migration related) → auto-activate deep research, ask user 3 scope questions
+   - For non-trivial specs, execute the Step 5 Evidence Gate before writing final requirements. Do not design from memory when codebase or current external evidence can answer the question.
+3. **Creation Mode Gate** (how far to run) — see the dedicated section below. Options: `Auto (→ Tasks)` · `Stop after Design` · `Step by step`. If `.claude/settings.json` → `language` is not English, also offer the **Translation Mirror** (see below).
+4. **Continue an unfinished spec** → read `spec.json.current_phase`, then `AskUserQuestion` offering the **remaining** stop points (e.g. `→ Design`, `→ Tasks`, `Step by step`) and resume the existing pipeline from that phase. If a message accompanied the call, treat it as added context for the next phase (scope expansion → ask, per `references/ask-user-question-gates.md`).
+5. **Run the chosen scope.** On an early stop, emit the Paused Block (Step 10). Sync `spec.json` per `state-sync.md`.
+
+> The pipeline, validator, templates, and rules are unchanged. "Stop after Design" simply halts before Step 7; it runs Steps 1–6 exactly as specified.
+
+### Creation Mode Gate
+
+Shown once (via `AskUserQuestion`) on the no-flag create path, after the description passes the safety gates. It selects the **stop point only** — every phase that runs uses the unchanged Step logic.
+
+| Option | Runs | Stops after | Approvals |
+|---|---|---|---|
+| **Auto (→ Tasks)** | Step 1→10 end-to-end | full (ready gate) | each phase `generated=true` + `approved=true` |
+| **Stop after Design** | Step 1→6 | `design` (before Step 7) | requirements + design `approved=true`; `ready_for_implementation=false` |
+| **Step by step** | one phase at a time | after each phase | per phase `generated=true`, `approved=false` until user approves |
+
+Rules:
+- `--auto` equals choosing **Auto (→ Tasks)** without showing this gate.
+- **Stop after Design** / **Step by step** leave `ready_for_implementation=false` and emit the Paused Block (Step 10).
+- Continuing later: run `/hapo:specs` again → Interactive State Discovery detects the unfinished spec and offers the remaining stop points. No flag or keyword required.
+
+### Translation Mirror (optional reference copy)
+
+Load `references/translation-mirror.md`. This is the only language feature in the entry layer; canonical artifacts are always English.
+
+- Read `.claude/settings.json` → `language`. If it is **not** English and the run is **interactive** (no `--auto`), ask once via `AskUserQuestion`: "Generate a `<language>` reference copy of this spec? (kept in sync, read-only)".
+- On `Yes` → set `spec.json.translation` (`enabled`, `language`, `language_code`, `dir: i18n/<code>`, `sync: always`) and, after each canonical doc is written in Steps 5–7, regenerate the matching file under `i18n/<code>/` with the reference-only marker.
+- `--auto` does not prompt for a mirror, so an `--auto` create makes none. But if the spec already has `translation.enabled = true` (set in an earlier interactive run), always-sync still applies: an `--auto` resume keeps regenerating the mirror after each canonical write.
+- The mirror is reference-only: never validated, never a source of truth, ignored by `hapo:develop`.
 
 ### When called WITH `--validate` argument
 
@@ -148,9 +179,16 @@ The system MUST NOT execute Steps 1-8. Instead, load `references/review.md` and 
 
 ```mermaid
 flowchart TD
-    A["Call /hapo:specs"] --> B{Has description?}
-    B -->|No| C["Menu: init / status / resume / --validate / archive"]
-    B -->|Yes| D["Step 1: Analyze description"]
+    A["Call /hapo:specs"] --> B{Flag?}
+    B -->|"--status"| ST["Status report → stop"]
+    B -->|"--archive"| AR["Archive workflow → stop"]
+    B -->|"--validate"| W
+    B -->|"--auto"| D["Step 1: Analyze description"]
+    B -->|none| DISC["Interactive State Discovery"]
+    DISC --> DISC1{Unfinished spec?}
+    DISC1 -->|Continue| RES["Read current_phase → resume remaining phases"]
+    DISC1 -->|New| D
+    RES --> CM
     D --> DB{"Needs pre-spec brainstorm?"}
     DB -->|Yes| DB2["Stop: run /hapo:brainstorm with same idea"]
     DB -->|No| E{Clear enough?}
@@ -174,7 +212,9 @@ flowchart TD
     N -->|Yes| P["Step 5B: Requirements — write EARS"]
     P --> Q["Step 6: Design — pick discovery mode"]
     Q --> R["Write design.md"]
-    R --> S["Step 7: Tasks — split into individual files"]
+    R --> CM{"Creation Mode?"}
+    CM -->|"Stop after Design"| STOP["Paused at design → emit Paused Block"]
+    CM -->|"Auto / Step by step"| S["Step 7: Tasks — split into individual files"]
     S --> T["Create tasks/task-R*.md + task_registry"]
     T --> U["Step 8: Hydrate Claude Tasks if >= 3 task files"]
     U --> V{Review?}
@@ -233,7 +273,7 @@ Load: `references/scope-inquiry.md`
   - `in_scope`: confirmed scope items
   - `out_of_scope`: excluded items
   - `expansion_policy`: `requires-user-approval`
-- Step 4 itself only initializes files. In a normal `/hapo:specs <feature-description>` run, immediately continue to Step 5 after Init. Stop here only when the user explicitly requested init-only behavior.
+- Step 4 itself only initializes files. The Creation Mode Gate (or `--auto`) decides how far the run proceeds; in every mode Step 4 continues into Step 5 — Init is never a stop point.
 
 ### Step 5: Evidence Gate, Requirements & Research
 - Read `spec.json` — stop if init hasn't completed
@@ -392,6 +432,7 @@ Load: `references/review.md` + `rules/design-review.md`
   Tasks and requirements must reuse the same policy verbatim; mixed policies are invalid.
 - FAIL if `validation.status = "completed"` but `timestamps.validation_done` / `timestamps.review_done`, `updated_at`, and report metadata are not synchronized with the final reviewed state.
 - If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit accepted-risk state recorded by the user), `ready_for_implementation` MUST remain `false`
+- If `translation.enabled = true`, ensure `i18n/<language_code>/` exists and was re-synced after the final canonical write; the mirror itself is excluded from validation and never blocks `ready_for_implementation`.
 - Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
@@ -407,15 +448,27 @@ After completing the spec, output a short summary of what was generated, then yo
 💡 Tip: Run /clear or start a new chat session before implementing to reduce planning context carryover.
 ```
 
+### Step 10b: Paused Block (early stop)
+
+When the run stops before Tasks (Creation Mode = **Stop after Design** or **Step by step**), do NOT print the completion block above and do NOT run the deterministic validator (no tasks exist yet). Instead print:
+
+```
+⏸ Spec paused at <phase>: specs/<feature>/
+📌 Continue — run /hapo:specs and choose "Continue <feature>"
+   (or /hapo:specs <feature> --auto to finish straight to Tasks)
+```
+
+`ready_for_implementation` stays `false`. The next `/hapo:specs` run re-detects this spec via Interactive State Discovery and offers the remaining phases.
+
 ## Active Spec State
 
 When user calls `hapo:specs`, system checks `specs/`:
 
 | Situation | Action |
 |---|---|
-| A spec is `in_progress` | Ask: "You have spec `<name>` at phase `<phase>`. Continue? [Y/n]" |
-| A spec matches current git branch | Ask: "Branch `feature/X` has spec `X`. Activate or create new?" |
-| Nothing found | Create new spec or show menu |
+| A spec is `in_progress` | Interactive State Discovery offers `Continue <name>` (resume from `<phase>`) vs `Create new spec` |
+| A spec matches current git branch | Offer `Continue <X>` vs `Create new` |
+| Nothing found | Create new spec → Creation Mode Gate |
 
 **Next step suggestions based on `spec.json`:**
 
@@ -437,8 +490,9 @@ When user calls `hapo:specs`, system checks `specs/`:
 **Timestamps:** Each `timestamps.*_done` field MUST use the **actual current time** (ISO 8601 with timezone) when that specific phase completes. This includes `review_done` and `validation_done` after review/validate workflows. Do NOT reuse the `init` timestamp for later phases. If running the full pipeline end-to-end, capture a fresh timestamp at each phase transition.
 
 **Approvals (auto-approval behavior):**
-- When running the **full pipeline end-to-end** (init → tasks in one session): set `approvals.{phase}.generated = true` AND `approvals.{phase}.approved = true` for each completed phase before proceeding to the next.
-- When running a **single phase**: set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
+- When running the **full pipeline end-to-end** (`--auto` or Creation Mode "Auto", init → tasks in one session): set `approvals.{phase}.generated = true` AND `approvals.{phase}.approved = true` for each completed phase before proceeding to the next.
+- When running to an **early stop point** (Creation Mode "Stop after Design"): for each phase that ran to reach the stop point, set `generated = true` AND `approved = true`; do not generate later phases; keep `ready_for_implementation = false`.
+- When running a **single phase** (Creation Mode "Step by step"): set `generated = true` but leave `approved = false` — user must explicitly approve before continuing.
 
 **Task inventory:** `task_files` MUST be present and MUST list every real task file exactly once using relative paths like `tasks/task-R1-01-example.md`.
 Task paths that omit the `task-` prefix or use non-padded sequence numbers (for example `tasks/R1-1-example.md`) are invalid for new CafeKit specs.
@@ -446,6 +500,8 @@ Task paths that omit the `task-` prefix or use non-padded sequence numbers (for 
 **Task machine-state:** `task_registry` MUST be present after Step 7. Each key is a relative task path, and each value MUST contain `id`, `title`, `status`, `dependencies`, `blocker`, `started_at`, `completed_at`, and `last_updated_at`.
 
 **Validation recommendation:** `design_context.validation_recommended` MUST be `true` for auth, privacy, delete-data, migration, schema-change, browser-extension-permission, external-provider, or 5+ task file specs.
+
+**Translation mirror:** `translation` records the optional reference copy (`enabled`, `language`, `language_code`, `dir`, `sync: always`, `last_synced_at`). Canonical artifacts stay English; when `enabled = true`, regenerate `i18n/<language_code>/` after each canonical doc write and stamp `last_synced_at`. The mirror never affects `ready_for_implementation`. See `references/translation-mirror.md`.
 
 **`ready_for_implementation`:** This field MUST only be set to `true` when ALL of the following conditions are met:
 1. `approvals.requirements.approved = true`
@@ -480,14 +536,28 @@ specs/
         └── red-team-report.md
 ```
 
+When `translation.enabled` is true, a reference-only mirror is added alongside (English stays canonical):
+
+```
+specs/<feature-name>/
+└── i18n/<lang-code>/         # reference only — generated from canonical, never validated
+    ├── requirements.md
+    ├── design.md
+    ├── research.md
+    └── tasks/task-R*.md
+```
+
 ## Subcommands
+
+The canonical surface is four flags. Bare-verb forms are kept only as silent back-compat aliases.
 
 | Command | Purpose | Reference |
 |---|---|---|
-| `/hapo:specs status` | View status of all specs | — |
-| `/hapo:specs resume <feature>` | Continue an active spec | — |
+| `/hapo:specs --status` | View status of all specs (alias: `status`) | — |
 | `/hapo:specs --validate <feature>` | Validate spec (auto: red team + validate based on complexity) | `references/review.md` |
-| `/hapo:specs archive` | Archive completed specs + write journal | `references/archive-workflow.md` |
+| `/hapo:specs --archive` | Archive completed specs + write journal (alias: `archive`) | `references/archive-workflow.md` |
+| `/hapo:specs --auto [<desc>]` | Non-interactive: create (or resume) and run end-to-end to Tasks | — |
+| `/hapo:specs [<desc>]` | Interactive State Discovery (continue unfinished, or create + Creation Mode Gate). Alias `resume` accepted. | — |
 
 ## Quality Standards
 
@@ -578,3 +648,4 @@ Before finalizing any specification, assert all the following:
 - `task-hydration.md` — Task files → Claude Tasks conversion
 - `review.md` — Spec review (auto-decides: red team 8 steps + validate 6 steps)
 - `archive-workflow.md` — Archive workflow (5 steps)
+- `translation-mirror.md` — Optional reference-only translation mirror (detection, layout, sync, fields)

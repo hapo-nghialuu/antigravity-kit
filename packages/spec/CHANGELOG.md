@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.11] - 2026-06-08
+
+### Changed
+- `hapo:specs` entry/dispatch redesign. The flag surface is now exactly four: `--auto`, `--validate`, `--status`, `--archive`. The bare verbs `status` / `archive` / `resume` and `--validate` remain as silent back-compat aliases.
+- Default behavior of `/hapo:specs <description>` changed: instead of always running end-to-end, it now uses **Interactive State Discovery** (detect unfinished specs → continue vs create) and asks a **Creation Mode** before running.
+- Spec artifacts are now **canonical in English** regardless of the session response language (`spec.json.language` defaults to `en`; `ears-format.md` and the runtime `CLAUDE.md` updated accordingly).
+
+### Added
+- **Creation Mode Gate** for `hapo:specs`: choose how far a run goes — `Auto (→ Tasks)`, `Stop after Design`, or `Step by step`. Early stops emit a Paused Block and leave `ready_for_implementation = false`; re-running `/hapo:specs` resumes from `current_phase`.
+- `--auto` flag: non-interactive run that creates (or resumes an unfinished spec) and goes end-to-end to Tasks with auto-approval.
+- `hapo:develop` auto-trigger now calls `/hapo:specs <feature> --auto` so mid-implementation spec creation stays non-interactive.
+- **Translation mirror**: when the configured language (`.claude/settings.json` → `language`) is not English, an interactive run offers a reference-only duplicate of the spec under `specs/<feature>/i18n/<lang>/`, kept in sync with the English canonical (`spec.json.translation`, `references/translation-mirror.md`). The mirror is never validated and never a source of truth.
+
+### Notes
+- The 10-step pipeline, deterministic validator, templates structure, and `spec.json` task contract are unchanged — this release changes how the pipeline is invoked, where it can stop, and the canonical language (plus an optional translated mirror).
+
 ## [0.9.7] - 2026-06-01
 
 ### Changed
