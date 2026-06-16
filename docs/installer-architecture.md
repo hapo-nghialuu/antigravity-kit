@@ -32,6 +32,7 @@ bin/phases/
   root-config.js            root .gitignore patterns
   post-install.js           OpenCode model, Gemini API key, addressing (platform-aware)
   skills-setup.js           opt-in: venv+pip, skill npm, Chromium; detect+guide system tools
+  setup-rtk.js              opt-in: rtk token-saver binary + Claude Code hook registration
   summary.js / report.js    summary output + per-action reporting helper
 bin/lib/
   skill-deps.js             cross-platform setup primitives (venv/pip/npm/chromium/detect)
@@ -40,7 +41,7 @@ bin/lib/
 ## Run sequence
 
 1. **Lock** — acquire `.cafekit.lock`; refuse if a live PID owns it, reclaim if stale.
-2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`), load the
+2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`), load the
    migration manifest, init results counters.
 3. **Select platforms** — auto-detect `.claude/` / `.opencode/`, else prompt.
 4. **Snapshot** — back up platform folders + root `CLAUDE.md`/`.gitignore` (skipped in dry-run).
@@ -48,7 +49,9 @@ bin/lib/
    claude-runtime *or* opencode-runtime → write metadata + manifest.
 6. **Root config** — ensure `.gitignore` patterns (incl. `.cafekit-backup/`, `.cafekit.lock`).
 7. **Post-install** — OpenCode model, Gemini, addressing (re-records CLAUDE.md baseline).
-8. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
+8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
+9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
+10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
 
 ## Ownership model
 
