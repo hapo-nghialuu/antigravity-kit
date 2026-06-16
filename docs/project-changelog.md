@@ -3,7 +3,7 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.12.0] - 2026-06-16
 
 ### Added
 - **Opt-in rtk token-saver integration** (`specs/rtk-installer-integration`): CafeKit installer now offers an opt-in phase to install the rtk binary and register its official Claude Code PreToolUse hook. Invoked via `--with-rtk` flag or interactive confirmation (defaults to off); non-fatal if rtk is unavailable or installation fails. Token savings apply to Bash command output logged by Claude Code.
