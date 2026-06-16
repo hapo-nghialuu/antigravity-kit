@@ -59,6 +59,17 @@ const MESSAGES = {
     // Skills / deps setup
     skillDepsConfirm:      'Install skill dependencies? (Python venv, pip, npm, Chromium — takes a few minutes)',
     skillsSkipped:         'Skill dependencies skipped.\n  Run later: npx @haposoft/cafekit --with-skills-deps',
+
+    // rtk token-saver setup
+    rtkConfirm:            'Install the rtk token-saver? (compacts git/grep/ls/build/test output for Claude Code Bash commands)',
+    rtkInstalling:         'Installing rtk via {method}',
+    rtkInstalled:          'rtk installed',
+    rtkInstallFailed:      'Could not install rtk — skipping (non-fatal). Install manually later: https://github.com/rtk-ai/rtk',
+    rtkInitFailed:         'rtk init -g failed: {reason} — hook not registered (non-fatal)',
+    rtkNeedsJq:            'rtk hook needs jq to run. Install jq, then the hook activates automatically.',
+    rtkFailed:             'rtk setup error: {reason} — skipped (non-fatal)',
+    rtkSkipped:            'rtk token-saver skipped.\n  Run later: npx @haposoft/cafekit --with-rtk',
+    rtkSummary:            'rtk token-saver: hook registered for Claude Code Bash commands',
     venvCreating:          'Setting up Python environment',
     venvReady:             'Python environment ready',
     venvFailed:            'Could not create Python environment — check your Python 3 installation.',
@@ -165,6 +176,17 @@ const MESSAGES = {
 
     skillDepsConfirm:      'スキルの依存関係をインストールしますか？（Python venv、pip、npm、Chromium — 数分かかります）',
     skillsSkipped:         'スキルの依存関係をスキップしました。\n  後で実行: npx @haposoft/cafekit --with-skills-deps',
+
+    // rtk token-saver setup
+    rtkConfirm:            'rtk トークンセーバーをインストールしますか？（Claude Code の Bash コマンドの git/grep/ls/build/test 出力を圧縮します）',
+    rtkInstalling:         '{method} で rtk をインストール中',
+    rtkInstalled:          'rtk をインストールしました',
+    rtkInstallFailed:      'rtk をインストールできませんでした — スキップします（致命的ではありません）。後で手動でインストール: https://github.com/rtk-ai/rtk',
+    rtkInitFailed:         'rtk init -g が失敗しました: {reason} — フックは未登録です（致命的ではありません）',
+    rtkNeedsJq:            'rtk フックの実行には jq が必要です。jq をインストールするとフックが自動的に有効になります。',
+    rtkFailed:             'rtk セットアップエラー: {reason} — スキップしました（致命的ではありません）',
+    rtkSkipped:            'rtk トークンセーバーをスキップしました。\n  後で実行: npx @haposoft/cafekit --with-rtk',
+    rtkSummary:            'rtk トークンセーバー: Claude Code の Bash コマンド用にフックを登録しました',
     venvCreating:          'Python 環境を準備しています',
     venvReady:             'Python 環境の準備ができました',
     venvFailed:            'Python 環境を作成できませんでした — Python 3 のインストールを確認してください。',
@@ -268,6 +290,17 @@ const MESSAGES = {
 
     skillDepsConfirm:      'Cài dependencies cho skill ngay? (Python venv, pip, npm, Chromium — mất vài phút)',
     skillsSkipped:         'Đã bỏ qua dependencies skill.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-skills-deps',
+
+    // rtk token-saver setup
+    rtkConfirm:            'Cài rtk token-saver? (rút gọn output git/grep/ls/build/test cho các lệnh Bash của Claude Code)',
+    rtkInstalling:         'Đang cài rtk qua {method}',
+    rtkInstalled:          'Đã cài rtk',
+    rtkInstallFailed:      'Không thể cài rtk — bỏ qua (không nghiêm trọng). Cài thủ công sau: https://github.com/rtk-ai/rtk',
+    rtkInitFailed:         'rtk init -g thất bại: {reason} — hook chưa được đăng ký (không nghiêm trọng)',
+    rtkNeedsJq:            'Hook của rtk cần jq để chạy. Cài jq thì hook sẽ tự kích hoạt.',
+    rtkFailed:             'Lỗi cài rtk: {reason} — đã bỏ qua (không nghiêm trọng)',
+    rtkSkipped:            'Đã bỏ qua rtk token-saver.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-rtk',
+    rtkSummary:            'rtk token-saver: đã đăng ký hook cho các lệnh Bash của Claude Code',
     venvCreating:          'Đang thiết lập môi trường Python',
     venvReady:             'Môi trường Python đã sẵn sàng',
     venvFailed:            'Không thể tạo môi trường Python — hãy kiểm tra cài đặt Python 3.',

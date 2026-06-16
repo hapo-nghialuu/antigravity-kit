@@ -185,7 +185,8 @@ function parseInstallerArgs(argv) {
     forceOverwrite: false,
     dryRun: false,
     yes: false,
-    withSkillsDeps: false
+    withSkillsDeps: false,
+    withRtk: false
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -199,6 +200,8 @@ function parseInstallerArgs(argv) {
       args.yes = true;
     } else if (arg === '--with-skills-deps') {
       args.withSkillsDeps = true;
+    } else if (arg === '--with-rtk') {
+      args.withRtk = true;
     } else if (arg === '--lang') {
       args.lang = argv[++i];
     } else if (arg.startsWith('--lang=')) {
