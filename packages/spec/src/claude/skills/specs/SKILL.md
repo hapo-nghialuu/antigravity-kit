@@ -318,7 +318,6 @@ Load: `references/scope-inquiry.md`
 - Load `rules/phase-decision-matrix.md` before generating task files. Treat "phase" as an implementation slice/task cluster, not a `phase-XX.md` artifact.
 - Load `rules/task-scoring-rubric.md` for every candidate task to decide priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
 - Load `references/ask-user-question-gates.md`; if scoring reveals unapproved scope expansion or an unresolved user-owned choice, pause before writing task files.
-- Load `rules/tasks-parallel-analysis.md` for parallel markers (default: enabled)
 - Each task file follows template `templates/task.md`
 - `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
 - Each task file MUST include `Completion Criteria` and `Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
@@ -613,8 +612,7 @@ Before finalizing any specification, assert all the following.
 - `design-discovery-light.md` — Lightweight research workflow
 - `design-review.md` — Design review GO/NO-GO process
 - `phase-decision-matrix.md` — Implementation slice/task-cluster boundary rules
-- `tasks-generation.md` — Task generation rules (includes spike task rules)
-- `tasks-parallel-analysis.md` — Parallel task analysis
+- `tasks-generation.md` — Task generation rules (includes spike task rules + parallel analysis)
 - `task-scoring-rubric.md` — Task priority, split/merge, spike, dependency, and evidence-depth scoring
 
 ### References (`references/`)
