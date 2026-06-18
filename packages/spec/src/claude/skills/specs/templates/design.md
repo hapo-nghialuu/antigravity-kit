@@ -79,6 +79,12 @@ Capture only the contracts whose inconsistency would break downstream implementa
 
 > Task files must reuse the same contract wording. If the feature touches delete-data or privacy retention, explicitly decide whether re-registration is blocked and how that lock works without keeping raw PII. If implementation later needs a different contract, update this section first before generating or editing tasks.
 
+### Machine-checkable contracts (optional, recommended for cross-layer work)
+
+When a data shape must stay identical across layers (e.g. a response consumed by both a backend task and a frontend task), define it as a **named contract block** so the validator can detect drift. Mark it with an HTML comment `<!-- contract:NAME -->` on its own line, immediately followed by a fenced code block holding the shape. For example, a contract named `OrderResponse` would be an HTML marker line followed by a json fenced block containing `{ "orderId": "string", "total": "number" }`.
+
+Any task that produces or consumes this shape adds a `Contracts: OrderResponse` line in its body and **copies the same fenced block verbatim**. `validate-spec-output.cjs` then fails the spec if a task's copy diverges from this canonical definition, or references a contract name not defined here. This is opt-in: specs without `<!-- contract:* -->` markers are unaffected.
+
 ## System Flows
 
 Provide only the diagrams needed to explain non-trivial flows. Use pure Mermaid syntax. Common patterns:

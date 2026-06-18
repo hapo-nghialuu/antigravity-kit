@@ -153,6 +153,54 @@ function validateTimestamps(spec, errors) {
   }
 }
 
+/** Normalize a fenced code block body for byte-comparison: trim + collapse
+ * trailing whitespace per line + drop blank edges. Keeps inner structure so a
+ * real field rename (user_name vs userName) still differs. */
+function normalizeBlock(body) {
+  return body
+    .split('\n')
+    .map((line) => line.replace(/\s+$/, ''))
+    .join('\n')
+    .replace(/^\n+|\n+$/g, '');
+}
+
+/**
+ * Parse canonical contract definitions from design.md. A definition is an HTML
+ * marker `<!-- contract:NAME -->` immediately followed by a fenced code block.
+ * Returns a Map<name, normalizedBody>. Empty when the spec uses no markers —
+ * which makes the whole cross-layer check opt-in (no effect on legacy specs).
+ */
+function extractContractDefs(designText) {
+  const defs = new Map();
+  const re = /<!--\s*contract:([A-Za-z0-9_.-]+)\s*-->\s*\n```[^\n]*\n([\s\S]*?)\n```/g;
+  let match;
+  while ((match = re.exec(designText)) !== null) {
+    defs.set(match[1], normalizeBlock(match[2]));
+  }
+  return defs;
+}
+
+/**
+ * From a task body, return the contracts it claims plus the first fenced block
+ * it carries (the task's local copy of the contract). Shape:
+ *   { names: string[], block: string|null }
+ * `names` come from a `Contracts: A, B` line; `block` is the first fenced code
+ * block in the task (normalized) used to compare against the canonical defs.
+ */
+function extractTaskContracts(taskText) {
+  const names = [];
+  const nameLine = taskText.match(/^\s*Contracts:\s*([^\n]+)$/im);
+  if (nameLine) {
+    for (const token of nameLine[1].split(',')) {
+      const name = token.trim();
+      if (name) names.push(name);
+    }
+  }
+  const blockMatch = taskText.match(/```[^\n]*\n([\s\S]*?)\n```/);
+  const block = blockMatch ? normalizeBlock(blockMatch[1]) : null;
+  return { names, block };
+}
+
 function validateSpec(specDir) {
   const errors = [];
   const warnings = [];
@@ -287,6 +335,11 @@ function validateSpec(specDir) {
 
   const coveredRequirementIds = new Set();
   const coveredSubCriteriaIds = new Set();
+  // Cross-layer contract defs (opt-in): empty unless design.md uses
+  // <!-- contract:NAME --> markers, so legacy specs are unaffected.
+  const contractDefs = fs.existsSync(designPath)
+    ? extractContractDefs(fs.readFileSync(designPath, 'utf8'))
+    : new Map();
   for (const taskFile of taskFiles) {
     const fullPath = path.join(specDir, taskFile);
     const content = fs.readFileSync(fullPath, 'utf8');
@@ -308,6 +361,24 @@ function validateSpec(specDir) {
         // Record the full sub-criterion (e.g. 3.4 -> R3.4) for per-criterion coverage.
         const sub = trimmed.match(/^(\d+\.\d+)$/);
         if (sub) coveredSubCriteriaIds.add(`R${sub[1]}`);
+      }
+    }
+
+    // Cross-layer contract check (opt-in via design.md markers). When a task
+    // claims `Contracts: NAME`, that name must exist in design.md and the task's
+    // local copy of the block must match the canonical definition byte-for-byte
+    // (after whitespace normalization). This catches BE/FE drift like
+    // user_name vs userName before integration.
+    if (contractDefs.size > 0) {
+      const { names, block } = extractTaskContracts(content);
+      for (const name of names) {
+        if (!contractDefs.has(name)) {
+          errors.push(`${taskFile}: declares unknown contract "${name}" (not defined in design.md)`);
+          continue;
+        }
+        if (block !== null && block !== contractDefs.get(name)) {
+          errors.push(`${taskFile}: contract "${name}" body diverges from the canonical definition in design.md`);
+        }
       }
     }
   }
