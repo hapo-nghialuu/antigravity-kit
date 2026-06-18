@@ -85,6 +85,25 @@ function extractRequirementIds(requirementsText) {
   return [...ids].filter((id) => id !== 'R0').sort();
 }
 
+/**
+ * Extract sub-criteria IDs (e.g. R3.4) ONLY when requirements.md declares them
+ * as explicit literals — bold `**R3.4**` or a line-leading `R3.4`. Specs that
+ * write acceptance criteria as a plain numbered list under a heading declare no
+ * such literals, so this returns empty and per-criterion coverage is skipped
+ * for them (no behaviour change). This is a progressive check: it rewards an
+ * unambiguous format, it never penalises the legacy one.
+ */
+function extractSubCriteriaIds(requirementsText) {
+  const ids = new Set();
+  const re = /(?:^|\s)\**(R\d+\.\d+)\**/gim;
+  let match;
+  while ((match = re.exec(requirementsText)) !== null) {
+    const id = match[1].toUpperCase();
+    if (!id.startsWith('R0.')) ids.add(id);
+  }
+  return [...ids].sort();
+}
+
 function validateTaskSections(taskPath, content, errors) {
   const hasContext = hasHeading(content, 'Context');
   const hasConstraints = hasHeading(content, 'Constraints');
@@ -110,6 +129,27 @@ function validateTaskSections(taskPath, content, errors) {
   if (!hasRiskAssessment) errors.push(`${taskPath}: missing Risk Assessment`);
   if (hasEvidence && !/Runtime reachability verification/i.test(content)) {
     errors.push(`${taskPath}: missing Runtime reachability verification`);
+  }
+}
+
+/**
+ * Each phase completion must carry its own timestamp. Reusing `timestamps.init`
+ * for a later phase is forbidden (SKILL.md spec.json Update Rules). This used to
+ * be a prompt-only rule the model had to remember; here it is a hard backstop.
+ */
+function validateTimestamps(spec, errors) {
+  const ts = spec.timestamps;
+  if (!ts || typeof ts !== 'object') return;
+  const init = ts.init;
+  if (!init) return;
+
+  for (const phase of ['requirements_done', 'design_done', 'tasks_done']) {
+    if (ts[phase] && ts[phase] === init) {
+      errors.push(
+        `spec.json.timestamps.${phase}: reuses init timestamp (${init}); ` +
+          'each phase must stamp its own completion time',
+      );
+    }
   }
 }
 
@@ -140,6 +180,8 @@ function validateSpec(specDir) {
   if (!spec.scope_lock || typeof spec.scope_lock !== 'object' || Array.isArray(spec.scope_lock)) {
     errors.push('spec.json.scope_lock: must be an object, not a boolean or array');
   }
+
+  validateTimestamps(spec, errors);
 
   const taskFiles = listTaskFiles(specDir);
   const taskFileSet = new Set(taskFiles);
@@ -236,11 +278,15 @@ function validateSpec(specDir) {
   }
 
   let requirementIds = [];
+  let subCriteriaIds = [];
   if (fs.existsSync(requirementsPath)) {
-    requirementIds = extractRequirementIds(fs.readFileSync(requirementsPath, 'utf8'));
+    const requirementsText = fs.readFileSync(requirementsPath, 'utf8');
+    requirementIds = extractRequirementIds(requirementsText);
+    subCriteriaIds = extractSubCriteriaIds(requirementsText);
   }
 
   const coveredRequirementIds = new Set();
+  const coveredSubCriteriaIds = new Set();
   for (const taskFile of taskFiles) {
     const fullPath = path.join(specDir, taskFile);
     const content = fs.readFileSync(fullPath, 'utf8');
@@ -256,8 +302,12 @@ function validateSpec(specDir) {
     const numericMappingRe = /_Requirements:\s*([^_\n]+)_/gi;
     while ((match = numericMappingRe.exec(content)) !== null) {
       for (const token of match[1].split(',')) {
-        const number = token.trim().match(/^(\d+)(?:\.\d+)?$/);
-        if (number) coveredRequirementIds.add(`R${number[1]}`);
+        const trimmed = token.trim();
+        const major = trimmed.match(/^(\d+)(?:\.\d+)?$/);
+        if (major) coveredRequirementIds.add(`R${major[1]}`);
+        // Record the full sub-criterion (e.g. 3.4 -> R3.4) for per-criterion coverage.
+        const sub = trimmed.match(/^(\d+\.\d+)$/);
+        if (sub) coveredSubCriteriaIds.add(`R${sub[1]}`);
       }
     }
   }
@@ -265,6 +315,18 @@ function validateSpec(specDir) {
   for (const requirementId of requirementIds) {
     if (!coveredRequirementIds.has(requirementId)) {
       errors.push(`requirements.md:${requirementId}: not covered by any task`);
+    }
+  }
+
+  // Per-criterion coverage: only enforced when requirements.md declares explicit
+  // R{N}.{M} literals AND tasks use the numeric `_Requirements: x.y_` mapping.
+  // If a spec declares sub-criteria but no task maps any at sub-level, that is the
+  // legacy coarse format (major-only) — skip silently to avoid false failures.
+  if (subCriteriaIds.length > 0 && coveredSubCriteriaIds.size > 0) {
+    for (const subId of subCriteriaIds) {
+      if (!coveredSubCriteriaIds.has(subId)) {
+        errors.push(`requirements.md:${subId}: acceptance criterion not covered by any task`);
+      }
     }
   }
 
