@@ -310,6 +310,7 @@ Load: `references/scope-inquiry.md`
 - Design decisions MUST trace back to `research.md` evidence. If a design choice lacks evidence and is not a user-approved constraint, gather more evidence or ask the user before finalizing.
 - Add diagrams only when design has multi-step or cross-boundary flows
 - For auth/session, transport/entrypoint, persistence/schema, generated-artifact, or runtime-sensitive work, the design MUST fill the `Canonical Contracts & Invariants` section and tasks MUST inherit the same decisions verbatim.
+- When a data shape must stay byte-identical across layers (e.g. an API response consumed by both a backend task and a frontend task, or a DB row shape), declare it as a **named contract block** — `<!-- contract:NAME -->` followed by a fenced block — per `templates/design.md`. Tasks that produce/consume it add `Contracts: NAME` and copy the block verbatim; the validator then hard-fails on cross-layer drift. Prefer this for any spec spanning BE/FE/DB.
 - Update `spec.json` phase, timestamps, discovery mode
 
 ### Step 7: Task Breakdown
