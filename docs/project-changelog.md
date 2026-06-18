@@ -5,6 +5,8 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-18
+
 ### Changed
 - **Specs context optimization (P0 + P1b)**: The `spec-state` UserPromptSubmit hook now emits the full Tollgate block only when spec state (phase + done/total tasks) actually changes; unchanged turns get a one-line reminder, cutting repeated per-turn context (~460 tokens/turn). State fingerprint cached in `.claude/hooks/.logs/tollgate-last.txt` (gitignored, fail-open).
 - **Deterministic timestamp check**: `validate-spec-output.cjs` now fails a spec when `timestamps.requirements_done` / `design_done` / `tasks_done` reuse `timestamps.init`, moving a previously prompt-only rule into the hard validator backstop.

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-18
+
+### Changed
+- **`hapo:specs` pipeline streamlined to 9 steps.** Removed the Task Hydration step (old Step 8): it created session-scoped Claude Tasks that died with the session and were re-derived from task files anyway, while `hapo:develop` reads task files directly. Task files + `spec.json.task_registry` remain the single source of truth.
+- **Lower per-turn context cost.** The `spec-state` tollgate hook now emits its full block only when spec state changes (phase or done/total tasks); unchanged turns get a one-line reminder.
+- **Leaner skill body.** De-duplicated `SKILL.md` finalization/checklist rules already enforced by the validator, and merged `rules/tasks-parallel-analysis.md` into `rules/tasks-generation.md` (one fewer rule file). No behavior change.
+
+### Added
+- **Deterministic validator hardening** (`validate-spec-output.cjs`):
+  - Fails when `timestamps.requirements_done` / `design_done` / `tasks_done` reuse `timestamps.init`.
+  - Verifies acceptance-criterion coverage at sub-level (e.g. `R3.4`), not just the requirement group — opt-in when `requirements.md` uses explicit `R{N}.{M}` literals.
+  - Detects cross-layer contract drift: a `<!-- contract:NAME -->` block in `design.md` must be copied verbatim by every task declaring `Contracts: NAME`; divergent copies or unknown names fail. Opt-in via markers; documented in `templates/design.md`.
+
+### Notes
+- All new validator checks are opt-in / progressive — specs in the legacy format are unaffected and continue to pass.
+
 ## [0.11.11] - 2026-06-08
 
 ### Changed
