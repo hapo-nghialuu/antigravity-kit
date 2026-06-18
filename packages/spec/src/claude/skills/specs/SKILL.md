@@ -410,30 +410,23 @@ Load: `references/review.md` + `rules/design-review.md`
 - **Deterministic Gate:** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` after all fixes and before final output. Script failure overrides any LLM checklist result and blocks `ready_for_implementation = true`.
 
 ### Step 9.5: Finalization Audit (MANDATORY)
-- Re-scan the `tasks/` directory and rebuild `spec.json.task_files` from the real filesystem (sorted, relative paths)
-- Rebuild `spec.json.task_registry` from the real filesystem if it is missing, stale, or missing keys. Preserve task status fields when the path still matches.
+- Re-scan the `tasks/` directory and rebuild `spec.json.task_files` + `task_registry` from the real filesystem (sorted relative paths; preserve task status when the path still matches).
 - Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
-- FAIL if any task file exists on disk but is missing from `task_files`
-- FAIL if any path in `task_files` does not exist on disk
-- FAIL if any task file exists on disk but is missing from `task_registry`
-- FAIL if any path in `task_registry` does not exist on disk
-- FAIL if any task file path does not match `tasks/task-R{N}-{SEQ}-<slug>.md` with two-digit `SEQ` (for example `tasks/task-R0-01-project-scaffolding.md`)
-- FAIL if a newly generated non-trivial spec lacks a `research.md` Evidence Summary with codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, and downstream task/test implications.
-- FAIL if any requirement or NFR mapping uses non-numeric labels (`NFR-1`, `SEC-1`, etc.)
-- FAIL if a task lacks `Completion Criteria` or `Evidence` (existing `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence` is accepted)
-- FAIL if a task creates runtime-facing artifacts but neither proves reachability from an entrypoint/caller nor names a later integration task responsible for wiring them.
-- FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or final integration section.
-- FAIL if accepted validation decisions exist in reports but are not reflected in the implementation-facing sections of affected artifacts (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`, canonical contracts, or requirements text).
-- FAIL if any generated task replaces the required task template with a reduced `Objective` / `Steps` / `Evidence` shape. `Context`, `Constraints`, `Related Files`, `Completion Criteria`, `Evidence`, and `Risk Assessment` must all remain present.
-- FAIL if the spec scope/provider was switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale provider-specific strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical cost comparisons.
+
+**Validator-enforced (do not re-check by hand — a clean exit clears all of these):** task_files/task_registry synced to disk; task naming `tasks/task-R{N}-{SEQ}-<slug>.md`; no forbidden artifacts; research.md Evidence Summary present; every requirement **and sub-criterion** covered by a task; each task keeps the full template (Context, Constraints, Steps, Related Files, Completion Criteria, Evidence, Risk Assessment) plus Runtime reachability; numeric requirement IDs only; validation_recommended vs validation.status; timestamps not reused from init; ready_for_implementation blocked while any error exists.
+
+**Judgment-only audit (validator cannot see these — assert manually):**
+- FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or section.
+- FAIL if accepted validation/red-team decisions exist in reports but are not reflected in implementation-facing sections (`Context`, `Steps`, `Requirements`, `Completion Criteria`, `Evidence`, canonical contracts, or requirements text).
+- FAIL if the scope/provider switched away from Anthropic/Claude but `requirements.md`, `design.md`, or `tasks/*.md` still contain stale strings such as `Claude API`, `Haiku`, or `haiku_reachable`. `research.md` is the only allowed place for historical comparisons.
 - FAIL if privacy/delete-data work lacks a single canonical deletion policy. The design MUST explicitly choose either:
   1. hard-delete with no re-registration lock, or
   2. privacy-preserving re-registration lock using a non-raw identifier (for example `email_hash` / `email_fingerprint`) with a retention period.
   Tasks and requirements must reuse the same policy verbatim; mixed policies are invalid.
-- FAIL if `validation.status = "completed"` but `timestamps.validation_done` / `timestamps.review_done`, `updated_at`, and report metadata are not synchronized with the final reviewed state.
-- If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit accepted-risk state recorded by the user), `ready_for_implementation` MUST remain `false`
-- If `translation.enabled = true`, ensure `i18n/<language_code>/` exists and was re-synced after the final canonical write; the mirror itself is excluded from validation and never blocks `ready_for_implementation`.
-- Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`
+- FAIL if `validation.status = "completed"` but `timestamps.validation_done` / `review_done`, `updated_at`, and report metadata are not synchronized with the final reviewed state.
+- If `validation_recommended = true` and `validation.status` is not `completed` (or an explicit user-accepted risk state), `ready_for_implementation` MUST remain `false`.
+- If `translation.enabled = true`, ensure `i18n/<language_code>/` exists and was re-synced after the final canonical write; the mirror is excluded from validation and never blocks `ready_for_implementation`.
+- Only after this audit passes may the system mark `progress.tasks = "done"` and `ready_for_implementation = true`.
 
 ### Step 10: Completion — Context Reminder (MANDATORY)
 After completing the spec, output a short summary of what was generated, then you MUST output the following block EXACTLY as written. DO NOT use awkward translations like "Điểm đã phản ánh đúng quyết định của bạn", keep it professional or just output the block directly:
@@ -583,26 +576,19 @@ The canonical surface is four flags. Bare-verb forms are kept only as silent bac
 - No over-engineering: if a function suffices, don't create a class
 
 ### Pre-Finalization Checklist
-Before finalizing any specification, assert all the following:
-- [ ] **scope_lock** initialized and respected throughout all phases
-- [ ] **Evidence Summary** exists in `research.md` with codebase scout, external research or skip rationale, selected decision, rejected alternatives, and task/test implications
-- [ ] **EARS format** applied to all acceptance criteria in requirements.md
-- [ ] **Numeric requirement IDs** assigned to every requirement
+Before finalizing any specification, assert all the following.
+
+**Machine-enforced** (run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` — it hard-fails on all of these, so do not re-verify by hand): scope_lock object, research.md Evidence Summary, every requirement + sub-criterion covered by a task, each task has Completion Criteria + Evidence + Risk Assessment + the required headings, task_files/task_registry synced to disk with valid dependencies, task naming convention, validation gate vs validation.status, timestamps not reused. A clean validator exit clears this whole group.
+
+**Judgment-only** (validator cannot see these — assert manually):
+- [ ] **EARS format** applied to all acceptance criteria, with measurable thresholds (no "fast"/"safe"/"robust")
 - [ ] **Discovery mode** selected and recorded in spec.json.design_context
 - [ ] **Requirements traceability** matrix present in design.md
-- [ ] **Canonical Contracts & Invariants** filled for auth/transport/persistence/artifact-sensitive work
-- [ ] **Every task file** maps to at least 1 valid in-scope requirement ID
-- [ ] **Every task file** includes `Evidence` with executable or inspectable proof
+- [ ] **Canonical Contracts & Invariants** filled for auth/transport/persistence/artifact-sensitive work, and inherited verbatim by every task that touches the contract
 - [ ] **State Machine Blueprint:** design.md contains Mermaid diagrams for non-trivial flows
-- [ ] **Dependency graph complete**: no task can start before its blockers are listed
-- [ ] **Risk matrix filled**: likelihood × impact, with mitigation for High items
 - [ ] **Test strategy defined**: what gets unit tested, integration tested, e2e validated
-- [ ] **task_files inventory synced**: no missing or orphaned task references
-- [ ] **task_registry synced**: every task file has exactly one machine-state entry with valid status + dependencies
-- [ ] **deterministic validator passed**: `node .claude/scripts/validate-spec-output.cjs specs/<feature>`
-- [ ] **Validation gate consistent**: validation_recommended and validation.status agree with spec risk
 - [ ] **Provider wording clean**: no stale vendor/provider strings outside allowed research context
-- [ ] **spec.json fully updated**: phase, current_phase, progress, timestamps, approvals, design_context
+- [ ] **Validation decisions propagated** into implementation-facing sections, not only reports/Risk Assessment
 
 ## When TO Use
 
