@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-06-21
+
+### Added — Specs v2 (quality + grounding + output-cost)
+- **Layer 2 grounding (`spec-ground.cjs`)**: deterministic check that greps the real work tree to verify every `Related Files` path a task cites (Modify/Delete/Read) exists, or is Created earlier in the spec. Active-grep, not opt-in. Wired into Step 8.5 + `--validate`. `--root` for monorepo specs.
+- **Spec scaffolding (`spec-scaffold.cjs`)**: generates spec.json + doc templates + task stubs so the model Edit-fills placeholders instead of hand-Writing whole files (cuts the dominant output-token cost). `--tasks-only` merges into an existing spec without overwriting filled tasks.
+- **Execution Tier (Light/Standard/Deep)**: auto-scales research/discovery/review depth so small specs skip full-pipeline overhead; recorded in `design_context.execution_tier`. Quality floor never skips.
+- **Evidence-gated red-team**: findings without a concrete task/section citation are auto-rejected.
+- **Definition of a Complete Task (DoCT)**: explicit quality bar mapping each completeness element to its enforcing mechanism.
+- **Frontend Fidelity Rule**: FE tasks with a provided visual reference must reproduce it faithfully (concrete hex/font/spacing/verbatim text + `match <reference>` constraint). Conditional — brownfield reuse unaffected.
+- **Complexity Smell Check (by numbers)**: quantitative YAGNI tripwires (>8 files / >2 services / >12 tasks → challenge; >15 → split).
+
+### Changed
+- **Literal `R{N}.{M}` is the default requirement format** (template + Step 5), waking per-criterion coverage that was previously dodged via bare numbered lists.
+
+### Notes
+- All new validator/grounding checks are opt-in/progressive or active-grep — legacy specs are unaffected and continue to pass. Spec structure (spec.json + requirements/design/research/tasks) unchanged.
+
 ## [0.13.0] - 2026-06-18
 
 ### Changed

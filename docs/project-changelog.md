@@ -5,12 +5,16 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-06-21
+
 ### Added — Specs v2 (quality + grounding + output-cost)
 - **Layer 2 grounding (`spec-ground.cjs`)**: new deterministic check that greps the real work tree to verify every `Related Files` path a task cites (Modify/Delete/Read) exists, or is Created earlier in the spec. Closes the gap where the structural validator checks spec *shape* but is blind to phantom file paths. Active-grep (not opt-in). Wired into Step 8.5 + the `--validate` gate. `--root` for monorepo/sibling-project specs.
 - **Spec scaffolding (`spec-scaffold.cjs`)**: generates spec.json + doc templates + task stubs so the model Edit-fills placeholders instead of hand-Writing whole files (the dominant output-token cost). `--tasks-only` merges task stubs + task_files/task_registry into an existing spec without overwriting filled tasks. Wired into Step 7.
 - **Execution Tier (Light/Standard/Deep)**: auto-scales research/discovery/review depth by complexity so small specs skip full-pipeline overhead. Recorded in `spec.json.design_context.execution_tier`. Quality floor (scope_lock, EARS, Layer 1 + Layer 2) never skips.
 - **Evidence-gated red-team**: `review.md` Step 5.5 auto-rejects findings that don't cite a concrete task/section or verbatim quote (spec-level analogue of ck-plan's `file:line` gate).
 - **Definition of a Complete Task (DoCT)**: explicit quality bar in SKILL.md mapping each completeness element (real paths, contract, measurable acceptance, real evidence commands, reachability, requirement mapping) to its enforcing mechanism.
+- **Frontend Fidelity Rule**: when a frontend task has a provided visual reference (design image, Figma, screenshot, palette, design tokens, style guide), the task MUST reproduce it faithfully — extract concrete values (exact hex, font, spacing, verbatim UI text), state a `match <reference>` constraint, and prove fidelity in Evidence. New components with a reference must cite its tokens; conditional so brownfield reuse is unaffected. (`tasks-generation.md` + DoCT)
+- **Complexity Smell Check (by numbers)**: quantitative YAGNI tripwires in scope inquiry (>8 files / >2 new services / >12 tasks → challenge; >15 tasks → split into sibling specs), targeting the mega-spec failure mode. Surfaced for the user to decide (Expand/Hold/Reduce/Split), never silently built. (`scope-inquiry.md` + SKILL.md Step 3)
 
 ### Changed — Specs v2
 - **Literal `R{N}.{M}` is now the default requirement format** (template + SKILL.md Step 5). Wakes per-criterion coverage (P1d), which the model previously dodged by writing a bare numbered list. NFR section uses literal IDs too.
