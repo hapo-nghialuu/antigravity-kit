@@ -403,6 +403,20 @@ Each task file MUST be **self-contained and implementation-ready** — detailed 
 
 **FORBIDDEN:** Task files with only vague checkboxes and no exact files, requirements, or evidence. Compact is good; vague is invalid.
 
+#### Definition of a Complete Task (DoCT) — the quality bar
+A task is "complete enough to implement without guessing" only when ALL hold. Each item is enforced by a named mechanism, not goodwill:
+
+| DoCT element | Enforced by |
+|---|---|
+| **Related Files** name exact real paths (Create/Modify/Delete) | Layer 2 grounding (`spec-ground.cjs`) — phantom path fails |
+| **Contract** (API/DB/event shape) stated concretely | Layer 1 contract-drift check (`<!-- contract:NAME -->`) |
+| **Acceptance** measurable (no "fast/nice/safe" without a threshold) | EARS rule + reviewer judgment |
+| **Evidence** uses commands that exist in the project (`package.json`) | Author + grounding spirit; never invent test commands |
+| **Reachability** names a real entrypoint/caller | `Runtime reachability verification` (Layer 1 presence) + judgment |
+| **Requirements mapping** present (`_Requirements: x.y_`) | Layer 1 coverage check |
+
+A stub with unfilled `{{...}}` placeholders fails DoCT by definition. The two scripts (Layer 1 structural + Layer 2 grounding) are the floor; reviewer judgment covers the rest.
+
 ### Step 8: Validation Review (Optional)
 Load: `references/review.md` + `rules/design-review.md`
 - Load `references/ask-user-question-gates.md` before applying validation or red-team changes. User approval is required when findings modify approved scope, requirements, canonical contracts, design decisions, or task behavior.
