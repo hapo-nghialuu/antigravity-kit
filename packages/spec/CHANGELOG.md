@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-06-21
+
+### Added — Enforce scaffold on task creation
+- **`task-scaffold-guard.cjs` (PreToolUse hook)**: hard-blocks any `Write` whose path matches `specs/<feature>/tasks/task-*.md`, so task files can only be created via `spec-scaffold.cjs` and then `Edit`-filled. Closes the dodge where the model hand-`Write`s task files and bypasses the (previously opt-in) scaffold step. Narrow scope: only the `Write` tool on a task-file path is blocked; `Edit`/`MultiEdit` and `Write` to any other file are untouched, and the scaffold script (writing via Node fs through Bash) is never blocked.
+- **Three safety valves**: fail-open when `spec-scaffold.cjs` is absent (a hook shipped without its script must not deadlock task creation); actionable block message carrying the exact scaffold command; escape hatch via `"spec": { "scaffold_guard": false }` in `.claude/runtime.json`.
+
+### Changed
+- `settings/settings.json`: registered the guard under a dedicated `Write` matcher in `PreToolUse` (separate entry so the settings-merge dedupe does not swallow it).
+- `migration-manifest.json`: declared `hooks/task-scaffold-guard.cjs` in `runtime.files` so the installer ships it alongside `spec-scaffold.cjs`.
+- `skills/specs/SKILL.md` Step 7: scaffold is now stated as **mandatory** (raw `Write` to a task file is blocked), not a suggestion.
+
+### Notes
+- Enforces *process discipline* (every spec goes through scaffold; `task_files`/`task_registry` stay consistent), not a large token cut — task content is still emitted via `Edit`.
+
 ## [0.13.1] - 2026-06-21
 
 ### Added — Specs v2 (quality + grounding + output-cost)
