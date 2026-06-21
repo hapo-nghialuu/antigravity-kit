@@ -258,6 +258,7 @@ Load: `references/scope-inquiry.md`
 - If Risk = **Chaotic** → exit spec workflow, redirect to `hapo:hotfix`
 - If Risk = **Complex** → include spike/prototype tasks in the spec
 - If Blast Radius = **Critical Path** → spec MUST include rollback strategy and test coverage requirements
+- **Complexity smell check (by numbers)** — quick YAGNI tripwires: >8 files touched / >2 new classes-services / >12 task files → challenge or simplify; **>15 task files → split into sibling specs** (a mega-spec is slow + failure-prone, per field test). Surface tripwires in the scope summary; never silently build the mega-version.
 - User picks scope level: Expand / Hold / Reduce
 - **Skip if:** trivial task (< 20 words, 1 file, user says "just do it")
 

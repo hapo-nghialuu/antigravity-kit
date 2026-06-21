@@ -48,6 +48,17 @@ Assess how many other parts of the system are affected if this change breaks or 
 
 > **Rule**: If Blast Radius = Critical Path, the spec MUST include rollback strategy and explicit test coverage requirements in the task files.
 
+### Complexity Smell Check (by numbers)
+
+After the qualitative 5-Dimension pass, run a quick quantitative gut-check. These are YAGNI tripwires, not hard limits — when one trips, pause and justify or simplify before locking scope:
+
+- **> 8 files touched** → challenge whether the same goal is reachable with fewer; flag accidental scope creep.
+- **> 2 new classes / services / modules** → smell; justify each new abstraction (could an existing module absorb it?).
+- **> 12 task files** → the spec is large; consider splitting by deliverable boundary into sibling specs (cross-spec `blockedBy`) rather than one mega-spec.
+- **> 15 task files** → strong signal to split. A single mega-spec is slow to generate, prone to mid-run failure, and hard to review. Prefer 2-3 focused specs unless the work is genuinely one indivisible slice.
+
+If any tripwire fires, surface it in the Scope Inquiry summary and let the user decide (Expand / Hold / Reduce / Split). Do not silently build the mega-version.
+
 ## Level Selection
 
 After completing the 5-Dimension Assessment, present via `AskUserQuestion`:
@@ -77,6 +88,7 @@ Scope Inquiry:
 - Gap Size: [Small/Medium/Large] — [reason]
 - Risk Level: [Clear/Complicated/Complex/Chaotic] — [reason]
 - Blast Radius: [Isolated/Moderate/Critical Path] — [affected modules]
+- Complexity smells: [none | >8 files | >2 new services | >12 tasks → consider split | >15 tasks → split]
 - Minimum Change: [Essential gap vs Niceties]
-- User chose: [Expand / Hold / Reduce]
+- User chose: [Expand / Hold / Reduce / Split]
 ```
