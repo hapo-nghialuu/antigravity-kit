@@ -192,6 +192,21 @@ Choose verification by task risk and touched surface. Do not force every task to
 
 `hapo:specs` writes the expected proof into each task. `hapo:develop` executes the task-local proof before marking the task done. `hapo:test` runs the broader system pass after implementation or for a requested feature scope.
 
+### Frontend Fidelity Rule (when a visual reference is provided)
+
+If the user/spec provides ANY visual reference for a frontend task — design image, Figma frame, screenshot, mockup, brand palette, design tokens, or a style guide — the task MUST reproduce it faithfully, not approximate it. Concretely, the task file MUST:
+
+1. **Extract concrete values into the task** (do NOT paraphrase as "make it look nice"): exact colors (`#DAF1EE`), font family + sizes, spacing/radius/shadow when the reference shows them, and verbatim UI text/labels (especially non-English copy, e.g. `「投稿を削除しました」`).
+2. **State a `MUST: match <reference>` constraint** naming the exact reference (e.g. `image_4.png` / Figma node / `tokens.css`), so fidelity is a requirement, not a suggestion.
+3. **Prove fidelity in Evidence**: a visual/runtime check that compares the rendered UI against the named reference (screenshot diff or side-by-side inspection), plus accessibility/contrast if interactive.
+
+Reuse vs new component:
+- **Reuse** an existing component → reference it by path; it carries the design system's style (no need to restate pixels).
+- **New** component (`Create`) WITH a reference → the task MUST cite the concrete tokens/values from the reference (this is the gap that lets new components drift from the design).
+- **New** component WITHOUT any reference → derive from a named sibling component or explicitly flag it as an open design question; never invent un-grounded styling silently.
+
+> Rationale: a spec that says "build the list screen" but omits the provided palette/text/spacing forces the implementer to guess, and the result drifts from what the user actually showed. When a reference exists, "looks roughly similar" is a failure — the task must carry the real values so the build matches the design.
+
 ## Task Hierarchy Rules
 
 ### Maximum 2 Levels

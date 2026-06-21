@@ -414,6 +414,7 @@ A task is "complete enough to implement without guessing" only when ALL hold. Ea
 | **Evidence** uses commands that exist in the project (`package.json`) | Author + grounding spirit; never invent test commands |
 | **Reachability** names a real entrypoint/caller | `Runtime reachability verification` (Layer 1 presence) + judgment |
 | **Requirements mapping** present (`_Requirements: x.y_`) | Layer 1 coverage check |
+| **FE fidelity** — if a visual reference (image/Figma/tokens/style guide) is provided, the task carries the concrete values (hex/font/spacing/verbatim text) + a `match <reference>` constraint | `tasks-generation.md` Frontend Fidelity Rule + reviewer/visual check |
 
 A stub with unfilled `{{...}}` placeholders fails DoCT by definition. The two scripts (Layer 1 structural + Layer 2 grounding) are the floor; reviewer judgment covers the rest.
 
