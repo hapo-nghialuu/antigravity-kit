@@ -212,13 +212,15 @@ Choose verification by task risk and touched surface. Do not force every task to
   - No data dependency on other pending tasks
   - No shared file or resource contention
   - No prerequisite review/approval from another task
+  - Environment/setup work needed by the task is already satisfied or covered within the task itself
 - Validate that identified parallel tasks operate within separate boundaries defined in the Architecture Pattern & Boundary Map.
 - Confirm API/event contracts from design.md do not overlap in ways that cause conflicts.
-- Append `(P)` immediately after the task number for each parallel-capable task:
+- Append `(P)` immediately after the task number for each parallel-capable task, kept **outside** the checkbox brackets:
   - Example: `- [ ] 2.1 (P) Build background worker`
   - Apply to both major tasks and sub-tasks when appropriate.
 - If sequential mode is requested, omit `(P)` markers entirely.
 - Group parallel tasks logically (same parent when possible) and highlight any ordering caveats in detail bullets.
+- Do not mark container-only major tasks (no own actionable bullets) with `(P)` — evaluate parallelism at the sub-task level.
 - Explicitly call out dependencies that prevent `(P)` even when tasks look similar.
 
 ### Checkbox Format

@@ -85,6 +85,25 @@ function extractRequirementIds(requirementsText) {
   return [...ids].filter((id) => id !== 'R0').sort();
 }
 
+/**
+ * Extract sub-criteria IDs (e.g. R3.4) ONLY when requirements.md declares them
+ * as explicit literals — bold `**R3.4**` or a line-leading `R3.4`. Specs that
+ * write acceptance criteria as a plain numbered list under a heading declare no
+ * such literals, so this returns empty and per-criterion coverage is skipped
+ * for them (no behaviour change). This is a progressive check: it rewards an
+ * unambiguous format, it never penalises the legacy one.
+ */
+function extractSubCriteriaIds(requirementsText) {
+  const ids = new Set();
+  const re = /(?:^|\s)\**(R\d+\.\d+)\**/gim;
+  let match;
+  while ((match = re.exec(requirementsText)) !== null) {
+    const id = match[1].toUpperCase();
+    if (!id.startsWith('R0.')) ids.add(id);
+  }
+  return [...ids].sort();
+}
+
 function validateTaskSections(taskPath, content, errors) {
   const hasContext = hasHeading(content, 'Context');
   const hasConstraints = hasHeading(content, 'Constraints');
@@ -111,6 +130,75 @@ function validateTaskSections(taskPath, content, errors) {
   if (hasEvidence && !/Runtime reachability verification/i.test(content)) {
     errors.push(`${taskPath}: missing Runtime reachability verification`);
   }
+}
+
+/**
+ * Each phase completion must carry its own timestamp. Reusing `timestamps.init`
+ * for a later phase is forbidden (SKILL.md spec.json Update Rules). This used to
+ * be a prompt-only rule the model had to remember; here it is a hard backstop.
+ */
+function validateTimestamps(spec, errors) {
+  const ts = spec.timestamps;
+  if (!ts || typeof ts !== 'object') return;
+  const init = ts.init;
+  if (!init) return;
+
+  for (const phase of ['requirements_done', 'design_done', 'tasks_done']) {
+    if (ts[phase] && ts[phase] === init) {
+      errors.push(
+        `spec.json.timestamps.${phase}: reuses init timestamp (${init}); ` +
+          'each phase must stamp its own completion time',
+      );
+    }
+  }
+}
+
+/** Normalize a fenced code block body for byte-comparison: trim + collapse
+ * trailing whitespace per line + drop blank edges. Keeps inner structure so a
+ * real field rename (user_name vs userName) still differs. */
+function normalizeBlock(body) {
+  return body
+    .split('\n')
+    .map((line) => line.replace(/\s+$/, ''))
+    .join('\n')
+    .replace(/^\n+|\n+$/g, '');
+}
+
+/**
+ * Parse canonical contract definitions from design.md. A definition is an HTML
+ * marker `<!-- contract:NAME -->` immediately followed by a fenced code block.
+ * Returns a Map<name, normalizedBody>. Empty when the spec uses no markers —
+ * which makes the whole cross-layer check opt-in (no effect on legacy specs).
+ */
+function extractContractDefs(designText) {
+  const defs = new Map();
+  const re = /<!--\s*contract:([A-Za-z0-9_.-]+)\s*-->\s*\n```[^\n]*\n([\s\S]*?)\n```/g;
+  let match;
+  while ((match = re.exec(designText)) !== null) {
+    defs.set(match[1], normalizeBlock(match[2]));
+  }
+  return defs;
+}
+
+/**
+ * From a task body, return the contracts it claims plus the first fenced block
+ * it carries (the task's local copy of the contract). Shape:
+ *   { names: string[], block: string|null }
+ * `names` come from a `Contracts: A, B` line; `block` is the first fenced code
+ * block in the task (normalized) used to compare against the canonical defs.
+ */
+function extractTaskContracts(taskText) {
+  const names = [];
+  const nameLine = taskText.match(/^\s*Contracts:\s*([^\n]+)$/im);
+  if (nameLine) {
+    for (const token of nameLine[1].split(',')) {
+      const name = token.trim();
+      if (name) names.push(name);
+    }
+  }
+  const blockMatch = taskText.match(/```[^\n]*\n([\s\S]*?)\n```/);
+  const block = blockMatch ? normalizeBlock(blockMatch[1]) : null;
+  return { names, block };
 }
 
 function validateSpec(specDir) {
@@ -140,6 +228,8 @@ function validateSpec(specDir) {
   if (!spec.scope_lock || typeof spec.scope_lock !== 'object' || Array.isArray(spec.scope_lock)) {
     errors.push('spec.json.scope_lock: must be an object, not a boolean or array');
   }
+
+  validateTimestamps(spec, errors);
 
   const taskFiles = listTaskFiles(specDir);
   const taskFileSet = new Set(taskFiles);
@@ -236,11 +326,20 @@ function validateSpec(specDir) {
   }
 
   let requirementIds = [];
+  let subCriteriaIds = [];
   if (fs.existsSync(requirementsPath)) {
-    requirementIds = extractRequirementIds(fs.readFileSync(requirementsPath, 'utf8'));
+    const requirementsText = fs.readFileSync(requirementsPath, 'utf8');
+    requirementIds = extractRequirementIds(requirementsText);
+    subCriteriaIds = extractSubCriteriaIds(requirementsText);
   }
 
   const coveredRequirementIds = new Set();
+  const coveredSubCriteriaIds = new Set();
+  // Cross-layer contract defs (opt-in): empty unless design.md uses
+  // <!-- contract:NAME --> markers, so legacy specs are unaffected.
+  const contractDefs = fs.existsSync(designPath)
+    ? extractContractDefs(fs.readFileSync(designPath, 'utf8'))
+    : new Map();
   for (const taskFile of taskFiles) {
     const fullPath = path.join(specDir, taskFile);
     const content = fs.readFileSync(fullPath, 'utf8');
@@ -256,8 +355,30 @@ function validateSpec(specDir) {
     const numericMappingRe = /_Requirements:\s*([^_\n]+)_/gi;
     while ((match = numericMappingRe.exec(content)) !== null) {
       for (const token of match[1].split(',')) {
-        const number = token.trim().match(/^(\d+)(?:\.\d+)?$/);
-        if (number) coveredRequirementIds.add(`R${number[1]}`);
+        const trimmed = token.trim();
+        const major = trimmed.match(/^(\d+)(?:\.\d+)?$/);
+        if (major) coveredRequirementIds.add(`R${major[1]}`);
+        // Record the full sub-criterion (e.g. 3.4 -> R3.4) for per-criterion coverage.
+        const sub = trimmed.match(/^(\d+\.\d+)$/);
+        if (sub) coveredSubCriteriaIds.add(`R${sub[1]}`);
+      }
+    }
+
+    // Cross-layer contract check (opt-in via design.md markers). When a task
+    // claims `Contracts: NAME`, that name must exist in design.md and the task's
+    // local copy of the block must match the canonical definition byte-for-byte
+    // (after whitespace normalization). This catches BE/FE drift like
+    // user_name vs userName before integration.
+    if (contractDefs.size > 0) {
+      const { names, block } = extractTaskContracts(content);
+      for (const name of names) {
+        if (!contractDefs.has(name)) {
+          errors.push(`${taskFile}: declares unknown contract "${name}" (not defined in design.md)`);
+          continue;
+        }
+        if (block !== null && block !== contractDefs.get(name)) {
+          errors.push(`${taskFile}: contract "${name}" body diverges from the canonical definition in design.md`);
+        }
       }
     }
   }
@@ -265,6 +386,18 @@ function validateSpec(specDir) {
   for (const requirementId of requirementIds) {
     if (!coveredRequirementIds.has(requirementId)) {
       errors.push(`requirements.md:${requirementId}: not covered by any task`);
+    }
+  }
+
+  // Per-criterion coverage: only enforced when requirements.md declares explicit
+  // R{N}.{M} literals AND tasks use the numeric `_Requirements: x.y_` mapping.
+  // If a spec declares sub-criteria but no task maps any at sub-level, that is the
+  // legacy coarse format (major-only) — skip silently to avoid false failures.
+  if (subCriteriaIds.length > 0 && coveredSubCriteriaIds.size > 0) {
+    for (const subId of subCriteriaIds) {
+      if (!coveredSubCriteriaIds.has(subId)) {
+        errors.push(`requirements.md:${subId}: acceptance criterion not covered by any task`);
+      }
     }
   }
 

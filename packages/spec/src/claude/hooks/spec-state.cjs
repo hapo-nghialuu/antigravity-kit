@@ -77,6 +77,27 @@ try {
     return status === 'pending' && deps.every((dep) => taskStatusByPath.get(dep) === 'done');
   });
 
+  // ── State-change gate: only emit the full tollgate when spec state changed ──
+  // This hook runs on EVERY UserPromptSubmit. Re-printing the whole block when
+  // phase + done/total are unchanged is wasted context (~460 tok/turn). We keep
+  // a tiny state fingerprint in a temp file: same -> one-line reminder; changed
+  // -> full block (and refresh the fingerprint). Fail-open at every step.
+  const stateKey = `${phase}|${taskCounts.done || 0}/${taskEntries.length}`;
+  const cacheFile = path.join(__dirname, '.logs', 'tollgate-last.txt');
+
+  let lastKey = '';
+  try { lastKey = fs.readFileSync(cacheFile, 'utf8').trim(); } catch { /* first run */ }
+
+  if (lastKey === stateKey) {
+    console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync \`spec.json\` when state changes.\n`);
+    process.exit(0);
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    fs.writeFileSync(cacheFile, stateKey);
+  } catch { /* fail-open: if the write fails we still print the full block */ }
+
   // Format the output
   const lines = [];
   lines.push('');
