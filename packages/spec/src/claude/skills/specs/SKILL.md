@@ -261,6 +261,20 @@ Load: `references/scope-inquiry.md`
 - User picks scope level: Expand / Hold / Reduce
 - **Skip if:** trivial task (< 20 words, 1 file, user says "just do it")
 
+#### Execution Tier (auto-scale — set right after the 5-Dimension assessment)
+Pick ONE tier from the assessment; it controls how deep the pipeline runs so small specs stay cheap. Record it in `spec.json.design_context.execution_tier`.
+
+| Tier | Trigger | Research (Step 5 external) | Discovery (Step 6) | Red-Team (Step 8) | Always runs |
+|---|---|---|---|---|---|
+| **Light** | Cynefin Clear + Blast Isolated + likely ≤2 tasks | skip (record skip rationale) | minimal | skip → Validate-only | scope_lock, EARS, **Layer 1 + Layer 2 grounding** |
+| **Standard** | default (Complicated / Moderate blast / 3-4 tasks) | targeted | light | per Step 8 auto-decision | all of the above |
+| **Deep** | Complex/Critical-path / security-migration / 5+ tasks | full (researchers + per-area scout) | full | Red-Team → Validate (mandatory) | all of the above |
+
+Rules:
+- Grounding (Layer 2) + structural validator (Layer 1) + scope_lock **never skip**, any tier — they are the quality floor, not depth knobs.
+- Light tier is the antidote to "small spec, full-pipeline overhead". Do NOT use Light for auth/payment/migration/schema/privacy work — those force Deep regardless of size.
+- Tier only changes *research/discovery/review depth*; it never changes the Hard Output Contract or DoCT.
+
 ### Step 4: Init
 - Check for duplicate slugs in `specs/` via Glob
 - Create directory `specs/<feature-name>/`
