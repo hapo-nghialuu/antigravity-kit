@@ -398,13 +398,16 @@ Load: `references/review.md` + `rules/design-review.md`
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
 - **Reconciliation Rule:** `validation.status = "completed"` is forbidden until all accepted findings and validation decisions are physically propagated into `requirements.md`, `design.md`, `tasks/*.md`, and `spec.json` where applicable.
-- **Deterministic Gate:** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` after all fixes and before final output. Script failure overrides any LLM checklist result and blocks `ready_for_implementation = true`.
+- **Deterministic Gate (2 layers):** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` (structural) AND `node .claude/scripts/spec-ground.cjs specs/<feature> [--root <work-context>]` (grounding — paths exist) after all fixes and before final output. Either script failing overrides any LLM checklist result and blocks `ready_for_implementation = true`.
 
 ### Step 8.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` + `task_registry` from the real filesystem (sorted relative paths; preserve task status when the path still matches).
-- Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
+- **Layer 1 — Structural:** run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
+- **Layer 2 — Grounding (MANDATORY):** run `node .claude/scripts/spec-ground.cjs specs/<feature> [--root <work-context>]` and treat any non-zero exit as a blocking failure. This greps the real work tree to verify every `Related Files` path a task cites (Modify/Delete/Read) actually exists — or is Created by another task in the spec. Pass `--root` when the code lives apart from the spec (monorepo / sibling project). A spec that PASSES Layer 1 but FAILS Layer 2 is trolling phantom files and is NOT ready.
 
 **Validator-enforced (do not re-check by hand — a clean exit clears all of these):** task_files/task_registry synced to disk; task naming `tasks/task-R{N}-{SEQ}-<slug>.md`; no forbidden artifacts; research.md Evidence Summary present; every requirement **and sub-criterion** covered by a task; each task keeps the full template (Context, Constraints, Steps, Related Files, Completion Criteria, Evidence, Risk Assessment) plus Runtime reachability; numeric requirement IDs only; validation_recommended vs validation.status; timestamps not reused from init; ready_for_implementation blocked while any error exists.
+
+**Grounding-enforced (spec-ground.cjs — do not re-check by hand):** every Modify/Delete/Read path in any task's `Related Files` exists in the work tree or is Created earlier in the spec. Phantom paths hard-fail.
 
 **Judgment-only audit (validator cannot see these — assert manually):**
 - FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or section.
