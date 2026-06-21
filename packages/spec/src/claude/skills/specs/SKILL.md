@@ -300,7 +300,7 @@ Rules:
 - External/current research must prefer official docs, standards, primary sources, or maintained upstream references. Record source links and the date/context of the finding.
 - Write `research.md` before final requirements. It MUST include an Evidence Summary with: codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, remaining gaps, and downstream task/test implications.
 - If evidence exposes unresolved architecture choices, unclear acceptance criteria, or multiple viable approaches with no obvious winner, stop and route to `/hapo:brainstorm` instead of forcing a spec.
-- Write requirements in **EARS** format (see `rules/ears-format.md`)
+- Write requirements in **EARS** format (see `rules/ears-format.md`). Give each acceptance criterion an **explicit literal ID `R{N}.{M}`** (e.g. `- **R1.1** When ...`), NOT a bare numbered list. This activates per-criterion coverage at Layer 1 (each `R1.1` must be mapped by a task `_Requirements: 1.1_`). A bare `1. 2. 3.` list silently disables sub-criterion coverage — do not use it for non-trivial specs.
 - **Feasibility Check:** Cross-check each requirement against known technical constraints from `research.md`.
 - Each requirement gets a unique numeric ID
 - **Verify Quality:** Before proceeding, assert each requirement is: *Singular, Unambiguous, Testable, and has a numeric ID*. Include Non-Functional Requirements (Performance, Security, Scalability, Reliability, Accessibility).
