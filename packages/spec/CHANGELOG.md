@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — Enforce scaffold on task creation
 - **`task-scaffold-guard.cjs` (PreToolUse hook)**: hard-blocks any `Write` whose path matches `specs/<feature>/tasks/task-*.md`, so task files can only be created via `spec-scaffold.cjs` and then `Edit`-filled. Closes the dodge where the model hand-`Write`s task files and bypasses the (previously opt-in) scaffold step. Narrow scope: only the `Write` tool on a task-file path is blocked; `Edit`/`MultiEdit` and `Write` to any other file are untouched, and the scaffold script (writing via Node fs through Bash) is never blocked.
 - **Three safety valves**: fail-open when `spec-scaffold.cjs` is absent (a hook shipped without its script must not deadlock task creation); actionable block message carrying the exact scaffold command; escape hatch via `"spec": { "scaffold_guard": false }` in `.claude/runtime.json`.
+- **Validator placeholder gate (`validate-spec-output.cjs`)**: a task file that still carries an unfilled `{{...}}` scaffold placeholder now hard-fails (previously a prompt-only DoCT rule). A leftover `.../` path fragment warns. This is the fill-side complement to the guard — the hook forces task files through the scaffold; this proves the resulting stubs were actually completed, closing the "stub created but not filled" gap.
 
 ### Changed
 - `settings/settings.json`: registered the guard under a dedicated `Write` matcher in `PreToolUse` (separate entry so the settings-merge dedupe does not swallow it).

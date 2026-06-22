@@ -10,6 +10,7 @@ All notable changes to CafeKit are documented here, following
 ### Added — Enforce scaffold on task creation
 - **`task-scaffold-guard.cjs` (PreToolUse hook)**: hard-blocks any `Write` to `specs/<feature>/tasks/task-*.md`, forcing task files to be generated via `spec-scaffold.cjs` then `Edit`-filled. Fixes the field-test dodge where the model hand-wrote every task file and skipped the opt-in scaffold step. Only the `Write` tool on a task-file path is blocked — `Edit`/`MultiEdit`, other `Write`s, and the scaffold script itself are untouched.
 - **Safety valves**: fail-open when the scaffold script is missing (no deadlock), an actionable block message with the exact command, and a `.claude/runtime.json` escape hatch (`"spec": { "scaffold_guard": false }`).
+- **Validator placeholder gate**: `validate-spec-output.cjs` now hard-fails a task that still has an unfilled `{{...}}` scaffold placeholder (warns on a leftover `.../` path). Fill-side complement to the guard: the hook forces creation via scaffold, this proves the stub was completed.
 
 ### Changed
 - `settings.json`: guard registered under a dedicated `Write` matcher in `PreToolUse`.

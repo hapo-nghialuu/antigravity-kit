@@ -250,7 +250,9 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
         content.includes("**MUST run deterministic validator.**") &&
-        content.includes("Script failure overrides any LLM checklist result") &&
+        // Substring is invariant to "Script failure" (single-layer) vs the
+        // Specs-v2 "Either script failing" (validator + grounding) wording.
+        content.includes("overrides any LLM checklist result") &&
         content.includes("output MUST NOT suggest `/hapo:develop`"),
     },
     {
