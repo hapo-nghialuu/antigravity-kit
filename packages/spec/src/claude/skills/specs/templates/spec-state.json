@@ -60,6 +60,7 @@
   "design_context": {
     "discovery_mode": null,
     "discovery_reason": null,
+    "execution_tier": "standard",
     "validation_recommended": false
   },
   "validation": {

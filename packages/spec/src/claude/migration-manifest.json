@@ -90,6 +90,7 @@
       "hooks/usage.cjs",
       "hooks/privacy-block.cjs",
       "hooks/inspect-block.cjs",
+      "hooks/task-scaffold-guard.cjs",
       "hooks/rules.cjs",
       "hooks/spec-state.cjs",
       "hooks/state.cjs",

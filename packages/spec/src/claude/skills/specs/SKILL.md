@@ -258,8 +258,23 @@ Load: `references/scope-inquiry.md`
 - If Risk = **Chaotic** → exit spec workflow, redirect to `hapo:hotfix`
 - If Risk = **Complex** → include spike/prototype tasks in the spec
 - If Blast Radius = **Critical Path** → spec MUST include rollback strategy and test coverage requirements
+- **Complexity smell check (by numbers)** — quick YAGNI tripwires: >8 files touched / >2 new classes-services / >12 task files → challenge or simplify; **>15 task files → split into sibling specs** (a mega-spec is slow + failure-prone, per field test). Surface tripwires in the scope summary; never silently build the mega-version.
 - User picks scope level: Expand / Hold / Reduce
 - **Skip if:** trivial task (< 20 words, 1 file, user says "just do it")
+
+#### Execution Tier (auto-scale — set right after the 5-Dimension assessment)
+Pick ONE tier from the assessment; it controls how deep the pipeline runs so small specs stay cheap. Record it in `spec.json.design_context.execution_tier`.
+
+| Tier | Trigger | Research (Step 5 external) | Discovery (Step 6) | Red-Team (Step 8) | Always runs |
+|---|---|---|---|---|---|
+| **Light** | Cynefin Clear + Blast Isolated + likely ≤2 tasks | skip (record skip rationale) | minimal | skip → Validate-only | scope_lock, EARS, **Layer 1 + Layer 2 grounding** |
+| **Standard** | default (Complicated / Moderate blast / 3-4 tasks) | targeted | light | per Step 8 auto-decision | all of the above |
+| **Deep** | Complex/Critical-path / security-migration / 5+ tasks | full (researchers + per-area scout) | full | Red-Team → Validate (mandatory) | all of the above |
+
+Rules:
+- Grounding (Layer 2) + structural validator (Layer 1) + scope_lock **never skip**, any tier — they are the quality floor, not depth knobs.
+- Light tier is the antidote to "small spec, full-pipeline overhead". Do NOT use Light for auth/payment/migration/schema/privacy work — those force Deep regardless of size.
+- Tier only changes *research/discovery/review depth*; it never changes the Hard Output Contract or DoCT.
 
 ### Step 4: Init
 - Check for duplicate slugs in `specs/` via Glob
@@ -286,7 +301,7 @@ Load: `references/scope-inquiry.md`
 - External/current research must prefer official docs, standards, primary sources, or maintained upstream references. Record source links and the date/context of the finding.
 - Write `research.md` before final requirements. It MUST include an Evidence Summary with: codebase scout result, external research result or skip rationale, selected decision, rejected alternatives, remaining gaps, and downstream task/test implications.
 - If evidence exposes unresolved architecture choices, unclear acceptance criteria, or multiple viable approaches with no obvious winner, stop and route to `/hapo:brainstorm` instead of forcing a spec.
-- Write requirements in **EARS** format (see `rules/ears-format.md`)
+- Write requirements in **EARS** format (see `rules/ears-format.md`). Give each acceptance criterion an **explicit literal ID `R{N}.{M}`** (e.g. `- **R1.1** When ...`), NOT a bare numbered list. This activates per-criterion coverage at Layer 1 (each `R1.1` must be mapped by a task `_Requirements: 1.1_`). A bare `1. 2. 3.` list silently disables sub-criterion coverage — do not use it for non-trivial specs.
 - **Feasibility Check:** Cross-check each requirement against known technical constraints from `research.md`.
 - Each requirement gets a unique numeric ID
 - **Verify Quality:** Before proceeding, assert each requirement is: *Singular, Unambiguous, Testable, and has a numeric ID*. Include Non-Functional Requirements (Performance, Security, Scalability, Reliability, Accessibility).
@@ -318,8 +333,11 @@ Load: `references/scope-inquiry.md`
 - Load `rules/phase-decision-matrix.md` before generating task files. Treat "phase" as an implementation slice/task cluster, not a `phase-XX.md` artifact.
 - Load `rules/task-scoring-rubric.md` for every candidate task to decide priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
 - Load `references/ask-user-question-gates.md`; if scoring reveals unapproved scope expansion or an unresolved user-owned choice, pause before writing task files.
-- Each task file follows template `templates/task.md`
-- `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks.
+- **Scaffold is mandatory — raw `Write` to a task file is blocked.** A PreToolUse hook (`task-scaffold-guard.cjs`) rejects any `Write` whose path matches `specs/<feature>/tasks/task-*.md`. The only path to a task file is scaffold → Edit. Once the task list is decided, generate the stubs:
+  `node .claude/scripts/spec-scaffold.cjs <feature> --tasks "R0-01-slug,R1-01-slug,..." --tasks-only`
+  This creates each `tasks/task-R*.md` from `templates/task.md` and merges `task_files` + `task_registry` into the existing `spec.json` (pending, no overwrite of already-filled tasks). Then **Edit-fill** the `{{...}}` placeholders in each stub (`Edit`/`MultiEdit` are allowed; `Write` is not). (The guard fails open if the scaffold script is absent, and can be disabled via `"spec": { "scaffold_guard": false }` in `.claude/runtime.json`.)
+- Each task file follows template `templates/task.md` (scaffold already applies it). **Leave NO `{{...}}` placeholder unfilled** — a stub with placeholders is an incomplete task.
+- `Related Files` and test plans must inherit paths, contracts, and test targets from the codebase scout. If exact files/tests cannot be named for an enhancement, run targeted inspect before generating tasks. Every `Related Files` path will be grounded (Layer 2) at Step 8.5 — phantom paths hard-fail, so cite real paths.
 - Each task file MUST include `Completion Criteria` and `Evidence` sections detailed enough that a downstream quality gate can prove the task is truly done. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
 - Each task's `Evidence` MUST choose the right proof type for the touched surface: unit for pure logic, component/integration for UI or state wiring, E2E/UI flow for complete user workflows, visual/responsive checks for style/layout work, accessibility checks for interactive UI, smoke checks for scaffold/config, regression checks for bug fixes, and performance/security checks only when the requirement or risk calls for them.
 - Every task MUST preserve the approved `scope_lock`: implement all scoped acceptance criteria for its requirement, avoid out-of-scope features, and record any intentional deferral as a named later task rather than implicit omission.
@@ -386,6 +404,21 @@ Each task file MUST be **self-contained and implementation-ready** — detailed 
 
 **FORBIDDEN:** Task files with only vague checkboxes and no exact files, requirements, or evidence. Compact is good; vague is invalid.
 
+#### Definition of a Complete Task (DoCT) — the quality bar
+A task is "complete enough to implement without guessing" only when ALL hold. Each item is enforced by a named mechanism, not goodwill:
+
+| DoCT element | Enforced by |
+|---|---|
+| **Related Files** name exact real paths (Create/Modify/Delete) | Layer 2 grounding (`spec-ground.cjs`) — phantom path fails |
+| **Contract** (API/DB/event shape) stated concretely | Layer 1 contract-drift check (`<!-- contract:NAME -->`) |
+| **Acceptance** measurable (no "fast/nice/safe" without a threshold) | EARS rule + reviewer judgment |
+| **Evidence** uses commands that exist in the project (`package.json`) | Author + grounding spirit; never invent test commands |
+| **Reachability** names a real entrypoint/caller | `Runtime reachability verification` (Layer 1 presence) + judgment |
+| **Requirements mapping** present (`_Requirements: x.y_`) | Layer 1 coverage check |
+| **FE fidelity** — if a visual reference (image/Figma/tokens/style guide) is provided, the task carries the concrete values (hex/font/spacing/verbatim text) + a `match <reference>` constraint | `tasks-generation.md` Frontend Fidelity Rule + reviewer/visual check |
+
+A stub with unfilled `{{...}}` placeholders fails DoCT by definition. The two scripts (Layer 1 structural + Layer 2 grounding) are the floor; reviewer judgment covers the rest.
+
 ### Step 8: Validation Review (Optional)
 Load: `references/review.md` + `rules/design-review.md`
 - Load `references/ask-user-question-gates.md` before applying validation or red-team changes. User approval is required when findings modify approved scope, requirements, canonical contracts, design decisions, or task behavior.
@@ -398,13 +431,16 @@ Load: `references/review.md` + `rules/design-review.md`
 - **PROHIBITION:** The system MUST NOT skip Red Team because of a prior code-auditor review. Code review ≠ Spec review.
 - **PROHIBITION:** The system MUST NOT create `.ts`, `.js`, `.py` or any implementation files during validation. Spec-only outputs.
 - **Reconciliation Rule:** `validation.status = "completed"` is forbidden until all accepted findings and validation decisions are physically propagated into `requirements.md`, `design.md`, `tasks/*.md`, and `spec.json` where applicable.
-- **Deterministic Gate:** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` after all fixes and before final output. Script failure overrides any LLM checklist result and blocks `ready_for_implementation = true`.
+- **Deterministic Gate (2 layers):** Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` (structural) AND `node .claude/scripts/spec-ground.cjs specs/<feature> [--root <work-context>]` (grounding — paths exist) after all fixes and before final output. Either script failing overrides any LLM checklist result and blocks `ready_for_implementation = true`.
 
 ### Step 8.5: Finalization Audit (MANDATORY)
 - Re-scan the `tasks/` directory and rebuild `spec.json.task_files` + `task_registry` from the real filesystem (sorted relative paths; preserve task status when the path still matches).
-- Run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
+- **Layer 1 — Structural:** run `node .claude/scripts/validate-spec-output.cjs specs/<feature>` and treat any non-zero exit as a blocking failure.
+- **Layer 2 — Grounding (MANDATORY):** run `node .claude/scripts/spec-ground.cjs specs/<feature> [--root <work-context>]` and treat any non-zero exit as a blocking failure. This greps the real work tree to verify every `Related Files` path a task cites (Modify/Delete/Read) actually exists — or is Created by another task in the spec. Pass `--root` when the code lives apart from the spec (monorepo / sibling project). A spec that PASSES Layer 1 but FAILS Layer 2 is trolling phantom files and is NOT ready.
 
 **Validator-enforced (do not re-check by hand — a clean exit clears all of these):** task_files/task_registry synced to disk; task naming `tasks/task-R{N}-{SEQ}-<slug>.md`; no forbidden artifacts; research.md Evidence Summary present; every requirement **and sub-criterion** covered by a task; each task keeps the full template (Context, Constraints, Steps, Related Files, Completion Criteria, Evidence, Risk Assessment) plus Runtime reachability; numeric requirement IDs only; validation_recommended vs validation.status; timestamps not reused from init; ready_for_implementation blocked while any error exists.
+
+**Grounding-enforced (spec-ground.cjs — do not re-check by hand):** every Modify/Delete/Read path in any task's `Related Files` exists in the work tree or is Created earlier in the spec. Phantom paths hard-fail.
 
 **Judgment-only audit (validator cannot see these — assert manually):**
 - FAIL if a UI/app/runtime spec has multiple user-facing task outputs but no final integration/reachability task or section.

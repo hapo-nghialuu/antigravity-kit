@@ -1,0 +1,105 @@
+{
+  "package": "mathquest_source_of_truth_package",
+  "asset_policy": "Use the renamed polished PNG assets as the current approved source references. Old placeholder SVG/PNG assets were removed.",
+  "screens": [
+    {
+      "id": "concept_sheet",
+      "title": "Main concept sheet",
+      "path": "assets/screens/mathquest_app_concept_sheet.png",
+      "dimensions": "1491x1055",
+      "purpose": "Primary visual overview showing the three-screen MVP loop."
+    },
+    {
+      "id": "product_concept_sheet",
+      "title": "Product concept sheet",
+      "path": "assets/screens/00_product_concept_sheet.png",
+      "dimensions": "1491x1055",
+      "purpose": "Expanded product and gameplay pillars overview."
+    },
+    {
+      "id": "adventure_map_screen",
+      "title": "Adventure map screen",
+      "path": "assets/screens/01_adventure_map_screen.png",
+      "dimensions": "941x1672",
+      "purpose": "Full-screen reference for the map scene."
+    },
+    {
+      "id": "lesson_question_screen",
+      "title": "Lesson / question screen",
+      "path": "assets/screens/02_lesson_question_screen.png",
+      "dimensions": "941x1672",
+      "purpose": "Full-screen reference for the place-value lesson scene."
+    },
+    {
+      "id": "reward_completion_screen",
+      "title": "Reward / completion screen",
+      "path": "assets/screens/03_reward_completion_screen.png",
+      "dimensions": "941x1672",
+      "purpose": "Full-screen reference for the bridge repaired reward scene."
+    }
+  ],
+  "references": [
+    {
+      "id": "color_palette_reference",
+      "path": "assets/references/01_color_palette_reference.png",
+      "dimensions": "1491x1055",
+      "purpose": "Approved palette, states, and color usage reference."
+    },
+    {
+      "id": "fox_mascot_reference",
+      "path": "assets/references/02_fox_mascot_reference.png",
+      "dimensions": "1491x1055",
+      "purpose": "Mascot poses, facial expressions, costume, silhouette, and accessory reference."
+    },
+    {
+      "id": "ui_component_reference",
+      "path": "assets/references/03_ui_component_reference.png",
+      "dimensions": "1491x1055",
+      "purpose": "Buttons, answer tiles, progress, badges, nav, audio, and reward components."
+    },
+    {
+      "id": "map_world_reference",
+      "path": "assets/references/04_map_world_reference.png",
+      "dimensions": "1491x1055",
+      "purpose": "Map regions, world elements, node examples, and art direction notes."
+    }
+  ],
+  "screen_crops": [
+    {
+      "id": "map_node_current_26",
+      "path": "assets/screen_crops/map_node_current_26.png",
+      "source": "assets/screens/01_adventure_map_screen.png",
+      "purpose": "Current active node styling."
+    },
+    {
+      "id": "bottom_nav_quests_practice_shop",
+      "path": "assets/screen_crops/bottom_nav_quests_practice_shop.png",
+      "source": "assets/screens/01_adventure_map_screen.png",
+      "purpose": "Bottom navigation reference."
+    },
+    {
+      "id": "lesson_answer_card",
+      "path": "assets/screen_crops/lesson_answer_card.png",
+      "source": "assets/screens/02_lesson_question_screen.png",
+      "purpose": "Question card and answer tile reference."
+    },
+    {
+      "id": "fox_mascot_cheer",
+      "path": "assets/screen_crops/fox_mascot_cheer.png",
+      "source": "assets/screens/02_lesson_question_screen.png",
+      "purpose": "In-lesson mascot support pose."
+    },
+    {
+      "id": "reward_stars_banner",
+      "path": "assets/screen_crops/reward_stars_banner.png",
+      "source": "assets/screens/03_reward_completion_screen.png",
+      "purpose": "Reward banner and three-star celebration reference."
+    },
+    {
+      "id": "xp_badge_60",
+      "path": "assets/screen_crops/xp_badge_60.png",
+      "source": "assets/screens/03_reward_completion_screen.png",
+      "purpose": "XP reward badge reference."
+    }
+  ]
+}

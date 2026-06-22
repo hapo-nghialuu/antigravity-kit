@@ -1,0 +1,167 @@
+{
+  "product": "MathQuest: Star Trail",
+  "slice_id": "vertical_mvp_001_place_value_bridge",
+  "target": {
+    "primary": "mobile portrait",
+    "preview": "desktop browser or simulator"
+  },
+  "initial_learner_state": {
+    "level": 12,
+    "stars": 152,
+    "streak": 7,
+    "xp": 1840,
+    "active_node": 26,
+    "current_world": "Star Trail"
+  },
+  "map": {
+    "screen_asset": "assets/screens/01_adventure_map_screen.png",
+    "regions": [
+      "Number Meadow",
+      "Fraction Lagoon",
+      "Shape Castle"
+    ],
+    "nodes": [
+      {
+        "id": 21,
+        "state": "completed",
+        "stars": 3
+      },
+      {
+        "id": 22,
+        "state": "completed",
+        "stars": 3
+      },
+      {
+        "id": 23,
+        "state": "completed",
+        "stars": 3
+      },
+      {
+        "id": 24,
+        "state": "completed",
+        "stars": 3
+      },
+      {
+        "id": 25,
+        "state": "completed",
+        "stars": 3
+      },
+      {
+        "id": 26,
+        "state": "active",
+        "stars": 0,
+        "lesson_id": "place_value_400_30_6"
+      },
+      {
+        "id": 27,
+        "state": "locked",
+        "stars": 0
+      }
+    ],
+    "bottom_nav": [
+      "Quests",
+      "Practice",
+      "Shop"
+    ]
+  },
+  "lesson": {
+    "screen_asset": "assets/screens/02_lesson_question_screen.png",
+    "id": "place_value_400_30_6",
+    "topic": "Place Value",
+    "objective": "Understand hundreds, tens and ones",
+    "progress": {
+      "current": 4,
+      "total": 10,
+      "label": "4 / 10"
+    },
+    "hearts": {
+      "filled": 2,
+      "empty": 1
+    },
+    "question": "Which number is 400 + 30 + 6?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "436",
+        "correct": true
+      },
+      {
+        "id": "b",
+        "label": "463",
+        "correct": false
+      },
+      {
+        "id": "c",
+        "label": "406",
+        "correct": false
+      },
+      {
+        "id": "d",
+        "label": "346",
+        "correct": false
+      }
+    ],
+    "hint": "Think about the hundreds, tens and ones.",
+    "explanation": "400 plus 30 plus 6 equals 436.",
+    "support_controls": [
+      "Hint",
+      "Help",
+      "Read"
+    ]
+  },
+  "reward": {
+    "screen_asset": "assets/screens/03_reward_completion_screen.png",
+    "title": "Bridge Repaired!",
+    "message": "Great job!",
+    "xp_awarded": 60,
+    "stars_awarded": 3,
+    "primary_cta": "Continue Adventure",
+    "secondary_cta": "Back to Map"
+  },
+  "state_machine": [
+    "boot",
+    "adventure_map",
+    "node_26_selected",
+    "lesson_question",
+    "answer_selected",
+    "feedback",
+    "reward_completion",
+    "save_progress",
+    "return_to_map"
+  ],
+  "scoring_rules": {
+    "first_try": {
+      "score": 10,
+      "stars": 3
+    },
+    "after_hint": {
+      "score": 7,
+      "stars": 2
+    },
+    "after_one_incorrect": {
+      "score": 5,
+      "stars": 2
+    },
+    "after_multiple_incorrect": {
+      "score": 3,
+      "stars": 1
+    },
+    "completion_xp": 60
+  },
+  "animation": {
+    "map_node_active": "pulse glow on node 26",
+    "node_select": "scale node and brighten bridge path",
+    "correct_answer": "green glow, star particles, progress bar advance",
+    "incorrect_answer": "short horizontal shake with supportive retry",
+    "reward_enter": "banner drop, three-star pop, XP count-up",
+    "reduced_motion": "replace large movement with opacity and instant state changes"
+  },
+  "acceptance_criteria": [
+    "Map screen uses the approved polished asset direction.",
+    "Learner can select node 26 and answer the Place Value question.",
+    "Correct answer 436 triggers reward completion.",
+    "Reward grants +60 XP and three stars.",
+    "Progress updates so node 27 can become available.",
+    "Hint, Help, and Read controls are present and accessible."
+  ]
+}

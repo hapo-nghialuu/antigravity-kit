@@ -1,0 +1,212 @@
+{
+  "feature_name": "place-value-bridge-mvp",
+  "created_at": "2026-06-18T10:27:35+0700",
+  "updated_at": "2026-06-18T10:49:30+0700",
+  "language": "en",
+  "status": "in_progress",
+  "phase": "review",
+  "current_phase": "review",
+  "priority": "P1",
+  "effort": "M",
+  "tags": ["mvp", "vertical-slice", "game", "vanilla-js", "gsap", "gpt-image-2", "education"],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "scope_lock": {
+    "source": "Polished version of the first Vertical MVP slice (place_value_bridge): assets, animation, business logic and functionalities fully completed. Generate assets with gpt-image-2, animate with GSAP, stay aligned with the approved MathQuest: Star Trail art direction (json/ guidance + assets/references/).",
+    "in_scope": [
+      "Project scaffolding: Vanilla JS + Vite + GSAP",
+      "Asset generation pipeline via gpt-image-2 for layered sprites and backgrounds (map, lesson, reward)",
+      "9-state game state machine: boot -> adventure_map -> node_26_selected -> lesson_question -> answer_selected -> feedback -> reward_completion -> save_progress -> return_to_map",
+      "Adventure Map scene: 7 nodes (21-25 completed, 26 active, 27 locked), top counters (Level 12 / 152 stars / 7 streak), 3 bottom nav destinations, active-node pulse glow, node-select animation",
+      "Lesson scene: Place Value question (400+30+6), 4 answer tiles, progress 4/10, hearts 2 filled 1 empty, Hint/Help/Read support controls, correct/incorrect feedback animations",
+      "Reward scene: Bridge Repaired banner drop, three-star pop, +60 XP count-up, Continue Adventure + Back to Map CTAs",
+      "Scoring engine: first_try/after_hint/after_one_incorrect/after_multiple_incorrect -> stars + score, completion_xp=60",
+      "Progress persistence (localStorage) so node 27 unlocks after node 26 reward",
+      "GSAP animation timelines for every animation cue in the config, with reduced-motion fallback",
+      "Accessibility: Hint/Help/Read controls present and operable, keyboard + ARIA on interactive elements",
+      "Final integration scene-router wiring all scenes reachable from a single entrypoint"
+    ],
+    "out_of_scope": [
+      "Lessons or nodes other than node 26 / place_value_400_30_6",
+      "Real backend, user accounts, networking, or cloud save",
+      "Audio playback engine beyond stubbed Read/Help control hooks",
+      "Shop, Practice, Quests destination content (nav present but non-functional placeholders)",
+      "Worlds beyond Star Trail / Number Meadow regions visible in the slice",
+      "Monetization, ads, analytics",
+      "Multi-question banks or adaptive difficulty"
+    ],
+    "expansion_policy": "requires-user-approval"
+  },
+  "dependencies": {
+    "blockedBy": [],
+    "blocks": []
+  },
+  "task_files": [
+    "tasks/task-R0-01-project-scaffolding.md",
+    "tasks/task-R0-02-asset-generation-pipeline.md",
+    "tasks/task-R0-03-state-machine-and-store.md",
+    "tasks/task-R1-01-adventure-map-scene.md",
+    "tasks/task-R2-01-lesson-question-scene.md",
+    "tasks/task-R3-01-scoring-and-feedback-engine.md",
+    "tasks/task-R4-01-reward-completion-scene.md",
+    "tasks/task-R5-01-progress-persistence-and-unlock.md",
+    "tasks/task-R6-01-gsap-animations-and-reduced-motion.md",
+    "tasks/task-R7-01-integration-and-acceptance.md"
+  ],
+  "task_registry": {
+    "tasks/task-R0-01-project-scaffolding.md": {
+      "id": "R0-01",
+      "title": "Project scaffolding (Vite + GSAP + structure)",
+      "status": "pending",
+      "dependencies": [],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R0-02-asset-generation-pipeline.md": {
+      "id": "R0-02",
+      "title": "Asset generation pipeline (gpt-image-2 layered sprites)",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-01-project-scaffolding.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R0-03-state-machine-and-store.md": {
+      "id": "R0-03",
+      "title": "Game state machine and store",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-01-project-scaffolding.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R1-01-adventure-map-scene.md": {
+      "id": "R1-01",
+      "title": "Adventure Map scene",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-02-asset-generation-pipeline.md", "tasks/task-R0-03-state-machine-and-store.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R2-01-lesson-question-scene.md": {
+      "id": "R2-01",
+      "title": "Lesson / Question scene",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-02-asset-generation-pipeline.md", "tasks/task-R0-03-state-machine-and-store.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R3-01-scoring-and-feedback-engine.md": {
+      "id": "R3-01",
+      "title": "Scoring and feedback engine",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-03-state-machine-and-store.md", "tasks/task-R2-01-lesson-question-scene.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R4-01-reward-completion-scene.md": {
+      "id": "R4-01",
+      "title": "Reward / Completion scene",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-02-asset-generation-pipeline.md", "tasks/task-R3-01-scoring-and-feedback-engine.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R5-01-progress-persistence-and-unlock.md": {
+      "id": "R5-01",
+      "title": "Progress persistence and node unlock",
+      "status": "pending",
+      "dependencies": ["tasks/task-R0-03-state-machine-and-store.md", "tasks/task-R4-01-reward-completion-scene.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R6-01-gsap-animations-and-reduced-motion.md": {
+      "id": "R6-01",
+      "title": "GSAP animations and reduced-motion",
+      "status": "pending",
+      "dependencies": ["tasks/task-R1-01-adventure-map-scene.md", "tasks/task-R2-01-lesson-question-scene.md", "tasks/task-R4-01-reward-completion-scene.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    },
+    "tasks/task-R7-01-integration-and-acceptance.md": {
+      "id": "R7-01",
+      "title": "Integration and acceptance verification",
+      "status": "pending",
+      "dependencies": ["tasks/task-R5-01-progress-persistence-and-unlock.md", "tasks/task-R6-01-gsap-animations-and-reduced-motion.md"],
+      "blocker": null,
+      "started_at": null,
+      "completed_at": null,
+      "last_updated_at": "2026-06-18T10:27:35+0700"
+    }
+  },
+  "blocker": null,
+  "progress": {
+    "init": "done",
+    "requirements": "done",
+    "research": "done",
+    "design": "done",
+    "tasks": "done",
+    "code": "pending",
+    "test": "pending",
+    "review": "done"
+  },
+  "timestamps": {
+    "init": "2026-06-18T10:27:35+0700",
+    "requirements_done": "2026-06-18T10:31:00+0700",
+    "research_done": "2026-06-18T10:30:00+0700",
+    "design_done": "2026-06-18T10:34:00+0700",
+    "tasks_done": "2026-06-18T10:40:00+0700",
+    "code_done": null,
+    "test_done": null,
+    "review_done": "2026-06-18T10:49:30+0700",
+    "validation_done": "2026-06-18T10:49:30+0700"
+  },
+  "design_context": {
+    "discovery_mode": "light",
+    "discovery_reason": "Greenfield single-slice browser game with a fully-specified config (state machine, scoring, animation cues, acceptance criteria) and locked art direction. Integration complexity is moderate (GSAP timelines + asset pipeline + persistence) but contracts are pre-defined, so light discovery is sufficient.",
+    "validation_recommended": true
+  },
+  "validation": {
+    "status": "completed",
+    "session_count": 1,
+    "questions_asked": 3,
+    "last_validated_at": "2026-06-18T10:49:30+0700"
+  },
+  "translation": {
+    "enabled": false,
+    "language": null,
+    "language_code": null,
+    "dir": null,
+    "sync": "always",
+    "last_synced_at": null
+  },
+  "ready_for_implementation": true
+}

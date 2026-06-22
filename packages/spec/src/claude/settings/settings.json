@@ -67,6 +67,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/inspect-block.cjs\""
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-scaffold-guard.cjs\""
+          }
+        ]
       }
     ],
     "PostToolUse": [

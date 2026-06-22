@@ -1,0 +1,112 @@
+{
+  "product": "MathQuest: Star Trail",
+  "purpose": "Art direction for the first vertical MVP slice.",
+  "approved_reference_assets": [
+    "assets/screens/mathquest_app_concept_sheet.png",
+    "assets/screens/00_product_concept_sheet.png",
+    "assets/references/01_color_palette_reference.png",
+    "assets/references/02_fox_mascot_reference.png",
+    "assets/references/03_ui_component_reference.png",
+    "assets/references/04_map_world_reference.png"
+  ],
+  "visual_style": {
+    "quality_bar": "polished mobile game concept art",
+    "tone": [
+      "bright",
+      "magical",
+      "kid-friendly",
+      "encouraging",
+      "curriculum-aligned"
+    ],
+    "world": [
+      "floating fantasy islands",
+      "glowing trail path",
+      "rainbow sky",
+      "bridges",
+      "castle towers",
+      "flowers",
+      "clouds",
+      "sparkles"
+    ],
+    "ui_language": [
+      "large rounded cards",
+      "pill counters",
+      "glossy CTA buttons",
+      "green active nodes",
+      "blue reward nodes",
+      "bright answer tiles",
+      "soft drop shadows",
+      "high contrast text"
+    ]
+  },
+  "mascot": {
+    "character": "cute orange fox guide",
+    "role": "coach, companion, celebration character",
+    "costume": "blue wizard/adventure outfit with yellow star accent",
+    "expressions": [
+      "happy",
+      "encouraging",
+      "celebrating",
+      "pointing",
+      "cheering"
+    ],
+    "rules": [
+      "keep the fox friendly and expressive",
+      "avoid realistic animal rendering",
+      "avoid scary fantasy styling",
+      "use the mascot to support learning, not distract from questions"
+    ]
+  },
+  "screen_layout_rules": {
+    "adventure_map": [
+      "top counters stay visible",
+      "active node 26 must be visually dominant",
+      "world labels must read clearly",
+      "bottom navigation has three visible destinations: Quests, Practice, Shop"
+    ],
+    "lesson_question": [
+      "question card is the visual priority",
+      "four answer choices use large tap targets",
+      "correct answer 436 uses the green answer style",
+      "Hint, Help, and Read controls remain anchored at the bottom"
+    ],
+    "reward_completion": [
+      "Bridge Repaired banner appears at top",
+      "three stars are large and glowing",
+      "XP badge is centered and readable",
+      "Continue Adventure is the dominant CTA"
+    ]
+  },
+  "palette_notes": {
+    "primary_blues": "deep navy text, bright sky blue backgrounds, saturated button blues",
+    "success_green": "used for active/progress/continue states",
+    "star_gold": "used for stars, rewards, and achievement accents",
+    "magic_purple": "used for banners, castle labels, and fantasy accents",
+    "fox_orange": "used only for the mascot and warm visual accents"
+  },
+  "typography": {
+    "style": "rounded, bold, highly readable educational-game typography",
+    "rules": [
+      "large numerals for math answers",
+      "short labels",
+      "avoid thin type",
+      "avoid low-contrast text",
+      "do not let text touch card edges"
+    ]
+  },
+  "avoid": [
+    "screenshot crops from the original video",
+    "rough vector placeholder look",
+    "flat wireframe UI",
+    "dark horror fantasy mood",
+    "casino reward language",
+    "ad-heavy monetization signals",
+    "crowded lesson cards that reduce readability"
+  ],
+  "future_generation_prompts": {
+    "screen": "Create a polished kid-friendly mobile game screen for MathQuest: Star Trail, bright fantasy floating-island math adventure, cute orange fox guide in blue wizard outfit, glossy rounded UI, readable educational text, star rewards, no watermark.",
+    "mascot": "Create a cute orange fox mascot for a children's math adventure app, blue wizard/adventure costume with yellow star, expressive and encouraging, polished mobile game art, no text, no watermark.",
+    "map": "Create a colorful floating-island adventure map for a math learning game, glowing trail nodes, rainbow sky, castle, bridge, flowers, clouds, polished mobile game UI, no watermark.",
+    "reward": "Create a celebratory reward screen for a children's math game, Bridge Repaired feeling, three glowing stars, +60 XP badge, happy fox mascot, magical night sky, polished mobile UI, no watermark."
+  }
+}

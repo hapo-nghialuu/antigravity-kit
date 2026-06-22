@@ -133,6 +133,28 @@ function validateTaskSections(taskPath, content, errors) {
 }
 
 /**
+ * Task files are created from the scaffold template (the scaffold-guard hook
+ * forces creation through it), so every task starts as a stub full of `{{...}}`
+ * placeholders. The hook guarantees the stub is CREATED via scaffold, but
+ * nothing guaranteed the model FILLED it. An unfilled `{{...}}` is an
+ * incomplete task — SKILL.md: "Leave NO {{...}} placeholder ... fails DoCT" —
+ * so it is a hard error here. A `.../` path fragment is a not-yet-resolved path
+ * placeholder; it is only a warning, because it usually survives in prose Steps
+ * while the Related Files table (which spec-ground.cjs does verify) is already
+ * concrete. Matching `\.\.\.\/` (three dots + slash) avoids flagging a relative
+ * `../` path or a prose ellipsis.
+ */
+function validateTaskPlaceholders(taskPath, content, errors, warnings) {
+  const stub = content.match(/\{\{[^}\n]+\}\}/);
+  if (stub) {
+    errors.push(`${taskPath}: unfilled scaffold placeholder ${stub[0]} — task stub was not completed`);
+  }
+  if (/\.\.\.\//.test(content)) {
+    warnings.push(`${taskPath}: contains a '.../' path placeholder — replace with a concrete path`);
+  }
+}
+
+/**
  * Each phase completion must carry its own timestamp. Reusing `timestamps.init`
  * for a later phase is forbidden (SKILL.md spec.json Update Rules). This used to
  * be a prompt-only rule the model had to remember; here it is a hard backstop.
@@ -344,6 +366,7 @@ function validateSpec(specDir) {
     const fullPath = path.join(specDir, taskFile);
     const content = fs.readFileSync(fullPath, 'utf8');
     validateTaskSections(taskFile, content, errors);
+    validateTaskPlaceholders(taskFile, content, errors, warnings);
 
     const idRe = /\b((?:REQ-\d+)|(?:R\d+))\b/gi;
     let match;

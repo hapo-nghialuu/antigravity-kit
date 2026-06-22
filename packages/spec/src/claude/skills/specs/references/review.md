@@ -121,8 +121,13 @@ Rules:
 3. Sort by severity: Critical → High → Medium
 4. Cap at 15 findings maximum
 
+#### Step 5.5: Evidence Filter (MANDATORY — auto-reject before merit)
+Before adjudicating, drop any finding whose `Location`/`Evidence` does not point at a concrete spot in the spec: a task/section name (`task-R2-01... §Steps`) or a verbatim quote of the offending text. A finding that only asserts a problem in the abstract ("this might race", "auth could be bypassed") **without citing where in the spec** is auto-`Reject (no evidence)` and is NOT counted toward the cap or shown to the user.
+
+Rationale: this is the spec-level analogue of ck-plan's `file:line` evidence gate. It stops reviewers from inventing plausible-sounding flaws that aren't actually in the artifact. A real flaw can always be located; an imagined one cannot.
+
 #### Step 6: Adjudicate
-For each finding, evaluate and propose: **Accept** or **Reject** with rationale.
+For each finding (that survived the Evidence Filter), evaluate and propose: **Accept** or **Reject** with rationale.
 
 #### Step 7: User Review
 Present via `AskUserQuestion`:
