@@ -31,7 +31,11 @@ try {
   function writeEnv(file, key, value) {
     if (!file) return;
     try {
-      const safe = String(value ?? '').replace(/"/g, '\\"');
+      // Escape every char that stays special inside a double-quoted shell
+      // string: backslash, dollar, backtick, and the closing quote. Escaping
+      // only `"` left `$(...)`/backticks live, so a value sourced from repo
+      // content (branch, package name) could execute when the env file is sourced.
+      const safe = String(value ?? '').replace(/([\\$`"])/g, '\\$1');
       fs.appendFileSync(file, `export ${key}="${safe}"\n`);
     } catch { /* fail-open */ }
   }

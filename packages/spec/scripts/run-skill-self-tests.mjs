@@ -1437,7 +1437,20 @@ async function main() {
     "src/claude/skills/pdf/scripts/check_bounding_boxes_test.py",
   );
 
+  const hookTestsDir = join(packageRoot, "src/claude/hooks/__tests__");
+  const hookTests = await listFiles(
+    hookTestsDir,
+    (name) => name.endsWith(".test.js"),
+  );
+
   const testSuites = [
+    {
+      label: "hook behavioral tests",
+      command: process.execPath,
+      args: ["--test", ...hookTests],
+      expectedFiles: hookTests.length,
+      parseCount: parseNodeTestCount,
+    },
     {
       label: "chrome-devtools script tests",
       command: process.execPath,
