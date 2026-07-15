@@ -366,11 +366,11 @@ const MESSAGES = {
   }
 };
 
-/** Normalize a language code to a supported one; unknown → 'ja'. */
+/** Normalize a language code to a supported one; unknown → 'en'. */
 function resolveLang(code) {
   if (!code) return 'en';
   const lc = String(code).toLowerCase().slice(0, 2);
-  return SUPPORTED.includes(lc) ? lc : 'ja';
+  return SUPPORTED.includes(lc) ? lc : 'en';
 }
 
 /** Build a translator. Falls back to English per-key, then the key itself. */
