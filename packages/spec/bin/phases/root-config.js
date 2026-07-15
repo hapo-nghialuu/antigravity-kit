@@ -1,12 +1,28 @@
 /**
  * Phase: root project configuration (.gitignore).
  *
- * Ensures the root .gitignore carries CafeKit-managed patterns, including the
- * new install backup dir and lock file so they never get committed. Honors dry-run.
+ * Ensures the root .gitignore carries CafeKit-managed patterns:
+ *  - workflow dirs (plans, shared research)
+ *  - install safety artifacts (backup, lock)
+ *  - runtime folders (.claude/, .opencode/) — reinstall via
+ *    `npx @haposoft/cafekit`; do not commit the local payload
+ *
+ * Layered with the in-folder `.claude/.gitignore` /
+ * `.opencode/.gitignore` templates (secrets, skill deps, session
+ * state) so force-adds and partial un-ignores stay safe.
+ *
+ * Honors dry-run.
  */
 
 const fs = require('fs');
 const path = require('path');
+
+/** True if `lines` already carries `pattern` with or without a trailing slash. */
+function hasPattern(lines, pattern) {
+  const bare = pattern.replace(/\/$/, '');
+  const withSlash = bare + '/';
+  return lines.includes(pattern) || lines.includes(bare) || lines.includes(withSlash);
+}
 
 function ensureGitignore(ctx) {
   const gitignorePath = path.join(process.cwd(), '.gitignore');
@@ -16,7 +32,10 @@ function ensureGitignore(ctx) {
     'plans/',
     '!plans/templates/',
     '.cafekit-backup/',
-    '.cafekit.lock'
+    '.cafekit.lock',
+    // Local runtime payload — reinstall with npx; keep out of git
+    '.claude/',
+    '.opencode/'
   ];
   const prefix = ctx.dryRun ? '[dry-run] ' : '';
 
@@ -30,7 +49,7 @@ function ensureGitignore(ctx) {
 
   const content = fs.readFileSync(gitignorePath, 'utf8');
   const lines = content.split('\n').map((l) => l.trim());
-  const missing = patterns.filter((p) => !lines.includes(p));
+  const missing = patterns.filter((p) => !hasPattern(lines, p));
 
   if (missing.length > 0) {
     let newContent = content;
@@ -46,4 +65,4 @@ function ensureGitignore(ctx) {
   }
 }
 
-module.exports = { ensureGitignore };
+module.exports = { ensureGitignore, hasPattern };

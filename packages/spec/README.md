@@ -2,7 +2,7 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.13.4-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 
@@ -45,6 +45,26 @@ npx @haposoft/cafekit --upgrade
 Requirements:
 - Node.js 18+
 - Claude Code project with `.claude/`, OpenCode project with `.opencode/` or `opencode.json`, or choose a runtime when prompted
+
+## Git ignore policy
+
+On install, CafeKit updates the **project-root** `.gitignore` with:
+
+```text
+# CafeKit / Ecosystem
+specs/_shared/
+plans/
+!plans/templates/
+.cafekit-backup/
+.cafekit.lock
+.claude/
+.opencode/
+```
+
+Runtime folders are local — reinstall with `npx @haposoft/cafekit` rather than
+committing them. Inside the runtime, CafeKit also installs `.claude/.gitignore`
+(or `.opencode/.gitignore`) so secrets, skill dependencies, session state, and
+hook logs stay out of git even if someone force-adds the folder.
 
 ## What Gets Installed
 
