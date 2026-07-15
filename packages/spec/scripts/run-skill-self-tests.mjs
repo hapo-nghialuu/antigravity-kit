@@ -751,7 +751,8 @@ async function runStaticSemanticTests() {
         content.includes("function removeObsoleteClaudeRuntimeFiles") &&
         content.includes("function pruneObsoleteSettingsHooks") &&
         content.includes("settingsHookCommandSubstrings") &&
-        content.includes("fs.rmSync(targetPath, { force: true })") &&
+        content.includes("fs.rmSync(targetPath, { force: true, recursive: isDir })") &&
+        content.includes("prunePrefix") &&
         content.includes("removeObsoleteClaudeRuntimeFiles(ctx, platformKey)"),
     },
     {
@@ -1094,7 +1095,6 @@ async function runOpenCodeInstallerFixtureTests() {
       "git.md",
       "devops.md",
       "web-testing.md",
-      "impact-analysis.md",
     ];
     for (const cmd of expectedDomainCommands) {
       if (!(await fileExists(join(root, ".opencode", "commands", cmd)))) {

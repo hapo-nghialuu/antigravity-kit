@@ -68,7 +68,6 @@ Leverage these specific tools or sub-agents to execute the workflow effectively:
 - `AskUserQuestion`: Use this to enforce the "One Question at a Time" rule and to present multiple choices.
 - `hapo:inspect`: Mandatory first pass for repo-aware brainstorming.
 - `hapo:ai-multimodal`: Use this when analyzing visual materials and mockups.
-- `hapo:generate-graph`: Use when a diagram would make architecture, flows, or trade-offs easier to validate.
 - `repomix --remote`: Use this bash command to summarize external Github repositories if a URL is provided.
 - `psql`: Query database schemas to understand existing data structures.
 - `brainstormer`: Call only for medium/high-complexity architecture trade-offs.
@@ -155,7 +154,7 @@ Always name the simplest viable option and explain the trade-off that makes it p
 
 If the topic involves UI layouts, interactive elements, visual styling, architecture diagrams, or spatial flows:
 - Use `hapo:ai-multimodal` for supplied images, videos, PDFs, or mockups.
-- Use `hapo:generate-graph` when a diagram would make trade-offs clearer.
+- Use a Mermaid diagram in the design doc when it would make trade-offs clearer.
 - Do not force text-only guesswork for visual choices.
 - Visual aids support the brainstorm; they do not bypass user approval.
 

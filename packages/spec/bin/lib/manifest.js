@@ -105,6 +105,21 @@ function createTracker(platformFolder, version) {
       this._pruned.add(key);
     },
 
+    /**
+     * Prune every tracked key under a directory prefix (e.g. "skills/foo/").
+     * Marks prior-manifest keys with the same prefix for deletion on write().
+     */
+    prunePrefix(relPrefix) {
+      const prefix = relPrefix.replace(/\\/g, '/');
+      for (const key of Object.keys(files)) {
+        if (key.startsWith(prefix)) delete files[key];
+      }
+      const prior = read(platformFolder);
+      for (const key of Object.keys(prior.files || {})) {
+        if (key.startsWith(prefix)) this._pruned.add(key);
+      }
+    },
+
     /** Recorded hash for a relPath written earlier this run, or null. */
     recorded(rel) {
       const key = rel.replace(/\\/g, '/');

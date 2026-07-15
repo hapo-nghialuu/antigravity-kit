@@ -94,13 +94,6 @@ const OPENCODE_COMMAND_TEMPLATES = [
     subtask: true,
     description: 'Inspect a codebase, artifact, or external context before planning.'
   },
-  {
-    fileName: 'generate-graph.md',
-    skillName: 'generate-graph',
-    agent: 'god-developer',
-    subtask: true,
-    description: 'Generate technical diagrams from project context.'
-  },
   // Domain skills — wrappers so users can invoke them directly via slash
   // commands. Each delegates to the matching skill under .opencode/skills/.
   {
@@ -165,13 +158,6 @@ const OPENCODE_COMMAND_TEMPLATES = [
     agent: 'git-ops',
     subtask: true,
     description: 'Run git workflows: branch, commit, tag, push, or release prep.'
-  },
-  {
-    fileName: 'impact-analysis.md',
-    skillName: 'impact-analysis',
-    agent: 'inspector',
-    subtask: true,
-    description: 'Assess affected files, blast radius, and side effects of a change.'
   },
   {
     fileName: 'mobile-development.md',

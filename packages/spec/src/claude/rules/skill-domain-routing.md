@@ -21,8 +21,7 @@ Use `/hapo:react-best-practices` for performance/re-render patterns. Use `/hapo:
 User wants to...
 ├── API, service, auth, database-backed feature          -> /hapo:backend-development
 ├── deployment, Docker, Kubernetes, Cloudflare, CI/CD     -> /hapo:devops
-├── mobile apps, iOS, Android, React Native, Flutter     -> /hapo:mobile-development
-└── impact of changing existing behavior                 -> /hapo:impact-analysis
+└── mobile apps, iOS, Android, React Native, Flutter     -> /hapo:mobile-development
 ```
 
 ## Codebase Understanding
@@ -32,7 +31,7 @@ User wants to...
 ├── answer questions from source code/docs/specs/config    -> /hapo:question
 ├── find files, locate code, scan project structure       -> /hapo:inspect
 ├── diagnose an error or failing check                    -> /hapo:debug
-├── understand possible side effects                      -> /hapo:impact-analysis
+├── understand possible side effects                      -> /hapo:inspect
 └── compare external approaches or best practices         -> /hapo:research
 ```
 

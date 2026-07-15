@@ -55,13 +55,13 @@ Do not turn reconstructed docs directly into implementation. Human review must a
 ## Research And Analysis Workflow
 
 ```text
-/hapo:inspect -> /hapo:impact-analysis -> /hapo:research
+/hapo:inspect -> /hapo:research
 ```
 
 | User intent | Suggested start |
 |---|---|
 | file discovery, codebase structure, source scouting | `/hapo:inspect` |
-| affected files, blast radius, dependency impact, side effects | `/hapo:impact-analysis` |
+| affected files, blast radius, dependency impact, side effects | `/hapo:inspect` |
 | external best practices, tool comparison, technical investigation | `/hapo:research` |
 
 Use `/hapo:research` for external knowledge. Use `/hapo:inspect` for local source truth.
@@ -70,7 +70,6 @@ Use `/hapo:research` for external knowledge. Use `/hapo:inspect` for local sourc
 
 | User intent | Suggested skill |
 |---|---|
-| diagrams, architecture maps, Mermaid/SVG/PNG graph output | `/hapo:generate-graph` |
 | PowerPoint or slide deck creation/editing | `/hapo:pptx` |
 | Word documents | `/hapo:docx` |
 | PDF processing | `/hapo:pdf` |

@@ -78,11 +78,14 @@ function removeObsoleteClaudeRuntimeFiles(ctx, platformKey) {
     const targetPath = path.join(targetBase, relPath);
     if (!fs.existsSync(targetPath)) return;
 
+    const isDir = fs.statSync(targetPath).isDirectory();
     if (!ctx.dryRun) {
-      fs.rmSync(targetPath, { force: true });
+      fs.rmSync(targetPath, { force: true, recursive: isDir });
       // Remove the entry from the manifest so it doesn't linger as a zombie.
       if (ctx.trackers && ctx.trackers.claude) {
         ctx.trackers.claude.prune(relPath);
+        // Directories: prune every tracked file underneath as well.
+        if (isDir) ctx.trackers.claude.prunePrefix(`${relPath}/`);
       }
     }
     ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed obsolete runtime: ${relPath}`);
