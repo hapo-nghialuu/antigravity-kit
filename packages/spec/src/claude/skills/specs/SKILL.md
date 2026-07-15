@@ -161,7 +161,7 @@ Load `references/translation-mirror.md`. This is the only language feature in th
 ### When called WITH `--validate` argument
 
 System IMMEDIATELY jumps to **Step 8: Validation Review**.
-The system MUST NOT execute Steps 1-8. Instead, load `references/review.md` and follow it **step-by-step**.
+The system MUST NOT execute Steps 1-7. Instead, load `references/review.md` and follow it **step-by-step**.
 
 #### `--validate` Guardrails (NON-NEGOTIABLE)
 

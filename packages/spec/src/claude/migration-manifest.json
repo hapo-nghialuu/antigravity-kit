@@ -19,10 +19,8 @@
       "docx",
       "frontend-design",
       "frontend-development",
-      "generate-graph",
       "git",
       "hotfix",
-      "impact-analysis",
       "inspect",
       "mobile-development",
       "pdf",
@@ -60,7 +58,6 @@
       "validate-docs.cjs",
       "validate-docs-reconstruct.cjs",
       "generate-skill-catalog.cjs",
-      "browser-tool.cjs",
       "validate-spec-output.cjs"
     ]
   },
@@ -73,7 +70,10 @@
   "obsolete": {
     "runtimeFiles": [
       "hooks/skill-router.cjs",
-      "hooks/lib/skill-router-routes.cjs"
+      "hooks/lib/skill-router-routes.cjs",
+      "scripts/browser-tool.cjs",
+      "skills/generate-graph",
+      "skills/impact-analysis"
     ],
     "settingsHookCommandSubstrings": [
       "hooks/skill-router.cjs"

@@ -25,7 +25,7 @@ Fast, token-efficient codebase discovery using parallel agents to find files nee
 - Starting debugging session requiring file relationships understanding
 - User asks about project structure or where functionality lives
 - Before changes that might affect multiple codebase parts
-- Before review/debug/impact-analysis when affected files are unclear
+- Before review/debug/impact analysis when affected files are unclear
 
 ## Preflight Scope Gate (MANDATORY - All Modes)
 
@@ -122,12 +122,12 @@ Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {
-    "model": "gemini-3-flash-preview"
+    "model": "gemma-4-31b-it"
   }
 }
 ```
 
-Default model: `gemini-3-flash-preview`
+Default model: `gemma-4-31b-it`
 
 **Note:** This file is automatically installed when you run `npx @haposoft/cafekit`.
 

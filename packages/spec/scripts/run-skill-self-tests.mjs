@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -751,7 +751,8 @@ async function runStaticSemanticTests() {
         content.includes("function removeObsoleteClaudeRuntimeFiles") &&
         content.includes("function pruneObsoleteSettingsHooks") &&
         content.includes("settingsHookCommandSubstrings") &&
-        content.includes("fs.rmSync(targetPath, { force: true })") &&
+        content.includes("fs.rmSync(targetPath, { force: true, recursive: isDir })") &&
+        content.includes("prunePrefix") &&
         content.includes("removeObsoleteClaudeRuntimeFiles(ctx, platformKey)"),
     },
     {
@@ -1094,7 +1095,6 @@ async function runOpenCodeInstallerFixtureTests() {
       "git.md",
       "devops.md",
       "web-testing.md",
-      "impact-analysis.md",
     ];
     for (const cmd of expectedDomainCommands) {
       if (!(await fileExists(join(root, ".opencode", "commands", cmd)))) {
@@ -1296,7 +1296,31 @@ async function runSpecValidatorFixtureTests() {
 
     console.log("✔ spec validator accepts valid fixture");
     console.log("✔ spec validator rejects triage-like invalid fixture");
-    return 2;
+
+    // Multi-contract drift: EVERY tagged contract copy must be verified,
+    // not just the first fenced block (regression guard for the old
+    // first-block-only extractTaskContracts).
+    const driftSpec = join(root, "multi-contract-drift-spec");
+    await cp(validSpec, driftSpec, { recursive: true });
+    await writeText(
+      join(driftSpec, "design.md"),
+      '# Design\n\n<!-- contract:PermissionPayload -->\n```json\n{ "user_id": 1, "can_create": true }\n```\n\n<!-- contract:PermissionError -->\n```json\n{ "error": "not_found" }\n```\n',
+    );
+    const driftTaskPath = join(driftSpec, "tasks/task-R1-01-user-permission.md");
+    const driftTask = (await readFile(driftTaskPath, "utf8")).replace(
+      "## Requirements",
+      'Contracts: PermissionPayload, PermissionError\n\n<!-- contract:PermissionPayload -->\n```json\n{ "user_id": 1, "can_create": true }\n```\n\n<!-- contract:PermissionError -->\n```json\n{ "error": "notFound" }\n```\n\n## Requirements',
+    );
+    await writeText(driftTaskPath, driftTask);
+    const drift = runSpecValidator(driftSpec);
+    const driftOutput = `${drift.stdout}\n${drift.stderr}`;
+    if (drift.status === 0 || !driftOutput.includes('contract "PermissionError" body diverges')) {
+      console.error(driftOutput);
+      console.error("[FAIL] spec validator missed drift in a non-first contract block");
+      process.exit(1);
+    }
+    console.log("✔ spec validator catches drift in every tagged contract block");
+    return 3;
   } finally {
     await rm(root, { recursive: true, force: true });
   }

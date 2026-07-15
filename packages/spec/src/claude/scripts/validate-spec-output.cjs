@@ -203,11 +203,13 @@ function extractContractDefs(designText) {
 }
 
 /**
- * From a task body, return the contracts it claims plus the first fenced block
- * it carries (the task's local copy of the contract). Shape:
- *   { names: string[], block: string|null }
- * `names` come from a `Contracts: A, B` line; `block` is the first fenced code
- * block in the task (normalized) used to compare against the canonical defs.
+ * From a task body, return the contracts it claims plus its local contract
+ * copies. Shape: { names: string[], blocks: Map<name, string>, firstBlock: string|null }
+ * `names` come from a `Contracts: A, B` line. `blocks` maps every
+ * `<!-- contract:NAME -->` marker in the task to its fenced block, so a task
+ * carrying multiple contracts has EACH copy verified (not just the first).
+ * `firstBlock` keeps the legacy fallback for single-contract tasks that copy
+ * the block without repeating the marker.
  */
 function extractTaskContracts(taskText) {
   const names = [];
@@ -218,9 +220,10 @@ function extractTaskContracts(taskText) {
       if (name) names.push(name);
     }
   }
+  const blocks = extractContractDefs(taskText); // same marker+fence grammar as design.md
   const blockMatch = taskText.match(/```[^\n]*\n([\s\S]*?)\n```/);
-  const block = blockMatch ? normalizeBlock(blockMatch[1]) : null;
-  return { names, block };
+  const firstBlock = blockMatch ? normalizeBlock(blockMatch[1]) : null;
+  return { names, blocks, firstBlock };
 }
 
 function validateSpec(specDir) {
@@ -393,14 +396,31 @@ function validateSpec(specDir) {
     // (after whitespace normalization). This catches BE/FE drift like
     // user_name vs userName before integration.
     if (contractDefs.size > 0) {
-      const { names, block } = extractTaskContracts(content);
+      const { names, blocks, firstBlock } = extractTaskContracts(content);
       for (const name of names) {
         if (!contractDefs.has(name)) {
           errors.push(`${taskFile}: declares unknown contract "${name}" (not defined in design.md)`);
           continue;
         }
-        if (block !== null && block !== contractDefs.get(name)) {
+        // Prefer the task's marker-tagged copy for this contract; fall back to
+        // the first fenced block only for single-contract tasks (legacy format).
+        const localCopy = blocks.has(name)
+          ? blocks.get(name)
+          : (names.length === 1 ? firstBlock : null);
+        if (localCopy === null) {
+          if (names.length > 1) {
+            errors.push(`${taskFile}: contract "${name}" has no <!-- contract:${name} --> tagged block (multi-contract tasks must tag each copy)`);
+          }
+          continue;
+        }
+        if (localCopy !== contractDefs.get(name)) {
           errors.push(`${taskFile}: contract "${name}" body diverges from the canonical definition in design.md`);
+        }
+      }
+      // Marker-tagged blocks not declared on the Contracts: line are drift risks.
+      for (const taggedName of blocks.keys()) {
+        if (!names.includes(taggedName)) {
+          warnings.push(`${taskFile}: carries <!-- contract:${taggedName} --> block but does not declare it on the Contracts: line`);
         }
       }
     }

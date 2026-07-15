@@ -26,8 +26,8 @@ Comprehensive guide for video understanding, temporal analysis, and YouTube proc
 - **gemini-3-pro-preview**: Latest, agentic workflows, 1M context, dynamic thinking
 
 ### Gemini 2.5 Series (Recommended)
-- **gemini-2.5-pro**: Best quality, 1M-2M context
-- **gemini-2.5-flash**: Balanced, 1M-2M context (recommended)
+- **gemma-4-31b-it**: Best quality, 1M-2M context
+- **gemma-4-31b-it**: Balanced, 1M-2M context (recommended)
 
 ### Context Windows
 - **2M token models**: ~2 hours (default) or ~6 hours (low-res)
@@ -57,7 +57,7 @@ if myfile.state.name == 'FAILED':
 
 # Analyze
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Summarize this video in 3 key points', myfile]
 )
 print(response.text)
@@ -69,7 +69,7 @@ print(response.text)
 from google.genai import types
 
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Summarize the main topics discussed',
         types.Part.from_uri(
@@ -87,7 +87,7 @@ with open('short-clip.mp4', 'rb') as f:
     video_bytes = f.read()
 
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'What happens in this video?',
         types.Part.from_bytes(data=video_bytes, mime_type='video/mp4')
@@ -102,7 +102,7 @@ response = client.models.generate_content(
 ```python
 # Analyze specific time range
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Summarize this segment',
         types.Part.from_video_metadata(
@@ -119,7 +119,7 @@ response = client.models.generate_content(
 ```python
 # Lower FPS for static content (saves tokens)
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Analyze this presentation',
         types.Part.from_video_metadata(
@@ -131,7 +131,7 @@ response = client.models.generate_content(
 
 # Higher FPS for fast-moving content
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Analyze rapid movements in this sports video',
         types.Part.from_video_metadata(
@@ -155,7 +155,7 @@ for video in [video1, video2]:
         video = client.files.get(name=video.name)
 
 response = client.models.generate_content(
-    model='gemini-2.5-pro',
+    model='gemma-4-31b-it',
     contents=[
         'Compare these two product demos. Which explains features better?',
         video1,
@@ -170,7 +170,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'What happens at 01:15 and how does it relate to 02:30?',
         myfile
@@ -182,7 +182,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Create a timeline with timestamps:
         - Key events
@@ -199,7 +199,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Identify all scene changes with timestamps and describe each scene',
         myfile
@@ -213,7 +213,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Transcribe the audio from this video',
         myfile
@@ -225,7 +225,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Transcribe with visual context:
         - Audio transcription
@@ -241,7 +241,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Transcribe with speaker labels and timestamps',
         myfile
@@ -255,7 +255,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Summarize this video:
         1. Main topic and purpose
@@ -271,7 +271,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Create educational materials:
         1. List key concepts taught
@@ -287,7 +287,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'List all actions performed in this tutorial with timestamps',
         myfile
@@ -299,7 +299,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Review video content:
         1. Identify any problematic content
@@ -315,7 +315,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Analyze interview:
         1. Questions asked (timestamps)
@@ -332,7 +332,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Analyze sports video:
         1. Key plays with timestamps
@@ -362,7 +362,7 @@ response = client.models.generate_content(
 youtube_uri = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Create chapter markers with timestamps',
         types.Part.from_uri(uri=youtube_uri, mime_type='video/mp4')
@@ -444,7 +444,7 @@ class VideoAnalysis(BaseModel):
     duration: str
 
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Analyze this video', myfile],
     config=genai.types.GenerateContentConfig(
         response_mime_type='application/json',

@@ -15,12 +15,12 @@ Read from `.claude/runtime.json`:
 ```json
 {
   "gemini": {
-    "model": "gemini-3-flash-preview"
+    "model": "gemma-4-31b-it"
   }
 }
 ```
 
-Default model: `gemini-3-flash-preview`
+Default model: `gemma-4-31b-it`
 
 **Note:** This file is automatically installed when you run `npx @haposoft/cafekit`.
 
@@ -48,7 +48,7 @@ gemini -y -m <model> "[prompt]"
 
 ### Example
 ```bash
-gemini -y -m gemini-3-flash-preview "Search src/ for authentication files. List paths with brief descriptions."
+gemini -y -m gemma-4-31b-it "Search src/ for authentication files. List paths with brief descriptions."
 ```
 
 ## Installation Check
@@ -67,9 +67,9 @@ If not installed, ask user:
 Use the `Bash` tool for each scoped Gemini command. Run them in the same tool turn when the runtime supports parallel tool calls; otherwise run them sequentially. Do not use `Agent` with `subagent_type: "Bash"` — `Bash` is a tool, not a subagent.
 
 ```
-Bash: gemini -y -m gemini-3-flash-preview '[prompt1]'
-Bash: gemini -y -m gemini-3-flash-preview '[prompt2]'
-Bash: gemini -y -m gemini-3-flash-preview '[prompt3]'
+Bash: gemini -y -m gemma-4-31b-it '[prompt1]'
+Bash: gemini -y -m gemma-4-31b-it '[prompt2]'
+Bash: gemini -y -m gemma-4-31b-it '[prompt3]'
 ```
 
 Group by independent scopes so each command can return a focused report.
@@ -109,9 +109,9 @@ User: "Find database migration files" with `ext`
 
 Run 3 scoped Gemini CLI commands:
 ```
-Bash: gemini -y -m gemini-3-flash-preview 'Search db/, migrations/ for migration files'
-Bash: gemini -y -m gemini-3-flash-preview 'Search lib/, src/ for database schema files'
-Bash: gemini -y -m gemini-3-flash-preview 'Search config/ for database configuration'
+Bash: gemini -y -m gemma-4-31b-it 'Search db/, migrations/ for migration files'
+Bash: gemini -y -m gemma-4-31b-it 'Search lib/, src/ for database schema files'
+Bash: gemini -y -m gemma-4-31b-it 'Search config/ for database configuration'
 ```
 
 ## Reading File Content

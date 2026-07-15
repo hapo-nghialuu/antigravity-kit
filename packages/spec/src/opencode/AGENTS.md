@@ -25,7 +25,6 @@ Use these OpenCode commands:
 - `/hotfix <issue>`: apply a narrow, scout-first production fix.
 - `/docs [--init|--update|--summarize|--reconstruct]`: maintain or reconstruct project docs.
 - `/inspect <target>`: inspect source, artifacts, or external context.
-- `/generate-graph <request>`: generate technical diagrams.
 
 The underlying CafeKit skills are still named `hapo:*` in their documentation. In OpenCode, use the commands above; each command reads the matching skill from `.opencode/skills/<skill>/SKILL.md`.
 
