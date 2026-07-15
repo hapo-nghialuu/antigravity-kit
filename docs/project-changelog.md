@@ -27,6 +27,23 @@ All notable changes to CafeKit are documented here, following
 - **`session.cjs` env escaping**: `writeEnv` now escapes `\ $ \` "` (was `"` only), so an attacker-influenced value flowing into `CLAUDE_ENV_FILE` (e.g. a git branch named `` evil$HOME-x`pwd` ``) can no longer expand or execute when the env file is sourced. Matches the canonical `escapeShellValue` semantics in `lib/config.cjs`.
 - **`privacy-block.cjs` symlink bypass**: the sensitive-file gate now resolves symlink targets via `fs.realpathSync` and checks both the requested name and its real target, closing the bypass where a harmless-looking symlink (e.g. `notes.txt` → `.env`) slipped past the basename check. Exemptions (`.env.example`) still win on either name; fail-open when the path cannot be resolved.
 
+## [0.13.4] - 2026-07-15
+
+### Added
+- **`hapo:delegate`**: offload a scoped coding task to Codex or Grok CLI from Claude Code (brief file, sandbox, monitor/resume, independent verify). Wired into skill routing + migration manifest.
+- Installer dual-layer gitignore: root ignores `.claude/` and `.opencode/`; in-folder `.gitignore` covers secrets, skill deps, session state, and logs.
+
+### Docs
+- CafeKit vs Claude Code audit (2026-07); installer architecture + README gitignore policy.
+
+## [0.13.3] - 2026-06-22
+
+### Added
+- Validator placeholder gate for unfilled scaffold stubs (hard-fail on leftover `{{...}}` in task files).
+
+### Changed
+- Specs self-tests / Step 7 wording realigned to process-discipline (not token-cut) framing.
+
 ## [0.13.2] - 2026-06-21
 
 ### Added — Enforce scaffold on task creation
