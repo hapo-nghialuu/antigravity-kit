@@ -22,12 +22,8 @@ Comprehensive guide for video understanding, temporal analysis, and YouTube proc
 
 ## Model Selection
 
-### Gemini 3 Series (Latest)
-- **gemini-3-pro-preview**: Latest, agentic workflows, 1M context, dynamic thinking
-
-### Gemini 2.5 Series (Recommended)
-- **gemma-4-31b-it**: Best quality, 1M-2M context
-- **gemma-4-31b-it**: Balanced, 1M-2M context (recommended)
+### Recommended
+- **gemma-4-31b-it**: 1M-2M context, balanced quality/speed (read model from `.claude/runtime.json`: `gemini.model`)
 
 ### Context Windows
 - **2M token models**: ~2 hours (default) or ~6 hours (low-res)

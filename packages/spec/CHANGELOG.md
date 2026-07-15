@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **`generate-graph` and `impact-analysis` skills** (unused) plus the orphaned `scripts/browser-tool.cjs`. All routing rules, OpenCode command wrappers, manifest entries, and self-test expectations cleaned; "blast radius / side effects" intent now routes to `hapo:inspect`. Existing installs are cleaned automatically on upgrade via new `obsolete.runtimeFiles` entries.
+
+### Fixed
+- **specs SKILL**: `--validate` dispatch said "MUST NOT execute Steps 1-8" while jumping to Step 8 — corrected to 1-7.
+- **ui-ux-designer agent**: `search.py` invocations used the dev-monorepo path; now use the installed `.claude/skills/` path via the skills venv.
+- **Model IDs unified on the `gemma-4-31b-it` family** across ai-multimodal, frontend-design, and inspect (SKILL bodies, references, `.env.example`, script defaults). `runtime.json → gemini.model` is the single source of truth; previously three sources disagreed.
+- **Installer i18n**: unsupported `--lang` codes now fall back to English (previously Japanese).
+- **Installer settings merge**: managed hooks merge per command keyed by matcher entry — a command added to an existing matcher is appended on upgrade (the old dedupe judged the whole entry duplicate by its first command). Malformed user `settings.json` no longer aborts the install; the merge is skipped with a warning.
+- **`validate-docs.cjs`** exits 1 on broken relative links (previously always exit 0).
+- **`validate-spec-output.cjs`** verifies every `<!-- contract:NAME -->` tagged block in a task, not just the first fenced block. Multi-contract tasks must tag each copy (untagged → error); tagged-but-undeclared blocks warn; single-contract legacy format unchanged. Covered by a new self-test fixture (138 tests total).
+
+### Changed
+- Installer obsolete mechanism removes directories recursively and prunes ownership-manifest entries by prefix (`tracker.prunePrefix`), enabling skill-level cleanup on upgrade.
+
 ## [0.13.2] - 2026-06-21
 
 ### Added — Enforce scaffold on task creation

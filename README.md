@@ -20,7 +20,6 @@ CafeKit installs a working runtime bundle for Claude Code:
 - `hapo:debug` and `hapo:hotfix` for evidence-first diagnosis and safe bug fixes
 - `hapo:docs` for project documentation and source-backed as-is reconstruction
 - `hapo:test` and `hapo:code-review` for verification
-- `hapo:generate-graph` for technical diagrams
 - supporting hooks, agents, rules, and statusline runtime
 
 CafeKit uses rule-based skill routing guidance and an installed skill catalog.
