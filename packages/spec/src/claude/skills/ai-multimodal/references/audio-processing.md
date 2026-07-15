@@ -42,7 +42,7 @@ myfile = client.files.upload(file='meeting.mp3')
 
 # Transcribe
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Generate a transcript of the speech.', myfile]
 )
 print(response.text)
@@ -52,7 +52,7 @@ print(response.text)
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Generate transcript with timestamps in MM:SS format.', myfile]
 )
 ```
@@ -61,7 +61,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Transcribe with speaker labels. Format: [Speaker 1], [Speaker 2], etc.', myfile]
 )
 ```
@@ -70,7 +70,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Transcribe only the segment from 02:30 to 05:15.', myfile]
 )
 ```
@@ -81,7 +81,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Summarize key points in 5 bullets with timestamps.', myfile]
 )
 ```
@@ -91,19 +91,19 @@ response = client.models.generate_content(
 ```python
 # Music analysis
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Identify the musical instruments and genre.', myfile]
 )
 
 # Environmental sounds
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Identify all sounds: voices, music, ambient noise.', myfile]
 )
 
 # Birdsong identification
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Identify bird species based on their calls.', myfile]
 )
 ```
@@ -112,7 +112,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['What is discussed from 10:30 to 15:45? Provide key points.', myfile]
 )
 ```
@@ -127,13 +127,13 @@ myfile = client.files.upload(file='large-audio.mp3')
 
 # First query
 response1 = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Transcribe this', myfile]
 )
 
 # Second query (reuses same file)
 response2 = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Summarize this', myfile]
 )
 ```
@@ -147,7 +147,7 @@ with open('small-audio.mp3', 'rb') as f:
     audio_bytes = f.read()
 
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         'Describe this audio',
         types.Part.from_bytes(data=audio_bytes, mime_type='audio/mp3')
@@ -161,14 +161,14 @@ response = client.models.generate_content(
 
 | Model | Quality | Speed | Cost/1M tokens |
 |-------|---------|-------|----------------|
-| `gemini-2.5-flash-native-audio-preview-09-2025` | High | Fast | $10 |
-| `gemini-2.5-pro` TTS mode | Premium | Slower | $20 |
+| `gemma-4-31b-it-native-audio-preview-09-2025` | High | Fast | $10 |
+| `gemma-4-31b-it` TTS mode | Premium | Slower | $20 |
 
 ### Basic TTS
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash-native-audio-preview-09-2025',
+    model='gemma-4-31b-it-native-audio-preview-09-2025',
     contents='Generate audio: Welcome to today\'s episode.'
 )
 
@@ -182,19 +182,19 @@ with open('output.wav', 'wb') as f:
 ```python
 # Professional tone
 response = client.models.generate_content(
-    model='gemini-2.5-flash-native-audio-preview-09-2025',
+    model='gemma-4-31b-it-native-audio-preview-09-2025',
     contents='Generate audio in a professional, clear tone: Welcome to our quarterly earnings call.'
 )
 
 # Casual and friendly
 response = client.models.generate_content(
-    model='gemini-2.5-flash-native-audio-preview-09-2025',
+    model='gemma-4-31b-it-native-audio-preview-09-2025',
     contents='Generate audio in a friendly, conversational tone: Hey there! Let\'s dive into today\'s topic.'
 )
 
 # Narrative style
 response = client.models.generate_content(
-    model='gemini-2.5-flash-native-audio-preview-09-2025',
+    model='gemma-4-31b-it-native-audio-preview-09-2025',
     contents='Generate audio in a narrative, storytelling tone: Once upon a time, in a land far away...'
 )
 ```
@@ -244,8 +244,8 @@ response = client.models.generate_content(
 - 9.5 hours = 1,094,400 tokens
 
 **Model selection**:
-- Use `gemini-2.5-flash` ($1/1M tokens) for most tasks
-- Upgrade to `gemini-2.5-pro` ($3/1M tokens) for complex analysis
+- Use `gemma-4-31b-it` ($1/1M tokens) for most tasks
+- Upgrade to `gemma-4-31b-it` ($3/1M tokens) for complex analysis
 - For high-volume: `gemini-1.5-flash` ($0.70/1M tokens)
 
 **Reduce costs**:
@@ -265,7 +265,7 @@ def transcribe_with_retry(file_path, max_retries=3):
         try:
             myfile = client.files.upload(file=file_path)
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemma-4-31b-it',
                 contents=['Transcribe with timestamps', myfile]
             )
             return response.text
@@ -283,7 +283,7 @@ def transcribe_with_retry(file_path, max_retries=3):
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Transcribe this meeting with:
         1. Speaker labels
@@ -299,7 +299,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Create podcast summary with:
         1. Main topics with timestamps
@@ -315,7 +315,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Analyze interview:
         1. Questions asked with timestamps
@@ -331,7 +331,7 @@ response = client.models.generate_content(
 
 ```python
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=[
         '''Verify audio content:
         1. Check for specific keywords or phrases
@@ -348,7 +348,7 @@ response = client.models.generate_content(
 ```python
 # Gemini auto-detects language
 response = client.models.generate_content(
-    model='gemini-2.5-flash',
+    model='gemma-4-31b-it',
     contents=['Transcribe this audio and translate to English if needed.', myfile]
 )
 ```

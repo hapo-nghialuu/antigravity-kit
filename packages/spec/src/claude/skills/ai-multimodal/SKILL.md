@@ -43,7 +43,7 @@ export GEMINI_API_KEY_2="key2"  # auto-rotates on rate limit
 ## Models
 
 ### Google Gemini
-- **Analysis**: `gemma-4-31b-it` (recommended), `gemini-2.5-pro` (advanced)
+- **Analysis**: `gemma-4-31b-it` (recommended), `gemma-4-31b-it` (advanced)
 
 ## Scripts
 
