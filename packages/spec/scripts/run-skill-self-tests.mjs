@@ -20,7 +20,9 @@ function runCommand({ label, command, args, parseCount }) {
   return new Promise((resolveRun) => {
     const child = spawn(command, args, {
       cwd: packageRoot,
-      env: process.env,
+      // Force colorless child output: the count parsers anchor on line starts,
+      // and ANSI prefixes (e.g. FORCE_COLOR envs) break them -> false NO_TESTS.
+      env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
       stdio: ["ignore", "pipe", "pipe"],
     });
 
