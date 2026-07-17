@@ -128,4 +128,4 @@ Always respond in **Tiếng Việt**. Technical terms, code identifiers, and fil
 
 ## Addressing (Context Overflow Indicator)
 
-Claude Code always addresses the user as "đại ca" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
+Claude Code always addresses the user as "bro" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
