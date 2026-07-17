@@ -6,8 +6,12 @@ All notable changes to CafeKit are documented here, following
 ## [Unreleased]
 
 ### Added
+- **`spec-gate.cjs` (Stop completion gate)**: machine-enforced receipt check when the assistant ends a turn with newly-done tasks (Evidence section + proof, no placeholders, `completed_at` set). First-run seeds cache without blocking; escape hatch `spec.completion_gate: false`. Complements the soft `spec-state` reminder (audit §3.4.1).
 - **OpenCode port Option A — spec-workflow enforcement**: `task-scaffold-guard.ts` (block hand-written task files via `write`/`apply_patch`) and `spec-state.ts` (tollgate inject via `chat.message`); installer self-test expects both plugins.
 - **First hook behavioral test harness** (`src/claude/hooks/__tests__/`): runs each hook as a real subprocess (stdin payload → exit code / output) via `node --test`, wired into `run-skill-self-tests.mjs`. Covers the two hook-hardening fixes with regression tests proven to fail against the unpatched code.
+
+### Changed
+- **`spec-state.cjs` reminder slimmed**: state-change block is compact English only (no red ALL-CAPS / bilingual wall); one-line unchanged path kept. Hard completion enforcement is now the Stop gate.
 
 ### Removed
 - `generate-graph` and `impact-analysis` skills (unused) + orphaned `scripts/browser-tool.cjs`; routing/manifest/OpenCode wrappers/self-tests cleaned; upgrades remove them from existing installs (PR #66).

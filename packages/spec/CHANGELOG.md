@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`spec-gate.cjs` (Stop completion gate)**: blocks turn end when *newly-done* tasks lack a verification receipt in their task markdown (`Status: done`, Evidence section with real proof — no `{{...}}` placeholders — plus non-empty `task_registry[].completed_at`). Loop-safe via `stop_hook_active`; first run (no cache) seeds history without blocking so legacy specs adopt cleanly. Escape hatch: `"spec": { "completion_gate": false }` in `.claude/runtime.json` (missing key keeps the gate ON). Registered first on the existing `Stop` hooks list (before `state.cjs`). Follow-up idea: a dedicated `TaskCompleted` event is not used here — its output contract is unverified on the target Claude Code version.
 - **OpenCode `task-scaffold-guard.ts` plugin**: ports Claude `task-scaffold-guard.cjs` — hard-blocks `write` and `apply_patch` creating `specs/<feature>/tasks/task-*.md`, forcing generation via `spec-scaffold.cjs` then Edit-fill. Also gates `edit` on a **non-existent** task file: OpenCode's `edit` can create files (unlike Claude's Edit — smoke-verified on opencode 1.17.15), so edit-creation is blocked while stub-filling stays allowed. Safety valves: runtime escape hatch (functional but **not advertised in the block message** — a smoke test proved the model reads the advertised override and disables the guard itself), fail-open if the scaffold script is missing, actionable block message. Auto-discovered by the OpenCode installer.
 - **OpenCode `spec-state.ts` plugin**: ports Claude `spec-state.cjs` tollgate via `chat.message` — injects state-sync reminder (fingerprint gate: one-line when unchanged, full URGENT block when phase/done-total changes). Injected parts are schema-complete (`id`/`sessionID`/`messageID`) — a bare `{type,text}` part crashes the whole user turn ("invalid user part before save"). Disable with `"spec": { "tollgate": false }` in `.opencode/runtime.json`. End-to-end verified on opencode 1.17.15 (tollgate text reaches the model).
 
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **frontend-design skill**: frontmatter pointed at a non-existent `LICENSE.txt`; corrected to `license: MIT` (no Anthropic-derived content found in the skill folder).
 
 ### Changed
+- **`spec-state.cjs` tollgate reminder slimmed**: state-change path is now a compact English block (≤7 lines: feature, phase, task counts, next unblocked task, sync/validate rule, Stop-gate note). Removed the red ALL-CAPS / bilingual MANDATORY wall (`URGENT`, `BẮT BUỘC`, `CẤM`). One-line unchanged-fingerprint path is unchanged. Completion enforcement moved to `spec-gate.cjs` on Stop.
 - Installer obsolete mechanism removes directories recursively and prunes ownership-manifest entries by prefix (`tracker.prunePrefix`), enabling skill-level cleanup on upgrade.
 
 ## [0.13.2] - 2026-06-21
