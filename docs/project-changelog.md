@@ -5,6 +5,13 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Fixed — Hook hardening
+- **`session.cjs` env escaping**: `writeEnv` now escapes `\ $ \` "` (was `"` only), so an attacker-influenced value flowing into `CLAUDE_ENV_FILE` (e.g. a git branch named `` evil$HOME-x`pwd` ``) can no longer expand or execute when the env file is sourced. Matches the canonical `escapeShellValue` semantics in `lib/config.cjs`.
+- **`privacy-block.cjs` symlink bypass**: the sensitive-file gate now resolves symlink targets via `fs.realpathSync` and checks both the requested name and its real target, closing the bypass where a harmless-looking symlink (e.g. `notes.txt` → `.env`) slipped past the basename check. Exemptions (`.env.example`) still win on either name; fail-open when the path cannot be resolved.
+
+### Added
+- **First hook behavioral test harness** (`src/claude/hooks/__tests__/`): runs each hook as a real subprocess (stdin payload → exit code / output) via `node --test`, wired into `run-skill-self-tests.mjs`. Covers the two fixes above with regression tests proven to fail against the unpatched code.
+
 ## [0.13.2] - 2026-06-21
 
 ### Added — Enforce scaffold on task creation

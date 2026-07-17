@@ -60,6 +60,20 @@ try {
     return RESTRICTED_PATTERNS.some((rule) => rule.test(base) || rule.test(filePath));
   }
 
+  /**
+   * Resolve a symlink to its real target so a harmless-looking name that points
+   * at a sensitive file cannot slip through the basename check. Returns null
+   * when the path cannot be resolved (missing file, broken link) — fail-open to
+   * the original-path check in that case.
+   */
+  function resolveTarget(filePath) {
+    try {
+      return fs.realpathSync(filePath);
+    } catch {
+      return null;
+    }
+  }
+
   function extractBashPaths(command) {
     const paths = [];
     const regex = /(?:cat|less|more|head|tail|source|\.)\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))/g;
@@ -146,8 +160,14 @@ try {
   if (!paths.length) process.exit(0);
 
   for (const filePath of paths) {
-    if (isSafe(filePath)) continue;
-    if (!isSensitive(filePath)) continue;
+    // Check the requested path and, when it is a symlink, its real target.
+    const target = resolveTarget(filePath);
+    const candidates = target && target !== filePath ? [filePath, target] : [filePath];
+
+    // An exemption on either name wins (e.g. a symlink to .env.example).
+    if (candidates.some(isSafe)) continue;
+    // Sensitive if the requested path OR its symlink target is sensitive.
+    if (!candidates.some(isSensitive)) continue;
 
     if (toolName === 'Bash') {
       console.error(`WARN: Privacy-sensitive file access via bash allowed for approved follow-up: ${path.basename(filePath)}`);
