@@ -7,7 +7,7 @@ when_to_use: "Invoke to read, create, or edit PowerPoint .pptx slides."
 category: document-skills
 keywords: [pptx, powerpoint, slides, office]
 metadata:
-  author: haposoft
+  author: "Anthropic, PBC — adapted by Haposoft"
   version: "1.0.0"
 ---
 # PPTX creation, editing, and analysis

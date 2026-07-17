@@ -7,7 +7,7 @@ when_to_use: "Invoke to read, extract, or generate PDF documents."
 category: document-skills
 keywords: [pdf, extract, document, generate]
 metadata:
-  author: haposoft
+  author: "Anthropic, PBC — adapted by Haposoft"
   version: "1.0.0"
 ---
 # PDF Processing Guide
