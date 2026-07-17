@@ -35,12 +35,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`spec-state.cjs` tollgate reminder slimmed**: state-change path is now a compact English block (≤7 lines: feature, phase, task counts, next unblocked task, sync/validate rule, Stop-gate note). Removed the red ALL-CAPS / bilingual MANDATORY wall (`URGENT`, `BẮT BUỘC`, `CẤM`). One-line unchanged-fingerprint path is unchanged. Completion enforcement moved to `spec-gate.cjs` on Stop.
 - Installer obsolete mechanism removes directories recursively and prunes ownership-manifest entries by prefix (`tracker.prunePrefix`), enabling skill-level cleanup on upgrade.
 
+## [0.13.4] - 2026-07-15
+
+### Added
+- **`hapo:delegate` skill**: dispatch a scoped implementation task from Claude Code to an external agent CLI (**Codex** or **Grok**). Covers file-based task briefs, non-interactive dispatch, minimum permissions, background monitoring/resume, and **independent verification** of the returned work (agent claims are not evidence).
+- Codex / Grok reference guides under `skills/delegate/references/` with verified CLI flags and pitfalls.
+- Workflow routing: assign/offload intents map to `/hapo:delegate` in `skill-workflow-routing.md`.
+- `migration-manifest.json`: `delegate` added to required skills so the installer ships it.
+
+### Changed — Installer gitignore (runtime out of git by default)
+- **Root `.gitignore`**: `ensureGitignore` now also adds `.claude/` and `.opencode/` so the local CafeKit payload is not committed. Reinstall with `npx @haposoft/cafekit` on each machine. Existing equivalent forms (`.claude` without trailing slash) are treated as already present.
+- **In-folder `.claude/.gitignore` / `.opencode/.gitignore`**: expanded template (`src/claude/gitignore`) with layered ignores for secrets, skill venvs/`node_modules`, session state, hook/plugin logs, and update cache — defense in depth for force-adds and partial un-ignores.
+
+### Docs
+- Audit note: `docs/audit-cafekit-vs-claude-code-2026-07.md` (full package inventory vs Claude Code practices as of v0.13.2).
+- Installer architecture + package README document the dual-layer gitignore policy.
+
+## [0.13.3] - 2026-06-22
+
+### Added
+- **Validator placeholder gate (`validate-spec-output.cjs`)**: a task file that still carries an unfilled `{{...}}` scaffold placeholder now hard-fails (previously a prompt-only DoCT rule); a leftover `.../` path fragment warns. Fill-side complement to the scaffold-guard hook — it proves every scaffolded stub was actually completed, closing the "stub created but not filled" gap.
+
+### Changed
+- Self-tests realigned to the Specs-v2 `SKILL.md` wording (`validate guardrail`, `init-is-never-a-stop-point`): the invariants are unchanged, only the asserted phrasing.
+- `skills/specs/SKILL.md` Step 7: dropped the misleading "scaffold cuts output tokens" claim — scaffold enforces process discipline, not a token cut.
+
 ## [0.13.2] - 2026-06-21
 
 ### Added — Enforce scaffold on task creation
 - **`task-scaffold-guard.cjs` (PreToolUse hook)**: hard-blocks any `Write` whose path matches `specs/<feature>/tasks/task-*.md`, so task files can only be created via `spec-scaffold.cjs` and then `Edit`-filled. Closes the dodge where the model hand-`Write`s task files and bypasses the (previously opt-in) scaffold step. Narrow scope: only the `Write` tool on a task-file path is blocked; `Edit`/`MultiEdit` and `Write` to any other file are untouched, and the scaffold script (writing via Node fs through Bash) is never blocked.
 - **Three safety valves**: fail-open when `spec-scaffold.cjs` is absent (a hook shipped without its script must not deadlock task creation); actionable block message carrying the exact scaffold command; escape hatch via `"spec": { "scaffold_guard": false }` in `.claude/runtime.json`.
-- **Validator placeholder gate (`validate-spec-output.cjs`)**: a task file that still carries an unfilled `{{...}}` scaffold placeholder now hard-fails (previously a prompt-only DoCT rule). A leftover `.../` path fragment warns. This is the fill-side complement to the guard — the hook forces task files through the scaffold; this proves the resulting stubs were actually completed, closing the "stub created but not filled" gap.
 
 ### Changed
 - `settings/settings.json`: registered the guard under a dedicated `Write` matcher in `PreToolUse` (separate entry so the settings-merge dedupe does not swallow it).

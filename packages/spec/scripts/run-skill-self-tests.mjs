@@ -179,7 +179,20 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("session-state/") &&
         content.includes("hooks/.logs/") &&
-        content.includes("skills/**/node_modules/"),
+        content.includes("plugins/.logs/") &&
+        content.includes("skills/**/node_modules/") &&
+        content.includes("skills/**/.venv/") &&
+        content.includes(".cafekit-update-cache.json"),
+    },
+    {
+      label: "installer root gitignore ignores runtime folders",
+      file: "bin/phases/root-config.js",
+      assert: (content) =>
+        content.includes("'.claude/'") &&
+        content.includes("'.opencode/'") &&
+        content.includes("'.cafekit-backup/'") &&
+        content.includes("'.cafekit.lock'") &&
+        content.includes("function hasPattern"),
     },
     {
       label: "hapo:specs handoff block points to hapo:develop",

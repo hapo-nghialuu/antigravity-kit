@@ -66,6 +66,14 @@ Do not turn reconstructed docs directly into implementation. Human review must a
 
 Use `/hapo:research` for external knowledge. Use `/hapo:inspect` for local source truth.
 
+## Delegation Workflow
+
+| User intent | Suggested skill |
+|---|---|
+| assign/offload an implementation task to an external agent CLI (codex, grok) | `/hapo:delegate` |
+
+Claude Code remains the orchestrator: it writes the task brief, dispatches, monitors, and independently verifies the returned work.
+
 ## Output Artifact Workflow
 
 | User intent | Suggested skill |

@@ -47,7 +47,8 @@ bin/lib/
 4. **Snapshot** — back up platform folders + root `CLAUDE.md`/`.gitignore` (skipped in dry-run).
 5. **Per platform** — read ownership baseline, start a tracker, then: copy payload →
    claude-runtime *or* opencode-runtime → write metadata + manifest.
-6. **Root config** — ensure `.gitignore` patterns (incl. `.cafekit-backup/`, `.cafekit.lock`).
+6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.opencode/`,
+   `.cafekit-backup/`, `.cafekit.lock`).
 7. **Post-install** — OpenCode model, Gemini, addressing (re-records CLAUDE.md baseline).
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
@@ -75,9 +76,16 @@ A file written earlier in the same run (e.g. spec templates copied by the `specs
 tree, then revisited by the template-sync loop) is treated as pristine via the
 tracker's in-run record, avoiding false "user-created" classification.
 
-The ownership manifest should be **committed** in the consumer project so a teammate's
-clone shares the baseline; otherwise their first install would treat committed
-`.claude/` files as user-created and never update them.
+By default the installer gitignores the runtime folders (`.claude/`, `.opencode/`)
+at project root — reinstall with `npx @haposoft/cafekit` on each machine. The
+ownership manifest therefore lives only on disk as a local re-install baseline.
+If a team deliberately force-adds and commits the runtime folder, they should
+also commit the ownership manifest so teammates share the baseline; otherwise
+their first install would treat those files as user-created and never update them.
+
+A second layer lives inside the runtime: `.claude/.gitignore` /
+`.opencode/.gitignore` (from `src/claude/gitignore`) ignore secrets, skill
+deps, session state, and logs so force-adds stay safe.
 
 ## Safety properties
 
