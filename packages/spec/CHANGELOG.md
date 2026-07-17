@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`spec-gate.cjs` (Stop completion gate)**: blocks turn end when *newly-done* tasks lack a verification receipt in their task markdown (`Status: done`, Evidence section with real proof — no `{{...}}` placeholders — plus non-empty `task_registry[].completed_at`). Loop-safe via `stop_hook_active`; first run (no cache) seeds history without blocking so legacy specs adopt cleanly. Escape hatch: `"spec": { "completion_gate": false }` in `.claude/runtime.json` (missing key keeps the gate ON). Registered first on the existing `Stop` hooks list (before `state.cjs`). Follow-up idea: a dedicated `TaskCompleted` event is not used here — its output contract is unverified on the target Claude Code version.
+- **OpenCode `task-scaffold-guard.ts` plugin**: ports Claude `task-scaffold-guard.cjs` — hard-blocks `write` and `apply_patch` creating `specs/<feature>/tasks/task-*.md`, forcing generation via `spec-scaffold.cjs` then Edit-fill. Also gates `edit` on a **non-existent** task file: OpenCode's `edit` can create files (unlike Claude's Edit — smoke-verified on opencode 1.17.15), so edit-creation is blocked while stub-filling stays allowed. Safety valves: runtime escape hatch (functional but **not advertised in the block message** — a smoke test proved the model reads the advertised override and disables the guard itself), fail-open if the scaffold script is missing, actionable block message. Auto-discovered by the OpenCode installer.
+- **OpenCode `spec-state.ts` plugin**: ports Claude `spec-state.cjs` tollgate via `chat.message` — injects state-sync reminder (fingerprint gate: one-line when unchanged, full URGENT block when phase/done-total changes). Injected parts are schema-complete (`id`/`sessionID`/`messageID`) — a bare `{type,text}` part crashes the whole user turn ("invalid user part before save"). Disable with `"spec": { "tollgate": false }` in `.opencode/runtime.json`. End-to-end verified on opencode 1.17.15 (tollgate text reaches the model).
+
+### Removed
+- **`generate-graph` and `impact-analysis` skills** (unused) plus the orphaned `scripts/browser-tool.cjs`. All routing rules, OpenCode command wrappers, manifest entries, and self-test expectations cleaned; "blast radius / side effects" intent now routes to `hapo:inspect`. Existing installs are cleaned automatically on upgrade via new `obsolete.runtimeFiles` entries.
+
+### Fixed
+- **Claude `task-scaffold-guard.cjs`**: block message no longer advertises the `runtime.json` override (same self-disarm vector proven in the OpenCode smoke test — the model flips the flag instead of scaffolding). The escape hatch remains functional for humans.
+- **OpenCode compaction banner / AGENTS.md**: no longer instruct the unavailable Claude `AskUserQuestion` tool; map to OpenCode built-in `question` (and `TodoWrite` → `todowrite`, `Task` → agent/subtask flow).
+- **specs SKILL**: `--validate` dispatch said "MUST NOT execute Steps 1-8" while jumping to Step 8 — corrected to 1-7.
+- **ui-ux-designer agent**: `search.py` invocations used the dev-monorepo path; now use the installed `.claude/skills/` path via the skills venv.
+- **Model IDs unified on the `gemma-4-31b-it` family** across ai-multimodal, frontend-design, and inspect (SKILL bodies, references, `.env.example`, script defaults). `runtime.json → gemini.model` is the single source of truth; previously three sources disagreed.
+- **Installer i18n**: unsupported `--lang` codes now fall back to English (previously Japanese).
+- **Installer settings merge**: managed hooks merge per command keyed by matcher entry — a command added to an existing matcher is appended on upgrade (the old dedupe judged the whole entry duplicate by its first command). Malformed user `settings.json` no longer aborts the install; the merge is skipped with a warning.
+- **`validate-docs.cjs`** exits 1 on broken relative links (previously always exit 0).
+- **`validate-spec-output.cjs`** verifies every `<!-- contract:NAME -->` tagged block in a task, not just the first fenced block. Multi-contract tasks must tag each copy (untagged → error); tagged-but-undeclared blocks warn; single-contract legacy format unchanged. Covered by a new self-test fixture (138 tests total).
+- **Document skills attribution**: `pdf`/`pptx`/`docx`/`xlsx` frontmatter `metadata.author` now credits `Anthropic, PBC — adapted by Haposoft` (the bundled `LICENSE.txt` files are Anthropic's; the field previously claimed haposoft).
+- **OpenCode session plugin**: the compact-recovery banner instructed the Claude-only `AskUserQuestion` tool, which `AGENTS.md` declares unavailable in OpenCode — it now tells the agent to ask the user directly in chat.
+- **frontend-design skill**: frontmatter pointed at a non-existent `LICENSE.txt`; corrected to `license: MIT` (no Anthropic-derived content found in the skill folder).
+
+### Changed
+- **`spec-state.cjs` tollgate reminder slimmed**: state-change path is now a compact English block (≤7 lines: feature, phase, task counts, next unblocked task, sync/validate rule, Stop-gate note). Removed the red ALL-CAPS / bilingual MANDATORY wall (`URGENT`, `BẮT BUỘC`, `CẤM`). One-line unchanged-fingerprint path is unchanged. Completion enforcement moved to `spec-gate.cjs` on Stop.
+- Installer obsolete mechanism removes directories recursively and prunes ownership-manifest entries by prefix (`tracker.prunePrefix`), enabling skill-level cleanup on upgrade.
+
 ## [0.13.2] - 2026-06-21
 
 ### Added — Enforce scaffold on task creation

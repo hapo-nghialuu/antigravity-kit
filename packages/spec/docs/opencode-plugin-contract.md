@@ -169,7 +169,7 @@ export const MyPlugin: Plugin = async () => ({
 |---|---|---|
 | `PreToolUse` | `tool.execute.before` (throw to block, mutate args) | Tool names differ — see normalization below |
 | `PostToolUse` | `tool.execute.after` | Has full `args` + result |
-| `UserPromptSubmit` | **none** | Closest: `chat.message` mutate, but fires after submission; no preemptive gate |
+| `UserPromptSubmit` | `chat.message` (mutate `output.parts`) | Fires before model processing (verified on 1.17.15); pushed parts MUST be schema-complete — `id`, `sessionID`, `messageID`, `type`, `text` — or the WHOLE turn fails with "invalid user part before save" (used by `spec-state.ts`) |
 | `SessionStart` (startup/resume/clear) | `event` with `type === "session.created"` | No `source` discriminator; treat as single mode |
 | `Stop` | `event` with `type === "session.idle"` | Fires on idle, not exactly Stop semantics |
 | `SubagentStart` | **none** | No subagent lifecycle exposed |

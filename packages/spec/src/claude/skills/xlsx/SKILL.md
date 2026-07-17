@@ -7,7 +7,7 @@ when_to_use: "Invoke to read, create, or edit Excel .xlsx spreadsheets."
 category: document-skills
 keywords: [xlsx, excel, spreadsheet, office]
 metadata:
-  author: haposoft
+  author: "Anthropic, PBC — adapted by Haposoft"
   version: "1.0.0"
 ---
 # Requirements for Outputs

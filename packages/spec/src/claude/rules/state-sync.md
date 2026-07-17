@@ -25,3 +25,7 @@ Before returning control to the user or orchestrator, the agent **MUST**:
 **Canonical state values:** New specs MUST use `status: "in_progress"` for active work. Legacy `in-progress` may be read for compatibility, but must not be emitted in new files.
 
 **Golden Rule:** If the current phase changes, or a task completes, the agent must update the physical files. Never mark a task completed before there is execution proof, and never let `task_registry` disagree with the matching markdown task file. The context is intentionally NOT persisted in the chat to save tokens. An injected Hook (`spec-state.cjs`) constantly enforces and validates this state.
+
+### Completion gate (Stop)
+
+Marking a task `done` is now machine-gated on the **Stop** hook (`spec-gate.cjs`), not only reminded on each prompt. When a turn ends with *newly-done* tasks, the gate requires a verification receipt in each task markdown: `Status: done`, an Evidence section (or legacy `Task Test Plan & Verification Evidence` / `Verification & Evidence`) with real proof (no `{{...}}` placeholders; at least one fenced command block or PASS/FAIL line), and a non-empty `task_registry[path].completed_at`. First adoption (no cache yet) seeds history without blocking. Escape hatch for humans: `"spec": { "completion_gate": false }` in `.claude/runtime.json` (missing key keeps the gate ON).

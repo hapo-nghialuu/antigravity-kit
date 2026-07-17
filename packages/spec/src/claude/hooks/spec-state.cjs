@@ -98,26 +98,19 @@ try {
     fs.writeFileSync(cacheFile, stateKey);
   } catch { /* fail-open: if the write fails we still print the full block */ }
 
-  // Format the output
+  // Compact state-change block (enforcement lives on Stop via spec-gate.cjs).
   const lines = [];
   lines.push('');
-  lines.push('### 🔴 URGENT SYSTEM TOLLGATE (STATE SYNC) 🔴');
-  lines.push(`- **Active Feature:** \`${featureName}\``);
-  lines.push(`- **Current Phase:** \`${phase}\``);
-  if (taskEntries.length > 0) {
-    lines.push(`- **Task Registry:** \`${taskEntries.length} total | ${(taskCounts.done || 0)} done | ${(taskCounts.in_progress || 0)} in_progress | ${(taskCounts.blocked || 0)} blocked | ${(taskCounts.pending || 0)} pending\``);
-    if (nextUnblocked) {
-      lines.push(`- **Next Unblocked Task:** \`${nextUnblocked[0]}\``);
-    }
+  lines.push(`### Spec state changed: \`${featureName}\``);
+  lines.push(`- Phase: \`${phase}\` | Tasks: ${(taskCounts.done || 0)} done / ${taskEntries.length} total` +
+    (taskEntries.length > 0
+      ? ` (${(taskCounts.in_progress || 0)} in_progress, ${(taskCounts.pending || 0)} pending, ${(taskCounts.blocked || 0)} blocked)`
+      : ''));
+  if (nextUnblocked) {
+    lines.push(`- Next unblocked: \`${nextUnblocked[0]}\``);
   }
-  lines.push('');
-  lines.push(`> BẮT BUỘC (MANDATORY): Nếu bạn vừa hoàn thành một bước, bạn KHÔNG ĐƯỢC báo cáo "Đã xong" ngay.`);
-  lines.push(`> Bạn PHẢI sử dụng công cụ Edit để cập nhật trạng thái vật lý sau khi đã có bằng chứng verify thật (build/test/runtime/artifact), không phải chỉ vì code đã viết xong.`);
-  lines.push(`> 1. Sửa file \`spec.json\` (status, phase/current_phase, timestamps, \`task_files\`, \`task_registry\`, validation state nếu có thay đổi).`);
-  lines.push(`> 2. Chỉ khi verify xong mới sửa file \`tasks/task-*.md\` (status + tick '[x]' các sub-task và completion criteria liên quan).`);
-  lines.push(`> 3. Trước khi set \`ready_for_implementation = true\`, PHẢI chạy \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` và sửa mọi lỗi.`);
-  lines.push(`> 4. NẾU VỪA HOÀN THÀNH 1 TASK CÓ SỬA SOURCE CODE, BẮT BUỘC cập nhật ngay tài liệu trong \`docs/\` (\`system-architecture.md\` hoặc Changelog) cho đồng bộ.`);
-  lines.push(`> CẤM VI PHẠM LUẬT TOLLGATE NÀY NHẰM ĐẢM BẢO TÍNH ĐỒNG BỘ CỦA HỆ THỐNG.`);
+  lines.push(`- Sync \`spec.json\` + task file after verified work; run \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` before \`ready_for_implementation=true\`.`);
+  lines.push(`- A completion gate verifies receipts when you end a turn with newly-done tasks.`);
   lines.push('');
 
   console.log(lines.join('\n'));

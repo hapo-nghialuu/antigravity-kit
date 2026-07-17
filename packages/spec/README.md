@@ -111,9 +111,8 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:docs [--init|--update|--summarize|--reconstruct]`: create project docs or reconstruct as-is system documentation from source code
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
-- `/hapo:generate-graph <diagram request>`: generate technical SVG/PNG diagrams
 
-Common companion skills bundled in this package include `inspect`, `impact-analysis`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
+Common companion skills bundled in this package include `inspect`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
 
 CafeKit uses rule-based skill routing guidance instead of an automatic prompt-scoring hook. See `.claude/rules/skill-workflow-routing.md`, `.claude/rules/skill-domain-routing.md`, or run:
 

@@ -244,9 +244,7 @@ response = client.models.generate_content(
 - 9.5 hours = 1,094,400 tokens
 
 **Model selection**:
-- Use `gemma-4-31b-it` ($1/1M tokens) for most tasks
-- Upgrade to `gemma-4-31b-it` ($3/1M tokens) for complex analysis
-- For high-volume: `gemini-1.5-flash` ($0.70/1M tokens)
+- Use `gemma-4-31b-it` for transcription and analysis (read model from `.claude/runtime.json`: `gemini.model`)
 
 **Reduce costs**:
 - Process only relevant segments using timestamps

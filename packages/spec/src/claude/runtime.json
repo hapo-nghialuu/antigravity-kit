@@ -15,6 +15,10 @@
     "docs": "docs",
     "specs": "specs"
   },
+  "spec": {
+    "scaffold_guard": true,
+    "completion_gate": true
+  },
   "locale": {
     "thinkingLanguage": null,
     "responseLanguage": null

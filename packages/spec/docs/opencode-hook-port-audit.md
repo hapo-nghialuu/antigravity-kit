@@ -11,9 +11,10 @@ Per-hook decision matrix with exact behavior translation, dependencies on shared
 | `state.cjs` | SessionStart, PostToolUse, Stop, SubagentStop | `event` + `tool.execute.after` | **PORT (partial)** — drop SubagentStop branch; Stop ≈ session.idle | T3.1 |
 | `docs-sync.cjs` | SessionStart | `event` (session.created) | **PORT (full)** | T3.2 |
 | `session.cjs` | SessionStart(startup,resume,clear,compact) | `event` (session.created + session.compacted) | **PORT (partial)** — banner only, no `CLAUDE_ENV_FILE` writes (OpenCode has no equivalent) | T3.3 |
-| `spec-state.cjs` | UserPromptSubmit | none | **DROP** — fold into AGENTS.md + specs skill |
+| `spec-state.cjs` | UserPromptSubmit | `chat.message` (mutate `output.parts`) | **PORTED** — inject tollgate text part before model turn |
+| `task-scaffold-guard.cjs` | PreToolUse(Write) | `tool.execute.before` (`write` + `apply_patch`) | **PORTED** — block task-file creation; three safety valves |
 | `rules.cjs` | UserPromptSubmit | none | **DROP** — fold into AGENTS.md + skill-workflow-routing.md |
-| `agent.cjs` | SubagentStart | none | **DROP** — orchestrator already injects context in subagent prompts |
+| `agent.cjs` | SubagentStart | none | **DROPPED** — OpenCode `session.created`+`parentID` subagent surface is unreliable; orchestrator already mandates self-contained subagent prompts (low ROI) |
 | `usage.cjs` | UserPromptSubmit + PostToolUse | `tool.execute.after` (only) | **PORT (partial)** — drop prompt half; keep file-edit counter |
 
 ## Detailed Per-Hook Translation
@@ -88,23 +89,34 @@ Per-hook decision matrix with exact behavior translation, dependencies on shared
 - Compact warning: trigger via `session.compacted` event branch.
 - `source` field: OpenCode events do not carry source discriminator → all session.created becomes generic "Session started.".
 
-### 6. spec-state.cjs → **DROP**
+### 6. spec-state.cjs → `.opencode/plugins/spec-state.ts` (**PORTED**)
 
-**Reason:** Relies on UserPromptSubmit to inject reminders before assistant processes user message. OpenCode has no preempt-style user-prompt hook. The closest `chat.message` fires after submission with no way to prepend system context.
+**Rationale (2026-07 re-investigation):** OpenCode `@opencode-ai/plugin` `chat.message` fires **before** the model processes the user message. Mutating `output.parts` (push a text part) injects tollgate context into the turn — the OpenCode equivalent of Claude `UserPromptSubmit` stdout injection.
 
-**Workaround:** Add explicit reminder block to:
-- `AGENTS.md` under "Spec workflow guardrails" section
-- `hapo:specs` skill front matter
+**OpenCode mapping:**
+- Hook: `chat.message(input, output)` → push a **schema-complete** part onto `output.parts`: `{ id, sessionID: output.message.sessionID, messageID: output.message.id, type: "text", text, synthetic: true }`. A bare `{ type, text }` part fails OpenCode's durable-part schema and **crashes the entire user turn** ("invalid user part before save" — verified on 1.17.15).
+- Scan `<project>/<runtime.paths.specs || "specs">/*/spec.json` for first `status === "in_progress"` (also accept legacy `"in-progress"`)
+- State-change gate: fingerprint `phase|done/total` in `plugins/.logs/tollgate-last.txt`; unchanged → one-line reminder; changed → full URGENT block (Vietnamese text preserved) + refresh fingerprint
+- Escape hatch: `.opencode/runtime.json` `{ "spec": { "tollgate": false } }` (default ON)
+- Fail-open crash wrapper → `plugins/.logs/hook-log.jsonl`; never throw
 
-Document in CHANGELOG/install README that OpenCode users get the spec-drift reminder via AGENTS.md prose only.
+### 6b. task-scaffold-guard.cjs → `.opencode/plugins/task-scaffold-guard.ts` (**PORTED**)
+
+**OpenCode mapping:**
+- Hook: `tool.execute.before`
+- Gate tools: `write` (`output.args.filePath`), `apply_patch` (scan `output.args.patchText` for `*** Add File: <path>` lines — absent from the 1.17.15 default toolset, kept as a defensive branch), and `edit` on a **non-existent** task file — OpenCode's `edit` CAN create files (unlike Claude's Edit, which requires an existing file), verified on 1.17.15; edit on an existing stub stays allowed (legitimate stub filling). The existence check resolves the project-relative `specs/...` suffix against the plugin `directory` because tool paths may be sandbox-virtual (`/home/user/...`).
+- Task-file regex: `/(^|\/)specs\/[^/]+\/tasks\/task-[^/]+\.md$/`
+- Three safety valves preserved: runtime `spec.scaffold_guard === false` escape (fail-closed on missing runtime); fail-open if `.opencode/scripts/spec-scaffold.cjs` absent; actionable block message with exact scaffold command
+- **Escape hatch is NOT advertised in the block message.** Smoke-tested: when the message included the `runtime.json` override line, the model wrote `{"spec":{"scaffold_guard":false}}` itself and disabled the guard (self-disarm). The hatch stays functional for humans and is documented here only. The Claude `.cjs` hook was hardened identically.
+- Crash-wrapper fail-open: re-throw only intentional `TASK SCAFFOLD REQUIRED` errors
 
 ### 7. rules.cjs → **DROP**
 
-**Reason:** Same UserPromptSubmit dependency. OpenCode users rely on `AGENTS.md` + `.opencode/rules/skill-workflow-routing.md` + `.opencode/rules/skill-domain-routing.md` — already installed.
+**Reason:** Same UserPromptSubmit dependency historically. OpenCode users rely on `AGENTS.md` + `.opencode/rules/skill-workflow-routing.md` + `.opencode/rules/skill-domain-routing.md` — already installed. (Not re-ported; AGENTS fold-in remains sufficient.)
 
-### 8. agent.cjs → **DROP**
+### 8. agent.cjs → **DROPPED** (explicit, low ROI)
 
-**Reason:** OpenCode has no `SubagentStart` event. CafeKit orchestrator rule (`orchestrator.md`) already mandates self-contained subagent prompts including work-context paths. No regression.
+**Reason:** OpenCode's subagent event surface (`session.created` + `parentID`) is unreliable for seeding subagent context. CafeKit orchestrator rule (`orchestrator.md`) already mandates self-contained subagent prompts including work-context paths. Porting would add fragile coupling for little gain.
 
 ### 9. usage.cjs → `.opencode/plugins/usage.ts` (partial)
 

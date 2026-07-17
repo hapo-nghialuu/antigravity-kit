@@ -81,7 +81,7 @@ Use this loop for non-trivial work:
 
 - Claude Code hooks/statusline/settings do not run in OpenCode.
 - Treat `.claude/rules/*` as explicit reference material, not injected hook context.
-- When a skill says to use unavailable Claude-specific tools such as `Task`, `TodoWrite`, or `AskUserQuestion`, use OpenCode's agent/subtask flow, a concise markdown checklist, or ask the user directly.
+- Map Claude-specific tools to OpenCode built-ins: `TodoWrite` → the `todowrite` tool; `AskUserQuestion` → the `question` tool; `Task` → OpenCode's agent/subtask flow.
 - Privacy and inspect gates are instruction-level gates in OpenCode unless a project-specific OpenCode plugin adds hard enforcement.
 
 ## Operating Discipline
