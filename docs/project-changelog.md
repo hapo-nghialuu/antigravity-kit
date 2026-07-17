@@ -5,6 +5,8 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-17
+
 ### Added
 - **`spec-gate.cjs` (Stop completion gate)**: machine-enforced receipt check when the assistant ends a turn with newly-done tasks (Evidence section + proof, no placeholders, `completed_at` set). First-run seeds cache without blocking; escape hatch `spec.completion_gate: false`. Complements the soft `spec-state` reminder (audit §3.4.1).
 - **OpenCode port Option A — spec-workflow enforcement**: `task-scaffold-guard.ts` (block hand-written task files via `write`/`apply_patch`) and `spec-state.ts` (tollgate inject via `chat.message`); installer self-test expects both plugins.
