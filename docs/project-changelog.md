@@ -5,6 +5,11 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-07-17
+
+### Fixed
+- Restored `hapo:delegate` (+ Codex/Grok references, routing, installer gitignore hardening) on the release line — present in 0.13.4 but missing from 0.14.0, which was published from `dev` before PR #68 merged.
+
 ## [0.14.0] - 2026-07-17
 
 ### Added

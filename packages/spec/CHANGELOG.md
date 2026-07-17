@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-07-17
+
+### Fixed
+- **Restored `hapo:delegate` on the release line**: the skill shipped in 0.13.4 (published from its feature branch) but was absent from 0.14.0 (published from `dev` before the branch merged). 0.14.1 includes the delegate skill, its Codex/Grok references, routing entries, and the installer dual-layer gitignore hardening from the same branch (PR #68). No new functionality vs 0.13.4 + 0.14.0 combined.
+
 ## [0.14.0] - 2026-07-17
 
 ### Added
