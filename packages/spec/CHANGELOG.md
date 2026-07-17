@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **OpenCode `task-scaffold-guard.ts` plugin**: ports Claude `task-scaffold-guard.cjs` — hard-blocks `write` and `apply_patch` creating `specs/<feature>/tasks/task-*.md`, forcing generation via `spec-scaffold.cjs` then Edit-fill. Also gates `edit` on a **non-existent** task file: OpenCode's `edit` can create files (unlike Claude's Edit — smoke-verified on opencode 1.17.15), so edit-creation is blocked while stub-filling stays allowed. Safety valves: runtime escape hatch (functional but **not advertised in the block message** — a smoke test proved the model reads the advertised override and disables the guard itself), fail-open if the scaffold script is missing, actionable block message. Auto-discovered by the OpenCode installer.
+- **OpenCode `spec-state.ts` plugin**: ports Claude `spec-state.cjs` tollgate via `chat.message` — injects state-sync reminder (fingerprint gate: one-line when unchanged, full URGENT block when phase/done-total changes). Injected parts are schema-complete (`id`/`sessionID`/`messageID`) — a bare `{type,text}` part crashes the whole user turn ("invalid user part before save"). Disable with `"spec": { "tollgate": false }` in `.opencode/runtime.json`. End-to-end verified on opencode 1.17.15 (tollgate text reaches the model).
+
 ### Removed
 - **`generate-graph` and `impact-analysis` skills** (unused) plus the orphaned `scripts/browser-tool.cjs`. All routing rules, OpenCode command wrappers, manifest entries, and self-test expectations cleaned; "blast radius / side effects" intent now routes to `hapo:inspect`. Existing installs are cleaned automatically on upgrade via new `obsolete.runtimeFiles` entries.
 
 ### Fixed
+- **Claude `task-scaffold-guard.cjs`**: block message no longer advertises the `runtime.json` override (same self-disarm vector proven in the OpenCode smoke test — the model flips the flag instead of scaffolding). The escape hatch remains functional for humans.
+- **OpenCode compaction banner / AGENTS.md**: no longer instruct the unavailable Claude `AskUserQuestion` tool; map to OpenCode built-in `question` (and `TodoWrite` → `todowrite`, `Task` → agent/subtask flow).
 - **specs SKILL**: `--validate` dispatch said "MUST NOT execute Steps 1-8" while jumping to Step 8 — corrected to 1-7.
 - **ui-ux-designer agent**: `search.py` invocations used the dev-monorepo path; now use the installed `.claude/skills/` path via the skills venv.
 - **Model IDs unified on the `gemma-4-31b-it` family** across ai-multimodal, frontend-design, and inspect (SKILL bodies, references, `.env.example`, script defaults). `runtime.json → gemini.model` is the single source of truth; previously three sources disagreed.

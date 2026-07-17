@@ -1064,6 +1064,8 @@ async function runOpenCodeInstallerFixtureTests() {
       "state.ts",
       "usage.ts",
       "rules.ts",
+      "task-scaffold-guard.ts",
+      "spec-state.ts",
     ];
     for (const plugin of expectedPlugins) {
       if (!(await fileExists(join(root, ".opencode", "plugins", plugin)))) {
