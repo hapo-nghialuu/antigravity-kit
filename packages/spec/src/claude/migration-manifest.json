@@ -93,6 +93,7 @@
       "hooks/task-scaffold-guard.cjs",
       "hooks/rules.cjs",
       "hooks/spec-state.cjs",
+      "hooks/spec-gate.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",
