@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installer settings merge**: managed hooks merge per command keyed by matcher entry — a command added to an existing matcher is appended on upgrade (the old dedupe judged the whole entry duplicate by its first command). Malformed user `settings.json` no longer aborts the install; the merge is skipped with a warning.
 - **`validate-docs.cjs`** exits 1 on broken relative links (previously always exit 0).
 - **`validate-spec-output.cjs`** verifies every `<!-- contract:NAME -->` tagged block in a task, not just the first fenced block. Multi-contract tasks must tag each copy (untagged → error); tagged-but-undeclared blocks warn; single-contract legacy format unchanged. Covered by a new self-test fixture (138 tests total).
+- **Document skills attribution**: `pdf`/`pptx`/`docx`/`xlsx` frontmatter `metadata.author` now credits `Anthropic, PBC — adapted by Haposoft` (the bundled `LICENSE.txt` files are Anthropic's; the field previously claimed haposoft).
+- **OpenCode session plugin**: the compact-recovery banner instructed the Claude-only `AskUserQuestion` tool, which `AGENTS.md` declares unavailable in OpenCode — it now tells the agent to ask the user directly in chat.
+- **frontend-design skill**: frontmatter pointed at a non-existent `LICENSE.txt`; corrected to `license: MIT` (no Anthropic-derived content found in the skill folder).
 
 ### Changed
 - Installer obsolete mechanism removes directories recursively and prunes ownership-manifest entries by prefix (`tracker.prunePrefix`), enabling skill-level cleanup on upgrade.

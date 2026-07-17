@@ -10,6 +10,7 @@ All notable changes to CafeKit are documented here, following
 
 ### Fixed
 - specs `--validate` dispatch off-by-one (Steps 1-7, not 1-8); ui-ux-designer agent dev-path → installed `.claude/skills/` venv path; Gemini model IDs unified on `gemma-4-31b-it` family (runtime.json is the single source); installer `--lang` unknown codes fall back to English; installer settings merge dedupes per command and survives malformed settings.json; `validate-docs.cjs` exits 1 on broken links; spec validator verifies every tagged contract block per task (PR #66).
+- Document-skill attribution restored to Anthropic (`pdf`/`pptx`/`docx`/`xlsx` frontmatter author); OpenCode compact banner no longer instructs the unavailable `AskUserQuestion` tool — asks the user directly; `frontend-design` license line corrected to MIT, removing a dangling `LICENSE.txt` reference (PR #67).
 
 ### Fixed — Hook hardening
 - **`session.cjs` env escaping**: `writeEnv` now escapes `\ $ \` "` (was `"` only), so an attacker-influenced value flowing into `CLAUDE_ENV_FILE` (e.g. a git branch named `` evil$HOME-x`pwd` ``) can no longer expand or execute when the env file is sourced. Matches the canonical `escapeShellValue` semantics in `lib/config.cjs`.
