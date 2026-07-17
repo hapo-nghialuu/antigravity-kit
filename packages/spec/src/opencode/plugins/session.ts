@@ -153,9 +153,9 @@ function handleSessionCreated(cwd: string): void {
 function handleSessionCompacted(cwd: string): void {
   const lines = [
     "🚨 SESSION COMPRESSED — VERIFY PENDING AUTHORIZATIONS:",
-    "Any pending confirmations requested via AskUserQuestion might have been lost.",
+    "Any pending confirmations you previously requested might have been lost.",
     "Do not proceed without explicitly asking the user again to ensure safety.",
-    'Use AskUserQuestion: "The chat context was compressed. Do I still have permission to proceed?"',
+    'Ask the user directly in chat: "The chat context was compressed. Do I still have permission to proceed?"',
   ];
   writeBannerSection(cwd, lines.join("\n"));
   console.error(lines.join("\n"));
