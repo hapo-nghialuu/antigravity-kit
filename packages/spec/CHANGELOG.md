@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Installer preserves configured locale on non-interactive upgrade**: `selectLanguage` returned before restoring the saved locale when run with `--yes`, so every upgrade reset `locale.responseLanguage` to `en` (reproduced on 0.14.0 and 0.14.1). Saved-locale restore now runs regardless of interactivity, plus a hardening guard in `patchRuntimeLocale` never downgrades a configured label when the run made no explicit language choice. Covered by a live installer regression fixture proven to fail on the unpatched code.
+- **Statusline context bar on 1M-context models**: the autocompact reserve was a hard-coded 45000 tokens (22.5% of a 200k window); it is now proportional (`0.225 × context_window_size` from the payload), so 1M windows are no longer treated as 200k. 200k behavior unchanged.
+
+### Changed
+- **`spec` toggles unified and documented**: `runtime.json` template now lists `spec.{scaffold_guard, completion_gate, tollgate}`; the Claude `spec-state.cjs` reminder honors `spec.tollgate: false` (same key the OpenCode plugin already used). Dead `skills.research.useGemini` key removed from the template and config defaults (the research skill uses native WebSearch). `paths.plans` documented.
+- **`usage.cjs` marked experimental**: the OAuth usage endpoint is undocumented and may break without notice; header now states the degradation contract (`status:"unavailable"`, statusline hides the segment) and the disable switch.
+- Legacy `Task`-tool prose modernized to the `Agent` tool in develop/test/hotfix skill text (deliberate backward-compat notes in `CLAUDE.md` and `subagent-patterns.md` kept). `inspector` and `debugger` agents now carry `memory: user` like `researcher`.
+
+### Removed
+- **Legacy `archive-command/` tree** (1,680 lines, 12 files): the pre-skill command-based spec workflow, superseded since the skills migration and never installed by the manifest. Vestigial `sourceSubdir` reference and its self-test assertion cleaned.
+
+### Added
+- **Self-test: settings/manifest hook consistency check** — every `hooks/*.cjs` registered in the settings template must exist in the payload and in `migration-manifest.json` `runtime.files`, and vice versa (schema-drift tripwire; 11 hooks verified).
+
 ## [0.14.1] - 2026-07-17
 
 ### Fixed
