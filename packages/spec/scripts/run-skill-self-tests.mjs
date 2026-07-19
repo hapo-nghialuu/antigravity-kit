@@ -952,6 +952,48 @@ async function runInstallerMigrationFixtureTests() {
 }
 
 /**
+ * Schema-drift tripwire: every hook command in the settings template must map
+ * to a real payload file that the migration manifest ships, and vice versa —
+ * a hook listed in runtime.files but registered nowhere is dead weight, a hook
+ * registered in settings but not shipped breaks at runtime.
+ */
+async function runSettingsManifestConsistencyCheck() {
+  const settings = JSON.parse(
+    await readFile(join(packageRoot, "src/claude/settings/settings.json"), "utf8"),
+  );
+  const manifest = JSON.parse(
+    await readFile(join(packageRoot, "src/claude/migration-manifest.json"), "utf8"),
+  );
+
+  const registered = new Set(
+    JSON.stringify(settings.hooks).match(/hooks\/[a-z-]+\.cjs/g) || [],
+  );
+  const shipped = new Set(
+    (manifest.runtime?.files || []).filter((f) => /^hooks\/[a-z-]+\.cjs$/.test(f)),
+  );
+
+  const failures = [];
+  for (const hook of registered) {
+    if (!shipped.has(hook)) failures.push(`registered in settings but not in manifest runtime.files: ${hook}`);
+    if (!(await fileExists(join(packageRoot, "src/claude", hook)))) {
+      failures.push(`registered in settings but payload file missing: ${hook}`);
+    }
+  }
+  for (const hook of shipped) {
+    if (!registered.has(hook)) failures.push(`shipped in manifest but registered in no settings event: ${hook}`);
+  }
+
+  if (failures.length > 0) {
+    console.error(failures.join("\n"));
+    console.error("[FAIL] settings/manifest hook consistency check failed");
+    process.exit(1);
+  }
+
+  console.log(`✔ settings template and manifest agree on ${registered.size} hooks`);
+  return 1;
+}
+
+/**
  * Regression: a non-interactive upgrade (--yes/--force-overwrite) must preserve
  * the configured locale.responseLanguage. Bug (0.14.0/0.14.1 era): selectLanguage
  * returned before restoring the saved locale when !interactive, so
@@ -1568,6 +1610,7 @@ async function main() {
   console.log("\n[skill-test] skill catalog checks");
   totalTests += runSkillCatalogTests();
   console.log("\n[skill-test] installer migration fixtures");
+  totalTests += await runSettingsManifestConsistencyCheck();
   totalTests += await runInstallerMigrationFixtureTests();
   totalTests += await runLocalePreservationFixtureTest();
   console.log("\n[skill-test] OpenCode installer fixtures");

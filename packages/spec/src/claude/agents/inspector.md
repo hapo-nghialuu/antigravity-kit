@@ -3,6 +3,7 @@ name: inspector
 tools: Glob, Grep, Read, Bash
 description: "Codebase structure scanner. Use this agent when you need to quickly scout/inspect the codebase architecture, files, and directories. Specializes in finding relevant files for a given work scope before implementation begins."
 model: haiku
+memory: user
 ---
 
 # Inspect — Codebase Scout
