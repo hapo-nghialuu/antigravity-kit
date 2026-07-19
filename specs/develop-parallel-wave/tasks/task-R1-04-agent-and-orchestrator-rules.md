@@ -1,7 +1,7 @@
 # Task R1-04: Agent and orchestrator rules
 
 **Requirement:** R2/R4 — Agent & orchestration rules (P)
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** S (~1h)
 **Dependencies:** tasks/task-R0-01-parallel-waves-reference.md
@@ -22,17 +22,17 @@
 
 ## Steps
 
-- [ ] 1. Amend `agents/god-developer.md` frontmatter description + body: Single-Track applies within the agent's workspace; when dispatched into a worktree the agent works only there, never edits `spec.json`/`tasks/*.md`, and stays inside its task's `Related Files`
+- [x] 1. Amend `agents/god-developer.md` frontmatter description + body: Single-Track applies within the agent's workspace; when dispatched into a worktree the agent works only there, never edits `spec.json`/`tasks/*.md`, and stays inside its task's `Related Files`
   - Lets N instances run without contradicting the agent's own contract
   - Mirror the two dispatch prohibitions (R2.2) so agent-side and prompt-side agree
   - _Requirements: 2.1, 2.2_
 
-- [ ] 2. Amend `rules/orchestrator.md` Parallel section: prerequisites add worktree isolation for implementation agents, the single-writer-per-file wave rule, orchestrator-only spec-state writes (R4.1), and the cap (default 3, max 5) tied to the existing 200K-per-agent resource warning
+- [x] 2. Amend `rules/orchestrator.md` Parallel section: prerequisites add worktree isolation for implementation agents, the single-writer-per-file wave rule, orchestrator-only spec-state writes (R4.1), and the cap (default 3, max 5) tied to the existing 200K-per-agent resource warning
   - Turns the previous blanket ban into a precise sanctioned pattern
   - Cross-reference `skills/develop/references/parallel-waves.md` as the operating procedure
   - _Requirements: 4.1, 6.1_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - `git diff` review: prohibitions amended not removed; npm test passes (agent/rule semantic assertions)
   - _Requirements: 4_
 
@@ -53,10 +53,10 @@
 
 ## Completion Criteria
 
-- [ ] god-developer description says Single-Track within its workspace; both prohibitions present in body
-- [ ] orchestrator.md sanctions worktree-isolated implementation parallelism with single-writer rule + cap numbers (negative check: the old blanket "Do not dispatch multiple implementation agents" phrasing no longer contradicts parallel-waves.md)
-- [ ] Cross-reference to parallel-waves.md resolves (file exists — R0-01 dependency)
-- [ ] Sequential Implementation Review Chain text retained
+- [x] god-developer description says Single-Track within its workspace; both prohibitions present in body
+- [x] orchestrator.md sanctions worktree-isolated implementation parallelism with single-writer rule + cap numbers (negative check: the old blanket "Do not dispatch multiple implementation agents" phrasing no longer contradicts parallel-waves.md)
+- [x] Cross-reference to parallel-waves.md resolves (file exists — R0-01 dependency)
+- [x] Sequential Implementation Review Chain text retained
 
 ## Evidence
 
@@ -72,18 +72,28 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `cd packages/spec && npm test`
   - Expected proof: suite PASS; existing god-developer/orchestrator assertions unaffected
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/src/claude/agents/god-developer.md`, `packages/spec/src/claude/rules/orchestrator.md`
   - Expect: amended clauses present; sequential chain retained
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: rule loaded by every session (orchestrator.md is an installed rule); agent loaded on god-developer dispatch
   - Expect: no dangling reference — parallel-waves.md path cited in orchestrator.md exists
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: contradiction scan — grep for "non-parallel" / blanket dispatch ban after amendment
   - Expect: no shipped text contradicts the sanctioned worktree pattern
+
+
+### Verification receipt (2026-07-19)
+
+```
+god-developer.md: description -> "Single-Track principle within its workspace"; Worktree Conduct section added (both prohibitions + commit mandate)
+grep -c "non-parallel" god-developer.md -> 0  == no contradiction remains
+orchestrator.md: same-file ban qualified "within the same working tree"; sanctioned worktree pattern + single-writer + cap "3 ... never more than 5" wired; cross-ref parallel-waves.md
+Sequential Implementation Review Chain text retained (additive/qualifier-only diff)
+```
 
 ## Risk Assessment
 
@@ -95,6 +105,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

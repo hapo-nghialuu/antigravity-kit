@@ -1,7 +1,7 @@
 # Task R0-01: Parallel waves reference
 
 **Requirement:** R1 — Wave planning (foundation reference)
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** M (~2h)
 **Dependencies:** tasks/task-R1-01-worktree-spike.md
@@ -23,17 +23,17 @@
 
 ## Steps
 
-- [ ] 1. Write the Wave Planning section in `parallel-waves.md`: ready-set definition, registry-order selection, cap (default 3, `--parallel N` 1..5), single-writer-per-file exclusion over `Related Files` Create/Modify paths, deferred-task pool
+- [x] 1. Write the Wave Planning section in `parallel-waves.md`: ready-set definition, registry-order selection, cap (default 3, `--parallel N` 1..5), single-writer-per-file exclusion over `Related Files` Create/Modify paths, deferred-task pool
   - Enables deterministic wave computation any agent can follow
   - Include the worked 4-task example with one path collision
   - _Requirements: 1.1, 1.2, 1.3, 6.1_
 
-- [ ] 2. Write the Merge & Fallback sections: sequential merge of gate-passed branches using the spike-verified recipe, conflict → skip branch + mark task blocked with conflict summary, post-merge integration check per wave, and the fallback triggers (no git repo / isolation unavailable / escape hatch) with the required user-facing notice
+- [x] 2. Write the Merge & Fallback sections: sequential merge of gate-passed branches using the spike-verified recipe, conflict → skip branch + mark task blocked with conflict summary, post-merge integration check per wave, and the fallback triggers (no git repo / isolation unavailable / escape hatch) with the required user-facing notice
   - Codifies R3.2/R3.3 skip-and-block behavior and R2.3 fallback so failure paths are prescriptive, not improvised
   - Cite `specs/develop-parallel-wave/reports/worktree-spike.md` for every git command shown
   - _Requirements: 2.3, 3.2, 3.3_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - Cross-check the file against design.md traceability rows R1.1–R1.3/R2.3/R3.2–R3.3/R6.1; confirm ≤200 lines; grep-able key phrases present for R2-02 assertions ("single writer", "sequential fallback", "wave cap")
   - _Requirements: 1_
 
@@ -57,10 +57,10 @@
 
 ## Completion Criteria
 
-- [ ] `parallel-waves.md` exists, ≤200 lines, and covers algorithm + merge + fallback with the worked example
-- [ ] Every git command in the Merge section traces to the spike report (no unverified behavior — negative check: zero commands absent from the report)
-- [ ] Key phrases "single writer", "sequential fallback", "wave cap" present verbatim for downstream self-test assertions
-- [ ] File is referenced (reachable) from `develop/SKILL.md` parallel section — wired in task R1-02; deferral to R1-02 is the named integration point
+- [x] `parallel-waves.md` exists, ≤200 lines, and covers algorithm + merge + fallback with the worked example
+- [x] Every git command in the Merge section traces to the spike report (no unverified behavior — negative check: zero commands absent from the report)
+- [x] Key phrases "single writer", "sequential fallback", "wave cap" present verbatim for downstream self-test assertions
+- [x] File is referenced (reachable) from `develop/SKILL.md` parallel section — wired in task R1-02; deferral to R1-02 is the named integration point
 
 ## Evidence
 
@@ -76,18 +76,28 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `wc -l packages/spec/src/claude/skills/develop/references/parallel-waves.md && grep -c "single writer\|sequential fallback\|wave cap" packages/spec/src/claude/skills/develop/references/parallel-waves.md`
   - Expected proof: ≤200 lines; grep count ≥3
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/src/claude/skills/develop/references/parallel-waves.md`
   - Expect: algorithm matches design.md normative block; worked example present; merge commands cite the spike report
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `packages/spec/src/claude/skills/develop/SKILL.md` (parallel section, wired by task R1-02)
   - Expect: SKILL.md "Load `references/parallel-waves.md`" line exists after R1-02; deferred to named task R1-02
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: diff the algorithm semantics against design.md "Wave algorithm (normative)"
   - Expect: no divergence in ready-set rule, cap bounds, or conflict exclusion; any deviation = task FAIL
+
+
+### Verification receipt (2026-07-19)
+
+```
+wc -l parallel-waves.md -> 112 (<=200 PASS)
+grep -c "single writer|sequential fallback|wave cap" -> 3 (>=3 PASS)
+Merge section: every git command (cherry-pick / worktree remove / branch -D) traces to reports/worktree-spike.md
+Algorithm cross-checked vs design.md normative block: ready-set, cap 1..5 default 3, Create/Modify exclusion — no divergence
+```
 
 ## Risk Assessment
 
@@ -99,6 +109,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

@@ -1,6 +1,6 @@
 ---
 name: god-developer
-description: "Primary code execution agent. Receives specifications (spec) from hapo:specs or task files and transforms them into production-grade source code. Operates on a Single-Track principle (linear, non-parallel)."
+description: "Primary code execution agent. Receives specifications (spec) from hapo:specs or task files and transforms them into production-grade source code. Operates on a Single-Track principle within its workspace (linear inside one working tree; multiple instances may run concurrently in separate isolated worktrees)."
 model: sonnet
 tools: Glob, Grep, Read, Edit, Write, NotebookEdit, Bash, WebFetch, WebSearch
 ---
@@ -94,3 +94,12 @@ Upon completion, output a concise report in this format:
 - Do not add AI attribution to code or commit messages.
 - Prioritize security (validate input, never hardcode secrets).
 - Code should be self-documenting — only add comments for complex logic.
+
+## Worktree Conduct (Parallel Wave dispatch)
+
+When dispatched into an isolated git worktree by `hapo:develop --parallel`:
+
+- Work ONLY inside this worktree; Single-Track discipline applies unchanged within it.
+- Do NOT edit `spec.json` or any `tasks/*.md` — the orchestrator is the single writer of spec state.
+- Do NOT touch files outside this task's `Related Files`.
+- Commit your completed work: `git commit -m "task(<id>): <title>"` — an uncommitted worktree cannot be merged back.

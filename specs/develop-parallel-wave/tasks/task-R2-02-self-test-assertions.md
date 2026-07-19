@@ -1,7 +1,7 @@
 # Task R2-02: Self test assertions
 
 **Requirement:** R5 — Self-test assertions
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** S (~1h)
 **Dependencies:** tasks/task-R1-02-develop-skill-parallel-mode.md, tasks/task-R1-03-quality-gate-worktree-amendment.md, tasks/task-R1-04-agent-and-orchestrator-rules.md, tasks/task-R2-01-runtime-toggle-and-changelog.md
@@ -22,17 +22,17 @@
 
 ## Steps
 
-- [ ] 1. Add static assertions to `run-skill-self-tests.mjs` for the five files listed in Target outcome (one assertion per file, multiple `content.includes` per assertion)
+- [x] 1. Add static assertions to `run-skill-self-tests.mjs` for the five files listed in Target outcome (one assertion per file, multiple `content.includes` per assertion)
   - Locks the guard phrases against silent regression
   - Reuse the existing assertion array; keep labels descriptive ("develop parallel mode keeps single-writer rule", ...)
   - _Requirements: 5.3_
 
-- [ ] 2. Run the full suite and reconcile the printed test count (baseline 152 + N new)
+- [x] 2. Run the full suite and reconcile the printed test count (baseline 152 + N new)
   - Proves assertions actually execute and pass against the shipped text
   - If any fails, fix the SOURCE text (tasks R0-01..R2-01), never weaken the assertion
   - _Requirements: 5.3_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - `cd packages/spec && npm test` twice (stability); count matches expectation
   - _Requirements: 5_
 
@@ -53,10 +53,10 @@
 
 ## Completion Criteria
 
-- [ ] ≥5 new assertions present following house pattern
-- [ ] Suite passes with increased count; removing any guard phrase makes it fail (negative check: temporarily blank one phrase → red → restore → green, proven once)
-- [ ] No assertion weakened or skipped to pass
-- [ ] Assertions reachable: wired into the main assertion array executed by `npm test`
+- [x] ≥5 new assertions present following house pattern
+- [x] Suite passes with increased count; removing any guard phrase makes it fail (negative check: temporarily blank one phrase → red → restore → green, proven once)
+- [x] No assertion weakened or skipped to pass
+- [x] Assertions reachable: wired into the main assertion array executed by `npm test`
 
 ## Evidence
 
@@ -72,18 +72,27 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `cd packages/spec && npm test`
   - Expected proof: PASS with count = baseline + new assertions; proven-red-once evidence recorded
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/scripts/run-skill-self-tests.mjs`
   - Expect: new labeled assertions in the main array
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `npm test` (package.json test script)
   - Expect: assertions execute in the run (labels visible on failure)
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: blank one guard phrase in a scratch copy → run suite
   - Expect: suite fails naming the assertion; restore → green
+
+
+### Verification receipt (2026-07-19)
+
+```
+6 assertions added to run-skill-self-tests.mjs (labels: parallel-waves / develop SKILL / god-developer / orchestrator / quality-gate / runtime template)
+PROVEN RED ONCE: redact "sequential fallback" -> [FAIL] parallel-waves reference keeps single-writer, fallback, cap, and cherry-pick recipe -> restore -> green
+Full suite: PASS 158 tests executed (baseline 152 + 6 new)
+```
 
 ## Risk Assessment
 
@@ -95,6 +104,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

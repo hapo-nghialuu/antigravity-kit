@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Parallel Wave Mode for `hapo:develop`** (opt-in `--parallel [N]`): independent spec tasks run concurrently — waves computed from `task_registry.dependencies` with a single-writer-per-file rule (cap 3 default / 5 max), one `god-developer` per task in an isolated git worktree, the unchanged Stage A+B quality gate running inside each worktree before merge, spike-verified `git cherry-pick` merge-back with explicit worktree cleanup, a post-merge integration check gating each wave, and orchestrator-only spec-state writes. Sequential default untouched; sequential fallback when isolation is unavailable; escape hatch `"develop": { "parallel": false }` in `.claude/runtime.json`. New operating procedure: `skills/develop/references/parallel-waves.md`.
+
 ### Fixed
 - **Installer preserves configured locale on non-interactive upgrade**: `selectLanguage` returned before restoring the saved locale when run with `--yes`, so every upgrade reset `locale.responseLanguage` to `en` (reproduced on 0.14.0 and 0.14.1). Saved-locale restore now runs regardless of interactivity, plus a hardening guard in `patchRuntimeLocale` never downgrades a configured label when the run made no explicit language choice. Covered by a live installer regression fixture proven to fail on the unpatched code.
 - **Statusline context bar on 1M-context models**: the autocompact reserve was a hard-coded 45000 tokens (22.5% of a 200k window); it is now proportional (`0.225 × context_window_size` from the payload), so 1M windows are no longer treated as 200k. 200k behavior unchanged.

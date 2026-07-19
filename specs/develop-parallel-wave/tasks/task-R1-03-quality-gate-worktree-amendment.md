@@ -1,7 +1,7 @@
 # Task R1-03: Quality gate worktree amendment
 
 **Requirement:** R3 — Quality gate in worktrees (P)
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** S (~1h)
 **Dependencies:** tasks/task-R0-01-parallel-waves-reference.md
@@ -22,17 +22,17 @@
 
 ## Steps
 
-- [ ] 1. Add the "Working directory (parallel mode)" note to Stage A/B in `quality-gate.md`: gate commands execute with the task's worktree as cwd; evidence recorded from that run feeds the task receipt
+- [x] 1. Add the "Working directory (parallel mode)" note to Stage A/B in `quality-gate.md`: gate commands execute with the task's worktree as cwd; evidence recorded from that run feeds the task receipt
   - Preserves gate integrity while containing failures pre-merge (R3.1)
   - One short paragraph + one example line; no threshold edits
   - _Requirements: 3.1_
 
-- [ ] 2. Add the "Post-merge integration check" subsection: after a wave's merges, run project build or the affected test subset; on failure the next wave MUST NOT start until fixed; add the COLLAPSE-isolation line (one task's 3-strike COLLAPSE never cancels other in-flight tasks of the wave)
+- [x] 2. Add the "Post-merge integration check" subsection: after a wave's merges, run project build or the affected test subset; on failure the next wave MUST NOT start until fixed; add the COLLAPSE-isolation line (one task's 3-strike COLLAPSE never cancels other in-flight tasks of the wave)
   - Codifies R3.3 wave gate and R3.4 failure isolation
   - Reference parallel-waves.md for what "wave" means (no duplication)
   - _Requirements: 3.3, 3.4_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - `git diff` review: Stage A/B threshold text untouched; new content additive; npm test suite still passes
   - _Requirements: 3_
 
@@ -51,10 +51,10 @@
 
 ## Completion Criteria
 
-- [ ] Both additions present; Stage A/B thresholds and COLLAPSE protocol text byte-unchanged (negative check via `git diff`)
-- [ ] Post-merge check names concrete command classes (build / affected tests) and the blocking rule
-- [ ] COLLAPSE-isolation line present verbatim enough to grep ("does not cancel other in-flight")
-- [ ] Reachable: parallel-waves.md merge section links to the post-merge subsection (wired here or noted for R0-01 cross-link)
+- [x] Both additions present; Stage A/B thresholds and COLLAPSE protocol text byte-unchanged (negative check via `git diff`)
+- [x] Post-merge check names concrete command classes (build / affected tests) and the blocking rule
+- [x] COLLAPSE-isolation line present verbatim enough to grep ("does not cancel other in-flight")
+- [x] Reachable: parallel-waves.md merge section links to the post-merge subsection (wired here or noted for R0-01 cross-link)
 
 ## Evidence
 
@@ -70,18 +70,27 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `cd packages/spec && npm test`
   - Expected proof: suite PASS (existing quality-gate assertions unaffected)
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/src/claude/skills/develop/references/quality-gate.md`
   - Expect: working-directory note + post-merge subsection + COLLAPSE-isolation line present
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `develop/SKILL.md` Step 4 (existing "Load quality-gate.md" flow — unchanged) + parallel-waves.md merge section cross-link
   - Expect: gate reference reachable from both sequential and parallel flows
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: `git diff` over Stage A/B threshold lines and COLLAPSE protocol
   - Expect: zero modifications to thresholds/retry text — additive-only diff
+
+
+### Verification receipt (2026-07-19)
+
+```
+git diff quality-gate.md -> additive-only (appended 2 sections at EOF; zero changes to Stage A/B threshold lines)
+grep "does not cancel other in-flight" -> present
+Post-merge check names: project build OR affected test subset + blocking rule
+```
 
 ## Risk Assessment
 
@@ -93,6 +102,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

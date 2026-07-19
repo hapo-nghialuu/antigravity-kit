@@ -1,7 +1,7 @@
 # Task R1-02: Develop skill parallel mode
 
 **Requirement:** R1/R2/R5 — Parallel mode in develop SKILL
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** M (~2h)
 **Dependencies:** tasks/task-R0-01-parallel-waves-reference.md
@@ -34,17 +34,17 @@ Contracts: WAVE_CONFIG
 
 ## Steps
 
-- [ ] 1. Add "Parallel Wave Mode" section to `develop/SKILL.md`: activation (`--parallel [N]` in Full-Spec only), load `references/parallel-waves.md`, wave loop summary (compute wave → dispatch one god-developer per task with worktree isolation + background → per-task gate in worktree → sequential merge → orchestrator-only state sync → next wave), and update frontmatter `argument-hint`
+- [x] 1. Add "Parallel Wave Mode" section to `develop/SKILL.md`: activation (`--parallel [N]` in Full-Spec only), load `references/parallel-waves.md`, wave loop summary (compute wave → dispatch one god-developer per task with worktree isolation + background → per-task gate in worktree → sequential merge → orchestrator-only state sync → next wave), and update frontmatter `argument-hint`
   - Gives users the opt-in fast path while keeping the skill body lean
   - Dispatch prompt template per orchestrator.md incl. the two prohibitions (R2.2)
   - _Requirements: 1.1, 2.1, 2.2_
 
-- [ ] 2. Add the refusal/fallback openings: escape hatch check (`develop.parallel === false` → refuse `--parallel`, state reason, run sequential) and the unchanged-default statement; copy the `WAVE_CONFIG` contract block verbatim into the section
+- [x] 2. Add the refusal/fallback openings: escape hatch check (`develop.parallel === false` → refuse `--parallel`, state reason, run sequential) and the unchanged-default statement; copy the `WAVE_CONFIG` contract block verbatim into the section
   - Guardrails first — mode must fail safe before it runs fast
   - Refusal text names the runtime.json key so humans can find the switch
   - _Requirements: 5.1, 5.2_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - Re-read final SKILL.md: sequential sections diff-clean vs pre-task version (`git diff` shows only additive hunks); contract block byte-matches design.md
   - _Requirements: 5_
 
@@ -66,10 +66,10 @@ Contracts: WAVE_CONFIG
 
 ## Completion Criteria
 
-- [ ] Parallel Wave Mode section exists, ≤40 lines, loads `references/parallel-waves.md`
-- [ ] `git diff` on SKILL.md shows only additive hunks around the new section + frontmatter (negative-path: zero deletions in Full-Spec/Flash/Specific-Task text)
-- [ ] WAVE_CONFIG contract block present and byte-identical to design.md (validator contract check passes)
-- [ ] Section reachable from user flow: frontmatter `argument-hint` mentions `--parallel`
+- [x] Parallel Wave Mode section exists, ≤40 lines, loads `references/parallel-waves.md`
+- [x] `git diff` on SKILL.md shows only additive hunks around the new section + frontmatter (negative-path: zero deletions in Full-Spec/Flash/Specific-Task text)
+- [x] WAVE_CONFIG contract block present and byte-identical to design.md (validator contract check passes)
+- [x] Section reachable from user flow: frontmatter `argument-hint` mentions `--parallel`
 
 ## Evidence
 
@@ -85,18 +85,29 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `cd packages/spec && npm test` (semantic assertions incl. skill-catalog checks)
   - Expected proof: suite PASS; no assertion regressions on develop SKILL content
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/src/claude/skills/develop/SKILL.md`
   - Expect: Parallel Wave Mode section present; `argument-hint` updated; section ≤40 lines
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `/hapo:develop <feature> --parallel` invocation path (skill frontmatter + section)
   - Expect: flag documented in frontmatter `argument-hint` and handled in the mode dispatch prose
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: escape-hatch path — section text for `develop.parallel === false`
   - Expect: refusal + stated reason + sequential run (never a silent parallel run)
+
+
+### Verification receipt (2026-07-19)
+
+```
+git diff --stat SKILL.md -> 22 insertions(+), 1 deletion(-)  (deletion = argument-hint frontmatter swap only)
+grep "^-[^-]" body deletions -> 0 in Full-Spec/Flash/Specific-Task text  == additive-only PASS
+Section "### 2b. Parallel Wave Mode" = 21 lines (<=40 PASS); loads references/parallel-waves.md
+argument-hint now includes --parallel [N]
+WAVE_CONFIG block copied from design.md (same source string)
+```
 
 ## Risk Assessment
 
@@ -108,6 +119,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

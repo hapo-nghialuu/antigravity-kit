@@ -21,6 +21,9 @@
     "completion_gate": true,
     "tollgate": true
   },
+  "develop": {
+    "parallel": true
+  },
   "locale": {
     "thinkingLanguage": null,
     "responseLanguage": null

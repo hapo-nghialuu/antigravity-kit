@@ -1,7 +1,7 @@
 # Task R1-01: Worktree spike
 
 **Requirement:** R6 — Non-functional (merge-semantics evidence)
-**Status:** pending
+**Status:** done
 **Priority:** P1
 **Estimated Effort:** S (≤1h)
 **Dependencies:** none
@@ -22,17 +22,17 @@
 
 ## Steps
 
-- [ ] 1. Dispatch a trivial background subagent with `isolation: "worktree"` that creates `spike-proof.txt` in the repo root, then inspect `git worktree list`, `git branch --list`, and the worktree directory state after completion
+- [x] 1. Dispatch a trivial background subagent with `isolation: "worktree"` that creates `spike-proof.txt` in the repo root, then inspect `git worktree list`, `git branch --list`, and the worktree directory state after completion
   - Answers: where the worktree lives, branch naming, whether changes persist after agent exit
   - Record raw command outputs verbatim in the report
   - _Requirements: 6.2_
 
-- [ ] 2. Merge the spike branch into the current branch with plain `git merge <spike-branch>`; record the exact command sequence and result, then delete `spike-proof.txt` + the spike branch/worktree
+- [x] 2. Merge the spike branch into the current branch with plain `git merge <spike-branch>`; record the exact command sequence and result, then delete `spike-proof.txt` + the spike branch/worktree
   - Answers: the canonical merge-back recipe the orchestrator will ship in parallel-waves.md
   - Note any surprise (detached state, auto-cleanup, lock files)
   - _Requirements: 6.2_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - Write `reports/worktree-spike.md` with the five answers + verbatim outputs; confirm working tree back to clean state (`git status`)
   - _Requirements: 6_
 
@@ -48,10 +48,10 @@
 
 ## Completion Criteria
 
-- [ ] Report exists and answers all five questions with verbatim command output (no inference)
-- [ ] Merge recipe was actually executed once successfully (not just described)
-- [ ] Working tree and branch list restored to pre-spike state (negative-path: no leftover worktree/branch)
-- [ ] R0-01 (parallel-waves reference) is unblocked: its merge-protocol section can cite this report
+- [x] Report exists and answers all five questions with verbatim command output (no inference)
+- [x] Merge recipe was actually executed once successfully (not just described)
+- [x] Working tree and branch list restored to pre-spike state (negative-path: no leftover worktree/branch)
+- [x] R0-01 (parallel-waves reference) is unblocked: its merge-protocol section can cite this report
 
 ## Evidence
 
@@ -67,18 +67,31 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `git worktree list && git branch --list && git status --short` (before/after each spike phase)
   - Expected proof: outputs captured verbatim in the report; final `git status` clean
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `specs/develop-parallel-wave/reports/worktree-spike.md`
   - Expect: five questions answered with raw outputs, merge recipe present
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `specs/develop-parallel-wave/tasks/task-R0-01-parallel-waves-reference.md` (consumer of the recipe)
   - Expect: R0-01 merge-protocol section cites this report; if R0-01 not yet written, this task's report is its named input
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: unchanged-run behavior — dispatch a second subagent that modifies nothing
   - Expect: worktree auto-cleaned, no branch left behind (documents the "nothing to merge" path)
+
+
+### Verification receipt (2026-07-19)
+
+```
+Run1 (changed): worktree=.claude/worktrees/agent-abc2c107c88218f89  branch=worktree-agent-abc2c107c88218f89  commit=0e52eee
+git merge <branch>  -> FAILED (dozens of conflicts, base=origin/main d294319) -> git merge --abort OK
+git cherry-pick 0e52eee -> 4da3755, 1 file changed, ZERO conflicts  == canonical recipe PASS
+Run2 (unchanged): worktree persisted (NOT auto-cleaned) -> explicit remove required
+Cleanup: git worktree list -> main only; branch --list "worktree-*" -> 0; spike-proof.txt removed
+```
+
+Full evidence: `reports/worktree-spike.md` (5 questions answered, verbatim outputs).
 
 ## Risk Assessment
 
@@ -90,6 +103,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

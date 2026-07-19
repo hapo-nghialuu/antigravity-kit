@@ -1,7 +1,7 @@
 # Task R2-01: Runtime toggle and changelog
 
 **Requirement:** R5 — Runtime toggle & changelog (P)
-**Status:** pending
+**Status:** done
 **Priority:** P2
 **Estimated Effort:** S (~30m)
 **Dependencies:** none
@@ -33,17 +33,17 @@ Contracts: WAVE_CONFIG
 
 ## Steps
 
-- [ ] 1. Add `"develop": { "parallel": true }` to `packages/spec/src/claude/runtime.json` per the WAVE_CONFIG contract
+- [x] 1. Add `"develop": { "parallel": true }` to `packages/spec/src/claude/runtime.json` per the WAVE_CONFIG contract
   - Makes the hatch discoverable; installer ships it via existing runtime.files entry
   - Placement next to the `spec` block; JSON stays valid
   - _Requirements: 5.1_
 
-- [ ] 2. Add `[Unreleased] → Added` entries to `packages/spec/CHANGELOG.md` and `docs/project-changelog.md` describing parallel wave mode (opt-in flag, waves, worktree isolation, gate preserved, escape hatch)
+- [x] 2. Add `[Unreleased] → Added` entries to `packages/spec/CHANGELOG.md` and `docs/project-changelog.md` describing parallel wave mode (opt-in flag, waves, worktree isolation, gate preserved, escape hatch)
   - Keeps the release trail per manage-docs.md
   - One concise bullet per file, Keep-a-Changelog format
   - _Requirements: 5.1_
 
-- [ ] 3. Verification implementation
+- [x] 3. Verification implementation
   - `node -e "require('./packages/spec/src/claude/runtime.json')"` parses; changelog entries render under [Unreleased]
   - _Requirements: 5_
 
@@ -61,10 +61,10 @@ Contracts: WAVE_CONFIG
 
 ## Completion Criteria
 
-- [ ] Template contains `develop.parallel: true` and parses as valid JSON
-- [ ] Contract block in this task byte-matches design.md (validator contract check — negative path: any drift fails Layer 1)
-- [ ] Both changelogs carry the feature entry
-- [ ] Key is consumed by the SKILL text (wired in R1-02 refusal path — named integration point)
+- [x] Template contains `develop.parallel: true` and parses as valid JSON
+- [x] Contract block in this task byte-matches design.md (validator contract check — negative path: any drift fails Layer 1)
+- [x] Both changelogs carry the feature entry
+- [x] Key is consumed by the SKILL text (wired in R1-02 refusal path — named integration point)
 
 ## Evidence
 
@@ -80,18 +80,27 @@ Select the proof by task risk; do not run every test type for every task.
 - Scaffold/release task: include smoke build/test/dev-server checks.
 - Performance/security checks are required only when the requirement, risk, or touched surface calls for them.
 
-- [ ] Automated verification (unit/component/integration/E2E as applicable)
+- [x] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `node -e "const r=require('./packages/spec/src/claude/runtime.json'); if(r.develop?.parallel!==true) process.exit(1)"`
   - Expected proof: exit 0
-- [ ] Artifact / runtime verification
+- [x] Artifact / runtime verification
   - Inspect: `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`
   - Expect: [Unreleased] Added entries present
-- [ ] Runtime reachability verification
+- [x] Runtime reachability verification
   - Entrypoint/caller: `develop/SKILL.md` escape-hatch check (task R1-02)
   - Expect: SKILL refusal path reads `develop.parallel`; deferred integration named as R1-02
-- [ ] Contract / negative-path verification
+- [x] Contract / negative-path verification
   - Check: WAVE_CONFIG block drift vs design.md
   - Expect: Layer 1 contract check passes byte-identical
+
+
+### Verification receipt (2026-07-19)
+
+```
+node -e "require runtime.json; develop.parallel===true" -> exit 0 (valid JSON, key present)
+packages/spec/CHANGELOG.md + docs/project-changelog.md: [Unreleased] -> Added entries present
+WAVE_CONFIG contract in this task byte-matches design.md (validated by Layer 1 at spec finalization)
+```
 
 ## Risk Assessment
 
@@ -103,6 +112,6 @@ Select the proof by task risk; do not run every test type for every task.
 ---
 
 > **Parallel marker**: Append `(P)` to the title if this task can run concurrently with another (usually when serving different requirements).
-> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [ ]*`.
+> **Test note**: If a test coverage sub-task can be deferred post-MVP, mark it with `- [x]*`.
 > **Requirement mapping**: Every sub-task MUST end with `_Requirements: X.X_`. No mapping = invalid task file.
 > **Evidence rule**: No `## Evidence` section = invalid task file. Existing specs may use `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`; agents must support all three headings.

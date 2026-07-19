@@ -1,11 +1,11 @@
 {
   "feature_name": "develop-parallel-wave",
   "created_at": "2026-07-19T16:15:00+07:00",
-  "updated_at": "2026-07-19T16:50:00+07:00",
+  "updated_at": "2026-07-19T18:35:00+07:00",
   "language": "en",
   "status": "in_progress",
   "phase": "tasks",
-  "current_phase": "tasks",
+  "current_phase": "develop",
   "priority": "P1",
   "effort": "M",
   "tags": [
@@ -67,75 +67,75 @@
     "tasks/task-R1-01-worktree-spike.md": {
       "id": "R1-01",
       "title": "Worktree spike",
-      "status": "pending",
+      "status": "done",
       "dependencies": [],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T16:58:00+07:00",
+      "completed_at": "2026-07-19T17:20:00+07:00",
+      "last_updated_at": "2026-07-19T17:20:00+07:00"
     },
     "tasks/task-R0-01-parallel-waves-reference.md": {
       "id": "R0-01",
       "title": "Parallel waves reference",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "tasks/task-R1-01-worktree-spike.md"
       ],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T17:25:00+07:00",
+      "completed_at": "2026-07-19T17:40:00+07:00",
+      "last_updated_at": "2026-07-19T17:40:00+07:00"
     },
     "tasks/task-R1-02-develop-skill-parallel-mode.md": {
       "id": "R1-02",
       "title": "Develop skill parallel mode",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "tasks/task-R0-01-parallel-waves-reference.md"
       ],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T17:55:00+07:00",
+      "completed_at": "2026-07-19T17:55:00+07:00",
+      "last_updated_at": "2026-07-19T17:55:00+07:00"
     },
     "tasks/task-R1-03-quality-gate-worktree-amendment.md": {
       "id": "R1-03",
       "title": "Quality gate worktree amendment",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "tasks/task-R0-01-parallel-waves-reference.md"
       ],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T18:00:00+07:00",
+      "completed_at": "2026-07-19T18:00:00+07:00",
+      "last_updated_at": "2026-07-19T18:00:00+07:00"
     },
     "tasks/task-R1-04-agent-and-orchestrator-rules.md": {
       "id": "R1-04",
       "title": "Agent and orchestrator rules",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "tasks/task-R0-01-parallel-waves-reference.md"
       ],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T18:05:00+07:00",
+      "completed_at": "2026-07-19T18:15:00+07:00",
+      "last_updated_at": "2026-07-19T18:15:00+07:00"
     },
     "tasks/task-R2-01-runtime-toggle-and-changelog.md": {
       "id": "R2-01",
       "title": "Runtime toggle and changelog",
-      "status": "pending",
+      "status": "done",
       "dependencies": [],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T18:05:00+07:00",
+      "completed_at": "2026-07-19T18:15:00+07:00",
+      "last_updated_at": "2026-07-19T18:15:00+07:00"
     },
     "tasks/task-R2-02-self-test-assertions.md": {
       "id": "R2-02",
       "title": "Self test assertions",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "tasks/task-R1-02-develop-skill-parallel-mode.md",
         "tasks/task-R1-03-quality-gate-worktree-amendment.md",
@@ -143,9 +143,9 @@
         "tasks/task-R2-01-runtime-toggle-and-changelog.md"
       ],
       "blocker": null,
-      "started_at": null,
-      "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "started_at": "2026-07-19T18:20:00+07:00",
+      "completed_at": "2026-07-19T18:35:00+07:00",
+      "last_updated_at": "2026-07-19T18:35:00+07:00"
     },
     "tasks/task-R3-01-integration-dry-run.md": {
       "id": "R3-01",
@@ -154,10 +154,10 @@
       "dependencies": [
         "tasks/task-R2-02-self-test-assertions.md"
       ],
-      "blocker": null,
+      "blocker": "Requires a live Claude Code session in a scratch project (fresh runtime, real /hapo:develop --parallel run). Scheduled as the field-test step; cannot be executed honestly from the implementing session.",
       "started_at": null,
       "completed_at": null,
-      "last_updated_at": "2026-07-19T16:50:00+07:00"
+      "last_updated_at": "2026-07-19T18:35:00+07:00"
     }
   },
   "blocker": null,
@@ -183,10 +183,11 @@
     "validation_recommended": true
   },
   "validation": {
-    "status": "not-run",
+    "status": "user-waived",
     "session_count": 0,
     "questions_asked": 0,
-    "last_validated_at": null
+    "last_validated_at": null,
+    "note": "User explicitly waived red-team validation on 2026-07-19 (\"lam luon dung thuc hien tao specs nua\") and ordered direct implementation. ready_for_implementation stays false because the deterministic validator only accepts status=completed; implementation proceeds on recorded user authority."
   },
   "translation": {
     "enabled": false,
