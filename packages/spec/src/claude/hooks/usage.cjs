@@ -8,6 +8,12 @@
  * Fetches Claude Code usage limits from Anthropic OAuth API and writes to cache.
  * Cache is read by status.cjs for statusline display.
  *
+ * ⚠ EXPERIMENTAL / UNDOCUMENTED API: api.anthropic.com/api/oauth/usage with the
+ * "oauth-2025-04-20" beta header is not a public contract and may break or
+ * change shape without notice. Every failure path degrades to
+ * status:"unavailable" (statusline hides the segment) — never block on it.
+ * Disable entirely with "usage": { "enabled": false } if it misbehaves.
+ *
  * Features:
  * - Cross-platform credential retrieval (macOS Keychain, file-based)
  * - Throttled API calls: 1 min (prompt) / 5 min (tool use)

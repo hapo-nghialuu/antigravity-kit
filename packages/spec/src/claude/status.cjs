@@ -21,8 +21,10 @@ const { countConfigs } = require('./hooks/lib/counter.cjs');
 const { loadConfig } = require('./hooks/lib/config.cjs');
 const { getGitInfo } = require('./hooks/lib/git.cjs');
 
-// Buffer constant matching /context output (22.5% of 200k)
-const AUTOCOMPACT_BUFFER = 45000;
+// Autocompact reserve as a fraction of the ACTUAL window size from the payload.
+// Derived from /context on a 200k window (45000/200000 = 22.5%); expressed as a
+// ratio so 1M-context models are not treated as if they were 200k.
+const AUTOCOMPACT_BUFFER_RATIO = 0.225;
 
 /**
  * Expand home directory to ~
@@ -411,19 +413,20 @@ async function main() {
       }
     } catch {}
 
-    // Context window - use current_usage fields with AUTOCOMPACT_BUFFER
+    // Context window - use current_usage fields with a proportional reserve
     const usage = data.context_window?.current_usage || {};
     const contextSize = data.context_window?.context_window_size || 0;
     let contextPercent = 0;
     let totalTokens = 0;
 
-    if (contextSize > 0 && contextSize > AUTOCOMPACT_BUFFER) {
+    if (contextSize > 0) {
       totalTokens = (usage.input_tokens ?? 0) +
                     (usage.cache_creation_input_tokens ?? 0) +
                     (usage.cache_read_input_tokens ?? 0);
 
-      // Add buffer to match /context calculation
-      contextPercent = Math.min(100, Math.round(((totalTokens + AUTOCOMPACT_BUFFER) / contextSize) * 100));
+      // Add the reserve to match /context calculation on any window size
+      const buffer = Math.round(contextSize * AUTOCOMPACT_BUFFER_RATIO);
+      contextPercent = Math.min(100, Math.round(((totalTokens + buffer) / contextSize) * 100));
     }
 
     // Write context data to temp file for hooks to read
