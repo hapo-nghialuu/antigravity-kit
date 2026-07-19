@@ -93,7 +93,7 @@ const PLATFORMS = {
     skillsRef: '.opencode/skills',
     commandPrefix: '/',
     sourceDir: 'claude',
-    sourceSubdir: 'archive-command'
+    sourceSubdir: 'commands'   // Dead config (manifest commands.core is []); kept for shape parity
   }
   // Add new platforms here:
   // cursor: {

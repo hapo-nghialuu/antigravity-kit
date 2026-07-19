@@ -291,14 +291,6 @@ async function runStaticSemanticTests() {
         content.includes("Init is never a stop point"),
     },
     {
-      label: "legacy spec-init redirects to hapo specs resume",
-      file: "src/claude/archive-command/spec-init.md",
-      assert: (content) =>
-        content.includes("templates/spec-state.json") &&
-        content.includes("/hapo:specs resume <feature-name>") &&
-        !content.includes("Command block showing `/spec-requirements"),
-    },
-    {
       label: "hapo:specs task rules require runtime reachability proof",
       file: "src/claude/skills/specs/rules/tasks-generation.md",
       assert: (content) =>
