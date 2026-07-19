@@ -93,6 +93,10 @@ function patchRuntimeLocale(ctx) {
     // Use locale (freeform label) so custom languages propagate to the AI hook.
     const locale = ctx.locale || ctx.lang;
     if (data.locale.responseLanguage === locale) continue;
+    // Hardening: never downgrade an existing configured label to a bare default
+    // code when this run never made an explicit language choice (ctx.locale
+    // empty). Protects user config on any code path that skips selectLanguage.
+    if (!ctx.locale && data.locale.responseLanguage) continue;
     data.locale.responseLanguage = locale;
     fs.writeFileSync(rtPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
     if (ctx.trackers[key]) ctx.trackers[key].record(rtPath);

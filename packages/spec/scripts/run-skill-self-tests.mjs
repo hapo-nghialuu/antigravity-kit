@@ -959,6 +959,62 @@ async function runInstallerMigrationFixtureTests() {
   }
 }
 
+/**
+ * Regression: a non-interactive upgrade (--yes/--force-overwrite) must preserve
+ * the configured locale.responseLanguage. Bug (0.14.0/0.14.1 era): selectLanguage
+ * returned before restoring the saved locale when !interactive, so
+ * patchRuntimeLocale clobbered the label with the 'en' default on every upgrade.
+ */
+async function runLocalePreservationFixtureTest() {
+  const root = await mkdtemp(join(tmpdir(), "cafekit-installer-locale-"));
+
+  try {
+    await mkdir(join(root, ".claude"), { recursive: true });
+
+    const install = (args = []) =>
+      spawnSync(process.execPath, [join(packageRoot, "bin", "install.js"), ...args], {
+        cwd: root,
+        input: "n\n\n",
+        encoding: "utf8",
+        env: { ...process.env, PATH: "/usr/bin:/bin" },
+      });
+
+    const first = install();
+    if (first.status !== 0) {
+      console.error(first.stdout, first.stderr);
+      console.error("[FAIL] locale fixture: fresh install failed");
+      process.exit(1);
+    }
+
+    // Simulate a configured install: user language saved as a freeform label.
+    const rtPath = join(root, ".claude", "runtime.json");
+    const rt = JSON.parse(await readFile(rtPath, "utf8"));
+    rt.locale = { ...(rt.locale || {}), responseLanguage: "Tiếng Việt" };
+    await writeFile(rtPath, `${JSON.stringify(rt, null, 2)}\n`);
+
+    // Non-interactive upgrade — the exact path that clobbered the locale.
+    const second = install(["--force-overwrite"]);
+    if (second.status !== 0) {
+      console.error(second.stdout, second.stderr);
+      console.error("[FAIL] locale fixture: upgrade run failed");
+      process.exit(1);
+    }
+
+    const after = JSON.parse(await readFile(rtPath, "utf8"));
+    if (after.locale?.responseLanguage !== "Tiếng Việt") {
+      console.error(
+        `[FAIL] locale fixture: responseLanguage became ${JSON.stringify(after.locale?.responseLanguage)} after upgrade (expected "Tiếng Việt")`,
+      );
+      process.exit(1);
+    }
+
+    console.log("✔ installer upgrade preserves configured locale.responseLanguage");
+    return 1;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function runOpenCodeInstallerFixtureTests() {
   const root = await mkdtemp(join(tmpdir(), "cafekit-opencode-installer-"));
 
@@ -1521,6 +1577,7 @@ async function main() {
   totalTests += runSkillCatalogTests();
   console.log("\n[skill-test] installer migration fixtures");
   totalTests += await runInstallerMigrationFixtureTests();
+  totalTests += await runLocalePreservationFixtureTest();
   console.log("\n[skill-test] OpenCode installer fixtures");
   totalTests += await runOpenCodeInstallerFixtureTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
