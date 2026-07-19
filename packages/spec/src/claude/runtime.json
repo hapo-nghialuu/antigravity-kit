@@ -13,20 +13,17 @@
   },
   "paths": {
     "docs": "docs",
-    "specs": "specs"
+    "specs": "specs",
+    "plans": "plans"
   },
   "spec": {
     "scaffold_guard": true,
-    "completion_gate": true
+    "completion_gate": true,
+    "tollgate": true
   },
   "locale": {
     "thinkingLanguage": null,
     "responseLanguage": null
-  },
-  "skills": {
-    "research": {
-      "useGemini": true
-    }
   },
   "usage": {
     "enabled": true
