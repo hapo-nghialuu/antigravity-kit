@@ -291,14 +291,6 @@ async function runStaticSemanticTests() {
         content.includes("Init is never a stop point"),
     },
     {
-      label: "legacy spec-init redirects to hapo specs resume",
-      file: "src/claude/archive-command/spec-init.md",
-      assert: (content) =>
-        content.includes("templates/spec-state.json") &&
-        content.includes("/hapo:specs resume <feature-name>") &&
-        !content.includes("Command block showing `/spec-requirements"),
-    },
-    {
       label: "hapo:specs task rules require runtime reachability proof",
       file: "src/claude/skills/specs/rules/tasks-generation.md",
       assert: (content) =>
@@ -959,6 +951,104 @@ async function runInstallerMigrationFixtureTests() {
   }
 }
 
+/**
+ * Schema-drift tripwire: every hook command in the settings template must map
+ * to a real payload file that the migration manifest ships, and vice versa —
+ * a hook listed in runtime.files but registered nowhere is dead weight, a hook
+ * registered in settings but not shipped breaks at runtime.
+ */
+async function runSettingsManifestConsistencyCheck() {
+  const settings = JSON.parse(
+    await readFile(join(packageRoot, "src/claude/settings/settings.json"), "utf8"),
+  );
+  const manifest = JSON.parse(
+    await readFile(join(packageRoot, "src/claude/migration-manifest.json"), "utf8"),
+  );
+
+  const registered = new Set(
+    JSON.stringify(settings.hooks).match(/hooks\/[a-z-]+\.cjs/g) || [],
+  );
+  const shipped = new Set(
+    (manifest.runtime?.files || []).filter((f) => /^hooks\/[a-z-]+\.cjs$/.test(f)),
+  );
+
+  const failures = [];
+  for (const hook of registered) {
+    if (!shipped.has(hook)) failures.push(`registered in settings but not in manifest runtime.files: ${hook}`);
+    if (!(await fileExists(join(packageRoot, "src/claude", hook)))) {
+      failures.push(`registered in settings but payload file missing: ${hook}`);
+    }
+  }
+  for (const hook of shipped) {
+    if (!registered.has(hook)) failures.push(`shipped in manifest but registered in no settings event: ${hook}`);
+  }
+
+  if (failures.length > 0) {
+    console.error(failures.join("\n"));
+    console.error("[FAIL] settings/manifest hook consistency check failed");
+    process.exit(1);
+  }
+
+  console.log(`✔ settings template and manifest agree on ${registered.size} hooks`);
+  return 1;
+}
+
+/**
+ * Regression: a non-interactive upgrade (--yes/--force-overwrite) must preserve
+ * the configured locale.responseLanguage. Bug (0.14.0/0.14.1 era): selectLanguage
+ * returned before restoring the saved locale when !interactive, so
+ * patchRuntimeLocale clobbered the label with the 'en' default on every upgrade.
+ */
+async function runLocalePreservationFixtureTest() {
+  const root = await mkdtemp(join(tmpdir(), "cafekit-installer-locale-"));
+
+  try {
+    await mkdir(join(root, ".claude"), { recursive: true });
+
+    const install = (args = []) =>
+      spawnSync(process.execPath, [join(packageRoot, "bin", "install.js"), ...args], {
+        cwd: root,
+        input: "n\n\n",
+        encoding: "utf8",
+        env: { ...process.env, PATH: "/usr/bin:/bin" },
+      });
+
+    const first = install();
+    if (first.status !== 0) {
+      console.error(first.stdout, first.stderr);
+      console.error("[FAIL] locale fixture: fresh install failed");
+      process.exit(1);
+    }
+
+    // Simulate a configured install: user language saved as a freeform label.
+    const rtPath = join(root, ".claude", "runtime.json");
+    const rt = JSON.parse(await readFile(rtPath, "utf8"));
+    rt.locale = { ...(rt.locale || {}), responseLanguage: "Tiếng Việt" };
+    await writeFile(rtPath, `${JSON.stringify(rt, null, 2)}\n`);
+
+    // Non-interactive upgrade — the exact path that clobbered the locale.
+    const second = install(["--force-overwrite"]);
+    if (second.status !== 0) {
+      console.error(second.stdout, second.stderr);
+      console.error("[FAIL] locale fixture: upgrade run failed");
+      process.exit(1);
+    }
+
+    const after = JSON.parse(await readFile(rtPath, "utf8"));
+    if (after.locale?.responseLanguage !== "Tiếng Việt") {
+      console.error(
+        `[FAIL] locale fixture: responseLanguage became ${JSON.stringify(after.locale?.responseLanguage)} after upgrade (expected "Tiếng Việt")`,
+      );
+      process.exit(1);
+    }
+
+    console.log("✔ installer upgrade preserves configured locale.responseLanguage");
+    return 1;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function runOpenCodeInstallerFixtureTests() {
   const root = await mkdtemp(join(tmpdir(), "cafekit-opencode-installer-"));
 
@@ -1520,7 +1610,9 @@ async function main() {
   console.log("\n[skill-test] skill catalog checks");
   totalTests += runSkillCatalogTests();
   console.log("\n[skill-test] installer migration fixtures");
+  totalTests += await runSettingsManifestConsistencyCheck();
   totalTests += await runInstallerMigrationFixtureTests();
+  totalTests += await runLocalePreservationFixtureTest();
   console.log("\n[skill-test] OpenCode installer fixtures");
   totalTests += await runOpenCodeInstallerFixtureTests();
   console.log("\n[skill-test] spec artifact validator fixtures");

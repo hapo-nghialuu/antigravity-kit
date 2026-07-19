@@ -95,7 +95,7 @@ You MUST implement all scoped behavior for the active task, MUST NOT add out-of-
 | Thought (Excuse) | Reality (Rule) |
 |-------------------|----------------|
 | "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call the `inspector` agent to scan files. |
-| "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via `Task` tool. |
+| "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via the `Agent` tool. |
 
 ## Absolute Workflow
 

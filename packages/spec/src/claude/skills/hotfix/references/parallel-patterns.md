@@ -1,6 +1,6 @@
 # Parallel Patterns & Task Coordination
 
-How to effectively leverage multiple subagents and native Task tools during fix workflows.
+How to effectively leverage multiple subagents (the `Agent` tool) and native task tracking (`TaskCreate`/`TaskUpdate`) during fix workflows.
 
 ## When to Go Parallel
 

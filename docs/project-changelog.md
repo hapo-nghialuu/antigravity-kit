@@ -5,6 +5,18 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Fixed
+- Installer no longer resets `locale.responseLanguage` to `en` on non-interactive upgrade (saved-locale restore hoisted above the interactivity check + no-downgrade guard; live regression fixture). Statusline autocompact reserve is proportional to the real context window (1M models no longer treated as 200k).
+
+### Changed
+- `spec.{scaffold_guard, completion_gate, tollgate}` documented in runtime.json; Claude reminder honors `tollgate` like OpenCode; dead `useGemini` key dropped; `usage.cjs` OAuth endpoint marked experimental; legacy `Task`-tool prose → `Agent`; `inspector`/`debugger` gain `memory: user`.
+
+### Removed
+- Legacy `archive-command/` tree (1,680 dead lines) + vestigial references.
+
+### Added
+- Self-test: settings-template ↔ migration-manifest hook consistency check (11 hooks).
+
 ## [0.14.1] - 2026-07-17
 
 ### Fixed

@@ -177,7 +177,7 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 | `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
 | `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
 | `god-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
-| `test-runner` agent | hapo:test → | Primary executor, spawned via Task tool |
+| `test-runner` agent | hapo:test → | Primary executor, spawned via the `Agent` tool |
 | chrome-devtools scripts | test-runner → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
 
 ## References

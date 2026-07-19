@@ -35,16 +35,21 @@ function getInstalledLocale() {
 
 /** First step: pick the installer/UI language (interactive only). */
 async function selectLanguage(ctx) {
-  if (!ctx.interactive || ctx.options.lang) return ctx;
-
-  // If already installed, restore saved locale and skip the prompt
-  const savedLocale = getInstalledLocale();
-  if (savedLocale) {
-    const code = Object.keys(LANGUAGE_LABELS).find((k) => LANGUAGE_LABELS[k] === savedLocale) || 'en';
-    ctx.setLang(code, savedLocale); // updates ctx.t to the saved language
-    ctx.ui.info(ctx.t('langKept', { lang: savedLocale }));
-    return ctx;
+  // Restore the saved locale BEFORE the interactivity check: a non-interactive
+  // upgrade (--yes) must not forget the configured language. Skipping this left
+  // ctx at the 'en' default, and patchRuntimeLocale then clobbered the user's
+  // responseLanguage on every upgrade.
+  if (!ctx.options.lang) {
+    const savedLocale = getInstalledLocale();
+    if (savedLocale) {
+      const code = Object.keys(LANGUAGE_LABELS).find((k) => LANGUAGE_LABELS[k] === savedLocale) || 'en';
+      ctx.setLang(code, savedLocale); // updates ctx.t to the saved language
+      if (ctx.interactive) ctx.ui.info(ctx.t('langKept', { lang: savedLocale }));
+      return ctx;
+    }
   }
+
+  if (!ctx.interactive || ctx.options.lang) return ctx;
 
   const options = [
     ...SUPPORTED.map((code) => ({ value: code, label: LANGUAGE_LABELS[code] })),
