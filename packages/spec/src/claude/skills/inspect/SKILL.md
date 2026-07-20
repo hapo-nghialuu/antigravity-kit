@@ -20,12 +20,9 @@ Fast, token-efficient codebase discovery using parallel agents to find files nee
 
 ## When to Use
 
-- Beginning work on feature spanning multiple directories
-- User mentions needing to "find", "locate", or "search for" files
-- Starting debugging session requiring file relationships understanding
-- User asks about project structure or where functionality lives
-- Before changes that might affect multiple codebase parts
-- Before review/debug/impact analysis when affected files are unclear
+- Feature spanning multiple directories; user wants to find/locate/search files
+- Debugging that needs file relationships; project structure questions
+- Before multi-area changes, review, debug, or impact analysis
 
 ## Preflight Scope Gate (MANDATORY - All Modes)
 
@@ -34,87 +31,34 @@ Before scanning with ANY mode (internal or external):
 2. Apply the built-in no-scan lists below.
 3. Prefer file-type or glob hints whenever possible.
 
-**When scope is too broad:**
-
-Instead of rejecting, use a **2-phase approach**: first run a lightweight Structure Scout to understand the real layout, then divide work among parallel agents based on actual findings.
+**When scope is too broad:** use a **2-phase approach** — lightweight Structure Scout first, then parallel agents on real sub-scopes.
 
 ### Phase 1 — Structure Scout (Single Agent, Run First)
 
-Spawn **one dedicated scout agent** to map the top-level structure before any work is divided:
+Spawn **one scout** to map top-level layout before dividing work:
+1. List immediate children of the scope root (dirs + key config; monorepo markers)
+2. Rough file count per discovered directory
+3. Return a division plan of 1–6 logical sub-scopes (path/glob, est. files, focus)
 
-1. **Discover top-level layout** - Use `Glob` or `Bash` `ls` to list immediate children of the scope root:
-   - Top-level directories (src/, apps/, backend/, frontend/, packages/, etc.)
-   - Key config files (README.md, package.json, tsconfig.json, pyproject.toml, go.mod, etc.)
-   - Monorepo markers (packages/*, apps/*, lerna.json, pnpm-workspace.yaml, turbo.json)
-2. **Estimate sub-scope sizes** - For each discovered directory, do a rough file count (no deep read needed)
-3. **Return a division plan** - Scout outputs a structured list of logical sub-scopes (1-6), each with:
-   - Path or glob pattern
-   - Estimated file count
-   - Suggested focus area description
-
-> Wait for Scout to complete before proceeding to Phase 2.
+Wait for Scout before Phase 2.
 
 ### Phase 2 — Parallel Explore Agents (Based on Scout Results)
 
-Use the Scout's division plan to spawn parallel agents — one per sub-scope:
+1. Follow Scout's plan; merge scopes < 10 files; split scopes > 100 files
+2. Spawn parallel Explore agents (SCALE 3–6 recommended), one per sub-scope
+3. Aggregate into the Inspect Report; offer deeper follow-up on specific areas
 
-1. **Auto-divide into sub-scopes** - Follow Scout's plan, adjusted for:
-   - Merging sub-scopes that are too small (< 10 files)
-   - Splitting sub-scopes that are too large (> 100 files)
-2. **Spawn parallel Explore agents** - One agent per sub-scope (SCALE 3-6 recommended)
-3. **Aggregate findings** - Collect results from all agents into unified report
-4. **Suggest next steps** - Based on findings, ask if user wants deeper investigation of specific areas
-
-**Example flow:**
-```
-User: "scan entire ~/Desktop/project"
-
-Phase 1 — Scout discovers:
-  - README.md, package.json, turbo.json  → monorepo root
-  - packages/  → 3 sub-packages (~40 files each)
-  - apps/web/  → React frontend (~120 files)
-  - apps/api/  → NestJS backend (~80 files)
-
-Scout outputs division plan:
-  - Scope A: root config files (README.md, package.json, turbo.json)
-  - Scope B: packages/* (shared libs)
-  - Scope C: apps/web/ (frontend)
-  - Scope D: apps/api/ (backend)
-
-Phase 2 — 4 agents run in parallel on Scope A–D
-
-Result: "This is a monorepo with 2 apps, NestJS backend, React frontend, 3 shared packages..."
-Follow-up: "Want to investigate deeper? Choose: backend API | frontend components | shared packages"
-```
-
-**Fallback to AskUserQuestion:**
-- If Scout result is ambiguous (flat structure, no obvious divisions, < 3 distinguishable areas)
-- Use `AskUserQuestion` with 2-4 concrete scope suggestions derived from Scout findings
-- After user selects, re-invoke inspect with chosen scope
+**Fallback to AskUserQuestion:** if Scout is ambiguous (flat layout, < 3 areas), offer 2–4 concrete scopes from findings, then re-invoke with the chosen scope.
 
 ## Built-in No-Scan Guidance
 
 ### `NO_SCAN_PATHS`
-- `.git/`
-- `node_modules/`
-- `dist/`
-- `build/`
-- `.next/`
-- `coverage/`
-- `tmp/`
-- `temp/`
-- `vendor/`
-- `artifacts/`
-- `secrets/`
-- `private/`
+- `.git/`, `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`
+- `tmp/`, `temp/`, `vendor/`, `artifacts/`, `secrets/`, `private/`
 
 ### `NO_SCAN_CONTENT_HINTS`
-- private keys
-- token dumps
-- credential exports
-- `.env` secrets
-- generated bundles
-- binary blobs
+- private keys, token dumps, credential exports, `.env` secrets
+- generated bundles, binary blobs
 
 ## Configuration
 
@@ -127,69 +71,54 @@ Read from `.claude/runtime.json`:
 }
 ```
 
-Default model: `gemma-4-31b-it`
-
-**Note:** This file is automatically installed when you run `npx @haposoft/cafekit`.
+Default model: `gemma-4-31b-it` (installed with `npx @haposoft/cafekit`).
 
 ## Workflow
 
 ### 1. Analyze Task
-- Parse user prompt for search targets
-- Identify key directories, patterns, file types, lines of code
-- Determine optimal SCALE value of subagents to spawn
+- Parse search targets; identify directories, patterns, file types
+- Determine SCALE of subagents
 
 **SCALE Calculation:**
 ```
 SCALE = ceil(estimated_files_to_scan / 50)
 ```
 
-Where:
-- `estimated_files_to_scan` = rough count of files matching scope
-- Minimum SCALE = 1 (single agent)
-- Maximum SCALE = 10 (practical limit for coordination overhead)
-
-**SCALE Thresholds:**
-- SCALE 1-2: Simple, focused searches (< 100 files)
-- SCALE 3-5: Medium scope, suitable for external Gemini CLI
-- SCALE 6-10: Large scope, requires internal Explore agents
+- Min SCALE = 1; Max SCALE = 10
+- SCALE 1-2: focused (< 100 files)
+- SCALE 3-5: medium (suitable for external Gemini CLI)
+- SCALE 6-10: large (internal Explore agents)
 
 ### 2. Divide and Conquer
-- Split codebase into logical segments per agent
-- Assign each agent specific directories or patterns
-- Ensure no overlap, maximize coverage
+- Split into logical segments; assign distinct directories/patterns; no overlap
 
 ### 3. Register Inspect Tasks
-- **Skip if:** Agent count ≤ 2 (overhead exceeds benefit)
-- `TaskList` first — check for existing inspect tasks in session
-- If not found, `TaskCreate` per agent with scope metadata
-- See `./references/internal-inspection.md` for patterns and examples
+- **Skip if:** Agent count ≤ 2
+- `TaskList` first; if none, `TaskCreate` per agent with scope metadata
+- See `./references/internal-inspection.md` for patterns
 
 ### 4. Choose Mode
 
-Decision table:
-- **No `ext` argument** → Use internal Explore agents
-- **`ext` argument + SCALE ≤ 5** → Use Gemini CLI (if scope gate passed and Gemini available)
-- **`ext` argument + SCALE ≥ 6** → Use internal Explore agents (external not suitable for large scale)
-- **Gemini unavailable or fails** → Fallback to internal Explore agents
+| Condition | Mode |
+|---|---|
+| No `ext` argument | Internal Explore agents |
+| `ext` + SCALE ≤ 5 | Gemini CLI (if available + scope gate passed) |
+| `ext` + SCALE ≥ 6 | Internal Explore agents |
+| Gemini unavailable/fails | Fallback to internal Explore |
 
-Load appropriate reference:
-- **Internal (Default):** `./references/internal-inspection.md` (Explore subagents)
-- **External:** `./references/external-gemini-inspection.md` (Gemini CLI)
+Load: **Internal** `./references/internal-inspection.md` or **External** `./references/external-gemini-inspection.md`.
 
 ### 5. Spawn Parallel Agents
 
-**Notes:**
-- `TaskUpdate` each task to `in_progress` before spawning its agent
-- Prompt detailed instructions for each subagent with exact directories or files it should read
-- Remember that each subagent has less than 200K tokens of context window
-- Amount of subagents to-be-spawned depends on the current system resources available and amount of files to be scanned
-- Each subagent must return a detailed summary report to a main agent
+**Internal mode:** dispatch native Explore agents with breadth medium/very-thorough + the Scope Gate above. Details: `./references/internal-inspection.md`.
+
+- `TaskUpdate` each task to `in_progress` before spawn
+- Prompt each subagent with exact directories/files; each has < 200K context
+- Agent count follows resources + file volume; each returns a summary to the main agent
 
 ### 6. Collect Results
-- Timeout: 3 minutes per agent (skip non-responders)
-- `TaskUpdate` completed tasks; log timed-out agents in report
-- Aggregate findings into single report
-- List unresolved questions at end
+- Timeout: 3 minutes per agent (skip non-responders; log in report)
+- `TaskUpdate` completed tasks; aggregate; list unresolved questions at end
 
 ## Report Format
 
