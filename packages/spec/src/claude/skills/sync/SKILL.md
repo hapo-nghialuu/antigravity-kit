@@ -39,8 +39,8 @@ Scans the `spec.json` against all physical `task-R*.md` files to detect mismatch
 
 1. **Precision Edits:** Never overwrite the entire `spec.json` string blindly. Update only the required keys, while keeping JSON valid.
 2. **Machine + Human Sync:** Every task status update MUST modify both `spec.json.task_registry[...]` and the matching markdown task file header/status section.
-3. **Markdown Integrity:** When marking a task `done`, only then turn `[ ]` into `[x]` inside `## Steps` / `## Implementation Steps` and relevant `Completion Criteria` / `Evidence` checkboxes that have actual proof. `Task Test Plan & Verification Evidence` and legacy `Verification & Evidence` sections are supported.
-4. **Verification Receipt Rule:** `done` is illegal without a human-readable verification receipt already present in `## Evidence`, `## Task Test Plan & Verification Evidence`, or legacy `## Verification & Evidence` (commands executed, artifact/runtime proof, or equivalent concrete evidence). If proof is missing, keep the task `in_progress` or `blocked`.
+3. **Markdown Integrity:** When marking a task `done`, only then turn `[ ]` into `[x]` inside `## Steps` / `## Implementation Steps` and relevant `Completion Criteria` / `Evidence` checkboxes that have actual proof. Use `## Evidence` (legacy heading aliases still parse).
+4. **Verification Receipt Rule:** `done` is illegal without a human-readable verification receipt already present in `## Evidence` (legacy heading aliases still parse) (commands executed, artifact/runtime proof, or equivalent concrete evidence). If proof is missing, keep the task `in_progress` or `blocked`.
 5. **Task Docs Hook:** Every time `hapo:sync` marks a task as `done`, it must flag that a task-level docs checkpoint is now due for that verified task.
 6. **Phase Prompt Rule:** When `hapo:sync` marks the final pending task in the whole feature as `done`, it should automatically prompt the user if they'd like to advance the phase, but only after the docs checkpoint for that last completed task has been considered.
 

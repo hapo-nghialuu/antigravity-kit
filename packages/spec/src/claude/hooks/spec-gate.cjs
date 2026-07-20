@@ -87,6 +87,7 @@ try {
   if (newlyDone.length === 0) process.exit(0);
 
   // /m so ^ matches line starts (Evidence is never at byte 0 of the file).
+  // legacy heading aliases: read-compat only, no longer advertised
   const EVID_RE = /^#{2,3}\s+(Evidence|Task Test Plan & Verification Evidence|Verification & Evidence)\b/m;
   const PROOF_RE = /(PASS|FAIL|exit code|passed|✓)/;
 
