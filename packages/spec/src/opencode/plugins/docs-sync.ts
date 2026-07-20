@@ -71,27 +71,21 @@ function currentSourceHash(cwd: string): string {
 
 function buildMissingDocsBanner(): string {
   return [
-    "### 🔴 URGENT SYSTEM ACTION: MISSING DOCUMENTATION 🔴",
-    "> BẮT BUỘC (MANDATORY): Hệ thống phát hiện dự án đã có Source Code nhưng thư mục `docs/` chưa tồn tại.",
-    "> Nhiệm vụ ĐẦU TIÊN của bạn trong session này là đọc hiểu mã nguồn hiện tại và tạo ra các tài liệu tiêu chuẩn:",
-    "> 1. `docs/system-architecture.md` (Kiến trúc hệ thống, phân tích flow)",
-    "> 2. `docs/project-overview-pdr.md` (Tổng quan, mục tiêu, tính năng)",
-    "> 3. Khởi tạo file hidden `docs/.sync_hash` để theo dõi cập nhật.",
-    "> ",
-    '> LƯU Ý BẮT BUỘC: Bạn phải chạy lệnh Git này trong Terminal để lấy Hash Code mới nhất: `git log -1 --format="%H" -- . ":(exclude)docs"`',
-    "> Sau đó ghi chuẩn giá trị Hash đó vào file `docs/.sync_hash`.",
+    "### Missing docs/",
+    "> Source exists but `docs/` does not. Create baseline docs first:",
+    "> 1. `docs/system-architecture.md` — system architecture and flows",
+    "> 2. `docs/project-overview-pdr.md` — overview, goals, features",
+    '> 3. Write current hash to `docs/.sync_hash` via `git log -1 --format="%H" -- . ":(exclude)docs"`',
   ].join("\n");
 }
 
 function buildStaleDocsBanner(currentHash: string, lastSyncHash: string): string {
   return [
-    "### 🔄 CONTINUOUS DOCS SYNC REQUIRED 🔄",
-    `> Source Code vừa có sự thay đổi mới (Git Hash: \`${currentHash}\`) kể từ lần đồng bộ Docs cuối cùng (\`${lastSyncHash || "Chưa gán"}\`).`,
-    "> YÊU CẦU TRƯỚC KHI LÀM THÊM TÍNH NĂNG:",
-    `> 1. Rà soát file bị thay đổi gần đây (dùng \`git diff ${lastSyncHash} ${currentHash}\` hoặc \`git log\`).`,
-    "> 2. Cập nhật lại `docs/system-architecture.md` hoặc các chuẩn code nếu cần thiết.",
-    "> 3. Cập nhật Changelog (nhật ký thay đổi).",
-    `> 4. KHI HOÀN TẤT, BẠN PHẢI GHI ĐÈ GIÁ TRỊ SAU: \`${currentHash}\` VÀO FILE \`docs/.sync_hash\` ĐỂ CHỐT TRẠNG THÁI HIỆN TẠI.`,
+    "### Docs sync needed",
+    `> Source changed (\`${currentHash}\`) since last docs sync (\`${lastSyncHash || "none"}\`).`,
+    `> 1. Review recent changes (\`git diff ${lastSyncHash} ${currentHash}\` or \`git log\`).`,
+    "> 2. Update architecture/code-standards docs and changelog as needed.",
+    `> 3. Write \`${currentHash}\` to \`docs/.sync_hash\` when done.`,
   ].join("\n");
 }
 

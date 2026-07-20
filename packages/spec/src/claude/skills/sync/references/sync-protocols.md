@@ -15,7 +15,7 @@ When requested to update a phase or change task configuration, `spec.json` must 
     - full relative path like `tasks/task-R0-02-extension-shell.md`
 *   **Status Update:** If a task changes to `blocked`, the matching `task_registry[path].status` must become `"blocked"`, `task_registry[path].blocker` must record the reason, and `spec.json.status` / `spec.json.blocker` must reflect the top-level block if work is globally blocked.
 *   **Timestamp Rule:** Update `task_registry[path].started_at`, `completed_at`, and `last_updated_at` consistently with the new state. Also refresh `spec.json.updated_at`.
-*   **Done-State Rule:** Never set `task_registry[path].status = "done"` unless the matching markdown task file already contains a verification receipt in `## Evidence`, `## Task Test Plan & Verification Evidence`, or legacy `## Verification & Evidence`, or the caller explicitly provides proof that can be written there first.
+*   **Done-State Rule:** Never set `task_registry[path].status = "done"` unless the matching markdown task file already contains a verification receipt in `## Evidence` (legacy heading aliases still parse), or the caller explicitly provides proof that can be written there first.
 *   **Receipt Integrity Rule:** A valid verification receipt must include the exact commands run, their outcomes, and artifact/runtime proof. Receipts containing `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or explicit "placeholder / simplified for MVP / production later" contract deviations are not eligible for `done`.
 *   **Contract Fidelity Rule:** If the task file notes or evidence show that a named framework/auth/runtime choice from the spec was silently replaced, sync MUST refuse `done` until the spec is amended or the implementation is corrected.
 *   **Task Docs Rule:** After a task is moved to `done`, emit a short alert that a task-level docs checkpoint is due for this verified task.
@@ -27,12 +27,12 @@ The structure of `tasks/task.md` relies heavily on exact keyword markers. Follow
 ### A. Completing a Task
 When `/hapo:sync <feature> <task-id> done`:
 1. Find: `**Status:** pending` (or `in_progress` / `blocked`).
-2. Inspect `## Evidence` first. If the task uses `## Task Test Plan & Verification Evidence` or legacy `## Verification & Evidence`, inspect that section instead. If it has no explicit proof lines (commands run, artifact proof, runtime proof, or blockers cleared), STOP and refuse to mark the task done.
+2. Inspect `## Evidence` (legacy heading aliases still parse) first. If it has no explicit proof lines (commands run, artifact proof, runtime proof, or blockers cleared), STOP and refuse to mark the task done.
 3. Refuse completion if the receipt contains any non-passing marker such as `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation substituted a named contract with a placeholder/custom simplification.
 4. Replace with: `**Status:** done`.
 5. Locate block: `## Steps` or `## Implementation Steps`.
 6. Convert `- [ ]` into `- [x]` strictly within that section.
-7. Update relevant checkboxes in `## Completion Criteria` and `## Evidence` only when the caller provides or the file already contains real proof. For v0.8 or legacy task files, update `## Task Test Plan & Verification Evidence` or `## Verification & Evidence` instead.
+7. Update relevant checkboxes in `## Completion Criteria` and `## Evidence` (legacy heading aliases still parse) only when the caller provides or the file already contains real proof.
 8. Surface a note such as: `Docs checkpoint due: task Rn-mm just completed`.
 
 ### B. Blocking a Task
@@ -59,7 +59,7 @@ When `/hapo:sync audit <feature>` is activated:
    - Missing disk file referenced in registry → remove or flag it
    - Markdown says `done` but registry not done → registry wins only if evidence already exists; otherwise downgrade markdown or flag conflict
    - Registry says `done` but markdown still pending → update markdown only if evidence exists
-   - Either side says `done` but `## Evidence` / `## Task Test Plan & Verification Evidence` / legacy `## Verification & Evidence` has no concrete proof → downgrade to `in_progress` or flag conflict instead of preserving fake completion
+   - Either side says `done` but `## Evidence` (legacy heading aliases still parse) has no concrete proof → downgrade to `in_progress` or flag conflict instead of preserving fake completion
    - Either side says `done` but the receipt contains `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or explicit contract-substitution notes → downgrade to `in_progress` or flag conflict
 5. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed and any unresolved conflicts requiring manual review.
 6. **Task Docs Alert:** If audit reveals tasks newly marked `done`, include whether task-level docs sync appears still due or already accounted for in the current run summary.

@@ -127,7 +127,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
 - Apply `(P)` parallel markers when applicable (load `.claude/skills/specs/rules/tasks-parallel-analysis.md`)
 - Every task MUST use the compact implementation-ready shape: `Context`, `Steps`, `Requirements`, `Related Files`, `Completion Criteria`, `Evidence`, `Risk Assessment`.
-- `Evidence` MUST include exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks. Existing specs may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
+- `## Evidence` (legacy heading aliases still parse) MUST include exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.
 - UI/app/runtime workflows MUST include a final integration/reachability task or final integration section that names the real entrypoint and proves all scoped user-facing surfaces are wired.
 - Do not allow orphan task outputs: components, services, hooks, routes, commands, workers, providers, reducers, data loaders, and generated artifacts must be reachable now or assigned to a named later integration task.

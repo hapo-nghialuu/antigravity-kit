@@ -113,6 +113,7 @@ function validateTaskSections(taskPath, content, errors) {
     hasHeading(content, 'Requirements') || /_Requirements:\s*[^_\n]+_/i.test(content);
   const hasRelatedFiles = hasHeading(content, 'Related Files');
   const hasCompletionCriteria = hasHeading(content, 'Completion Criteria');
+  // legacy heading aliases: read-compat only, no longer advertised
   const hasEvidence =
     hasHeading(content, 'Evidence') ||
     hasHeading(content, 'Task Test Plan & Verification Evidence') ||
@@ -365,6 +366,11 @@ function validateSpec(specDir) {
   const contractDefs = fs.existsSync(designPath)
     ? extractContractDefs(fs.readFileSync(designPath, 'utf8'))
     : new Map();
+  if (taskFiles.length >= 5 && contractDefs.size === 0) {
+    warnings.push(
+      'design.md declares no contract blocks; specs spanning BE/FE must declare shared shapes (<!-- contract:NAME -->)',
+    );
+  }
   for (const taskFile of taskFiles) {
     const fullPath = path.join(specDir, taskFile);
     const content = fs.readFileSync(fullPath, 'utf8');

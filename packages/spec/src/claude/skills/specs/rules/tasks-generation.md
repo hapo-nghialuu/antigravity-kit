@@ -157,7 +157,7 @@ Every task file MUST contain the Risk Assessment table, even if no risks are ide
 
 ### Mandatory Evidence Section
 
-Every new task file MUST include a `## Evidence` section. Existing specs may still use the v0.8 heading `## Task Test Plan & Verification Evidence` or the legacy `## Verification & Evidence` heading; readers and sync tools must support all three.
+Every new task file MUST include a `## Evidence` section (`## Evidence` (legacy heading aliases still parse)).
 
 That section is the task-level test plan and proof checklist. It MUST contain:
 1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`

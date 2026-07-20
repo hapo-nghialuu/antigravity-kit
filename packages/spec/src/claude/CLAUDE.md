@@ -37,7 +37,7 @@ These rules reduce common agent coding failures: hidden assumptions, overbuilt s
 ### 4. Goal-Driven Execution
 
 - Convert requests into verifiable success criteria.
-- For spec tasks, use `Completion Criteria` and `Evidence` as the source of truth. Existing task files may use `Task Test Plan & Verification Evidence` or legacy `Verification & Evidence`.
+- For spec tasks, use `Completion Criteria` and `## Evidence` (legacy heading aliases still parse) as the source of truth.
 - For bugs, reproduce with a failing test or concrete evidence when feasible before fixing.
 - Loop until verification passes or a real blocker is recorded.
 

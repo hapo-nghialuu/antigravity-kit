@@ -12,6 +12,7 @@ All notable changes to CafeKit are documented here, following
 - Installer no longer resets `locale.responseLanguage` to `en` on non-interactive upgrade (saved-locale restore hoisted above the interactivity check + no-downgrade guard; live regression fixture). Statusline autocompact reserve is proportional to the real context window (1M models no longer treated as 200k).
 
 ### Changed
+- Slim-flow batch (audit §3.6): specs SKILL diet (~662→≤450), docs-sync banners slimmed (no shouting), routing rules → ambiguous-cases only, inspect internal mode thinned, `## Evidence` canonicalized (legacy aliases parse-only), contract-marker MUST for BE/FE + validator WARN on ≥5-task specs without contracts.
 - `spec.{scaffold_guard, completion_gate, tollgate}` documented in runtime.json; Claude reminder honors `tollgate` like OpenCode; dead `useGemini` key dropped; `usage.cjs` OAuth endpoint marked experimental; legacy `Task`-tool prose → `Agent`; `inspector`/`debugger` gain `memory: user`.
 
 ### Removed
