@@ -779,6 +779,23 @@ async function runStaticSemanticTests() {
         content.includes("config.paths?.docs || 'docs'"),
     },
     {
+      label: "hapo:specs SKILL stays lean after slim-flow diet",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) => content.split("\n").length <= 470,
+    },
+    {
+      label: "docs-sync.cjs has no shouting banners",
+      file: "src/claude/hooks/docs-sync.cjs",
+      assert: (content) =>
+        !content.includes("URGENT") && !content.includes("BẮT BUỘC"),
+    },
+    {
+      label: "workflow routing keeps delegate and ambiguity table",
+      file: "src/claude/rules/skill-workflow-routing.md",
+      assert: (content) =>
+        content.includes("/hapo:delegate") && content.includes("debug"),
+    },
+    {
       label: "usage hook reads runtime config from hook cwd",
       file: "src/claude/hooks/usage.cjs",
       assert: (content) =>
