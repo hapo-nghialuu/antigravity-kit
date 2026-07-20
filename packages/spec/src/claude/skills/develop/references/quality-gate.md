@@ -129,3 +129,11 @@ Must log the Quality Gate result to the terminal for user visibility:
 - **Preflight Fail:** `[x] Step 4 Quality Gate: PRECHECK_FAIL → compile/typecheck/build failed before tests mattered`
 - **Fix Needed:** `[~] Step 4 Quality Gate: Tests/spec/evidence failed → returned to god-developer`
 - **Awaiting Rescue:** `[!] Step 4 Quality Gate: Failed 3 rounds! Awaiting user intervention...`
+
+## Working directory (parallel mode)
+
+When `hapo:develop` runs in Parallel Wave Mode (`references/parallel-waves.md`), every Stage A and Stage B command for a task executes **with that task's worktree as the working directory**. Gate evidence recorded from the worktree run feeds the task's verification receipt. Thresholds, retry counter, and the COLLAPSE protocol are identical to sequential mode. A COLLAPSE of one task does not cancel other in-flight tasks of the wave.
+
+## Post-merge integration check (per wave)
+
+After the orchestrator cherry-picks the last gate-passed task of a wave: run the project build **or** the affected test subset (never the full suite mid-flight — it runs once at develop completion). While this check fails, the next wave MUST NOT start.

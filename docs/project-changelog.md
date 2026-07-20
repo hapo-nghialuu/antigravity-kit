@@ -5,6 +5,9 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Added
+- Parallel Wave Mode for `hapo:develop` (`--parallel [N]`): dependency-ordered waves, worktree-isolated `god-developer` per task, gate-in-worktree before cherry-pick merge, post-merge wave check, orchestrator-only state sync; sequential default unchanged, runtime escape hatch `develop.parallel` (spec `develop-parallel-wave`).
+
 ### Fixed
 - Installer no longer resets `locale.responseLanguage` to `en` on non-interactive upgrade (saved-locale restore hoisted above the interactivity check + no-downgrade guard; live regression fixture). Statusline autocompact reserve is proportional to the real context window (1M models no longer treated as 200k).
 

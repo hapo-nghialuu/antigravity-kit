@@ -23,7 +23,7 @@ Example prompt:
 ## Resource Constraints
 
 - Each subagent has a **200K token context window** — scope tasks to fit comfortably within it
-- Spawning many parallel agents degrades system performance — check available CPU/memory before scaling out
+- Spawning many parallel agents degrades system performance — check available CPU/memory before scaling out. For parallel implementation waves the cap is 3 concurrent agents by default, never more than 5 (each agent carries the 200K budget above)
 - Prefer fewer, well-scoped agents over many overlapping ones
 - Include system resource info (from hook injection) when delegating tasks so subagents can self-regulate
 
@@ -48,7 +48,7 @@ For implementation tasks, keep the chain explicit:
 2. Verify with `test-runner` using task files and exact evidence commands.
 3. Review with `code-auditor` using task files, design contracts, and the diff.
 
-Do not dispatch multiple implementation agents against the same files or same task. Parallelize only independent scopes with distinct file ownership.
+Do not dispatch multiple implementation agents against the same files or same task **within the same working tree**. Parallelize only independent scopes with distinct file ownership — the sanctioned pattern for parallel implementation is **worktree isolation** (one agent per task, each in its own git worktree) with a **single writer per file per wave** and orchestrator-only spec-state writes, per `skills/develop/references/parallel-waves.md`.
 
 ### Parallel (independent tasks)
 

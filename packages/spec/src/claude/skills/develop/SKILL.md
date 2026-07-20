@@ -5,7 +5,7 @@ user-invocable: true
 when_to_use: "Invoke to implement specs and tasks end-to-end after scope is clear."
 category: utilities
 keywords: [implementation, specs, build, orchestration]
-argument-hint: "[feature-name|specs-directory-path] [task-file] [--flash] [--no-notes]"
+argument-hint: "[feature-name|specs-directory-path] [task-file] [--flash] [--parallel [N]] [--no-notes]"
 metadata:
   author: haposoft
   version: "1.0.0"
@@ -47,6 +47,27 @@ Triggered by `/hapo:develop <feature>` or `/hapo:develop specs/<feature>`.
 - Recompute the queue and continue.
 - STOP the overall run on the first blocked task, unresolved gate failure, or missing proof.
 - In `--flash` mode, missing full test proof does not stop the loop; record `FLASH_UNVERIFIED` and continue to the next unblocked task.
+
+### 2b. Parallel Wave Mode (opt-in)
+Triggered by adding `--parallel [N]` to Full-Spec mode. Load `references/parallel-waves.md` and follow it exactly — it is the operating procedure (wave planning, dispatch, merge, cleanup).
+
+Contracts: WAVE_CONFIG
+
+<!-- contract:WAVE_CONFIG -->
+```jsonc
+// .claude/runtime.json — develop parallel toggle (missing key = allowed)
+"develop": {
+  "parallel": true   // false = --parallel refused, sequential run + notice
+}
+// Flag: /hapo:develop <feature> --parallel [N]   (N = wave cap, 1..5, default 3)
+```
+
+- Preconditions first: if `runtime.json` sets `develop.parallel: false`, refuse `--parallel`, name the key, and run the sequential loop. If the work context is not a git repository or worktree isolation is unavailable, state the reason and fall back sequential (see parallel-waves.md §1).
+- Waves are computed from `task_registry.dependencies` with the single-writer-per-file rule; wave cap = N (1..5, default 3).
+- Dispatch one `god-developer` per wave task — worktree isolation, background, self-contained prompt per `rules/orchestrator.md`, plus the mandatory lines in parallel-waves.md §3 (commit mandate; never edit `spec.json`/`tasks/*.md`; never touch files outside the task's `Related Files`).
+- Quality gate (Stage A+B, unchanged) runs inside each task's worktree BEFORE merge; merge = sequential `git cherry-pick` of agent commits with explicit worktree/branch cleanup (spike-verified — see parallel-waves.md §5); post-merge integration check gates the next wave.
+- The orchestrator is the single writer of spec state: registry/task-md/receipts update after each cherry-pick, exactly as in sequential mode.
+- Without `--parallel`, nothing in this section applies — the sequential Full-Spec loop below is unchanged.
 
 ### 3. Flash Mode
 Triggered by adding `--flash` to either specific-task or full-spec mode.

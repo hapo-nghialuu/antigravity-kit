@@ -291,6 +291,50 @@ async function runStaticSemanticTests() {
         content.includes("Init is never a stop point"),
     },
     {
+      label: "parallel-waves reference keeps single-writer, fallback, cap, and cherry-pick recipe",
+      file: "src/claude/skills/develop/references/parallel-waves.md",
+      assert: (content) =>
+        content.includes("single writer") &&
+        content.includes("sequential fallback") &&
+        content.includes("wave cap") &&
+        content.includes("git cherry-pick"),
+    },
+    {
+      label: "develop SKILL wires --parallel to parallel-waves and keeps sequential default",
+      file: "src/claude/skills/develop/SKILL.md",
+      assert: (content) =>
+        content.includes("--parallel") &&
+        content.includes("references/parallel-waves.md") &&
+        content.includes("one unblocked task at a time"),
+    },
+    {
+      label: "god-developer is single-track within its workspace with spec-state prohibition",
+      file: "src/claude/agents/god-developer.md",
+      assert: (content) =>
+        content.includes("within its workspace") &&
+        content.includes("Do NOT edit `spec.json`"),
+    },
+    {
+      label: "orchestrator sanctions worktree parallelism with single-writer rule and cap",
+      file: "src/claude/rules/orchestrator.md",
+      assert: (content) =>
+        content.includes("worktree isolation") &&
+        content.includes("single writer per file per wave") &&
+        content.includes("never more than 5"),
+    },
+    {
+      label: "quality-gate carries worktree working-directory note and COLLAPSE isolation",
+      file: "src/claude/skills/develop/references/quality-gate.md",
+      assert: (content) =>
+        content.includes("Working directory (parallel mode)") &&
+        content.includes("does not cancel other in-flight"),
+    },
+    {
+      label: "runtime template documents develop.parallel escape hatch",
+      file: "src/claude/runtime.json",
+      assert: (content) => content.includes('"develop"') && content.includes('"parallel": true'),
+    },
+    {
       label: "hapo:specs task rules require runtime reachability proof",
       file: "src/claude/skills/specs/rules/tasks-generation.md",
       assert: (content) =>
