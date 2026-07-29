@@ -84,12 +84,12 @@ try {
   const newlyDone = Object.keys(taskRegistry).filter((tp) =>
     (taskRegistry[tp]?.status || 'pending') === 'done' && featureCache[tp] !== 'done'
   );
-  if (newlyDone.length === 0) process.exit(0);
-
   // /m so ^ matches line starts (Evidence is never at byte 0 of the file).
   // legacy heading aliases: read-compat only, no longer advertised
   const EVID_RE = /^#{2,3}\s+(Evidence|Task Test Plan & Verification Evidence|Verification & Evidence)\b/m;
-  const PROOF_RE = /(PASS|FAIL|exit code|passed|✓)/;
+  const PASS_MARKER_RE = /^\s*Verification:\s*PASS\s*$/m;
+  const LEGACY_SUCCESS_RE = /^\s*(?:PASS(?:ED)?|✓)(?:\s*:|$)|exit\s+code\s*[:=]?\s*0\b/im;
+  const EXPLICIT_FAILURE_RE = /\bFAIL(?:ED|URE|URES|ING)?\b|tests?\s+failed|exit\s+code\s*[:=]?\s*[1-9]\d*|\b0\s+tests?\b/i;
 
   /** Body of first Evidence heading until next same-or-higher heading. */
   function evidenceBody(text) {
@@ -123,12 +123,20 @@ try {
     const body = evidenceBody(text);
     if (body === null || !EVID_RE.test(text)) {
       fails.push('b');
-    } else if (/\{\{[^}]+\}\}/.test(body) || !(/```/.test(body) || PROOF_RE.test(body))) {
+    } else if (
+      /\{\{[^}]+\}\}/.test(body) ||
+      EXPLICIT_FAILURE_RE.test(body) ||
+      !(PASS_MARKER_RE.test(body) || LEGACY_SUCCESS_RE.test(body))
+    ) {
       fails.push('c');
     }
 
     const at = taskRegistry[taskPath]?.completed_at;
-    if (typeof at !== 'string' || at.trim() === '') fails.push('d');
+    if (
+      typeof at !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T/.test(at) ||
+      Number.isNaN(Date.parse(at))
+    ) fails.push('d');
     return fails;
   }
 
@@ -136,7 +144,8 @@ try {
     .map((tp) => ({ taskPath: tp, fails: checkReceipt(tp) }))
     .filter((f) => f.fails.length > 0);
 
-  // Leave failing newly-done at old cache status so the gate re-fires next Stop.
+  // Always persist status transitions, including done → pending. Leave failing
+  // newly-done tasks at their old status so the gate re-fires next Stop.
   try {
     const nextFeature = { ...featureCache, ...currentStatuses };
     for (const { taskPath } of failures) {
@@ -148,6 +157,7 @@ try {
     fs.writeFileSync(cacheFile, JSON.stringify(cache));
   } catch { /* fail-open */ }
 
+  if (newlyDone.length === 0) process.exit(0);
   if (failures.length === 0) process.exit(0);
 
   const lines = [
@@ -156,7 +166,7 @@ try {
   for (const { taskPath, fails } of failures) {
     lines.push(`- \`${taskPath}\`: failed check(s) ${fails.join(', ')}`);
     lines.push(
-      `  Fix: add a verification receipt to \`## Evidence\` in \`specs/${featureName}/${taskPath}\`: commands run + outcomes, then re-sync spec.json`
+      `  Fix: add \`Verification: PASS\` plus commands and successful outcomes to \`## Evidence\` in \`specs/${featureName}/${taskPath}\`, then re-sync spec.json`
     );
   }
   process.stdout.write(JSON.stringify({ decision: 'block', reason: lines.slice(0, 8).join('\n') }) + '\n');

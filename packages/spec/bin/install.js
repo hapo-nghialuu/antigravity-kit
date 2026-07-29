@@ -170,11 +170,19 @@ async function main() {
     await runPostInstall(ctx);
     await setupSkillDeps(ctx);
     await setupRtk(ctx);
+
+    // Phase handlers may report recoverable-looking errors through counters
+    // instead of throwing. Treat them as transactional failure so the snapshot
+    // is restored before any success summary or backup pruning occurs.
+    if (ctx.results.errors > 0) {
+      throw new Error(`Installer reported ${ctx.results.errors} error${ctx.results.errors === 1 ? '' : 's'}`);
+    }
+
     printSummary(ctx);
 
     if (!ctx.dryRun) backup.prune(3);
 
-    exitCode = ctx.results.errors > 0 ? 1 : 0;
+    exitCode = 0;
   } catch (error) {
     const log = ctx && ctx.ui ? ctx.ui : { error: (m) => console.error(m) };
     const t = ctx ? ctx.t : (k) => k;

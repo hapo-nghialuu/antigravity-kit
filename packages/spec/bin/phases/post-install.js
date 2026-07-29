@@ -16,6 +16,25 @@ const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { LANGUAGE_LABELS } = require('../lib/i18n');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
+const { transformManagedClaudeContent } = require('./claude-runtime');
+
+function updateManagedClaudeFile(filePath, transform) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const next = transformManagedClaudeContent(content, transform);
+  if (next === content) return false;
+  fs.writeFileSync(filePath, next, 'utf8');
+  return true;
+}
+
+function readManagedClaudeBody(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  let body = '';
+  transformManagedClaudeContent(content, (managed) => {
+    body = managed;
+    return managed;
+  });
+  return body;
+}
 
 /** Write `"language"` field into .claude/settings.json so it's visible at a glance. */
 function patchSettingsLanguage(ctx) {
@@ -64,20 +83,14 @@ Always respond in **${label}**. Technical terms, code identifiers, and file path
 
 `;
 
-  let content = fs.readFileSync(claudeMdFile, 'utf8');
-  // Replace if marker present, else replace the generic section.
+  // Replace only inside the installer-owned block.
   const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
   const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
-
-  if (markerRe.test(content)) {
-    content = content.replace(markerRe, newSection);
-  } else if (genericRe.test(content)) {
-    content = content.replace(genericRe, newSection);
-  } else {
-    content += `\n${newSection}\n`;
-  }
-
-  fs.writeFileSync(claudeMdFile, content, 'utf8');
+  updateManagedClaudeFile(claudeMdFile, (managed) => {
+    if (markerRe.test(managed)) return managed.replace(markerRe, newSection);
+    if (genericRe.test(managed)) return managed.replace(genericRe, newSection);
+    return `${managed.trimEnd()}\n\n${newSection}\n`;
+  });
 }
 function patchRuntimeLocale(ctx) {
   for (const key of ctx.platforms) {
@@ -116,19 +129,18 @@ function configureAddressing(ctx, userAddress) {
   }
 
   const name = assistantName(ctx);
-  let content = fs.readFileSync(claudeMdFile, 'utf8');
   const addressingSection = `## Addressing (Context Overflow Indicator)
 
 ${name} always addresses the user as "${userAddress}" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
-  // Idempotent: replace existing section (shared marker) or append.
+  // Idempotent and scoped to the installer-owned block.
   const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
-  content = regex.test(content)
-    ? content.replace(regex, addressingSection)
-    : `${content.endsWith('\n') ? content : `${content}\n`}\n${addressingSection}\n`;
-
-  fs.writeFileSync(claudeMdFile, content, 'utf8');
-  ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
+  const changed = updateManagedClaudeFile(claudeMdFile, (managed) => (
+    regex.test(managed)
+      ? managed.replace(regex, addressingSection)
+      : `${managed.endsWith('\n') ? managed : `${managed}\n`}\n${addressingSection}\n`
+  ));
+  if (changed) ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
 }
 
 async function setupAddressing(ctx) {
@@ -138,7 +150,7 @@ async function setupAddressing(ctx) {
   const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
   let existingName = null;
   if (fs.existsSync(claudeMdFile)) {
-    const content = fs.readFileSync(claudeMdFile, 'utf8');
+    const content = readManagedClaudeBody(claudeMdFile);
     const match = content.match(/##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?always addresses the user as "([^"]+)"/);
     if (match) {
       existingName = match[1];
@@ -203,11 +215,8 @@ async function runPostInstall(ctx) {
   // Write "language" field into .claude/settings.json for visibility.
   patchSettingsLanguage(ctx);
 
-  // Re-record post-write baselines so installer-managed files stay "pristine",
-  // then flush each touched platform tracker.
-  if (ctx.platforms.includes('claude') && ctx.trackers.claude && fs.existsSync('CLAUDE.md')) {
-    ctx.trackers.claude.record('CLAUDE.md');
-  }
+  // Flush touched platform trackers. Root CLAUDE.md is block-managed and must
+  // never regain a whole-file ownership record.
   for (const key of ctx.platforms) {
     if (ctx.trackers[key]) ctx.trackers[key].write();
   }

@@ -15,11 +15,50 @@ const {
   getRuntimeSupportTargetDir,
   getCopyOptions
 } = require('../lib/context');
+const { sha256 } = require('../lib/manifest');
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
 const { normalizeOpenCodeBody } = require('../lib/opencode-install');
 
 const SRC = path.join(__dirname, '../../src');
+const CLAUDE_START = '<!-- CAFEKIT CLAUDE START -->';
+const CLAUDE_END = '<!-- CAFEKIT CLAUDE END -->';
+
+function managedClaudeBlock(template) {
+  return `${CLAUDE_START}\n${template.trimEnd()}\n${CLAUDE_END}`;
+}
+
+function managedClaudeRange(content) {
+  const start = content.indexOf(CLAUDE_START);
+  if (start === -1) return null;
+  const endStart = content.indexOf(CLAUDE_END, start + CLAUDE_START.length);
+  if (endStart === -1) return null;
+  return { start, end: endStart + CLAUDE_END.length, bodyStart: start + CLAUDE_START.length, bodyEnd: endStart };
+}
+
+/** Transform only the CafeKit-owned body, preserving all surrounding bytes. */
+function transformManagedClaudeContent(content, transform) {
+  const range = managedClaudeRange(content);
+  if (!range) return content;
+  const body = content.slice(range.bodyStart, range.bodyEnd);
+  return `${content.slice(0, range.bodyStart)}${transform(body)}${content.slice(range.bodyEnd)}`;
+}
+
+function upsertManagedClaudeBlock(existing, template, legacyOwned) {
+  const block = managedClaudeBlock(template);
+  const range = managedClaudeRange(existing);
+  if (range) {
+    return `${existing.slice(0, range.start)}${block}${existing.slice(range.end)}`;
+  }
+
+  // Whole-file migration is deliberately limited to exact shipped content or
+  // a file whose bytes still match the legacy ownership manifest.
+  if (existing === template || legacyOwned) return `${block}\n`;
+  if (!existing) return `${block}\n`;
+
+  const separator = existing.endsWith('\n') ? '\n' : '\n\n';
+  return `${existing}${separator}${block}\n`;
+}
 
 /** Copy ROUTING.md (SKILLS_DIR substituted; OpenCode body normalized). */
 function copyRoutingFile(ctx, platformKey) {
@@ -105,9 +144,22 @@ function copyClaudeMdFile(ctx, platformKey) {
     return;
   }
 
-  const { action } = writeManagedFile({
-    src, dest, platformFolder: PLATFORMS.claude.folder, ctx, tracker: ctx.trackers.claude
-  });
+  const tracker = ctx.trackers.claude;
+  // Older releases recorded the root file relative to .claude/. Never retain
+  // that whole-file ownership claim, even when this run makes no content change.
+  if (tracker) tracker.prune('../CLAUDE.md');
+
+  const template = fs.readFileSync(src, 'utf8');
+  const exists = fs.existsSync(dest);
+  const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  const legacyRecord = ctx.ownership?.[PLATFORMS.claude.folder]?.files?.['../CLAUDE.md'];
+  const legacyOwned = Boolean(legacyRecord && legacyRecord.sha256 === sha256(existing));
+  const next = upsertManagedClaudeBlock(existing, template, legacyOwned);
+  const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';
+
+  if (!ctx.dryRun && action !== 'unchanged') {
+    fs.writeFileSync(dest, next, 'utf8');
+  }
   report(ctx, action, 'CLAUDE.md');
 }
 
@@ -137,5 +189,6 @@ module.exports = {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
-  copyRulesDirectory
+  copyRulesDirectory,
+  transformManagedClaudeContent
 };

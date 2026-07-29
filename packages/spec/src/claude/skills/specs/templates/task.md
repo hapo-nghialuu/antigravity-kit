@@ -60,6 +60,8 @@
 This section is both the task-level test plan and the proof checklist. Keep it short, exact, and executable.
 Select the proof by task risk; do not run every test type for every task.
 
+Verification: PENDING
+
 - Logic/data/validator task: include unit tests.
 - Stateful UI/component task: include component or integration tests.
 - Cross-module/API/state flow task: include integration tests.
