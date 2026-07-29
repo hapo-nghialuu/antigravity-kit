@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-07-29
+
 ### Added
 - **Parallel Wave Mode for `hapo:develop`** (opt-in `--parallel [N]`): independent spec tasks run concurrently — waves computed from `task_registry.dependencies` with a single-writer-per-file rule (cap 3 default / 5 max), one `god-developer` per task in an isolated git worktree, the unchanged Stage A+B quality gate running inside each worktree before merge, spike-verified `git cherry-pick` merge-back with explicit worktree cleanup, a post-merge integration check gating each wave, and orchestrator-only spec-state writes. Sequential default untouched; sequential fallback when isolation is unavailable; escape hatch `"develop": { "parallel": false }` in `.claude/runtime.json`. New operating procedure: `skills/develop/references/parallel-waves.md`.
 

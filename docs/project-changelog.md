@@ -5,10 +5,16 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-07-29
+
 ### Added
 - Parallel Wave Mode for `hapo:develop` (`--parallel [N]`): dependency-ordered waves, worktree-isolated `god-developer` per task, gate-in-worktree before cherry-pick merge, post-merge wave check, orchestrator-only state sync; sequential default unchanged, runtime escape hatch `develop.parallel` (spec `develop-parallel-wave`).
 
 ### Fixed
+- Claude installer now manages only a marked block in project-root `CLAUDE.md`, preserves project-owned instructions, and rolls back both overwritten and newly created targets after failure.
+- Claude privacy hooks use native `permissionDecision: "ask"` for sensitive direct/Bash access, classify symlink targets first, and avoid duplicate `.env` policy in the inspect hook.
+- Spec completion rejects explicit failures, non-zero exits, zero-test receipts, invalid timestamps, and fence-only evidence; reopened tasks are gated again.
+- Session state includes tracked and untracked files, including repositories without a first commit.
 - Installer no longer resets `locale.responseLanguage` to `en` on non-interactive upgrade (saved-locale restore hoisted above the interactivity check + no-downgrade guard; live regression fixture). Statusline autocompact reserve is proportional to the real context window (1M models no longer treated as 200k).
 
 ### Changed
