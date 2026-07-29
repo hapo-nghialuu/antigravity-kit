@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { assertNoSymlinkPath } = require('./path-safety');
 
 const BACKUP_ROOT = '.cafekit-backup';
 const SNAPSHOT_METADATA = 'snapshot.json';
@@ -47,8 +48,18 @@ function validateRunId(runId) {
  * snapshot and restore. Skips if the source does not exist.
  */
 function copyTree(src, dest) {
-  if (!fs.existsSync(src)) return;
-  const stat = fs.statSync(src);
+  let stat;
+  try {
+    stat = fs.lstatSync(src);
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.symlinkSync(fs.readlinkSync(src), dest);
+    return;
+  }
   if (stat.isDirectory()) {
     fs.mkdirSync(dest, { recursive: true });
     for (const entry of fs.readdirSync(src)) {
@@ -77,10 +88,12 @@ function snapshot(folders, runId) {
   const targets = [...new Set(folders.map(validateTarget))];
   const backupDir = path.join(BACKUP_ROOT, validateRunId(runId));
   const dataDir = path.join(backupDir, SNAPSHOT_DATA);
+  assertNoSymlinkPath(BACKUP_ROOT);
   fs.mkdirSync(backupDir, { recursive: true });
 
   const records = [];
   for (const target of targets) {
+    assertNoSymlinkPath(target);
     const existed = fs.existsSync(target);
     records.push({ target, existed });
     if (existed) copyTree(target, path.join(dataDir, target));
@@ -115,7 +128,14 @@ function restore(backupDir) {
     }
     const target = validateTarget(record.target);
     const source = path.join(backupDir, SNAPSHOT_DATA, target);
-    if (record.existed && !fs.existsSync(source)) {
+    let sourceExists = true;
+    try {
+      fs.lstatSync(source);
+    } catch (error) {
+      if (error.code === 'ENOENT') sourceExists = false;
+      else throw error;
+    }
+    if (record.existed && !sourceExists) {
       throw new Error(`Backup data missing for target: ${target}`);
     }
     fs.rmSync(target, { recursive: true, force: true });

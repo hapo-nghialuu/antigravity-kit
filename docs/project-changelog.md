@@ -5,6 +5,21 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-29
+
+### Added
+- Native Codex CLI install surface: `.agents/skills`, `.codex/agents/*.toml`, project lifecycle hooks/rules/scripts/references/runtime, and a managed CafeKit block in root `AGENTS.md`; invoked with `$hapo-*` or `/skills`, with no generated project `config.toml`.
+
+### Changed
+- Installer supports Claude Code, Codex CLI, and OpenCode coexistence. Codex ownership and rollback span `.codex/` + `.agents/`; same-version runs selectively refresh pristine files, preserve user edits, and reserve full reset for explicit `--force-overwrite`.
+
+### Fixed
+- Codex privacy tokens are one-use and exact-set-bound across session/tool/canonical sensitive paths, including native patch and move inputs.
+- Codex state/lock/archive data is isolated per hashed session ID; malformed managed `AGENTS.md` markers preserve user bytes.
+
+### Verified
+- Package tests and a real Codex CLI 0.145 sandbox passed native skill, custom-agent, hooks/state, and privacy-block flows.
+
 ## [0.14.2] - 2026-07-29
 
 ### Added

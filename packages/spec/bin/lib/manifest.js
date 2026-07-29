@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { assertNoSymlinkPath, isInside } = require('./path-safety');
 
 const MANIFEST_FILE = 'cafekit-manifest.json';
 const SCHEMA_VERSION = 1;
@@ -75,10 +76,26 @@ function read(platformFolder) {
  * writes them back as the new baseline. relPath keys are normalized to forward
  * slashes and are relative to the platform folder.
  */
-function createTracker(platformFolder, version) {
+function createTracker(platformFolder, version, options = {}) {
   const files = {};
+  const recordRoot = path.resolve(options.recordRoot || platformFolder);
+  const allowedRoots = (options.allowedRoots || [options.recordRoot || platformFolder])
+    .map((root) => path.resolve(root));
+
+  function keyFor(filePath) {
+    const target = path.resolve(filePath);
+    if (!allowedRoots.some((root) => isInside(root, target))) {
+      throw new Error(`Managed file is outside allowed roots: ${filePath}`);
+    }
+    assertNoSymlinkPath(target);
+    return path.relative(recordRoot, target).replace(/\\/g, '/');
+  }
 
   return {
+    recordRoot,
+    allowedRoots,
+    keyFor,
+
     /**
      * Record a managed file by its on-disk path. Hashes the file as written.
      * Skips silently if the file is missing (e.g. dry-run).
@@ -86,7 +103,7 @@ function createTracker(platformFolder, version) {
     record(absPath) {
       const hash = hashFile(absPath);
       if (hash === null) return;
-      const rel = path.relative(platformFolder, absPath).replace(/\\/g, '/');
+      const rel = keyFor(absPath);
       files[rel] = { sha256: hash, version };
     },
 
@@ -159,8 +176,8 @@ function createTracker(platformFolder, version) {
  *   state: 'absent' | 'pristine' | 'user-modified' | 'user-created'
  *   changed: whether the payload differs from what's on disk (false → skip copy)
  */
-function classify(absPath, platformFolder, manifest, payloadHash) {
-  const rel = path.relative(platformFolder, absPath).replace(/\\/g, '/');
+function classify(absPath, platformFolder, manifest, payloadHash, recordRoot = platformFolder) {
+  const rel = path.relative(recordRoot, absPath).replace(/\\/g, '/');
   const recorded = manifest.files[rel];
   const recordedHash = recorded ? recorded.sha256 : null;
   const diskHash = hashFile(absPath);

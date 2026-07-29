@@ -1,10 +1,11 @@
 # @haposoft/cafekit
 
-> Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
+> Native spec-driven workflow and runtime bundle for Claude Code, Codex CLI, and OpenCode.
 
-[![Version](https://img.shields.io/badge/version-0.14.2-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.15.0-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
+[![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Native-orange.svg)](https://claude.ai/code)
+[![Codex%20CLI](https://img.shields.io/badge/Codex%20CLI-Native-111111.svg)](https://developers.openai.com/codex)
 
 ## Overview
 
@@ -19,6 +20,13 @@ Claude Code install support:
 - installs supporting agents under `.claude/agents/`
 - installs runtime hooks, statusline, and managed settings
 - merges Claude settings safely on re-run
+
+Codex CLI install support:
+- installs native skills under `.agents/skills/`
+- installs auto-discovered custom agents under `.codex/agents/*.toml`
+- installs native lifecycle hooks, rules, scripts, references, and runtime config under `.codex/`
+- merges a CafeKit-owned block into root `AGENTS.md`
+- requires no generated `.codex/config.toml` and never changes global trust config
 
 OpenCode install support:
 - installs command wrappers under `.opencode/commands/`
@@ -36,15 +44,22 @@ Run in your project root:
 npx @haposoft/cafekit
 ```
 
-Refresh managed files:
+Install Codex explicitly:
 
 ```bash
-npx @haposoft/cafekit --upgrade
+npx @haposoft/cafekit --platform codex
+```
+
+Re-running the same version selectively refreshes pristine managed files while
+preserving edits. To reset user-modified managed files from a saved backup:
+
+```bash
+npx @haposoft/cafekit --platform codex --force-overwrite
 ```
 
 Requirements:
 - Node.js 18+
-- Claude Code project with `.claude/`, OpenCode project with `.opencode/` or `opencode.json`, or choose a runtime when prompted
+- Claude Code, Codex CLI, or OpenCode; choose a runtime when prompted or use `--platform`
 
 ## Git ignore policy
 
@@ -59,12 +74,17 @@ plans/
 .cafekit.lock
 .claude/
 .opencode/
+.codex/
+.agents/
 ```
 
 Runtime folders are local — reinstall with `npx @haposoft/cafekit` rather than
-committing them. Inside the runtime, CafeKit also installs `.claude/.gitignore`
-(or `.opencode/.gitignore`) so secrets, skill dependencies, session state, and
-hook logs stay out of git even if someone force-adds the folder.
+committing them. Inside the runtime, CafeKit also installs `.claude/.gitignore`,
+`.opencode/.gitignore`, or the Codex pair `.codex/.gitignore` +
+`.agents/.gitignore`. These keep secrets, skill dependencies, session state,
+and hook logs out of git even if someone partially un-ignores a runtime.
+Teams may deliberately commit runtime files, but should also commit the
+ownership manifest so selective updates share the same baseline.
 
 ## What Gets Installed
 
@@ -89,6 +109,33 @@ CLAUDE.md
 
 CafeKit owns only its marked block inside the project-root `CLAUDE.md`; project
 instructions outside that block are preserved across installs and upgrades.
+
+Codex CLI targets:
+
+```text
+.agents/
+├── .gitignore
+└── skills/
+
+.codex/
+├── .gitignore
+├── agents/*.toml
+├── hooks.json
+├── hooks/
+├── rules/
+├── scripts/
+├── references/
+├── cafekit.json
+└── runtime.json
+
+AGENTS.md
+```
+
+CafeKit owns only its marked block in root `AGENTS.md`. Codex discovers skills
+and custom agents natively after the repository is trusted; no project
+`config.toml` is generated. Review and trust project hooks with `/hooks`.
+CafeKit uses Codex's native status and usage UI instead of installing the
+Claude statusline.
 
 OpenCode targets:
 
@@ -119,6 +166,7 @@ To check the installed CafeKit package version:
 
 ```bash
 cat .claude/cafekit.json
+cat .codex/cafekit.json
 cat .opencode/cafekit.json
 ```
 
@@ -144,6 +192,10 @@ CafeKit uses rule-based skill routing guidance instead of an automatic prompt-sc
 node .claude/scripts/generate-skill-catalog.cjs --skills
 ```
 
+On Codex, invoke the transformed native skill names as `$hapo-<name>` or browse
+them with `/skills`. Explicit custom-agent delegation uses snake_case agent
+names and `fork_turns: "none"`.
+
 ## Quick Start
 
 Claude Code:
@@ -155,6 +207,17 @@ Claude Code:
 /hapo:develop meet-transcript-mvp
 /hapo:test meet-transcript-mvp --full
 /hapo:code-review meet-transcript-mvp --pending
+```
+
+Codex CLI:
+
+```text
+$hapo-question "Which files define the current CafeKit runtime?" --repo
+$hapo-brainstorm Explore approaches for a Google Meet transcript extension
+$hapo-specs Build a Google Meet transcript extension with AI summaries
+$hapo-develop meet-transcript-mvp
+$hapo-test meet-transcript-mvp --full
+$hapo-code-review meet-transcript-mvp --pending
 ```
 
 OpenCode uses the generated command names without the Claude `hapo:` prefix:
@@ -175,6 +238,14 @@ Reconstruct as-is docs from a legacy codebase:
 ```
 
 The reconstruct bundle includes as-is markdown/JSON evidence and a self-contained `overview.html` review dashboard before the approved docs are handed to `/hapo:specs`.
+
+## Codex hook safety
+
+Codex project hooks cover session/prompt/tool/subagent/stop lifecycle events,
+spec and task guardrails, per-session state, and privacy blocking. Sensitive
+access approval is one-time and bound to the session, tool, and exact canonical
+path set. Hooks are guardrails rather than a complete security boundary:
+hosted or specialized tools may not enter the local hook path.
 
 ## Spec Output
 

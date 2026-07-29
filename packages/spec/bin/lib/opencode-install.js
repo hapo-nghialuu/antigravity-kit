@@ -419,6 +419,20 @@ function upsertCafeKitAgentsBlock(existingContent, blockContent) {
     return existingContent.replace(blockPattern, managedBlock);
   }
 
+  // Pre-managed-block releases wrote the shipped template as the whole file.
+  // Wrap only an exact shipped prefix and preserve any user/Codex suffix.
+  if (existingContent.startsWith(blockContent)) {
+    return `${managedBlock}${existingContent.slice(blockContent.length)}`;
+  }
+  const trimmedLegacy = blockContent.trimEnd();
+  if (
+    existingContent.startsWith(trimmedLegacy)
+    && ['', '\n', '\r'].includes(existingContent.charAt(trimmedLegacy.length))
+  ) {
+    return `${managedBlock}${existingContent.slice(trimmedLegacy.length)}`;
+  }
+  if (!existingContent) return `${managedBlock}\n`;
+
   const separator = existingContent.endsWith('\n') ? '\n' : '\n\n';
   return `${existingContent}${separator}${managedBlock}\n`;
 }
@@ -442,35 +456,23 @@ function getOpenCodeAgentsTemplateContent() {
 function copyOpenCodeAgentsMdFile(platformKey, results, options = {}) {
   if (platformKey !== 'opencode') return;
 
-  const shouldOverwriteManagedFiles = Boolean(options.upgrade);
   const dest = 'AGENTS.md';
   const content = getOpenCodeAgentsTemplateContent();
 
   if (content) {
     const destinationExists = fs.existsSync(dest);
+    const existingContent = destinationExists ? fs.readFileSync(dest, 'utf8') : '';
+    const nextContent = upsertCafeKitAgentsBlock(existingContent, content);
 
-    if (destinationExists && !shouldOverwriteManagedFiles) {
-      const existingContent = fs.readFileSync(dest, 'utf8');
-      const nextContent = upsertCafeKitAgentsBlock(existingContent, content);
-
-      if (nextContent === existingContent) {
-        console.log(`  → Skipped: AGENTS.md (already up to date)`);
-        results.skipped++;
-        return;
-      }
-
+    if (nextContent === existingContent) {
+      console.log(`  → Skipped: AGENTS.md (already up to date)`);
+      results.skipped++;
+    } else if (destinationExists) {
       fs.writeFileSync(dest, nextContent, 'utf8');
       console.log(`  ↻ AGENTS.md merged`);
       results.updated++;
-      return;
-    }
-
-    fs.writeFileSync(dest, content, 'utf8');
-
-    if (destinationExists && shouldOverwriteManagedFiles) {
-      console.log(`  ↻ AGENTS.md overwritten`);
-      results.updated++;
     } else {
+      fs.writeFileSync(dest, nextContent, 'utf8');
       console.log(`  ✓ AGENTS.md installed`);
       results.copied++;
     }

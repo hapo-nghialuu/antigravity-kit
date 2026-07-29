@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const { isTextAsset } = require('./copy-utils');
 const manifest = require('./manifest');
+const { assertNoSymlinkPath } = require('./path-safety');
 
 /**
  * Resolve the payload bytes for a source file, applying a text transform when
@@ -47,6 +48,7 @@ function writeManagedFile(opts) {
   if (!fs.existsSync(src)) {
     return { action: 'missing', state: 'absent' };
   }
+  assertNoSymlinkPath(dest);
 
   const { data, utf8 } = readPayload(src, transform);
   const payloadHash = manifest.sha256(data);
@@ -56,7 +58,9 @@ function writeManagedFile(opts) {
   // A file already written earlier THIS run (e.g. a spec template copied as part
   // of the specs/ tree, then revisited by the template-sync loop) is ours — treat
   // it as pristine against what we just wrote, not as a user-created file.
-  const relForRun = path.relative(platformFolder, dest).replace(/\\/g, '/');
+  const relForRun = tracker?.keyFor
+    ? tracker.keyFor(dest)
+    : path.relative(platformFolder, dest).replace(/\\/g, '/');
   const writtenThisRun = tracker ? tracker.recorded(relForRun) : null;
 
   let cls;
@@ -68,7 +72,13 @@ function writeManagedFile(opts) {
       changed: writtenThisRun !== payloadHash
     };
   } else {
-    cls = manifest.classify(dest, platformFolder, ownership, payloadHash);
+    cls = manifest.classify(
+      dest,
+      platformFolder,
+      ownership,
+      payloadHash,
+      tracker?.recordRoot || platformFolder
+    );
   }
   const forced = Boolean(ctx.options.forceOverwrite);
 
@@ -101,6 +111,11 @@ function writeManagedFile(opts) {
       fs.writeFileSync(dest, data, 'utf8');
     } else {
       fs.writeFileSync(dest, data);
+    }
+    if (process.platform !== 'win32') {
+      const sourceMode = fs.statSync(src).mode;
+      const destinationMode = fs.statSync(dest).mode;
+      fs.chmodSync(dest, (destinationMode & ~0o111) | (sourceMode & 0o111));
     }
   }
 

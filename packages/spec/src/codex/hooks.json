@@ -1,0 +1,122 @@
+{
+  "description": "CafeKit project-local lifecycle hooks for Codex CLI. Review and trust with /hooks.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/session.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/session.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/docs-sync.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/docs-sync.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/agent.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/agent.cjs\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-approval.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-approval.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-state.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-state.cjs\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write|Read|Glob|Grep|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-block.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-block.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/inspect-block.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/inspect-block.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/task-scaffold-guard.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/task-scaffold-guard.cjs\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent|spawn_agent|update_plan|task|Task|TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-gate.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-gate.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
+            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -21,13 +21,17 @@ bin/lib/
   backup.js                 snapshot / restore / prune  (.cafekit-backup/<runId>/)
   lock.js                   acquire / release / stale-PID reclaim  (.cafekit.lock)
   copy-utils.js             copyRecursive / isTextAsset / readJsonFile  (existing)
-  opencode-install.js       OpenCode conversion + writers  (existing, called as-is)
+  opencode-install.js       OpenCode conversion + writers
+  codex-install.js          Codex path/tool/skill transforms + managed AGENTS block
+  codex-frontmatter.js      minimal agent frontmatter reader for TOML conversion
+  path-safety.js            reject managed targets that traverse project symlinks
 bin/phases/
   select-platform.js        detect platforms, prompt, legacy warning
   copy-payload.js           skills / agents / references / scripts / commands
   claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md, rules
   claude-settings.js        settings.json merge + obsolete-hook pruning
   opencode-runtime.js       delegates to opencode-install.js (plugins, commands, AGENTS, config)
+  codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
   post-install.js           OpenCode model, Gemini API key, addressing (platform-aware)
@@ -43,13 +47,16 @@ bin/lib/
 1. **Lock** — acquire `.cafekit.lock`; refuse if a live PID owns it, reclaim if stale.
 2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`), load the
    migration manifest, init results counters.
-3. **Select platforms** — auto-detect `.claude/` / `.opencode/`, else prompt.
-4. **Snapshot** — back up platform folders + root `CLAUDE.md`/`.gitignore` (skipped in dry-run).
+3. **Select platforms** — honor `--platform`, otherwise restore installed/detected
+   `.claude/`, `.codex/`, and `.opencode/` runtimes or prompt.
+4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
+   (skipped in dry-run). Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
 5. **Per platform** — read ownership baseline, start a tracker, then: copy payload →
-   claude-runtime *or* opencode-runtime → write metadata + manifest.
-6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.opencode/`,
-   `.cafekit-backup/`, `.cafekit.lock`).
-7. **Post-install** — OpenCode model, Gemini, addressing (re-records CLAUDE.md baseline).
+   Claude, Codex, or OpenCode runtime → write metadata + manifest.
+6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.codex/`,
+   `.agents/`, `.opencode/`, `.cafekit-backup/`, `.cafekit.lock`).
+7. **Post-install** — OpenCode model, runtime locale, Gemini, and managed
+   `CLAUDE.md`/`AGENTS.md` addressing.
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
 10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
@@ -76,16 +83,47 @@ A file written earlier in the same run (e.g. spec templates copied by the `specs
 tree, then revisited by the template-sync loop) is treated as pristine via the
 tracker's in-run record, avoiding false "user-created" classification.
 
-By default the installer gitignores the runtime folders (`.claude/`, `.opencode/`)
+Claude and OpenCode keep their ownership manifest inside one runtime root.
+Codex uses one tracker with `recordRoot: "."` and only allows keys under
+`.codex/` or `.agents/`; root `AGENTS.md` is managed separately as a marked
+block so project and OpenCode instructions remain byte-preserved.
+
+By default the installer gitignores the runtime folders (`.claude/`, `.codex/`,
+`.agents/`, `.opencode/`)
 at project root — reinstall with `npx @haposoft/cafekit` on each machine. The
 ownership manifest therefore lives only on disk as a local re-install baseline.
 If a team deliberately force-adds and commits the runtime folder, they should
 also commit the ownership manifest so teammates share the baseline; otherwise
 their first install would treat those files as user-created and never update them.
 
-A second layer lives inside the runtime: `.claude/.gitignore` /
-`.opencode/.gitignore` (from `src/claude/gitignore`) ignore secrets, skill
-deps, session state, and logs so force-adds stay safe.
+A second layer lives inside the runtime: `.claude/.gitignore`,
+`.opencode/.gitignore`, or Codex's `.codex/.gitignore` +
+`.agents/.gitignore`. These ignore secrets, skill dependencies, session state,
+and logs so partial un-ignores and force-adds stay safer.
+
+## Native Codex layout
+
+`npx @haposoft/cafekit --platform codex` installs:
+
+```text
+.agents/skills/             native skills (`$hapo-*`, discoverable via `/skills`)
+.codex/agents/*.toml        auto-discovered snake_case custom agents
+.codex/hooks.json           project lifecycle registration
+.codex/hooks/               native event handlers and state/privacy libraries
+.codex/{rules,scripts,references}/
+.codex/{runtime,cafekit}.json
+AGENTS.md                    CafeKit-owned marked block only
+```
+
+The installer does not create `.codex/config.toml` or change user-global trust.
+Codex loads project agents/hooks after the repository is trusted; users review
+hook definitions with `/hooks`. It uses Codex's native status/usage UI, not the
+Claude statusline.
+
+Codex payload conversion is scoped by asset type. Markdown/text instructions
+map Claude paths, skill syntax, tools, and agent examples to native Codex
+equivalents. Executable source files receive path/label rewrites only, preventing
+keywords such as Python `prompt=` or `description=` from being corrupted.
 
 ## Safety properties
 
@@ -94,6 +132,17 @@ deps, session state, and logs so force-adds stay safe.
 - **Concurrency** — the lock prevents two installs racing on the same project.
 - **Dry-run** — every write/delete/`mkdir`/manifest write is guarded; OpenCode delegation
   is skipped (it is not dry-run aware) while `rules/` still previews.
+- **Path safety** — managed writes and snapshots reject symlink traversal outside
+  the intended project paths.
+- **Permissions** — POSIX execute bits from payload scripts are preserved without
+  replacing destination read/write bits.
+- **Selective refresh** — re-running the same version updates pristine payload
+  files and preserves user modifications; only explicit `--force-overwrite`
+  resets them.
+- **Codex privacy/state** — sensitive approval is one-use and bound to the exact
+  session/tool/canonical path set. State, locks, resume context, and archives are
+  isolated by hashed session ID. Hooks remain guardrails: hosted or specialized
+  tools may not enter the local hook path.
 
 ## Known follow-ups
 

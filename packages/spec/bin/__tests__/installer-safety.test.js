@@ -7,8 +7,12 @@ const path = require('node:path');
 const { test } = require('node:test');
 
 const backup = require('../lib/backup');
+const {
+  copyOpenCodeAgentsMdFile,
+  normalizeOpenCodeBody
+} = require('../lib/opencode-install');
 const { copyClaudeMdFile } = require('../phases/claude-runtime');
-const { configureAddressing } = require('../phases/post-install');
+const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
@@ -104,6 +108,68 @@ test('addressing changes remain inside the managed CLAUDE block', () => {
   });
 });
 
+test('OpenCode force refresh preserves user and Codex AGENTS blocks', () => {
+  inTempProject(() => {
+    const userContent = '# User instructions\n\nKeep this exact.\n';
+    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
+    fs.writeFileSync('AGENTS.md', `${userContent}\n${codexBlock}`);
+    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
+
+    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
+
+    const content = fs.readFileSync('AGENTS.md', 'utf8');
+    assert.ok(content.startsWith(userContent));
+    assert.ok(content.includes(codexBlock.trim()));
+    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
+    assert.equal(results.updated, 1);
+  });
+});
+
+test('legacy unmarked OpenCode AGENTS content is wrapped without duplication', () => {
+  inTempProject(() => {
+    const source = path.join(__dirname, '../../src/opencode/AGENTS.md');
+    const legacy = normalizeOpenCodeBody(fs.readFileSync(source, 'utf8'));
+    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
+    fs.writeFileSync('AGENTS.md', `${legacy}\n${codexBlock}`);
+    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
+
+    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
+
+    const content = fs.readFileSync('AGENTS.md', 'utf8');
+    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
+    assert.equal((content.match(/^# AGENTS\.md$/gm) || []).length, 1);
+    assert.ok(content.includes(codexBlock.trim()));
+  });
+});
+
+test('locale patch does not claim ownership of a preserved user runtime', () => {
+  inTempProject(() => {
+    fs.mkdirSync('.codex', { recursive: true });
+    fs.writeFileSync(
+      '.codex/runtime.json',
+      `${JSON.stringify({ custom: true, locale: { responseLanguage: 'English' } })}\n`
+    );
+    const ctx = {
+      platforms: ['codex'],
+      locale: 'Tiếng Việt',
+      lang: 'vi',
+      trackers: {
+        codex: {
+          keyFor: () => '.codex/runtime.json',
+          recorded: () => null,
+          record: () => assert.fail('preserved runtime must not become installer-owned')
+        }
+      }
+    };
+
+    patchRuntimeLocale(ctx);
+
+    const runtime = JSON.parse(fs.readFileSync('.codex/runtime.json', 'utf8'));
+    assert.equal(runtime.custom, true);
+    assert.equal(runtime.locale.responseLanguage, 'Tiếng Việt');
+  });
+});
+
 test('backup restores existing targets and removes targets absent before the run', () => {
   inTempProject(() => {
     fs.mkdirSync('.claude/nested', { recursive: true });
@@ -135,11 +201,59 @@ test('backup restores existing targets and removes targets absent before the run
   });
 });
 
+test('backup preserves nested dependency symlinks without following them', () => {
+  inTempProject(() => {
+    fs.mkdirSync('.agents/skills/demo/.venv/bin', { recursive: true });
+    fs.mkdirSync('toolchain', { recursive: true });
+    fs.writeFileSync('toolchain/python3', 'project-owned target\n');
+    const linkPath = '.agents/skills/demo/.venv/bin/python3';
+    const linkTarget = '../../../../../toolchain/python3';
+    fs.symlinkSync(linkTarget, linkPath);
+
+    const backupDir = backup.snapshot(['.agents'], '20260729-nested-symlink');
+    const backupLink = path.join(backupDir, 'data', linkPath);
+    assert.equal(fs.lstatSync(backupLink).isSymbolicLink(), true);
+    assert.equal(fs.readlinkSync(backupLink), linkTarget);
+
+    fs.rmSync('.agents', { recursive: true, force: true });
+    backup.restore(backupDir);
+
+    assert.equal(fs.lstatSync(linkPath).isSymbolicLink(), true);
+    assert.equal(fs.readlinkSync(linkPath), linkTarget);
+    assert.equal(fs.readFileSync(linkPath, 'utf8'), 'project-owned target\n');
+  });
+});
+
 test('backup rejects traversal targets before snapshot or restore deletion', () => {
   inTempProject(() => {
     assert.throws(
       () => backup.snapshot(['../outside'], '20260729-test'),
       /Unsafe backup target/
+    );
+  });
+});
+
+test('managed targets and snapshots reject project symlink traversal', () => {
+  inTempProject((root) => {
+    fs.mkdirSync('external', { recursive: true });
+    fs.symlinkSync(
+      path.join(root, 'external'),
+      '.agents',
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+
+    const { createTracker } = require('../lib/manifest');
+    const tracker = createTracker('.codex', 'test', {
+      recordRoot: '.',
+      allowedRoots: ['.codex', '.agents']
+    });
+    assert.throws(
+      () => tracker.keyFor('.agents/skills/specs/SKILL.md'),
+      /Refusing to follow symlinked managed path/
+    );
+    assert.throws(
+      () => backup.snapshot(['.agents'], '20260729-symlink-test'),
+      /Refusing to follow symlinked managed path/
     );
   });
 });

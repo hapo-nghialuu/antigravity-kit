@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   PLATFORMS,
-  isClaudeCompatibleRuntime,
+  hasPlatformCapability,
   getRuntimeSupportTargetDir,
   getCopyOptions
 } = require('../lib/context');
@@ -165,7 +165,7 @@ function copyClaudeMdFile(ctx, platformKey) {
 
 /** Copy the rules/ tree (ownership-aware; no longer force-overwrites). */
 function copyRulesDirectory(ctx, platformKey) {
-  if (!isClaudeCompatibleRuntime(platformKey)) return;
+  if (!hasPlatformCapability(platformKey, 'rules')) return;
 
   const src = path.join(SRC, 'claude/rules');
   const dest = getRuntimeSupportTargetDir(platformKey, 'rules');
@@ -175,9 +175,7 @@ function copyRulesDirectory(ctx, platformKey) {
     return;
   }
 
-  const transform = platformKey === 'opencode'
-    ? getCopyOptions('opencode', {}).transform
-    : undefined;
+  const transform = getCopyOptions(platformKey, {}).transform;
   const agg = copyManagedTree({
     src, dest, platformFolder: PLATFORMS[platformKey].folder, ctx, tracker: ctx.trackers[platformKey], transform
   });

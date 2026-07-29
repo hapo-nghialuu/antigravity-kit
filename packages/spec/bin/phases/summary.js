@@ -53,7 +53,12 @@ function printSummary(ctx) {
 
   const lines = [];
   for (const key of platforms) {
-    lines.push(key === 'claude' ? t('nsClaude') : t('nsOpencode'));
+    const messageKey = {
+      claude: 'nsClaude',
+      opencode: 'nsOpencode',
+      codex: 'nsCodex'
+    }[key];
+    if (messageKey) lines.push(t(messageKey));
   }
   // rtk token-saver result (set by phases/setup-rtk.js when setup completed).
   if (ctx.rtkSetupRan) {

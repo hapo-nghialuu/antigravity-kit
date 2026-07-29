@@ -38,7 +38,7 @@ const MESSAGES = {
     modeInstall:  'Mode: install / update  •  your customisations are preserved',
 
     // Intro
-    introDesc:    'AI-native development workflow for Claude Code',
+    introDesc:    'AI-native development workflow',
 
     // Platform install spinner
     installingPlatform:    'Installing {name}',
@@ -108,6 +108,7 @@ const MESSAGES = {
     nextStepsTitle:  'Next steps',
     nsClaude:        'Start coding: /hapo:specs <feature>',
     nsOpencode:      'Start coding: ask the agent to begin a new feature or brainstorm',
+    nsCodex:         'Start with `$hapo-specs <feature>`; review and trust project hooks with `/hooks`',
     nsKeys:          'Some skills need API keys: {skills}\n  Copy <skill>/.env.example → .env and fill in the values',
     nsForce:         'To force-refresh managed files: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run complete — no files were changed.\n  Re-run without --dry-run to apply.',
@@ -115,11 +116,13 @@ const MESSAGES = {
 
     // Version check
     versionUpToDate:      'Already up to date ({v}). Use --force-overwrite to reinstall.',
+    versionRefreshing:    'Refreshing CafeKit {v}; your modified files will be preserved.',
     versionDowngrade:     'Downgrading {from} → {to}. Features may be removed. Continue?',
     versionSamePrompt:    'CafeKit {v} is already installed. What would you like to do?',
     versionForceReinstall: 'Reinstalling CafeKit {v} (--force-overwrite)...',
     versionUpgradePrompt: 'CafeKit {from} → {to}: Update available!',
     updateOption:         'Update to {v}',
+    refreshOption:        'Refresh managed files (preserve your edits)',
     reinstallOption:      'Reinstall (overwrite managed files)',
     reinstallCurrentOption: 'Reinstall {v}',
     skipOption:           'Skip (exit)',
@@ -158,7 +161,7 @@ const MESSAGES = {
     modeInstall:  'モード: インストール / 更新  •  カスタマイズは保持されます',
 
     // Intro
-    introDesc:    'Claude Code 向け AI ネイティブ開発ワークフロー',
+    introDesc:    'AI ネイティブ開発ワークフロー',
 
     installingPlatform:    '{name} をインストール中',
     platformInstalled:     '{name} — {files} ファイル、{skills} スキル',
@@ -223,17 +226,20 @@ const MESSAGES = {
     nextStepsTitle:  '次のステップ',
     nsClaude:        'コーディング開始: /hapo:specs <機能名>',
     nsOpencode:      'コーディング開始: エージェントに新機能の開始またはブレストを依頼',
+    nsCodex:         '`$hapo-specs <機能名>` で開始し、`/hooks` でプロジェクトフックを確認・信頼',
     nsKeys:          '一部のスキルに API キーが必要です: {skills}\n  <skill>/.env.example を .env にコピーし、値を入力してください',
     nsForce:         '管理ファイルを強制更新: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
     outroDone:       '完了！  ドキュメント: https://github.com/haposoft/cafekit',
 
     versionUpToDate:      '最新バージョンです（{v}）。再インストールするには --force-overwrite を使用してください。',
+    versionRefreshing:    'CafeKit {v} を更新します。編集済みファイルは保持されます。',
     versionDowngrade:     '{from} → {to} へのダウングレードです。機能が削除される可能性があります。続けますか？',
     versionSamePrompt:    'CafeKit {v} は既にインストールされています。何をしますか？',
     versionForceReinstall: 'CafeKit {v} を再インストール中 (--force-overwrite)...',
     versionUpgradePrompt: 'CafeKit {from} → {to}: アップデートが利用可能です！',
     updateOption:         '{v} にアップデート',
+    refreshOption:        '管理対象ファイルを更新（編集内容を保持）',
     reinstallOption:      '再インストール（管理対象ファイルを上書き）',
     reinstallCurrentOption: '{v} を再インストール',
     skipOption:           'スキップ（終了）',
@@ -272,7 +278,7 @@ const MESSAGES = {
     modeInstall:  'Chế độ: cài / cập nhật  •  nội dung bạn tuỳ chỉnh được giữ nguyên',
 
     // Intro
-    introDesc:    'Quy trình phát triển AI-native cho Claude Code',
+    introDesc:    'Quy trình phát triển AI-native',
 
     installingPlatform:    'Đang cài {name}',
     platformInstalled:     '{name} — {files} tệp, {skills} skill',
@@ -337,17 +343,20 @@ const MESSAGES = {
     nextStepsTitle:  'Bước tiếp theo',
     nsClaude:        'Bắt đầu code: /hapo:specs <mô-tả-tính-năng>',
     nsOpencode:      'Bắt đầu code: yêu cầu agent khởi động tính năng mới hoặc brainstorm',
+    nsCodex:         'Bắt đầu bằng `$hapo-specs <tính-năng>`; kiểm tra và trust project hooks bằng `/hooks`',
     nsKeys:          'Một số skill cần API key: {skills}\n  Sao chép <skill>/.env.example → .env rồi điền giá trị',
     nsForce:         'Làm mới file được quản lý: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',
     outroDone:       'Xong!  Tài liệu: https://github.com/haposoft/cafekit',
 
     versionUpToDate:      'Đã là phiên bản mới nhất ({v}). Dùng --force-overwrite để cài lại.',
+    versionRefreshing:    'Đang làm mới CafeKit {v}; các tệp bạn đã sửa sẽ được giữ nguyên.',
     versionDowngrade:     'Đang hạ cấp {from} → {to}. Một số tính năng có thể bị xoá. Tiếp tục?',
     versionSamePrompt:    'CafeKit {v} đã được cài đặt. Bạn muốn làm gì?',
     versionForceReinstall: 'Đang cài lại CafeKit {v} (--force-overwrite)...',
     versionUpgradePrompt: 'CafeKit {from} → {to}: Có bản cập nhật mới!',
     updateOption:         'Cập nhật lên {v}',
+    refreshOption:        'Làm mới file được quản lý (giữ phần bạn đã sửa)',
     reinstallOption:      'Cài lại (ghi đè file được quản lý)',
     reinstallCurrentOption: 'Cài lại {v}',
     skipOption:           'Bỏ qua (thoát)',

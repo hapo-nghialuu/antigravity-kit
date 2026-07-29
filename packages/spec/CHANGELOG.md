@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-29
+
+### Added
+- **Native Codex CLI runtime**: `--platform codex` installs Codex-native skills in `.agents/skills/`, auto-discovered custom agents in `.codex/agents/*.toml`, lifecycle hooks, rules, scripts, references, runtime metadata, and a managed CafeKit block in root `AGENTS.md`. Skills use `$hapo-*`/`/skills`; no `.codex/config.toml` or global trust mutation is required.
+- **Codex lifecycle guardrails**: native `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `SubagentStart`, `SubagentStop`, and `Stop` handlers port routing, spec/task enforcement, docs reminders, state recovery, inspect limits, and privacy protection.
+
+### Changed
+- Installer platform registry now supports Claude Code, Codex CLI, and OpenCode together. Codex uses split managed roots (`.codex/` + `.agents/`), root `AGENTS.md` block coexistence, platform-prioritized locale restore, symlink-safe backup/write paths, and source executable-bit preservation.
+- Same-version installs now run a selective refresh instead of exiting or implicitly enabling force overwrite. User-modified files remain intact unless `--force-overwrite` is explicitly supplied.
+
+### Fixed
+- Codex privacy approval is one-time and atomically bound to the session, tool, and exact canonical sensitive-path set. Native `apply_patch` input variants and move destinations are covered without treating harmless prose that mentions `.env` as access.
+- Codex session state, locks, resume context, and archives are isolated by a SHA-256 namespace per session. Malformed or duplicated CafeKit markers in `AGENTS.md` fail safely without consuming project-owned bytes.
+
+### Validation
+- Full package self-tests, clean-install/package checks, and real Codex CLI 0.145 smoke tests passed for native skill discovery, custom-agent delegation, lifecycle hooks, and sensitive-file blocking.
+
 ## [0.14.2] - 2026-07-29
 
 ### Added
