@@ -2,7 +2,7 @@
 
 > Claude Code-first spec-driven workflow and runtime bundle for AI coding assistants.
 
-[![Version](https://img.shields.io/badge/version-0.13.4-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.14.1-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Primary-orange.svg)](https://claude.ai/code)
 
@@ -82,9 +82,13 @@ Claude Code targets:
 ├── cafekit.json
 ├── status.cjs
 ├── runtime.json
-├── settings.json
-└── CLAUDE.md
+└── settings.json
+
+CLAUDE.md
 ```
+
+CafeKit owns only its marked block inside the project-root `CLAUDE.md`; project
+instructions outside that block are preserved across installs and upgrades.
 
 OpenCode targets:
 

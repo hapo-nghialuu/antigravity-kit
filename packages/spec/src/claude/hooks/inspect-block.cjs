@@ -21,7 +21,7 @@ try {
   // Directories that should never be read (too large / irrelevant to LLM)
   const BLOCKED_DIRS = [
     'node_modules', 'dist', 'build', '.next', '.nuxt', '.output',
-    '__pycache__', '.venv', 'venv', '.env',
+    '__pycache__', '.venv', 'venv',
     'vendor', 'target',
     '.git', 'coverage', '.nyc_output',
   ];

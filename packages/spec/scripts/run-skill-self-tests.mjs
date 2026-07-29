@@ -1635,7 +1635,20 @@ async function main() {
     (name) => name.endsWith(".test.js"),
   );
 
+  const installerTestsDir = join(packageRoot, "bin", "__tests__");
+  const installerTests = await listFiles(
+    installerTestsDir,
+    (name) => name.endsWith(".test.js"),
+  );
+
   const testSuites = [
+    {
+      label: "installer safety tests",
+      command: process.execPath,
+      args: ["--test", ...installerTests],
+      expectedFiles: installerTests.length,
+      parseCount: parseNodeTestCount,
+    },
     {
       label: "hook behavioral tests",
       command: process.execPath,

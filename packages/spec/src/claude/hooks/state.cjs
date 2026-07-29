@@ -120,19 +120,29 @@ try {
       }
     }
 
+    const changed = [];
     try {
       const diff = execSync('git diff --name-only HEAD', {
         encoding: 'utf8',
         timeout: 3000,
         stdio: ['pipe', 'pipe', 'pipe']
       }).trim();
+      if (diff) changed.push(...diff.split('\n'));
+    } catch {
+      // A repository without HEAD can still report untracked files below.
+    }
 
-      if (diff) {
-        data.modifiedFiles = diff.split('\n').slice(0, MAX_MODIFIED_FILES_DISPLAY);
-      }
+    try {
+      const untracked = execSync('git ls-files --others --exclude-standard', {
+        encoding: 'utf8',
+        timeout: 3000,
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).trim();
+      if (untracked) changed.push(...untracked.split('\n'));
     } catch {
       // fail-open
     }
+    data.modifiedFiles = [...new Set(changed)].slice(0, MAX_MODIFIED_FILES_DISPLAY);
 
     return data;
   }

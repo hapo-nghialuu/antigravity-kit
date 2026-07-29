@@ -7,12 +7,11 @@
  * Claude Code CLI privacy gate for sensitive files.
  *
  * Runtime contract:
- * - Non-bash file access to sensitive files is blocked with a JSON marker
- * - Assistant must use AskUserQuestion with that JSON payload
- * - If user approves, assistant should read via `bash cat "file"`
- * - Bash access is allowed with a warning to enable the approved follow-up path
+ * - Sensitive access returns Claude Code's native PreToolUse "ask" decision
+ * - The same decision applies to direct tools and Bash commands
+ * - Symlinks are classified by their resolved target before their alias
  *
- * Exit: 0 = allow, 2 = block
+ * Exit: 0 (the JSON hook output carries the permission decision)
  */
 
 try {
@@ -20,7 +19,7 @@ try {
   const path = require('path');
 
   const RESTRICTED_PATTERNS = [
-    /^\.env(\.|$)/i,
+    /^\.env(?:[.\[*?{]|$)/i,
     /^credentials/i,
     /secrets?\.(ya?ml|json)$/i,
     /\.pem$/i,
@@ -66,22 +65,28 @@ try {
    * when the path cannot be resolved (missing file, broken link) — fail-open to
    * the original-path check in that case.
    */
-  function resolveTarget(filePath) {
+  function resolveTarget(filePath, cwd) {
     try {
-      return fs.realpathSync(filePath);
+      const requested = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+      return fs.realpathSync(requested);
     } catch {
       return null;
     }
   }
 
   function extractBashPaths(command) {
-    const paths = [];
-    const regex = /(?:cat|less|more|head|tail|source|\.)\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))/g;
-    let match;
-    while ((match = regex.exec(command)) !== null) {
-      paths.push(match[1] || match[2] || match[3]);
+    const paths = new Set();
+    // Quotes are delimiters rather than grouped tokens so nested shell
+    // commands such as `bash -c 'cat .env'` cannot hide the sensitive path.
+    const tokens = command.split(/[\s|;&<>"']+/).filter(Boolean);
+    for (const token of tokens) {
+      const cleaned = token.replace(/^["'()`]+|["'(),]+$/g, '');
+      for (const candidate of cleaned.split('=')) {
+        const value = candidate.replace(/^["'()`]+|["'(),]+$/g, '');
+        if (value && (isSensitive(value) || isSafe(value))) paths.add(value);
+      }
     }
-    return paths;
+    return [...paths];
   }
 
   function extractPaths(toolName, input) {
@@ -107,42 +112,15 @@ try {
     return paths.filter(Boolean);
   }
 
-  function formatBlockMessage(filePath) {
+  function askForPermission(filePath) {
     const basename = path.basename(filePath);
-    const promptData = {
-      type: 'PRIVACY_PROMPT',
-      file: filePath,
-      basename,
-      question: {
-        header: 'File Access',
-        text: `I need to read "${basename}" which may contain sensitive data (API keys, passwords, tokens). Do you approve?`,
-        options: [
-          {
-            label: 'Yes, approve access',
-            description: `Allow reading ${basename} this time`
-          },
-          {
-            label: 'No, skip this file',
-            description: 'Continue without accessing this file'
-          }
-        ]
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'ask',
+        permissionDecisionReason: `Sensitive file access requires approval: ${basename}`
       }
-    };
-
-    return [
-      'NOTE: This is not an error. This block protects sensitive data.',
-      '',
-      `PRIVACY BLOCK: Sensitive file access requires user approval`,
-      `File: ${filePath}`,
-      '',
-      '@@PRIVACY_PROMPT_START@@',
-      JSON.stringify(promptData, null, 2),
-      '@@PRIVACY_PROMPT_END@@',
-      '',
-      'Claude Code follow-up:',
-      `- If approved: use bash to read: cat "${filePath}"`,
-      '- If denied: continue without this file'
-    ].join('\n');
+    }) + '\n');
   }
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
@@ -160,22 +138,21 @@ try {
   if (!paths.length) process.exit(0);
 
   for (const filePath of paths) {
-    // Check the requested path and, when it is a symlink, its real target.
-    const target = resolveTarget(filePath);
-    const candidates = target && target !== filePath ? [filePath, target] : [filePath];
+    const target = resolveTarget(filePath, cwd);
 
-    // An exemption on either name wins (e.g. a symlink to .env.example).
-    if (candidates.some(isSafe)) continue;
-    // Sensitive if the requested path OR its symlink target is sensitive.
-    if (!candidates.some(isSensitive)) continue;
-
-    if (toolName === 'Bash') {
-      console.error(`WARN: Privacy-sensitive file access via bash allowed for approved follow-up: ${path.basename(filePath)}`);
-      process.exit(0);
+    // The real target is authoritative: an exempt-looking alias must not hide
+    // a sensitive target, while a real .env.example target remains safe.
+    if (target) {
+      if (isSensitive(target) && !isSafe(target)) {
+        askForPermission(filePath);
+        process.exit(0);
+      }
+      if (isSafe(target)) continue;
     }
 
-    console.error(formatBlockMessage(filePath));
-    process.exit(2);
+    if (isSafe(filePath) || !isSensitive(filePath)) continue;
+    askForPermission(filePath);
+    process.exit(0);
   }
 
   process.exit(0);

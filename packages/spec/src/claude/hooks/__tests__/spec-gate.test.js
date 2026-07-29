@@ -64,7 +64,7 @@ function readCache() {
  * @param {string} [opts.taskStatus='done']
  * @param {string|null} [opts.completed_at='2026-07-01T00:00:00Z']
  * @param {string} [opts.mdStatus='done']
- * @param {'valid'|'missing-evidence'|'placeholder'|'none'} [opts.evidence='valid']
+ * @param {'valid'|'legacy-valid'|'failed'|'fence-only'|'missing-evidence'|'placeholder'|'none'} [opts.evidence='valid']
  * @param {object|null} [opts.runtime] — if set, write .claude/runtime.json
  */
 function makeFixture(opts = {}) {
@@ -97,12 +97,19 @@ function makeFixture(opts = {}) {
     evidenceBlock = [
       '## Evidence',
       '',
+      'Verification: PASS',
       '```',
       'npm test',
       'PASS: 10 tests',
       '```',
       '',
     ].join('\n');
+  } else if (evidence === 'legacy-valid') {
+    evidenceBlock = '## Evidence\n\nnpm test — passed, exit code 0\n';
+  } else if (evidence === 'failed') {
+    evidenceBlock = '## Evidence\n\nVerification: PASS\n\nFAIL: tests failed, exit code 1\n';
+  } else if (evidence === 'fence-only') {
+    evidenceBlock = '## Evidence\n\n```\nnpm test\n```\n';
   } else if (evidence === 'placeholder') {
     evidenceBlock = [
       '## Evidence',
@@ -264,6 +271,73 @@ test('7. Evidence with {{...}} placeholder → blocked (check c)', () => {
       body.reason.includes(TASK_REL) && /\bc\b/.test(body.reason),
       `reason must cite task path and check c; got: ${body.reason}`,
     );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('8. explicit failure cannot pass even when PASS text is present', () => {
+  const dir = makeFixture({ evidence: 'failed' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body);
+    assert.match(body.reason, /\bc\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('9. a code fence alone is not verification proof', () => {
+  const dir = makeFixture({ evidence: 'fence-only' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    assert.ok(parseBlock(runHook({}, dir).stdout));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('10. completed_at must be a valid ISO timestamp', () => {
+  const dir = makeFixture({ completed_at: 'yesterday' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body);
+    assert.match(body.reason, /\bd\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('11. done → pending cache transition is persisted and can be gated again', () => {
+  const dir = makeFixture({ taskStatus: 'pending', mdStatus: 'pending' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'done' } });
+    assert.strictEqual(runHook({}, dir).stdout, '');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'pending');
+
+    const specFile = path.join(dir, 'specs', FEATURE, 'spec.json');
+    const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
+    spec.task_registry[TASK_REL] = {
+      status: 'done',
+      completed_at: '2026-07-01T00:00:00Z',
+    };
+    fs.writeFileSync(specFile, JSON.stringify(spec));
+    const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
+    fs.writeFileSync(taskFile, '# Task\n\n**Status:** done\n\n## Evidence\n\nFAIL: tests failed\n');
+
+    assert.ok(parseBlock(runHook({}, dir).stdout), 're-completed failing task must be gated');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('12. legacy successful receipt remains read-compatible', () => {
+  const dir = makeFixture({ evidence: 'legacy-valid' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    assert.strictEqual(runHook({}, dir).stdout, '');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
