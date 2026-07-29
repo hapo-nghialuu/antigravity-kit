@@ -2,7 +2,7 @@
 
 > Native spec-driven workflow and runtime bundle for Claude Code, Codex CLI, and OpenCode.
 
-[![Version](https://img.shields.io/badge/version-0.15.0-blue.svg)](https://github.com/haposoft/cafekit)
+[![Version](https://img.shields.io/badge/version-0.15.2-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude%20Code](https://img.shields.io/badge/Claude%20Code-Native-orange.svg)](https://claude.ai/code)
 [![Codex%20CLI](https://img.shields.io/badge/Codex%20CLI-Native-111111.svg)](https://developers.openai.com/codex)
@@ -134,6 +134,8 @@ AGENTS.md
 CafeKit owns only its marked block in root `AGENTS.md`. Codex discovers skills
 and custom agents natively after the repository is trusted; no project
 `config.toml` is generated. Review and trust project hooks with `/hooks`.
+On Windows, installed hook commands are bound to the canonical project path
+without requiring Git and remain stable when a session starts in a subdirectory.
 CafeKit uses Codex's native status and usage UI instead of installing the
 Claude statusline.
 

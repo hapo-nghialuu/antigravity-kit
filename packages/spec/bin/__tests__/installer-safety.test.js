@@ -11,12 +11,55 @@ const {
   copyOpenCodeAgentsMdFile,
   normalizeOpenCodeBody
 } = require('../lib/opencode-install');
+const {
+  commandFailureReason,
+  resolvePackageCommand
+} = require('../lib/skill-deps');
 const { copyClaudeMdFile } = require('../phases/claude-runtime');
 const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
 const TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/claude/CLAUDE.md'), 'utf8');
+
+test('skill dependency package commands use cmd.exe for Windows npm launchers', () => {
+  const windows = resolvePackageCommand(
+    'npm',
+    ['install', '--no-audit', '--no-fund'],
+    'win32',
+    { ComSpec: 'C:\\Windows\\System32\\cmd.exe' }
+  );
+  assert.deepEqual(windows, {
+    command: 'C:\\Windows\\System32\\cmd.exe',
+    args: ['/d', '/s', '/c', 'npm.cmd', 'install', '--no-audit', '--no-fund']
+  });
+
+  const posix = resolvePackageCommand('npx', ['playwright', '--version'], 'linux', {});
+  assert.deepEqual(posix, {
+    command: 'npx',
+    args: ['playwright', '--version']
+  });
+});
+
+test('skill dependency failures surface the useful npm or spawn error code', () => {
+  assert.equal(
+    commandFailureReason({
+      stderr: "npm error Request failed\nnpm error code ENOTCACHED\nnpm error Log unavailable\n",
+      stdout: '',
+      status: 1
+    }),
+    'npm error code ENOTCACHED'
+  );
+  assert.equal(
+    commandFailureReason({
+      stderr: 'spawn npm.cmd EINVAL',
+      stdout: '',
+      status: null,
+      errorCode: 'EINVAL'
+    }),
+    'spawn npm.cmd EINVAL'
+  );
+});
 
 function inTempProject(run) {
   const originalCwd = process.cwd();

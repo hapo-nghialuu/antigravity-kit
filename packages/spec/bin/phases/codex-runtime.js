@@ -20,6 +20,33 @@ const CODEX_OWN_RUNTIME = [
   ['hooks.json', 'hooks.json']
 ];
 
+const WINDOWS_HOOK_COMMAND = /^node "\.codex\/hooks\/([a-z0-9-]+\.cjs)"$/;
+
+function materializeWindowsHookCommands(content, projectRoot = process.cwd()) {
+  const config = JSON.parse(content);
+  const canonicalRoot = fs.realpathSync(projectRoot);
+
+  for (const groups of Object.values(config.hooks || {})) {
+    for (const group of groups) {
+      for (const handler of group.hooks || []) {
+        if (typeof handler.commandWindows !== 'string') continue;
+        const match = handler.commandWindows.match(WINDOWS_HOOK_COMMAND);
+        if (!match) {
+          throw new Error(`Unsupported Codex Windows hook command: ${handler.commandWindows}`);
+        }
+        const hookPath = path.join(canonicalRoot, '.codex', 'hooks', match[1]);
+        const encodedPath = Buffer.from(hookPath, 'utf8').toString('base64url');
+        handler.commandWindows = (
+          'node -e "require(Buffer.from(process.argv[1],\'base64url\').toString(\'utf8\'))" ' +
+          encodedPath
+        );
+      }
+    }
+  }
+
+  return `${JSON.stringify(config, null, 2)}\n`;
+}
+
 function writeSourceFile(ctx, platformKey, src, dest, label, transform) {
   const platform = PLATFORMS[platformKey];
   const { action } = writeManagedFile({
@@ -41,7 +68,10 @@ function installRuntimeFiles(ctx, platformKey) {
       platformKey,
       path.join(CODEX_SRC, sourceRel),
       path.join(platform.folder, targetRel),
-      `Codex runtime: ${targetRel}`
+      `Codex runtime: ${targetRel}`,
+      sourceRel === 'hooks.json'
+        ? (content) => materializeWindowsHookCommands(content, process.cwd())
+        : undefined
     );
   }
   writeSourceFile(
@@ -107,4 +137,4 @@ function installCodexRuntime(ctx, platformKey) {
   return ctx;
 }
 
-module.exports = { installCodexRuntime };
+module.exports = { installCodexRuntime, materializeWindowsHookCommands };

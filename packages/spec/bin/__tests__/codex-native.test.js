@@ -59,6 +59,12 @@ function allFiles(root, predicate) {
   return found;
 }
 
+function allHookHandlers(config) {
+  return Object.values(config.hooks).flatMap((groups) => (
+    groups.flatMap((group) => group.hooks)
+  ));
+}
+
 function parseGeneratedTomlString(content, key) {
   const match = content.match(new RegExp(`^${key} = (.+)$`, 'm'));
   assert.ok(match, `missing TOML key: ${key}`);
@@ -313,6 +319,64 @@ test('Codex dry-run leaves both managed roots untouched', () => {
     assert.equal(fs.existsSync(path.join(root, '.agents')), false);
     assert.equal(fs.existsSync(path.join(root, 'AGENTS.md')), false);
     assert.equal(fs.existsSync(path.join(root, '.gitignore')), false);
+  });
+});
+
+test('Codex Windows hook launchers stay project-bound without Git from nested cwd', () => {
+  inTempProject((root) => {
+    const projectRoot = path.join(root, 'project with spaces');
+    fs.mkdirSync(projectRoot, { recursive: true });
+    const installed = install(projectRoot);
+    assert.equal(installed.status, 0, `${installed.stdout}\n${installed.stderr}`);
+
+    const config = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, '.codex', 'hooks.json'), 'utf8')
+    );
+    const handlers = allHookHandlers(config);
+    assert.equal(handlers.length, 14);
+    for (const handler of handlers) {
+      assert.doesNotMatch(handler.commandWindows, /\$\(/);
+      assert.doesNotMatch(handler.commandWindows, /\bgit\b/i);
+      assert.doesNotMatch(handler.commandWindows, /process\.cwd\(\)|existsSync/);
+      const encodedPath = handler.commandWindows.match(/\s([A-Za-z0-9_-]+)$/)?.[1];
+      assert.ok(encodedPath, `missing encoded hook path in: ${handler.commandWindows}`);
+      const target = Buffer.from(encodedPath, 'base64url').toString('utf8');
+      assert.equal(path.dirname(target), fs.realpathSync(path.join(projectRoot, '.codex', 'hooks')));
+      assert.equal(
+        fs.existsSync(target),
+        true,
+        `missing installed hook: ${path.basename(target)}`
+      );
+    }
+
+    const nested = path.join(projectRoot, 'nested', 'workspace');
+    fs.mkdirSync(nested, { recursive: true });
+    const shadowHooks = path.join(projectRoot, 'nested', '.codex', 'hooks');
+    const shadowMarker = path.join(root, 'shadow-hook-ran');
+    fs.mkdirSync(shadowHooks, { recursive: true });
+    fs.writeFileSync(
+      path.join(shadowHooks, 'session.cjs'),
+      `require('node:fs').writeFileSync(${JSON.stringify(shadowMarker)}, 'unsafe')\n`
+    );
+    const session = config.hooks.SessionStart[0].hooks[0];
+    const nodeCommand = session.commandWindows.replace(/^node /, `"${process.execPath}" `);
+    const noGitEnv = { ...process.env, PATH: '' };
+    const launched = spawnSync(nodeCommand, {
+      cwd: nested,
+      encoding: 'utf8',
+      input: JSON.stringify({
+        session_id: 'windows-launcher-test',
+        cwd: nested,
+        hook_event_name: 'SessionStart',
+        source: 'startup'
+      }),
+      env: noGitEnv,
+      shell: true
+    });
+    assert.equal(launched.status, 0, launched.stderr);
+    assert.match(launched.stdout, /Session startup\./);
+    assert.match(launched.stdout, /CafeKit project root:/);
+    assert.equal(fs.existsSync(shadowMarker), false);
   });
 });
 

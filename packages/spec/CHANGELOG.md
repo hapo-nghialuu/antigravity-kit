@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-07-29
+
+### Fixed
+- **Codex hooks on native Windows**: every `commandWindows` now uses a `cmd.exe`-safe Node launcher bound at install time to the project's canonical `.codex/hooks` path. It needs neither Git nor POSIX `$()` substitution, works from nested session directories, and cannot be redirected to an untrusted nested hook tree. This removes the repeated `SessionStart`, `UserPromptSubmit`, and `PreToolUse` exit-code-1 failures before their hook scripts start.
+- **Skill dependency setup on native Windows**: npm and npx `.cmd` launchers now run through `%ComSpec%` for skill-local installs plus Puppeteer/Playwright browser setup. Installer failures also include the actionable npm or spawn error code instead of referring to a log that was never written.
+- **Node 18 installer compatibility**: pinned the last CommonJS-compatible `@clack/prompts` line so the installer matches its declared Node `>=18` runtime contract.
+
+## [0.15.1] - 2026-07-29
+
+### Changed
+- **Release metadata**: bumped `@haposoft/cafekit` to `0.15.1` after validating the published `0.15.0` Claude Code and Codex CLI install surfaces. This version-only change does not alter installer or runtime behavior.
+
 ## [0.15.0] - 2026-07-29
 
 ### Added

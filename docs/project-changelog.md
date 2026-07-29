@@ -5,6 +5,18 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-07-29
+
+### Fixed
+- Native Windows Codex hooks now use a cmd-safe launcher bound to the canonical project hook path at install time. It needs no Git, works from nested directories, and rejects nested hook shadowing, removing the repeated `SessionStart`, `UserPromptSubmit`, and `PreToolUse` exit-code-1 errors.
+- Native Windows skill setup now invokes npm/npx `.cmd` through `%ComSpec%` for package and browser dependencies, and surfaces the useful failure code when a command still fails.
+- Installer UI now pins the CommonJS-compatible Clack line, restoring the declared Node 18 compatibility contract.
+
+## [0.15.1] - 2026-07-29
+
+### Changed
+- Release metadata bumped to `0.15.1` after validating the published `0.15.0` Claude Code and Codex CLI install surfaces; no installer or runtime behavior changed in this version-only update.
+
 ## [0.15.0] - 2026-07-29
 
 ### Added

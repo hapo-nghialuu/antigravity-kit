@@ -8,17 +8,17 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/session.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/session.cjs\""
+            "commandWindows": "node \".codex/hooks/session.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/docs-sync.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/docs-sync.cjs\""
+            "commandWindows": "node \".codex/hooks/docs-sync.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+            "commandWindows": "node \".codex/hooks/state.cjs\""
           }
         ]
       }
@@ -30,7 +30,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/agent.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/agent.cjs\""
+            "commandWindows": "node \".codex/hooks/agent.cjs\""
           }
         ]
       }
@@ -41,17 +41,17 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-approval.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-approval.cjs\""
+            "commandWindows": "node \".codex/hooks/privacy-approval.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\""
+            "commandWindows": "node \".codex/hooks/rules.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-state.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-state.cjs\""
+            "commandWindows": "node \".codex/hooks/spec-state.cjs\""
           }
         ]
       }
@@ -63,17 +63,17 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-block.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-block.cjs\""
+            "commandWindows": "node \".codex/hooks/privacy-block.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/inspect-block.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/inspect-block.cjs\""
+            "commandWindows": "node \".codex/hooks/inspect-block.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/task-scaffold-guard.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/task-scaffold-guard.cjs\""
+            "commandWindows": "node \".codex/hooks/task-scaffold-guard.cjs\""
           }
         ]
       }
@@ -85,7 +85,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+            "commandWindows": "node \".codex/hooks/state.cjs\""
           }
         ]
       }
@@ -96,12 +96,12 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-gate.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-gate.cjs\""
+            "commandWindows": "node \".codex/hooks/spec-gate.cjs\""
           },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+            "commandWindows": "node \".codex/hooks/state.cjs\""
           }
         ]
       }
@@ -113,7 +113,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
-            "commandWindows": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\""
+            "commandWindows": "node \".codex/hooks/state.cjs\""
           }
         ]
       }

@@ -1,6 +1,6 @@
 {
   "name": "@haposoft/cafekit",
-  "version": "0.15.0",
+  "version": "0.15.2",
   "description": "Native spec-driven workflows for Claude Code, Codex CLI, and OpenCode. Bundles CafeKit skills, runtime hooks, agents, and installer scaffolding.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
@@ -49,7 +49,7 @@
     "@opencode-ai/plugin": "1.15.11"
   },
   "dependencies": {
-    "@clack/prompts": "^1.5.0",
+    "@clack/prompts": "0.11.0",
     "picocolors": "^1.1.1"
   }
 }
