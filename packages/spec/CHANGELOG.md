@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-07-29
+
+### Fixed
+- **Codex hooks on native Windows**: every `commandWindows` now uses a `cmd.exe`-safe Node launcher bound at install time to the project's canonical `.codex/hooks` path. It needs neither Git nor POSIX `$()` substitution, works from nested session directories, and cannot be redirected to an untrusted nested hook tree. This removes the repeated `SessionStart`, `UserPromptSubmit`, and `PreToolUse` exit-code-1 failures before their hook scripts start.
+- **Skill dependency setup on native Windows**: npm and npx `.cmd` launchers now run through `%ComSpec%` for skill-local installs plus Puppeteer/Playwright browser setup. Installer failures also include the actionable npm or spawn error code instead of referring to a log that was never written.
+- **Node 18 installer compatibility**: pinned the last CommonJS-compatible `@clack/prompts` line so the installer matches its declared Node `>=18` runtime contract.
+
+## [0.15.1] - 2026-07-29
+
+### Changed
+- **Release metadata**: bumped `@haposoft/cafekit` to `0.15.1` after validating the published `0.15.0` Claude Code and Codex CLI install surfaces. This version-only change does not alter installer or runtime behavior.
+
+## [0.15.0] - 2026-07-29
+
+### Added
+- **Native Codex CLI runtime**: `--platform codex` installs Codex-native skills in `.agents/skills/`, auto-discovered custom agents in `.codex/agents/*.toml`, lifecycle hooks, rules, scripts, references, runtime metadata, and a managed CafeKit block in root `AGENTS.md`. Skills use `$hapo-*`/`/skills`; no `.codex/config.toml` or global trust mutation is required.
+- **Codex lifecycle guardrails**: native `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `SubagentStart`, `SubagentStop`, and `Stop` handlers port routing, spec/task enforcement, docs reminders, state recovery, inspect limits, and privacy protection.
+
+### Changed
+- Installer platform registry now supports Claude Code, Codex CLI, and OpenCode together. Codex uses split managed roots (`.codex/` + `.agents/`), root `AGENTS.md` block coexistence, platform-prioritized locale restore, symlink-safe backup/write paths, and source executable-bit preservation.
+- Same-version installs now run a selective refresh instead of exiting or implicitly enabling force overwrite. User-modified files remain intact unless `--force-overwrite` is explicitly supplied.
+
+### Fixed
+- Codex privacy approval is one-time and atomically bound to the session, tool, and exact canonical sensitive-path set. Native `apply_patch` input variants and move destinations are covered without treating harmless prose that mentions `.env` as access.
+- Codex session state, locks, resume context, and archives are isolated by a SHA-256 namespace per session. Malformed or duplicated CafeKit markers in `AGENTS.md` fail safely without consuming project-owned bytes.
+
+### Validation
+- Full package self-tests, clean-install/package checks, and real Codex CLI 0.145 smoke tests passed for native skill discovery, custom-agent delegation, lifecycle hooks, and sensitive-file blocking.
+
+## [0.14.2] - 2026-07-29
+
 ### Added
 - **Parallel Wave Mode for `hapo:develop`** (opt-in `--parallel [N]`): independent spec tasks run concurrently — waves computed from `task_registry.dependencies` with a single-writer-per-file rule (cap 3 default / 5 max), one `god-developer` per task in an isolated git worktree, the unchanged Stage A+B quality gate running inside each worktree before merge, spike-verified `git cherry-pick` merge-back with explicit worktree cleanup, a post-merge integration check gating each wave, and orchestrator-only spec-state writes. Sequential default untouched; sequential fallback when isolation is unavailable; escape hatch `"develop": { "parallel": false }` in `.claude/runtime.json`. New operating procedure: `skills/develop/references/parallel-waves.md`.
 

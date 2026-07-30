@@ -56,11 +56,13 @@ function loadClaudeMigrationManifest() {
 const DEPENDENCY_TEMPLATES = {
   commands: {
     claude: {},
-    opencode: {}
+    opencode: {},
+    codex: {}
   },
   agents: {
     claude: {},
-    opencode: {}
+    opencode: {},
+    codex: {}
   }
 };
 
@@ -79,7 +81,16 @@ const PLATFORMS = {
     skillsRef: '.claude/skills',
     commandPrefix: '/',
     sourceDir: 'claude',       // Maps to src/claude/
-    sourceSubdir: 'commands'   // Source subfolder within src/claude/
+    sourceSubdir: 'commands',  // Source subfolder within src/claude/
+    backupTargets: ['.claude', 'CLAUDE.md'],
+    capabilities: {
+      skills: true,
+      agents: true,
+      references: true,
+      scripts: true,
+      rules: true,
+      commands: true
+    }
   },
   opencode: {
     id: 'opencode',
@@ -93,7 +104,43 @@ const PLATFORMS = {
     skillsRef: '.opencode/skills',
     commandPrefix: '/',
     sourceDir: 'claude',
-    sourceSubdir: 'commands'   // Dead config (manifest commands.core is []); kept for shape parity
+    sourceSubdir: 'commands',  // Dead config (manifest commands.core is []); kept for shape parity
+    backupTargets: ['.opencode', 'AGENTS.md', 'opencode.json', 'opencode.jsonc'],
+    capabilities: {
+      skills: true,
+      agents: true,
+      references: true,
+      scripts: true,
+      rules: true,
+      commands: false
+    }
+  },
+  codex: {
+    id: 'codex',
+    name: 'Codex CLI',
+    description: 'OpenAI Codex CLI',
+    folder: '.codex',
+    detectFiles: ['.codex'],
+    commandsDir: null,
+    skillsDir: '.agents/skills',
+    agentsDir: '.codex/agents',
+    skillsRef: '.agents/skills',
+    commandPrefix: '$',
+    sourceDir: 'claude',
+    sourceSubdir: null,
+    backupTargets: ['.codex', '.agents', 'AGENTS.md'],
+    ownership: {
+      recordRoot: '.',
+      allowedRoots: ['.codex', '.agents']
+    },
+    capabilities: {
+      skills: true,
+      agents: true,
+      references: true,
+      scripts: true,
+      rules: true,
+      commands: false
+    }
   }
   // Add new platforms here:
   // cursor: {
@@ -136,8 +183,8 @@ function getPlatformKeys() {
   return Object.keys(PLATFORMS);
 }
 
-function isClaudeCompatibleRuntime(platformKey) {
-  return platformKey === 'claude' || platformKey === 'opencode';
+function hasPlatformCapability(platformKey, capability) {
+  return Boolean(PLATFORMS[platformKey]?.capabilities?.[capability]);
 }
 
 function getRuntimeSupportTargetDir(platformKey, subdir) {
@@ -164,6 +211,11 @@ function getCopyOptions(platformKey, baseOptions = {}) {
   if (platformKey === 'opencode') {
     return getOpenCodeCopyOptions(baseOptions);
   }
+  if (platformKey === 'codex') {
+    // Lazy require avoids coupling the shared registry to a runtime adapter
+    // during module initialization.
+    return require('./codex-install').getCodexCopyOptions(baseOptions);
+  }
   return baseOptions;
 }
 
@@ -186,7 +238,8 @@ function parseInstallerArgs(argv) {
     dryRun: false,
     yes: false,
     withSkillsDeps: false,
-    withRtk: false
+    withRtk: false,
+    platforms: []
   };
 
   for (let i = 2; i < argv.length; i++) {
@@ -202,6 +255,10 @@ function parseInstallerArgs(argv) {
       args.withSkillsDeps = true;
     } else if (arg === '--with-rtk') {
       args.withRtk = true;
+    } else if (arg === '--platform') {
+      args.platforms.push(...String(argv[++i] || '').split(',').filter(Boolean));
+    } else if (arg.startsWith('--platform=')) {
+      args.platforms.push(...arg.slice('--platform='.length).split(',').filter(Boolean));
     } else if (arg === '--lang') {
       args.lang = argv[++i];
     } else if (arg.startsWith('--lang=')) {
@@ -288,7 +345,7 @@ module.exports = {
   detectPlatforms,
   formatPlatformList,
   getPlatformKeys,
-  isClaudeCompatibleRuntime,
+  hasPlatformCapability,
   getRuntimeSupportTargetDir,
   warnLegacyClaudeFolder,
   getCopyOptions,

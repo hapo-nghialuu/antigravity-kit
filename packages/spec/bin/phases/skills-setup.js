@@ -79,12 +79,16 @@ async function setupNode(ctx, skillsDir) {
     const extraEnv = (skill === 'chrome-devtools' && systemChrome)
       ? { PUPPETEER_SKIP_DOWNLOAD: 'true' }
       : {};
-    const ok = await dep.npmInstall(dir, hasNodeModules, extraEnv);
+    const result = await dep.npmInstall(dir, hasNodeModules, extraEnv);
 
-    if (ok) {
+    if (result.ok) {
       ctx.ui.stopSpinner(ctx.t('npmInstalled', { skill }));
     } else {
-      ctx.ui.stopSpinner(ctx.t('npmFailed', { skill, dir }));
+      ctx.ui.stopSpinner(ctx.t('npmFailed', {
+        skill,
+        dir,
+        error: dep.commandFailureReason(result)
+      }));
       continue;
     }
 

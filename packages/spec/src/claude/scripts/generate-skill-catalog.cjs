@@ -37,9 +37,14 @@ function parseArgs(argv) {
 }
 
 function defaultSkillsRoot() {
-  const installed = path.resolve(process.cwd(), '.claude', 'skills');
-  if (fs.existsSync(installed)) return installed;
-  return path.resolve(__dirname, '..', 'skills');
+  const candidates = [
+    path.resolve(process.cwd(), '.claude', 'skills'),
+    path.resolve(process.cwd(), '.agents', 'skills'),
+    path.resolve(process.cwd(), '.opencode', 'skills'),
+    path.resolve(__dirname, '..', 'skills'),
+    path.resolve(__dirname, '..', '..', '.agents', 'skills')
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
 }
 
 function readText(filePath) {

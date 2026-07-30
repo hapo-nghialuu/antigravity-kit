@@ -4,7 +4,7 @@
  * Ensures the root .gitignore carries CafeKit-managed patterns:
  *  - workflow dirs (plans, shared research)
  *  - install safety artifacts (backup, lock)
- *  - runtime folders (.claude/, .opencode/) — reinstall via
+ *  - runtime folders (.claude/, .opencode/, .codex/, .agents/) — reinstall via
  *    `npx @haposoft/cafekit`; do not commit the local payload
  *
  * Layered with the in-folder `.claude/.gitignore` /
@@ -35,7 +35,9 @@ function ensureGitignore(ctx) {
     '.cafekit.lock',
     // Local runtime payload — reinstall with npx; keep out of git
     '.claude/',
-    '.opencode/'
+    '.opencode/',
+    '.codex/',
+    '.agents/'
   ];
   const prefix = ctx.dryRun ? '[dry-run] ' : '';
 

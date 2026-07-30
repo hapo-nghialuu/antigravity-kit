@@ -16,24 +16,58 @@ const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { LANGUAGE_LABELS } = require('../lib/i18n');
 const { setupOpenCodeModel } = require('../lib/opencode-install');
+const { transformManagedCodexContent } = require('../lib/codex-install');
 const { transformManagedClaudeContent } = require('./claude-runtime');
+const ASSISTANT_NAMES = {
+  claude: 'Claude Code',
+  codex: 'Codex CLI',
+  opencode: 'OpenCode'
+};
+const LANGUAGE_LABEL_BY_CODE = {
+  vi: 'Vietnamese',
+  ja: 'Japanese',
+  en: 'English'
+};
 
-function updateManagedClaudeFile(filePath, transform) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const next = transformManagedClaudeContent(content, transform);
-  if (next === content) return false;
-  fs.writeFileSync(filePath, next, 'utf8');
-  return true;
-}
-
-function readManagedClaudeBody(filePath) {
+function readManagedBody(filePath, transformManagedContent) {
   const content = fs.readFileSync(filePath, 'utf8');
   let body = '';
-  transformManagedClaudeContent(content, (managed) => {
+  transformManagedContent(content, (managed) => {
     body = managed;
     return managed;
   });
   return body;
+}
+
+function instructionTargets(ctx) {
+  const targets = {
+    claude: {
+      file: path.join(process.cwd(), 'CLAUDE.md'),
+      transform: transformManagedClaudeContent
+    },
+    codex: {
+      file: path.join(process.cwd(), 'AGENTS.md'),
+      transform: transformManagedCodexContent
+    }
+  };
+  return Object.keys(targets)
+    .filter((key) => ctx.platforms.includes(key))
+    .map((key) => ({ key, ...targets[key] }));
+}
+
+function updateInstructionTarget(target, updateManaged) {
+  if (!fs.existsSync(target.file)) return false;
+  const content = fs.readFileSync(target.file, 'utf8');
+  const next = target.transform(content, updateManaged);
+  if (next === content) return false;
+  fs.writeFileSync(target.file, next, 'utf8');
+  return true;
+}
+
+function trackerOwnsPath(tracker, filePath) {
+  if (!tracker?.keyFor) return false;
+  const trackedKey = tracker.keyFor(filePath);
+  return tracker.recorded(trackedKey) !== null;
 }
 
 /** Write `"language"` field into .claude/settings.json so it's visible at a glance. */
@@ -65,17 +99,12 @@ function patchSettingsLanguage(ctx) {
  * can update it idempotently.
  */
 function patchLanguageSection(ctx) {
-  if (!ctx.platforms.includes('claude')) return;
   // Skip when locale is English (default — no override needed in CLAUDE.md).
   const locale = ctx.locale || ctx.lang;
   if (!locale || locale === 'en' || locale === 'English') return;
 
-  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
-  if (!fs.existsSync(claudeMdFile)) return;
-
-  const LANG_LABEL = { vi: 'Vietnamese', ja: 'Japanese', en: 'English' };
   // Use locale directly when set (e.g. "Korean"), or map from lang code.
-  const label = locale in LANG_LABEL ? LANG_LABEL[locale] : locale;
+  const label = locale in LANGUAGE_LABEL_BY_CODE ? LANGUAGE_LABEL_BY_CODE[locale] : locale;
 
   const newSection = `## Language Consistency <!-- cafekit:lang -->
 
@@ -86,12 +115,15 @@ Always respond in **${label}**. Technical terms, code identifiers, and file path
   // Replace only inside the installer-owned block.
   const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
   const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
-  updateManagedClaudeFile(claudeMdFile, (managed) => {
-    if (markerRe.test(managed)) return managed.replace(markerRe, newSection);
-    if (genericRe.test(managed)) return managed.replace(genericRe, newSection);
-    return `${managed.trimEnd()}\n\n${newSection}\n`;
-  });
+  for (const target of instructionTargets(ctx)) {
+    updateInstructionTarget(target, (managed) => {
+      if (markerRe.test(managed)) return managed.replace(markerRe, newSection);
+      if (genericRe.test(managed)) return managed.replace(genericRe, newSection);
+      return `${managed.trimEnd()}\n\n${newSection}\n`;
+    });
+  }
 }
+
 function patchRuntimeLocale(ctx) {
   for (const key of ctx.platforms) {
     const rtPath = path.join(PLATFORMS[key].folder, 'runtime.json');
@@ -112,48 +144,53 @@ function patchRuntimeLocale(ctx) {
     if (!ctx.locale && data.locale.responseLanguage) continue;
     data.locale.responseLanguage = locale;
     fs.writeFileSync(rtPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-    if (ctx.trackers[key]) ctx.trackers[key].record(rtPath);
+    // A preserved user-created/user-modified runtime was deliberately not
+    // recorded by managed-writer. Updating its explicit locale must not turn
+    // the whole user file into a pristine CafeKit ownership baseline.
+    const tracker = ctx.trackers[key];
+    if (trackerOwnsPath(tracker, rtPath)) tracker.record(rtPath);
   }
 }
 
 /** Human assistant name for the active platform(s). */
-function assistantName(ctx) {
-  return ctx.platforms.includes('claude') ? 'Claude Code' : 'OpenCode';
+function assistantName(platformKey) {
+  return ASSISTANT_NAMES[platformKey] || ASSISTANT_NAMES.opencode;
 }
 
 function configureAddressing(ctx, userAddress) {
-  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
-  if (!fs.existsSync(claudeMdFile)) {
-    ctx.ui.warn('CLAUDE.md not found at project root; skipped addressing');
-    return;
-  }
-
-  const name = assistantName(ctx);
-  const addressingSection = `## Addressing (Context Overflow Indicator)
+  let found = false;
+  for (const target of instructionTargets(ctx)) {
+    if (!fs.existsSync(target.file)) continue;
+    found = true;
+    const name = assistantName(target.key);
+    const addressingSection = `## Addressing (Context Overflow Indicator)
 
 ${name} always addresses the user as "${userAddress}" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider \`/clear\`.`;
 
-  // Idempotent and scoped to the installer-owned block.
-  const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
-  const changed = updateManagedClaudeFile(claudeMdFile, (managed) => (
-    regex.test(managed)
-      ? managed.replace(regex, addressingSection)
-      : `${managed.endsWith('\n') ? managed : `${managed}\n`}\n${addressingSection}\n`
-  ));
-  if (changed) ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
+    const regex = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
+    const changed = updateInstructionTarget(target, (managed) => (
+      regex.test(managed)
+        ? managed.replace(regex, addressingSection)
+        : `${managed.endsWith('\n') ? managed : `${managed}\n`}\n${addressingSection}\n`
+    ));
+    if (changed) {
+      ctx.ui.success(ctx.t('addressingSet', { name, addr: userAddress }));
+    }
+  }
+  if (!found) ctx.ui.warn('Project instruction file not found; skipped addressing');
 }
 
 async function setupAddressing(ctx) {
-  if (!ctx.platforms.includes('claude')) return;
+  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex')) return;
 
-  // Check if there's already an addressing section in CLAUDE.md
-  const claudeMdFile = path.join(process.cwd(), 'CLAUDE.md');
   let existingName = null;
-  if (fs.existsSync(claudeMdFile)) {
-    const content = readManagedClaudeBody(claudeMdFile);
+  for (const target of instructionTargets(ctx)) {
+    if (!fs.existsSync(target.file)) continue;
+    const content = readManagedBody(target.file, target.transform);
     const match = content.match(/##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?always addresses the user as "([^"]+)"/);
     if (match) {
       existingName = match[1];
+      break;
     }
   }
 
@@ -223,4 +260,4 @@ async function runPostInstall(ctx) {
   return ctx;
 }
 
-module.exports = { configureAddressing, runPostInstall };
+module.exports = { configureAddressing, patchRuntimeLocale, runPostInstall };

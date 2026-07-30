@@ -5,10 +5,43 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-07-29
+
+### Fixed
+- Native Windows Codex hooks now use a cmd-safe launcher bound to the canonical project hook path at install time. It needs no Git, works from nested directories, and rejects nested hook shadowing, removing the repeated `SessionStart`, `UserPromptSubmit`, and `PreToolUse` exit-code-1 errors.
+- Native Windows skill setup now invokes npm/npx `.cmd` through `%ComSpec%` for package and browser dependencies, and surfaces the useful failure code when a command still fails.
+- Installer UI now pins the CommonJS-compatible Clack line, restoring the declared Node 18 compatibility contract.
+
+## [0.15.1] - 2026-07-29
+
+### Changed
+- Release metadata bumped to `0.15.1` after validating the published `0.15.0` Claude Code and Codex CLI install surfaces; no installer or runtime behavior changed in this version-only update.
+
+## [0.15.0] - 2026-07-29
+
+### Added
+- Native Codex CLI install surface: `.agents/skills`, `.codex/agents/*.toml`, project lifecycle hooks/rules/scripts/references/runtime, and a managed CafeKit block in root `AGENTS.md`; invoked with `$hapo-*` or `/skills`, with no generated project `config.toml`.
+
+### Changed
+- Installer supports Claude Code, Codex CLI, and OpenCode coexistence. Codex ownership and rollback span `.codex/` + `.agents/`; same-version runs selectively refresh pristine files, preserve user edits, and reserve full reset for explicit `--force-overwrite`.
+
+### Fixed
+- Codex privacy tokens are one-use and exact-set-bound across session/tool/canonical sensitive paths, including native patch and move inputs.
+- Codex state/lock/archive data is isolated per hashed session ID; malformed managed `AGENTS.md` markers preserve user bytes.
+
+### Verified
+- Package tests and a real Codex CLI 0.145 sandbox passed native skill, custom-agent, hooks/state, and privacy-block flows.
+
+## [0.14.2] - 2026-07-29
+
 ### Added
 - Parallel Wave Mode for `hapo:develop` (`--parallel [N]`): dependency-ordered waves, worktree-isolated `god-developer` per task, gate-in-worktree before cherry-pick merge, post-merge wave check, orchestrator-only state sync; sequential default unchanged, runtime escape hatch `develop.parallel` (spec `develop-parallel-wave`).
 
 ### Fixed
+- Claude installer now manages only a marked block in project-root `CLAUDE.md`, preserves project-owned instructions, and rolls back both overwritten and newly created targets after failure.
+- Claude privacy hooks use native `permissionDecision: "ask"` for sensitive direct/Bash access, classify symlink targets first, and avoid duplicate `.env` policy in the inspect hook.
+- Spec completion rejects explicit failures, non-zero exits, zero-test receipts, invalid timestamps, and fence-only evidence; reopened tasks are gated again.
+- Session state includes tracked and untracked files, including repositories without a first commit.
 - Installer no longer resets `locale.responseLanguage` to `en` on non-interactive upgrade (saved-locale restore hoisted above the interactivity check + no-downgrade guard; live regression fixture). Statusline autocompact reserve is proportional to the real context window (1M models no longer treated as 200k).
 
 ### Changed

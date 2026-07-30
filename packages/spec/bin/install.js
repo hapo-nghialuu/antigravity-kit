@@ -32,6 +32,7 @@ const {
 } = require('./phases/claude-runtime');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
+const { installCodexRuntime } = require('./phases/codex-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
 const { checkVersions } = require('./lib/version-check');
 const { ensureGitignore } = require('./phases/root-config');
@@ -46,7 +47,11 @@ function installPlatform(ctx, platformKey) {
 
   // Read ownership baseline + start a fresh tracker for this platform.
   ctx.ownership[platform.folder] = manifestLib.read(platform.folder);
-  ctx.trackers[platformKey] = manifestLib.createTracker(platform.folder, packageJson.version);
+  ctx.trackers[platformKey] = manifestLib.createTracker(
+    platform.folder,
+    packageJson.version,
+    platform.ownership
+  );
 
   const before = { copied: ctx.results.copied, updated: ctx.results.updated, skills: ctx.results.installedSkills };
   ctx.ui.startSpinner(ctx.t('installingPlatform', { name: platform.name }));
@@ -66,6 +71,10 @@ function installPlatform(ctx, platformKey) {
     installOpenCodeRuntime(ctx, platformKey);
   }
 
+  if (platformKey === 'codex') {
+    installCodexRuntime(ctx, platformKey);
+  }
+
   writePlatformVersionMetadata(ctx, platformKey);
 
   const wrote = (ctx.results.copied - before.copied) + (ctx.results.updated - before.updated);
@@ -74,7 +83,7 @@ function installPlatform(ctx, platformKey) {
     name: platform.name, files: wrote, skills
   }));
 
-  ctx.results.targets.push(platform.commandsDir);
+  ctx.results.targets.push(platform.commandsDir || platform.skillsDir || platform.folder);
 }
 
 function printHelp() {
@@ -83,10 +92,11 @@ function printHelp() {
 Usage: npx @haposoft/cafekit [options]
 
 Installs CafeKit skills, agents, rules and runtime into the current project
-(.claude/ and/or .opencode/). Re-runs are selective: managed files are updated,
+for Claude Code, OpenCode, and/or Codex CLI. Re-runs are selective: managed files are updated,
 your edits are preserved.
 
 Options:
+  --platform <id[,id]> Select claude, opencode, or codex explicitly
   --dry-run            Preview changes; write nothing
   --force-overwrite    Overwrite user-modified managed files (backup kept)
   -u, --upgrade, -f, --force   Alias of --force-overwrite
@@ -133,7 +143,7 @@ async function main() {
     await resolvePlatforms(ctx);
     if (ctx.cancelled) { lock.release(); process.exit(0); }
 
-    // Version check: same → exit, downgrade → confirm, upgrade → version picker
+    // Version check: same → selective refresh, downgrade → confirm, upgrade → picker
     await checkVersions(ctx);
     if (ctx.cancelled) { lock.release(); process.exit(0); }
 
@@ -158,8 +168,10 @@ async function main() {
     // Capture platform folders AND the root files the pipeline mutates
     // (CLAUDE.md, .gitignore) so a mid-run failure rolls back cleanly.
     if (!ctx.dryRun) {
-      const folders = ctx.platforms.map((key) => PLATFORMS[key].folder);
-      ctx.backupDir = backup.snapshot([...folders, 'CLAUDE.md', '.gitignore'], ctx.runId);
+      const targets = ctx.platforms.flatMap((key) => (
+        PLATFORMS[key].backupTargets || [PLATFORMS[key].folder]
+      ));
+      ctx.backupDir = backup.snapshot([...targets, '.gitignore'], ctx.runId);
     }
 
     for (const platformKey of ctx.platforms) {
@@ -169,7 +181,9 @@ async function main() {
     ensureGitignore(ctx);
     await runPostInstall(ctx);
     await setupSkillDeps(ctx);
-    await setupRtk(ctx);
+    if (ctx.platforms.includes('claude')) {
+      await setupRtk(ctx);
+    }
 
     // Phase handlers may report recoverable-looking errors through counters
     // instead of throwing. Treat them as transactional failure so the snapshot

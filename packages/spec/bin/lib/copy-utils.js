@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const TEXT_REWRITE_EXTENSIONS = new Set([
-  '.md', '.mdx', '.txt', '.json', '.cjs', '.js', '.mjs', '.ts', '.sh', '.yml', '.yaml'
+  '.md', '.mdx', '.txt', '.json', '.cjs', '.js', '.mjs', '.ts', '.py', '.sh', '.toml', '.yml', '.yaml'
 ]);
 
 function isTextAsset(filePath) {

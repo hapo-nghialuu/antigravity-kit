@@ -141,9 +141,42 @@ async function runStaticSemanticTests() {
         content.includes("skillsRef: '.opencode/skills'") &&
         content.includes("getRuntimeSupportTargetDir(platformKey, 'scripts')") &&
         content.includes("getRuntimeSupportTargetDir(platformKey, 'rules')") &&
-        content.includes("isClaudeCompatibleRuntime(platformKey)") &&
+        content.includes("hasPlatformCapability(platformKey, 'rules')") &&
         content.includes("normalizeOpenCodeBody") &&
         content.includes("warnLegacyClaudeFolder"),
+    },
+    {
+      label: "installer offers Codex as a native split-root runtime",
+      files: [
+        "bin/lib/context.js",
+        "bin/phases/copy-payload.js",
+        "bin/phases/codex-runtime.js",
+        "bin/lib/codex-install.js",
+      ],
+      assert: (content) =>
+        content.includes("id: 'codex'") &&
+        content.includes("skillsDir: '.agents/skills'") &&
+        content.includes("agentsDir: '.codex/agents'") &&
+        content.includes("installCodexRuntime") &&
+        content.includes("convertCodexAgentContent") &&
+        content.includes("fork_turns=\"none\"") &&
+        !content.includes("config.toml"),
+    },
+    {
+      label: "Codex split roots keep generated skill files locally ignored",
+      files: [
+        "src/codex/gitignore",
+        "src/codex/agents-gitignore",
+        "bin/phases/codex-runtime.js",
+        "bin/phases/root-config.js",
+      ],
+      assert: (content) =>
+        content.includes("path.join('.agents', '.gitignore')") &&
+        content.includes("skills/**/.venv/") &&
+        content.includes("skills/**/node_modules/") &&
+        content.includes("!skills/**/.env.example") &&
+        content.includes("'.agents/'") &&
+        !content.includes("../.agents/skills"),
     },
     {
       label: "OpenCode has dedicated project instruction template",
@@ -190,6 +223,8 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("'.claude/'") &&
         content.includes("'.opencode/'") &&
+        content.includes("'.codex/'") &&
+        content.includes("'.agents/'") &&
         content.includes("'.cafekit-backup/'") &&
         content.includes("'.cafekit.lock'") &&
         content.includes("function hasPattern"),
