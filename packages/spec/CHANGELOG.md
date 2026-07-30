@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Platform selection after prior install**: `resolvePlatforms` now correctly prompts for additional platforms when user has existing CafeKit setup. Previously, merging `savedPlatforms` with `detectPlatforms()` silently skipped interactive selection because `detectPlatforms()` only scanned disk directories, preventing users from adding Codex CLI to an existing Claude Code project without `--platform` flag.
+
+### Added
+- **Interactive add-platforms prompt**: new `promptAddMorePlatforms` function asks users (in interactive mode only) whether to add platforms not yet installed, defaulting to "no" to preserve previous behavior. Non-interactive and CI modes are unaffected.
+- **I18n key `addPlatformsPrompt`**: added to English, Japanese, and Vietnamese locale files.
+- **E2E test coverage**: new test installs Codex over existing Claude setup in temp directory, verifies `.claude/` remains intact, `.codex/` receives full payload, AGENTS.md preserves user content while receiving Codex block, and per-platform metadata stays independent.
+- **Unit tests**: two tests for the new prompt flow plus one consistency test verifying `addPlatformsPrompt` uses exactly `{names}` placeholder across all locales.
+
 ## [0.15.2] - 2026-07-29
 
 ### Fixed

@@ -132,6 +132,9 @@ const MESSAGES = {
     langKept:             'Language: {lang} (saved — skipping prompt)',
     platformKept:         'Platform: {names} (saved — skipping prompt)',
 
+    // Add more platforms prompt (interactive, prior install exists)
+    addPlatformsPrompt:   'Existing platforms: {names}. Add more?',
+
     // Version picker
     versionPickPrompt:    'Select CafeKit version to install:',
     versionPickCurrent:   '(installed)',
@@ -249,6 +252,9 @@ const MESSAGES = {
     langKept:             '言語: {lang} (保存済み — スキップ)',
     platformKept:         'プラットフォーム: {names} (保存済み — スキップ)',
 
+    // Add more platforms prompt (interactive, prior install exists)
+    addPlatformsPrompt:   '既存プラットフォーム: {names}。さらに追加しますか？',
+
     // Version picker
     versionPickPrompt:    'インストールする CafeKit バージョンを選択:',
     versionPickCurrent:   '(インストール済み)',
@@ -365,6 +371,9 @@ const MESSAGES = {
     installingFor:        'Cài cho: {names}',
     langKept:             'Ngôn ngữ: {lang} (đã lưu — bỏ qua chọn lại)',
     platformKept:         'Nền tảng: {names} (đã lưu — bỏ qua chọn lại)',
+
+    // Add more platforms prompt (interactive, prior install exists)
+    addPlatformsPrompt:   'Nền tảng hiện có: {names}. Thêm nền tảng khác?',
 
     // Version picker
     versionPickPrompt:    'Chọn phiên bản CafeKit để cài:',
