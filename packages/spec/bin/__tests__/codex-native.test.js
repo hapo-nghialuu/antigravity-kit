@@ -18,6 +18,7 @@ const {
   resolvePlatforms,
   selectLanguage
 } = require('../phases/select-platform');
+const { MESSAGES } = require('../lib/i18n');
 
 const PACKAGE_ROOT = path.join(__dirname, '../..');
 const PACKAGE_VERSION = JSON.parse(
@@ -199,6 +200,114 @@ test('same-version install can add Codex beside an existing runtime', async () =
   } finally {
     process.chdir(originalCwd);
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('resolvePlatforms interactive prompts to add more platforms when prior install exists', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-add-platforms-'));
+  const originalCwd = process.cwd();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.claude', 'cafekit.json'),
+      `${JSON.stringify({ version: PACKAGE_VERSION, platform: 'claude' })}\n`
+    );
+    process.chdir(root);
+    const ctx = {
+      options: { platforms: [], forceOverwrite: false },
+      interactive: true,
+      dryRun: false,
+      ui: {
+        info() {},
+        confirm: async ({ message }) => {
+          if (message.includes('Existing platforms') || message.includes('addPlatformsPrompt')) return true;
+          if (message.includes('confirmAllDetected') || message.includes('existing configs')) return true;
+          return true;
+        },
+        select: async ({ message, options }) => {
+          if (message.includes('selectPlatform') || message.includes('Select platform')) {
+            return ['codex'];
+          }
+          return options[0].value;
+        },
+        isCancel: () => false
+      },
+      t: (key, vars) => {
+        const tpl = (MESSAGES.en && MESSAGES.en[key]) || key;
+        if (vars) return tpl.replace(/\{(\w+)\}/g, (_, name) => (vars[name] !== undefined ? String(vars[name]) : `{${name}}`));
+        return tpl;
+      }
+    };
+    await resolvePlatforms(ctx);
+    assert.deepEqual(ctx.platforms.sort(), ['claude', 'codex'].sort());
+  } finally {
+    process.chdir(originalCwd);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('resolvePlatforms interactive keeps existing platforms when user declines to add more', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-keep-platforms-'));
+  const originalCwd = process.cwd();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.claude', 'cafekit.json'),
+      `${JSON.stringify({ version: PACKAGE_VERSION, platform: 'claude' })}\n`
+    );
+    process.chdir(root);
+    const ctx = {
+      options: { platforms: [], forceOverwrite: false },
+      interactive: true,
+      dryRun: false,
+      ui: {
+        info() {},
+        confirm: async ({ message }) => {
+          // Check that the message is properly rendered without {names} placeholder
+          // If i18n uses {existing} but ctx passes {names}, the rendered message will contain {existing}
+          if (message.includes('Existing platforms') || message.includes('既存プラットフォーム') || message.includes('Nền tảng hiện có')) {
+            assert.ok(!message.includes('{'), `Message should not contain unrendered placeholder: ${message}`);
+            assert.ok(!message.includes('}'), `Message should not contain unrendered placeholder: ${message}`);
+            return false; // decline to add more
+          }
+          return true; // confirmAllDetected
+        },
+        select: async () => ['claude'],
+        isCancel: () => false
+      },
+      t: (key, vars) => {
+        const tpl = (MESSAGES.en && MESSAGES.en[key]) || key;
+        if (vars) return tpl.replace(/\{(\w+)\}/g, (_, name) => (vars[name] !== undefined ? String(vars[name]) : `{${name}}`));
+        return tpl;
+      }
+    };
+    await resolvePlatforms(ctx);
+    assert.deepEqual(ctx.platforms, ['claude']);
+  } finally {
+    process.chdir(originalCwd);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('addPlatformsPrompt placeholder consistency across all locales', () => {
+  const expectedPlaceholders = ['names'];
+  const placeholderRegex = /\{(\w+)\}/g;
+
+  for (const [locale, messages] of Object.entries(MESSAGES)) {
+    const template = messages.addPlatformsPrompt;
+    assert.ok(template, `Missing addPlatformsPrompt key in locale: ${locale}`);
+
+    const placeholders = [];
+    let match;
+    while ((match = placeholderRegex.exec(template)) !== null) {
+      placeholders.push(match[1]);
+    }
+
+    assert.deepEqual(
+      placeholders,
+      expectedPlaceholders,
+      `Locale ${locale} addPlatformsPrompt has incorrect placeholders. Template: "${template}". Expected: ${JSON.stringify(expectedPlaceholders)}, Got: ${JSON.stringify(placeholders)}`
+    );
   }
 });
 
@@ -518,5 +627,60 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
     const forced = install(root, ['--force-overwrite']);
     assert.equal(forced.status, 0, `${forced.stdout}\n${forced.stderr}`);
     assert.doesNotMatch(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
+  });
+});
+
+test('Codex install on top of existing Claude installation preserves content and adds Codex', () => {
+  inTempProject((root) => {
+    // Setup existing Claude installation with content
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.claude', 'cafekit.json'),
+      `${JSON.stringify({ version: PACKAGE_VERSION, platform: 'claude' })}\n`
+    );
+
+    // Existing CLAUDE.md with content
+    const claudeMdContent = '# CLAUDE.md\n\n## User Instructions\n\nThis is my existing CLAUDE.md content.\n';
+    fs.writeFileSync(path.join(root, 'CLAUDE.md'), claudeMdContent);
+
+    // Existing AGENTS.md with content
+    const agentsMdContent = '# AGENTS.md\n\n## User Rules\n\nKeep this exact.\n';
+    fs.writeFileSync(path.join(root, 'AGENTS.md'), agentsMdContent);
+
+    // Run Codex install
+    const result = install(root, ['--platform', 'codex']);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    // Assert .claude/ and its content still exist
+    assert.equal(fs.existsSync(path.join(root, '.claude')), true, '.claude should exist');
+    assert.equal(fs.existsSync(path.join(root, '.claude', 'cafekit.json')), true, '.claude/cafekit.json should exist');
+    const claudeMetadata = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'cafekit.json'), 'utf8'));
+    assert.equal(claudeMetadata.platform, 'claude', '.claude/cafekit.json should still be claude platform');
+
+    // Assert .codex/ is created with payload
+    assert.equal(fs.existsSync(path.join(root, '.codex')), true, '.codex should be created');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'hooks.json')), true, '.codex/hooks.json should exist');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'runtime.json')), true, '.codex/runtime.json should exist');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'hooks', 'privacy-block.cjs')), true, '.codex/hooks/privacy-block.cjs should exist');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'rules', 'workflow.md')), true, '.codex/rules/workflow.md should exist');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'scripts', 'validate-spec-output.cjs')), true, '.codex/scripts/validate-spec-output.cjs should exist');
+    assert.equal(fs.existsSync(path.join(root, '.agents', '.gitignore')), true, '.agents/.gitignore should exist');
+    assert.equal(fs.existsSync(path.join(root, '.agents', 'skills', 'specs', 'SKILL.md')), true, '.agents/skills/specs/SKILL.md should exist');
+
+    // Assert .codex/cafekit.json has platform codex
+    const codexMetadata = JSON.parse(fs.readFileSync(path.join(root, '.codex', 'cafekit.json'), 'utf8'));
+    assert.equal(codexMetadata.platform, 'codex', '.codex/cafekit.json should have platform codex');
+    assert.equal(codexMetadata.version, PACKAGE_VERSION, '.codex/cafekit.json should have current version');
+
+    // Assert AGENTS.md root contains CODEX markers AND preserves original content
+    const agentsMd = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    assert.match(agentsMd, /<!-- CAFEKIT CODEX START -->/, 'AGENTS.md should have CODEX START marker');
+    assert.match(agentsMd, /<!-- CAFEKIT CODEX END -->/, 'AGENTS.md should have CODEX END marker');
+    assert.match(agentsMd, /Keep this exact\./, 'AGENTS.md should preserve original user content');
+    assert.ok(agentsMd.startsWith(agentsMdContent), 'AGENTS.md should start with original user content');
+
+    // Assert CLAUDE.md is unchanged
+    const claudeMd = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+    assert.equal(claudeMd, claudeMdContent, 'CLAUDE.md should be unchanged');
   });
 });

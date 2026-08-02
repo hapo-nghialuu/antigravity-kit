@@ -128,6 +128,19 @@ function cancelSelection(ctx) {
   return [];
 }
 
+async function promptAddMorePlatforms(ctx, savedPlatforms) {
+  const allKeys = getPlatformKeys();
+  const available = allKeys.filter((key) => !savedPlatforms.includes(key));
+  if (available.length === 0) return false;
+
+  const r = await ctx.ui.confirm(
+    { message: ctx.t('addPlatformsPrompt', { names: platformNames(savedPlatforms) }), initialValue: false },
+    false
+  );
+  if (ctx.ui.isCancel(r)) return false;
+  return r;
+}
+
 async function promptPlatforms(ctx) {
   const platforms = await promptPlatformSelection(ctx);
   return platforms.length > 0 ? platforms : cancelSelection(ctx);
@@ -163,6 +176,16 @@ async function resolvePlatforms(ctx) {
       if (!proceed) {
         platforms = await promptPlatforms(ctx);
         if (ctx.cancelled) return ctx;
+      }
+    } else if (ctx.interactive) {
+      // No newly detected platforms, but user might want to ADD more platforms
+      const wantAdd = await promptAddMorePlatforms(ctx, savedPlatforms);
+      if (wantAdd) {
+        const added = await promptPlatformSelection(ctx);
+        if (ctx.cancelled) return ctx;
+        if (added.length > 0) {
+          platforms = [...new Set([...platforms, ...added])];
+        }
       }
     }
     ctx.platforms = platforms;
