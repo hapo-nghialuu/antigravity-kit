@@ -5,6 +5,17 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-07-31
+
+### Fixed
+- Installer now prompts to add additional platforms when a prior CafeKit install exists, so Codex CLI can be added to a project already running Claude Code without the `--platform` flag; the prompt defaults to no and is skipped entirely in non-interactive and CI runs.
+
+### Added
+- E2E coverage installs Codex over an existing Claude setup, and unit tests cover the new add-platform prompt plus `{names}` placeholder consistency for the i18n key across locales.
+
+### Security
+- Dependency bumps close reported vulnerabilities: `next` to 16.2.11 (with `eslint-config-next`) and `sharp` to ^0.35.0 in the `chrome-devtools` and `pptx` skills, with a pnpm override forcing transitive `sharp` onto the patched line.
+
 ## [0.15.2] - 2026-07-29
 
 ### Fixed
