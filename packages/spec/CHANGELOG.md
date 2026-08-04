@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+
 - **Platform selection after prior install**: `resolvePlatforms` now correctly prompts for additional platforms when user has existing CafeKit setup. Previously, merging `savedPlatforms` with `detectPlatforms()` silently skipped interactive selection because `detectPlatforms()` only scanned disk directories, preventing users from adding Codex CLI to an existing Claude Code project without `--platform` flag.
 
 ### Added
@@ -15,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **I18n key `addPlatformsPrompt`**: added to English, Japanese, and Vietnamese locale files.
 - **E2E test coverage**: new test installs Codex over existing Claude setup in temp directory, verifies `.claude/` remains intact, `.codex/` receives full payload, AGENTS.md preserves user content while receiving Codex block, and per-platform metadata stays independent.
 - **Unit tests**: two tests for the new prompt flow plus one consistency test verifying `addPlatformsPrompt` uses exactly `{names}` placeholder across all locales.
+
+## [0.16.0] - 2026-08-04
+
+### Changed
+- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
+- **Canonical instruction install**: added one shared `src/common/AGENTS.md` core and made Claude installs create/update the imported root `AGENTS.md` block while preserving Codex/OpenCode managed blocks.
+- **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
+- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
 
 ## [0.15.2] - 2026-07-29
 
