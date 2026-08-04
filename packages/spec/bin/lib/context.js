@@ -82,7 +82,7 @@ const PLATFORMS = {
     commandPrefix: '/',
     sourceDir: 'claude',       // Maps to src/claude/
     sourceSubdir: 'commands',  // Source subfolder within src/claude/
-    backupTargets: ['.claude', 'CLAUDE.md'],
+    backupTargets: ['.claude', 'CLAUDE.md', 'AGENTS.md'],
     capabilities: {
       skills: true,
       agents: true,

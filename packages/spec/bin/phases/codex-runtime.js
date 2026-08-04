@@ -13,6 +13,7 @@ const {
 
 const SRC = path.join(__dirname, '../../src');
 const CODEX_SRC = path.join(SRC, 'codex');
+const COMMON_SRC = path.join(SRC, 'common');
 
 const CODEX_OWN_RUNTIME = [
   ['gitignore', '.gitignore'],
@@ -107,8 +108,9 @@ function installNativeRuleOverrides(ctx, platformKey) {
 }
 
 function installManagedAgentsMd(ctx) {
-  const source = path.join(CODEX_SRC, 'AGENTS.md');
-  if (!fs.existsSync(source)) {
+  const sharedSource = path.join(COMMON_SRC, 'AGENTS.md');
+  const runtimeSource = path.join(CODEX_SRC, 'AGENTS.md');
+  if (!fs.existsSync(sharedSource) || !fs.existsSync(runtimeSource)) {
     report(ctx, 'missing', 'Codex AGENTS.md template');
     return;
   }
@@ -116,9 +118,8 @@ function installManagedAgentsMd(ctx) {
   const destination = 'AGENTS.md';
   const exists = fs.existsSync(destination);
   const existing = exists ? fs.readFileSync(destination, 'utf8') : '';
-  const block = normalizeCodexBody(fs.readFileSync(source, 'utf8'))
-    .replace(/^# CLAUDE\.md\s*$/m, '# CafeKit for Codex CLI')
-    .trim();
+  const template = `${fs.readFileSync(sharedSource, 'utf8').trimEnd()}\n\n${fs.readFileSync(runtimeSource, 'utf8').trim()}`;
+  const block = normalizeCodexBody(template);
   const next = upsertManagedCodexBlock(existing, block);
   const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';
 

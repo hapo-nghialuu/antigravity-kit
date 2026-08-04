@@ -6,6 +6,7 @@ const readline = require('readline');
 const { copyRecursive, isTextAsset } = require('./copy-utils');
 
 const SPEC_ROOT = path.resolve(__dirname, '..', '..');
+const COMMON_AGENTS_TEMPLATE = path.join(SPEC_ROOT, 'src/common/AGENTS.md');
 const OPENCODE_FOLDER = '.opencode';
 const OPENCODE_PLUGIN_PACKAGE = '@opencode-ai/plugin';
 const OPENCODE_PLUGIN_VERSION = '^1.15.11';
@@ -439,6 +440,12 @@ function upsertCafeKitAgentsBlock(existingContent, blockContent) {
 
 function getOpenCodeAgentsTemplateContent() {
   const openCodeTemplate = path.join(SPEC_ROOT, 'src/opencode/AGENTS.md');
+
+  if (fs.existsSync(COMMON_AGENTS_TEMPLATE) && fs.existsSync(openCodeTemplate)) {
+    const shared = fs.readFileSync(COMMON_AGENTS_TEMPLATE, 'utf8').trimEnd();
+    const runtime = fs.readFileSync(openCodeTemplate, 'utf8').trim();
+    return normalizeOpenCodeBody(`${shared}\n\n${runtime}`);
+  }
 
   if (fs.existsSync(openCodeTemplate)) {
     return normalizeOpenCodeBody(fs.readFileSync(openCodeTemplate, 'utf8'));

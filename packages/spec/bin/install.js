@@ -28,6 +28,7 @@ const {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
+  copyClaudeAgentsMdFile,
   copyRulesDirectory
 } = require('./phases/claude-runtime');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
@@ -63,6 +64,7 @@ function installPlatform(ctx, platformKey) {
     copyClaudeRuntimeFiles(ctx, platformKey);
     removeObsoleteClaudeRuntimeFiles(ctx, platformKey);
     mergeClaudeSettings(ctx, platformKey);
+    copyClaudeAgentsMdFile(ctx, platformKey);
     copyClaudeMdFile(ctx, platformKey);
     copyRulesDirectory(ctx, platformKey);
   }

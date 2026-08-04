@@ -23,6 +23,8 @@ const { normalizeOpenCodeBody } = require('../lib/opencode-install');
 const SRC = path.join(__dirname, '../../src');
 const CLAUDE_START = '<!-- CAFEKIT CLAUDE START -->';
 const CLAUDE_END = '<!-- CAFEKIT CLAUDE END -->';
+const CLAUDE_AGENTS_START = '<!-- CAFEKIT CLAUDE AGENTS START -->';
+const CLAUDE_AGENTS_END = '<!-- CAFEKIT CLAUDE AGENTS END -->';
 
 function managedClaudeBlock(template) {
   return `${CLAUDE_START}\n${template.trimEnd()}\n${CLAUDE_END}`;
@@ -58,6 +60,46 @@ function upsertManagedClaudeBlock(existing, template, legacyOwned) {
 
   const separator = existing.endsWith('\n') ? '\n' : '\n\n';
   return `${existing}${separator}${block}\n`;
+}
+
+function upsertManagedClaudeAgentsBlock(existing, template) {
+  const block = `${CLAUDE_AGENTS_START}\n${template.trimEnd()}\n${CLAUDE_AGENTS_END}`;
+  const start = existing.indexOf(CLAUDE_AGENTS_START);
+  if (start !== -1) {
+    const endStart = existing.indexOf(CLAUDE_AGENTS_END, start + CLAUDE_AGENTS_START.length);
+    if (endStart !== -1) {
+      const end = endStart + CLAUDE_AGENTS_END.length;
+      return `${existing.slice(0, start)}${block}${existing.slice(end)}`;
+    }
+  }
+
+  if (!existing) return `${block}\n`;
+  const separator = existing.endsWith('\n') ? '\n' : '\n\n';
+  return `${existing}${separator}${block}\n`;
+}
+
+/** Install the shared AGENTS.md core used by Claude's @AGENTS.md import. */
+function copyClaudeAgentsMdFile(ctx, platformKey) {
+  if (platformKey !== 'claude') return;
+
+  const src = path.join(SRC, 'common/AGENTS.md');
+  const dest = 'AGENTS.md';
+  if (!fs.existsSync(src)) {
+    ctx.ui.warn('Shared AGENTS.md template not found');
+    ctx.results.missingDependencies++;
+    return;
+  }
+
+  const template = fs.readFileSync(src, 'utf8');
+  const exists = fs.existsSync(dest);
+  const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  const next = upsertManagedClaudeAgentsBlock(existing, template);
+  const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';
+
+  if (!ctx.dryRun && action !== 'unchanged') {
+    fs.writeFileSync(dest, next, 'utf8');
+  }
+  report(ctx, action, 'AGENTS.md (shared CafeKit block)');
 }
 
 /** Copy ROUTING.md (SKILLS_DIR substituted; OpenCode body normalized). */
@@ -187,6 +229,7 @@ module.exports = {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
+  copyClaudeAgentsMdFile,
   copyRulesDirectory,
   transformManagedClaudeContent
 };
