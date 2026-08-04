@@ -3,6 +3,14 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.16.0] - 2026-08-04
+
+### Changed
+- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
+- **Canonical instruction install**: added one shared `src/common/AGENTS.md` core and made Claude installs create/update the imported root `AGENTS.md` block while preserving Codex/OpenCode managed blocks.
+- **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
+- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
+
 ## [Unreleased]
 
 ## [0.15.2] - 2026-07-29

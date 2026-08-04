@@ -28,7 +28,7 @@ bin/lib/
 bin/phases/
   select-platform.js        detect platforms, prompt, legacy warning
   copy-payload.js           skills / agents / references / scripts / commands
-  claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md, rules
+  claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md, AGENTS.md, rules
   claude-settings.js        settings.json merge + obsolete-hook pruning
   opencode-runtime.js       delegates to opencode-install.js (plugins, commands, AGENTS, config)
   codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
@@ -50,9 +50,18 @@ bin/lib/
 3. **Select platforms** — honor `--platform`, otherwise restore installed/detected
    `.claude/`, `.codex/`, and `.opencode/` runtimes or prompt.
 4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
-   (skipped in dry-run). Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
+   (skipped in dry-run). Claude snapshots `.claude/`, `CLAUDE.md`, and `AGENTS.md`;
+   Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
 5. **Per platform** — read ownership baseline, start a tracker, then: copy payload →
-   Claude, Codex, or OpenCode runtime → write metadata + manifest.
+   Claude, Codex, or OpenCode runtime → copy AGENTS.md (Claude only) → write metadata + manifest.
+
+   The Claude-specific per-platform sequence is:
+   - copyClaudeRuntimeFiles (ROUTING, rules, scripts, references)
+   - removeObsoleteClaudeRuntimeFiles
+   - mergeClaudeSettings
+   - **copyClaudeAgentsMdFile** — installs the shared `src/common/AGENTS.md` core into the root `AGENTS.md` block, making it the always-on instruction surface for Claude Code
+   - copyClaudeMdFile — writes `CLAUDE.md` with `@AGENTS.md` import and Claude-specific runtime guidance
+   - copyRulesDirectory
 6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.codex/`,
    `.agents/`, `.opencode/`, `.cafekit-backup/`, `.cafekit.lock`).
 7. **Post-install** — OpenCode model, runtime locale, Gemini, and managed
@@ -112,7 +121,7 @@ and logs so partial un-ignores and force-adds stay safer.
 .codex/hooks/               native event handlers and state/privacy libraries
 .codex/{rules,scripts,references}/
 .codex/{runtime,cafekit}.json
-AGENTS.md                    CafeKit-owned marked block only
+AGENTS.md                    CafeKit-owned marked block, built from `src/common/AGENTS.md` + `src/codex/AGENTS.md`
 ```
 
 The installer does not create `.codex/config.toml` or change user-global trust.
