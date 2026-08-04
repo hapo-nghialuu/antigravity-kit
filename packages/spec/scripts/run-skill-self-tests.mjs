@@ -657,13 +657,14 @@ async function runStaticSemanticTests() {
         content.includes("Do not write \"user selected\""),
     },
     {
-      label: "CafeKit uses Research-style skill routing rules",
-      file: "src/claude/CLAUDE.md",
+      label: "CafeKit keeps canonical AGENTS core and Claude wrapper",
+      files: ["src/claude/CLAUDE.md", "src/common/AGENTS.md"],
       assert: (content) =>
-        content.includes("skill-workflow-routing.md") &&
-        content.includes("skill-domain-routing.md") &&
-        content.includes("Analyze the skills catalog and activate the skills") &&
-        content.includes("advisory routing when choosing a skill"),
+        content.includes("@AGENTS.md") &&
+        content.includes("## Response style") &&
+        content.includes("## Commands") &&
+        content.includes("## Language Consistency <!-- cafekit:lang -->") &&
+        content.includes(".claude/skills/.venv/bin/python3"),
     },
     {
       label: "CafeKit skill routing workflow rule maps core flows",
@@ -842,13 +843,17 @@ async function runStaticSemanticTests() {
         content.includes("removeObsoleteClaudeRuntimeFiles(ctx, platformKey)"),
     },
     {
-      label: "CafeKit rules hook injects routing rule references",
+      label: "CafeKit rules hook injects only project-specific reminders",
       file: "src/claude/hooks/rules.cjs",
       assert: (content) =>
-        content.includes("## Skill Routing") &&
-        content.includes("skill-workflow-routing.md") &&
-        content.includes("skill-domain-routing.md") &&
-        content.includes("generate-skill-catalog.cjs --skills"),
+        content.includes("reserveSession") &&
+        content.includes("runtime.locale") &&
+        content.includes("docs.maxLoc") &&
+        content.includes("Markdown files") &&
+        !content.includes("COOLDOWN_MS") &&
+        !content.includes("## Skill Routing") &&
+        !content.includes("[IMPORTANT] Consider Modularization") &&
+        !content.includes("YAGNI · KISS · DRY"),
     },
     {
       label: "docs sync respects runtime docs path",

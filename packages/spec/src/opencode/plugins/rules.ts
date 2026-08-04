@@ -20,7 +20,11 @@
 
 import type { Plugin } from "@opencode-ai/plugin";
 import {
+  createHash,
+} from "node:crypto";
+import {
   existsSync,
+  mkdirSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
@@ -36,7 +40,7 @@ function resolveProjectDir(directory?: string): string {
   return dirname(dirname(PLUGIN_DIR));
 }
 
-function readRuntime(cwd: string): Record<string, any> {
+function readRuntime(cwd: string): Record<string, any> | null {
   try {
     const file = join(cwd, ".opencode", "runtime.json");
     if (existsSync(file)) {
@@ -44,12 +48,27 @@ function readRuntime(cwd: string): Record<string, any> {
     }
   } catch {
     /* fail-open */
+    return null;
   }
   return {};
 }
 
-function renderDynamicRules(cwd: string): string {
+function reserveSession(cwd: string, sessionId?: string): boolean {
+  if (!sessionId) return false;
+  try {
+    const key = createHash("sha256").update(sessionId).digest("hex").slice(0, 16);
+    const file = join(cwd, ".opencode", "plugins", ".logs", `rules-${key}.json`);
+    mkdirSync(join(cwd, ".opencode", "plugins", ".logs"), { recursive: true });
+    writeFileSync(file, JSON.stringify({ sessionId }), { encoding: "utf8", flag: "wx", mode: 0o600 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderDynamicRules(cwd: string): string | null {
   const runtime = readRuntime(cwd);
+  if (runtime === null) return null;
   const thinkLang: string = runtime?.locale?.thinkingLanguage || "";
   const respondLang: string = runtime?.locale?.responseLanguage || "";
   const effectThink = thinkLang || (respondLang ? "en" : "");
@@ -77,34 +96,6 @@ function renderDynamicRules(cwd: string): string {
     "- **DO NOT** create markdown files outside of those directories unless explicitly asked.",
   );
   lines.push(`- docs.maxLoc: ${maxLoc} lines max per doc file`);
-  lines.push("- Follow **YAGNI · KISS · DRY** principles");
-  lines.push(
-    "- Sacrifice grammar for concision in reports. List unresolved Qs at end.",
-  );
-  lines.push("- Ensure token efficiency while maintaining high quality.");
-  lines.push("");
-
-  lines.push("### Skill Routing");
-  lines.push(
-    "- Choose skills from intent using `.opencode/rules/skill-workflow-routing.md` and `.opencode/rules/skill-domain-routing.md`.",
-  );
-  lines.push(
-    "- Use the OpenCode slash commands installed under `.opencode/commands/` (no `hapo:` prefix).",
-  );
-  lines.push(
-    "- Explicit user commands and direct-answer requests override routing suggestions.",
-  );
-  lines.push("");
-
-  lines.push("### Modularization");
-  lines.push("- If a file exceeds 200 lines, consider splitting it");
-  lines.push("- Check existing modules before creating new ones");
-  lines.push(
-    "- Prefer kebab-case (JS/TS/Python/shell); PascalCase (C#/Java); snake_case (Go/Rust)",
-  );
-  lines.push(
-    "- Skip modularization for: markdown, plain text, bash scripts, config files, .env files",
-  );
   lines.push("");
   lines.push(RULES_BLOCK_END);
 
@@ -145,16 +136,17 @@ function upsertBlock(filePath: string, block: string): boolean {
 export const RulesPlugin: Plugin = async ({ directory }) => {
   const cwd = resolveProjectDir(directory);
 
-  const refresh = () => {
+  const refresh = (sessionId?: string) => {
+    if (!reserveSession(cwd, sessionId)) return;
     const agentsFile = join(cwd, "AGENTS.md");
     const block = renderDynamicRules(cwd);
-    upsertBlock(agentsFile, block);
+    if (block) upsertBlock(agentsFile, block);
   };
 
   return {
     event: async ({ event }) => {
       if (event.type === "session.created") {
-        refresh();
+        refresh(event.properties?.info?.id);
       }
     },
   };

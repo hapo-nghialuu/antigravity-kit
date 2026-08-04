@@ -6,7 +6,7 @@
  * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks
  *
  * Fires when a subagent (Task tool) is spawned.
- * Injects lightweight context: language, rules, paths (~100 tokens).
+ * Injects lightweight context: language, paths, and skill venv guidance.
  *
  * Exit: 0 always (fail-open)
  */
@@ -38,8 +38,6 @@ try {
   if (!stdin) process.exit(0);
 
   const payload    = JSON.parse(stdin);
-  const agentType  = payload.agent_type || 'unknown';
-  const agentId    = payload.agent_id   || 'unknown';
   // Use payload.cwd for monorepo support — subagent may run in a different dir
   const agentCwd   = payload.cwd?.trim() || process.cwd();
   const runtime    = readRuntime(agentCwd);
@@ -58,10 +56,6 @@ try {
   // Build context block
   const lines = [];
 
-  lines.push(`## Subagent: ${agentType}`);
-  lines.push(`ID: ${agentId} | CWD: ${agentCwd}`);
-  lines.push('');
-
   // Language section (only if configured)
   const hasThink = effectThink && effectThink !== respondLang;
   if (hasThink || respondLang) {
@@ -74,11 +68,8 @@ try {
   // Python venv (optional — if .claude/skills/.venv exists)
   const venv = resolveVenv(agentCwd);
 
-  // Rules
   lines.push('## Rules');
   lines.push(`- Plans → ${plansPath}/ | Docs → ${docsPath}/`);
-  lines.push('- YAGNI · KISS · DRY');
-  lines.push('- Be concise. List unresolved questions at end.');
   if (venv) {
     lines.push(`- Python in .claude/skills/: use \`${venv}\``);
     lines.push('- Never use global pip install');
