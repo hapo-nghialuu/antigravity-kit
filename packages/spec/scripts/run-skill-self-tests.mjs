@@ -1804,6 +1804,28 @@ async function runWave1InstructionFixtureTests() {
     if (codexRules.status !== 0 || codexRules.stdout.trim() !== "") {
       fail("Codex rules hook injected with runtime.json missing", codexRules);
     }
+    const opencodeRoot = roots[2];
+    const opencodeAgentsBefore = await readFile(join(opencodeRoot, "AGENTS.md"), "utf8");
+    await rm(join(opencodeRoot, ".opencode", "runtime.json"), { force: true });
+    if (Number(process.versions.node.split(".")[0]) >= 22) {
+      const rulesSource = JSON.stringify(join(packageRoot, "src/opencode/plugins/rules.ts"));
+      const projectRoot = JSON.stringify(opencodeRoot);
+      const pluginProbe = [
+        `import { RulesPlugin } from ${rulesSource};`,
+        `const plugin = await RulesPlugin({ directory: ${projectRoot} });`,
+        `await plugin.event({ event: { type: "session.created", properties: { info: { id: "wave1-opencode-missing" } } } });`,
+      ].join("\n");
+      const opencodeRules = spawnSync(
+        process.execPath,
+        ["--experimental-strip-types", "--input-type=module", "-e", pluginProbe],
+        { cwd: opencodeRoot, encoding: "utf8" },
+      );
+      if (opencodeRules.status !== 0) fail("OpenCode rules plugin probe failed", opencodeRules);
+    }
+    const opencodeAgentsAfter = await readFile(join(opencodeRoot, "AGENTS.md"), "utf8");
+    if (opencodeAgentsAfter !== opencodeAgentsBefore) {
+      fail("OpenCode rules plugin injected with runtime.json missing");
+    }
 
     const combined = await mkdtemp(join(tmpdir(), "cafekit-wave1-combined-"));
     roots.push(combined);
