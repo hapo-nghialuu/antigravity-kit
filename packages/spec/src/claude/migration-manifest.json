@@ -41,7 +41,7 @@
     "required": [
       "test-runner.md",
       "code-auditor.md",
-      "god-developer.md",
+      "implementer.md",
       "debugger.md",
       "docs-keeper.md",
       "git-ops.md",

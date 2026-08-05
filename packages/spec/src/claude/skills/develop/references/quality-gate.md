@@ -80,7 +80,7 @@ START_LOOP:
     - If retry_count >= 3:
         → COLLAPSE! AskUserQuestion: "Quality gate cannot prove this task is complete! User intervention required!"
     - If retry_count < 3:
-        → Return to Step 3 (god-developer). Fix the failing checks, spec gaps, or missing evidence first.
+        → Return to Step 3 (implementer). Fix the failing checks, spec gaps, or missing evidence first.
         → GOTO START_LOOP
 
   CASE 2 — Test PASS + Evidence PASS + SPEC_PASS:
@@ -91,10 +91,10 @@ STAGE B:
   CODE QUALITY REVIEW (only after spec compliance passes)
   ---------------------------------------------------------------
   → Agent(subagent_type="code-auditor",
-        prompt="CODE QUALITY REVIEW. Spec compliance already passed. Review recently written code for security, logic correctness, architecture, YAGNI/KISS/DRY, maintainability, tests, and project conventions. Also re-check that no recent edits broke dependents found by the task-aware scout report. Return score (X/10), critical count, warning list, and concrete file:line findings.",
+        prompt="CODE QUALITY REVIEW. Spec compliance already passed. Review recently written code for security, logic correctness, architecture, YAGNI/KISS/DRY, maintainability, tests, and project conventions. Also re-check that no recent edits broke dependents found by the task-aware scout report. Return a verdict (PASS = no Critical, no High, at most one Medium), critical/high/medium finding lists, and concrete file:line findings.",
         description="Quality review [feature]")
 
-  CASE 3 — Code quality review FAIL (Score < 9.5 OR Critical > 0):
+  CASE 3 — Code quality review FAIL (one or more Critical or High findings, or two or more Medium findings):
     - Increment retry_count++
     - If retry_count >= 3:
         → COLLAPSE! AskUserQuestion: "Code does not meet minimum standards! User intervention required!"
@@ -102,7 +102,7 @@ STAGE B:
         → Fix each review issue.
         → GOTO START_LOOP unless the fix is prose-only and cannot affect evidence; otherwise re-run Stage B.
 
-  CASE 4 — Test PASS + Evidence PASS + SPEC_PASS + Code quality review PASS (Score >= 9.5 AND Critical = 0):
+  CASE 4 — Test PASS + Evidence PASS + SPEC_PASS + Code quality review PASS (no Critical, no High, at most one Medium):
     → PASS! Auto-approved.
     → PROCEED to completion report with a verification receipt summarizing exact commands executed, artifact/runtime/reachability proof, spec review result, and code quality review result.
 ```
@@ -124,10 +124,10 @@ STAGE B:
 
 Must log the Quality Gate result to the terminal for user visibility:
 
-- **Quick Pass:** `✓ Step 4 Quality Gate: Test PASS + Evidence PASS + Spec PASS + Review 9.5/10 - Auto-Approved`
-- **Hard-Won Pass:** `✓ Step 4 Quality Gate: Failed 2 rounds → Test PASS + Evidence PASS + Spec PASS + Review 9.6/10`
+- **Quick Pass:** `✓ Step 4 Quality Gate: Test PASS + Evidence PASS + Spec PASS + Review PASS (no Critical, no High, at most one Medium) - Auto-Approved`
+- **Hard-Won Pass:** `✓ Step 4 Quality Gate: Failed 2 rounds → Test PASS + Evidence PASS + Spec PASS + Review PASS (no Critical, no High, at most one Medium)`
 - **Preflight Fail:** `[x] Step 4 Quality Gate: PRECHECK_FAIL → compile/typecheck/build failed before tests mattered`
-- **Fix Needed:** `[~] Step 4 Quality Gate: Tests/spec/evidence failed → returned to god-developer`
+- **Fix Needed:** `[~] Step 4 Quality Gate: Tests/spec/evidence failed → returned to implementer`
 - **Awaiting Rescue:** `[!] Step 4 Quality Gate: Failed 3 rounds! Awaiting user intervention...`
 
 ## Working directory (parallel mode)

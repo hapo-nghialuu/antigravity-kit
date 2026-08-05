@@ -153,7 +153,7 @@ Return a **structured verdict** (required format — not free-form prose):
 
 ### Action
 - PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to god-developer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
+- FAIL → [list specific fixes needed] → Return to implementer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
 
@@ -176,7 +176,7 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 | `hapo:code-review` | runs in parallel | Both run at Quality Gate Step 4 |
 | `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
 | `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
-| `god-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
+| `implementer` agent | hapo:test → | FAIL verdicts route back here for fixing |
 | `test-runner` agent | hapo:test → | Primary executor, spawned via the `Agent` tool |
 | chrome-devtools scripts | test-runner → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
 

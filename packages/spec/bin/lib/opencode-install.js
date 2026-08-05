@@ -49,7 +49,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'develop.md',
     skillName: 'develop',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement approved CafeKit spec tasks with scope fidelity.'
   },
@@ -77,7 +77,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'hotfix.md',
     skillName: 'hotfix',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Apply a scout-first, narrow production hotfix.'
   },
@@ -114,7 +114,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'backend-development.md',
     skillName: 'backend-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement backend services, APIs, data layers, and integrations.'
   },
@@ -149,7 +149,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'frontend-development.md',
     skillName: 'frontend-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Build React/TypeScript UI components and frontend features.'
   },
@@ -163,7 +163,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'mobile-development.md',
     skillName: 'mobile-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement iOS, Android, React Native, or Flutter mobile features.'
   },

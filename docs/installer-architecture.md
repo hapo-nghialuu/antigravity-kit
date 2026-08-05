@@ -83,6 +83,17 @@ Two distinct manifests (never conflated):
 - **Ownership manifest** (`<folder>/cafekit-manifest.json`, `ctx.ownership`) — SHA-256 of
   every file CafeKit wrote, used to classify on re-install.
 
+### Payload mapping and self-tests
+
+The implementation agent payload is `agents/implementer.md`; the legacy
+`god-developer.md` name is not used. The migration manifest, Codex `AGENT_NAMES`,
+and OpenCode command templates use the same `implementer` name so every runtime
+resolves the same implementation role.
+
+The installer copies payload files and transforms paths, syntax, and command
+mappings for each target runtime. Installer self-tests exercise the transformed
+output and assert that agent mappings stay aligned.
+
 `managed-writer` compares three hashes — disk, recorded baseline, incoming payload:
 
 | State | Condition | Default action | With `--force-overwrite` |

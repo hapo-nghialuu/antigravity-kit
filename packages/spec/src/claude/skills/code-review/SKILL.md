@@ -41,7 +41,7 @@ If invoked without explicit arguments, default to reviewing recent changes (pend
 
 ## 3-Stage Adversarial Protocol
 
-Ensure verification walks through these three stages before delivering a final score.
+Ensure verification walks through these three stages before delivering a final verdict.
 
 ### Stage 1 — Spec Compliance (with `ai-multimodal` injection)
 Does the code match what was requested?
@@ -61,18 +61,17 @@ Actively try to break the code.
 - Find false assumptions, resource exhaustion loops, and race conditions.
 - Find unhandled edge cases (e.g. empty strings, null pointers, negative integers). 
 
-## Output Scoring
+## Output
 
-Your report MUST return a score out of 10.
-- **PASS:** Score >= 9.5 and **0 Critical findings**.
-- **FAIL:** Score < 9.5 or > 0 Critical findings.
+Your report MUST classify every finding by severity and return a verdict.
+- **PASS:** no Critical findings, no High findings, at most one Medium.
+- **FAIL:** one or more Critical or High findings, or two or more Medium findings.
 
 Format:
 ```markdown
 # Code Review Results [hapo:code-review]
 
-**Score:** X.X / 10
-**Status:** PASS | FAIL
+**Verdict:** PASS | FAIL
 **Target:** [PR | Commit | Path]
 
 ## Stage 1: Spec Compliance
@@ -83,7 +82,8 @@ Format:
 
 ## Stage 3: Adversarial Findings
 - [🔴 Critical] ...
-- [🟡 Warning] ...
+- [🟠 High] ...
+- [🟡 Medium] ...
 - [🔵 Suggestion] ...
 
 ## Fix Commands (Terminal ready)

@@ -15,7 +15,7 @@ Agent(subagent_type="inspector", prompt="Scan and identify all files related to 
 
 ## Code Implementation Phase
 ```
-Agent(subagent_type="god-developer", prompt="Implement the sub-tasks from [tasks-directory] based on the specification in [spec.json]", description="Code Feature [feature]")
+Agent(subagent_type="implementer", prompt="Implement the sub-tasks from [tasks-directory] based on the specification in [spec.json]", description="Code Feature [feature]")
 ```
 
 ## UI Implementation Phase
@@ -25,7 +25,7 @@ Agent(subagent_type="ui-ux-designer", prompt="Implement the frontend code for [f
 
 ## Code Review Phase
 ```
-Agent(subagent_type="code-auditor", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return score (X/10), list of critical issues, warnings, and suggestions.", description="Review [phase]")
+Agent(subagent_type="code-auditor", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return a verdict (PASS = no Critical, no High, at most one Medium), severity-classified findings, and concrete suggestions.", description="Review [phase]")
 ```
 
 ## Test Execution Phase

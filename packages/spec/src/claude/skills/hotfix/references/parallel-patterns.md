@@ -9,7 +9,7 @@ How to effectively leverage multiple subagents (the `Agent` tool) and native tas
 | Searching for root cause across 3+ directories | Parallel scout | `Explore` × 2-3 |
 | Testing 2-3 diagnostic hypotheses simultaneously | Parallel hypothesis test | `Explore` × 2-3 |
 | Verifying fix (typecheck + lint + build + test) | Parallel verification | `Bash` × 3-4 |
-| Fixing 2+ independent bugs in one session | Parallel issue trees | `god-developer` × N |
+| Fixing 2+ independent bugs in one session | Parallel issue trees | `implementer` × N |
 | Deep workflow: scout + diagnose + research together | Parallel investigation | Mixed |
 
 ## Pattern A: Parallel Scouting
@@ -71,7 +71,7 @@ B4 = TaskCreate(subject="[Auth] Verify + test",             addBlockedBy=[B3])
 TaskCreate(subject="Integration verification",              addBlockedBy=[A4, B4])
 ```
 
-Spawn one `god-developer` agent per issue tree. Each agent claims tasks via `TaskUpdate(status="in_progress")` and completes via `TaskUpdate(status="completed")`.
+Spawn one `implementer` agent per issue tree. Each agent claims tasks via `TaskUpdate(status="in_progress")` and completes via `TaskUpdate(status="completed")`.
 
 ## Pattern E: Deep Workflow — Parallel Investigation Phase
 

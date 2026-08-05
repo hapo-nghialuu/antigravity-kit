@@ -27,6 +27,16 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 /hapo:develop <feature name> --no-notes
 ```
 
+## Mode Matrix
+
+| Mode | Scout | Quality gate | Receipt | Notes |
+|---|---|---|---|---|
+| default (specific-task / full-spec) | per tier | full (Step 4) | verified | |
+| `--flash` | per tier | Flash Gate (4F) | `FLASH_UNVERIFIED` | |
+| `--parallel` | inspector per task | full, inside each worktree | verified | implies Deep tier |
+| `--flash --parallel` | **not supported** — `--parallel` wins, state this to the user | | | waves always run the quality gate |
+| `--no-notes` | — | — | — | composable with all modes |
+
 ## Execution Modes
 
 ### 1. Specific-Task Mode
@@ -64,7 +74,7 @@ Contracts: WAVE_CONFIG
 
 - Preconditions first: if `runtime.json` sets `develop.parallel: false`, refuse `--parallel`, name the key, and run the sequential loop. If the work context is not a git repository or worktree isolation is unavailable, state the reason and fall back sequential (see parallel-waves.md §1).
 - Waves are computed from `task_registry.dependencies` with the single-writer-per-file rule; wave cap = N (1..5, default 3).
-- Dispatch one `god-developer` per wave task — worktree isolation, background, self-contained prompt per `rules/orchestrator.md`, plus the mandatory lines in parallel-waves.md §3 (commit mandate; never edit `spec.json`/`tasks/*.md`; never touch files outside the task's `Related Files`).
+- Dispatch one `implementer` per wave task — worktree isolation, background, self-contained prompt per `rules/orchestrator.md`, plus the mandatory lines in parallel-waves.md §3 (commit mandate; never edit `spec.json`/`tasks/*.md`; never touch files outside the task's `Related Files`).
 - Quality gate (Stage A+B, unchanged) runs inside each task's worktree BEFORE merge; merge = sequential `git cherry-pick` of agent commits with explicit worktree/branch cleanup (spike-verified — see parallel-waves.md §5); post-merge integration check gates the next wave.
 - The orchestrator is the single writer of spec state: registry/task-md/receipts update after each cherry-pick, exactly as in sequential mode.
 - Without `--parallel`, nothing in this section applies — the sequential Full-Spec loop below is unchanged.
@@ -90,6 +100,17 @@ Enabled by default for all develop modes. Disable only with `--no-notes`.
 - Record decisions and caveats while implementing, not only at the end.
 - Do not use notes to justify scope changes that alter the approved contract. If the contract changes, stop and route back to `/hapo:specs update`.
 
+## Delegation policy (single source for this skill)
+
+Implement in the main session by default. Do not spawn a subagent because a step
+mentions an agent name — spawn only per this table:
+
+| Tier (from spec `execution_tier`) | Delegation |
+|---|---|
+| Light — clear + isolated + ≤2 tasks | None. Main session scouts, implements, verifies. |
+| Standard — default / 3-4 tasks | Main session scouts + implements; one independent `code-auditor` review at ship point. |
+| Deep — Complex/Critical, auth/payment/migration/schema, 5+ tasks, or `--parallel` | `inspector` scout per task, one `implementer` per worktree (parallel wave), `test-runner` + `code-auditor` gates. |
+
 <HARD-GATE>
 DO NOT write implementation code until an approved spec exists.
 - If the directory `specs/<feature-name>` DOES NOT EXIST or `spec.json` is not ready, automatically trigger `/hapo:specs <feature-name> --auto` first to create the specification end-to-end (non-interactive). Do not improvise.
@@ -111,21 +132,14 @@ The approved `scope_lock`, requirements, design contracts, and active task packe
 You MUST implement all scoped behavior for the active task, MUST NOT add out-of-scope behavior, and MUST NOT mark work done while required surfaces exist only as orphaned files, unmounted UI, unregistered routes, uncalled loaders, or placeholder wiring.
 </SCOPE-FIDELITY>
 
-## Anti-Rationalization Protocol
-
-| Thought (Excuse) | Reality (Rule) |
-|-------------------|----------------|
-| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call the `inspector` agent to scan files. |
-| "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via the `Agent` tool. |
-
 ## Absolute Workflow
 
 ```mermaid
 flowchart TD
     A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
     B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Task-Aware Scout (inspector)]
-    C --> D[Step 3: Implement Code (god-developer)]
+    B -->|Ready| C[Step 2: Task-Aware Scout (per Delegation policy)]
+    C --> D[Step 3: Implement (per Delegation policy)]
     D --> E{Flash Mode?}
     E -->|No| Q[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
     E -->|Yes| R[Step 4F: Flash Gate: Minimal Preflight + Scope Sanity]
@@ -162,14 +176,14 @@ flowchart TD
 - Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory per task:** Call agent `Agent(subagent_type="inspector", ...)` before implementing EVERY active task. This is task-aware scouting, not a one-time global scan.
-- The inspector prompt MUST include:
+- **Scout per Delegation policy** — Deep tier delegates to `inspector`; Light/Standard scouts in the main session with the same required outputs:
+- The scout prompt MUST include:
   - Active task file path and extracted task packet
   - Requirement IDs and `scope_lock`
   - Relevant `design.md` contracts/invariants
   - Prior completed task outputs from `spec.json.task_registry`
   - Related Files from the active task
-- Inspector MUST report:
+- The scout MUST report:
   - Real runtime entrypoints/callers affected by the task (`App.tsx`, routes, CLI command, worker registration, manifest, API consumer, etc.)
   - Existing integration points and adjacent code patterns to follow
   - Prior task outputs this task must consume or preserve
@@ -179,7 +193,7 @@ flowchart TD
 - If the inspector cannot identify the entrypoint/caller for a runtime-facing task, STOP and route back to spec correction or ask the user. Do not guess.
 
 ### Step 3: Implement Code
-- Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.
+- Act as the `implementer` per the Delegation policy (default: the main session), executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - You MUST use the Step 2 scout report as implementation context. If code reality contradicts the task packet, stop and reconcile the spec before coding.
 - Unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
@@ -208,7 +222,7 @@ flowchart TD
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
-**Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
+**Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: PASS requires no Critical findings, no High findings, and at most one Medium.
 
 If `--flash` is active, use **Step 4F: Flash Gate** instead of the full automatic review loop.
 
@@ -217,11 +231,9 @@ If `--flash` is active, use **Step 4F: Flash Gate** instead of the full automati
   2. Spec compliance review passes: every scoped requirement and active task criterion is implemented, with no extras and no omissions
   3. Code quality review passes
   4. Task evidence passes (artifacts/runtime surfaces/reachability/negative-path checks from the task file are proven)
+- Violating any Step 3 rule = FAIL.
 - `PRECHECK_FAIL` outranks `NO_TESTS`. If compile/typecheck/build fails, the task is FAIL even when no test suite exists yet.
-- `NO_TESTS` is NOT equivalent to PASS. If the task explicitly requires a test command or automated test proof, `NO_TESTS` is a FAIL or BLOCKED outcome until the requirement is satisfied or the spec is corrected.
 - If build/test passes but task evidence is missing, the task is still FAIL.
-- If runtime-facing work is orphaned, unmounted, unregistered, uncalled, or unreachable from the declared entrypoint/caller, the task is still FAIL.
-- If the implementation silently replaced a named contract choice or relies on cross-service process-local stand-ins, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
 ### Step 4F: Flash Gate (`--flash` only)
@@ -267,7 +279,7 @@ Flash mode is an explicit speed trade-off requested by the user.
   - If `none`: record that explicitly in the completion report and stop
   - If `minor` or `major`: trigger `docs-keeper` to surgically update affected existing docs under `./docs`
   - Default to **lightweight docs sync**: update only the docs touched by this task and its verified behavior; do NOT run `repomix` unless `docs-keeper` truly cannot verify the required architecture/context from the code, spec, and current docs
-- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and crash.
+- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and will fail to locate the root docs/ folder.
 - Task-level docs sync happens after every verified completed task, but actual edits still depend on `Docs impact`.
 - In **Specific-Task Mode**, STOP after sync and report the result.
 - In **Full-Spec Mode**, only after sync may you re-read `task_registry`, pick the next unblocked pending task, and repeat from Step 1 for that task.

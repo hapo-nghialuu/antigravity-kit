@@ -315,8 +315,8 @@ messaging().onNotificationOpenedApp(remoteMessage => {
 ```
 
 **Impact:**
-- 25% revenue increase with proper personalization
-- 88% opt-in rate with pre-permission modal (vs 40% without)
+- Personalization can increase revenue
+- Pre-permission modal can improve opt-in rate
 
 ## Authentication & Authorization
 
@@ -443,10 +443,10 @@ const token = credentials.password;
 - Expedited: 1-2 hours (emergencies only)
 
 **Rejection Reasons:**
-- Crashes (50%)
-- Privacy violations (25%)
-- Incomplete information (15%)
-- Guideline violations (10%)
+- Crashes
+- Privacy violations
+- Incomplete information
+- Guideline violations
 
 ### Google Play (Android)
 

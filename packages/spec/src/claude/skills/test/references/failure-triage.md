@@ -35,21 +35,21 @@ Failure detected
 ├─ Compile Error (#1)
 │   → STOP immediately. Do NOT run further tests.
 │   → Report: file, line, error message.
-│   → Action: return to god-developer. Fix compile errors first.
+│   → Action: return to implementer. Fix compile errors first.
 │
 ├─ Logic Error (#2)
 │   → Report: test name, file:line, expected value, actual value.
-│   → Action: return to god-developer with precise location.
+│   → Action: return to implementer with precise location.
 │   → Do NOT modify test to make it pass.
 │
 ├─ Environment Error (#3)
 │   → Report: which service/env var is missing.
-│   → Action: escalate to USER (not god-developer).
+│   → Action: escalate to USER (not implementer).
 │     "Environment issue: [DB/service] not reachable. Please start it."
 │
 ├─ Flaky Test (#4)
 │   → Report: test name + "intermittent failure observed".
-│   → Action: flag for god-developer review.
+│   → Action: flag for implementer review.
 │     Likely cause: shared state, async timing, or test ordering.
 │
 ├─ Coverage Gap (#5)
@@ -59,17 +59,17 @@ Failure detected
 │
 ├─ Build Error (#6)
 │   → Report: build command, error output (last 20 lines).
-│   → Action: return to god-developer.
+│   → Action: return to implementer.
 │
 ├─ UI Console Error (#7)
 │   → Report: error message, source file, line number.
-│   → Action: return to god-developer if JS error.
+│   → Action: return to implementer if JS error.
 │     If external script error: flag as warning only.
 │
 ├─ UI Network Error (#8)
 │   → Report: endpoint URL, status code, response body excerpt.
-│   → Action: 404 → god-developer (missing route/resource).
-│     500 → god-developer (server error). 401/403 → auth issue (user).
+│   → Action: 404 → implementer (missing route/resource).
+│     500 → implementer (server error). 401/403 → auth issue (user).
 │
 ├─ UI Performance (#9)
 │   → Report: specific metric name + actual value + threshold.
@@ -77,27 +77,27 @@ Failure detected
 │
 ├─ Accessibility Error (#10)
 │   → Report: element role + missing attribute.
-│   → Action: return to god-developer. Add aria-label / alt / for attributes.
+│   → Action: return to implementer. Add aria-label / alt / for attributes.
 │
 ├─ User Flow Error (#11)
 │   → Report: step failed (e.g., login submit), expected vs actual URL/state.
-│   → Action: return to god-developer to fix E2E UI flow.
+│   → Action: return to implementer to fix E2E UI flow.
 │
 ├─ SEO Error (#12)
 │   → Report: missing tag or invalid setup (e.g., no H1, bad canonical).
-│   → Action: return to god-developer. Add missing HTML meta tags.
+│   → Action: return to implementer. Add missing HTML meta tags.
 │
 ├─ Security Warning (#13)
 │   → Report: missing header names or exposed secret pattern.
-│   → Action: return to god-developer. Add helmet/headers or remove secrets.
+│   → Action: return to implementer. Add helmet/headers or remove secrets.
 │
 ├─ Broken Links (#14)
 │   → Report: crawler source URL → broken target URL (404).
-│   → Action: return to god-developer to fix href paths.
+│   → Action: return to implementer to fix href paths.
 │
 └─ UI Visual Error (#15)
     → Report: AI parsed visual issue (e.g., button overlapping text).
-    → Action: return to god-developer to fix CSS/layout issues.
+    → Action: return to implementer to fix CSS/layout issues.
 ```
 
 ---
@@ -107,11 +107,11 @@ Failure detected
 | Failure count | Verdict | Action |
 |---|---|---|
 | 0 failures | **PASS** | Proceed to hapo:code-review |
-| 1–2 failures | **FAIL** | Return to god-developer with targeted fix list |
-| 3–10 failures | **FAIL** | Return to god-developer, flag as "significant failures" |
+| 1–2 failures | **FAIL** | Return to implementer with targeted fix list |
+| 3–10 failures | **FAIL** | Return to implementer, flag as "significant failures" |
 | > 10 failures OR 0 tests pass | **COLLAPSE** | Call `AskUserQuestion`: "Test suite critically broken. User intervention required." |
 | Only coverage gaps | **PARTIAL** | Proceed to hapo:code-review, attach coverage gap list |
-| Environment errors only | **BLOCKED** | Escalate to user (not god-developer) |
+| Environment errors only | **BLOCKED** | Escalate to user (not implementer) |
 
 ---
 

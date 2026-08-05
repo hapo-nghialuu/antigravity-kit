@@ -23,7 +23,7 @@ Comprehensive guide for video understanding, temporal analysis, and YouTube proc
 ## Model Selection
 
 ### Recommended
-- **gemma-4-31b-it**: 1M-2M context, balanced quality/speed (read model from `.claude/runtime.json`: `gemini.model`)
+- **gemma-4-31b-it**: 1M-2M context, balanced quality/speed; override with `GEMINI_MODEL` when needed.
 
 ### Context Windows
 - **2M token models**: ~2 hours (default) or ~6 hours (low-res)

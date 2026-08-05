@@ -16,7 +16,7 @@ const AGENT_NAMES = [
   'deployer',
   'docs-keeper',
   'git-ops',
-  'god-developer',
+  'implementer',
   'inspector',
   'project-manager',
   'researcher',

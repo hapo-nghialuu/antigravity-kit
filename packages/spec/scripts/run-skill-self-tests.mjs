@@ -343,8 +343,8 @@ async function runStaticSemanticTests() {
         content.includes("one unblocked task at a time"),
     },
     {
-      label: "god-developer is single-track within its workspace with spec-state prohibition",
-      file: "src/claude/agents/god-developer.md",
+      label: "implementer is single-track within its workspace with spec-state prohibition",
+      file: "src/claude/agents/implementer.md",
       assert: (content) =>
         content.includes("within its workspace") &&
         content.includes("Do NOT edit `spec.json`"),
@@ -475,7 +475,7 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("<SCOPE-FIDELITY>") &&
-        content.includes("Mandatory per task") &&
+        content.includes("Scout per Delegation policy") &&
         content.includes("Final Integration Scout"),
     },
     {
@@ -533,6 +533,38 @@ async function runStaticSemanticTests() {
         content.includes("Evidence: FLASH_UNVERIFIED") &&
         content.includes("Do not report `Test PASS`") &&
         content.includes("preflight=<pass|skipped>"),
+    },
+    {
+      label: "inspect uses only internal Explore discovery",
+      file: "src/claude/skills/inspect/SKILL.md",
+      assert: (content) =>
+        content.includes("Internal Explore agents") &&
+        !content.includes("external-gemini-inspection") &&
+        !content.includes("Gemini") &&
+        !content.includes("`ext`"),
+    },
+    {
+      label: "quality gate uses severity verdict instead of numeric score",
+      file: "src/claude/skills/develop/references/quality-gate.md",
+      assert: (content) =>
+        content.includes("no Critical, no High, at most one Medium") &&
+        !content.includes("9.5"),
+    },
+    {
+      label: "inspect runtime config has no legacy Gemini model key",
+      file: "src/claude/runtime.json",
+      assert: (content) =>
+        content.includes('"inspect"') &&
+        !content.includes('"gemini"'),
+    },
+    {
+      label: "hotfix review cycle consumes severity verdicts",
+      file: "src/claude/skills/hotfix/references/review-cycle.md",
+      assert: (content) =>
+        content.includes("verdict and severity-classified findings") &&
+        content.includes("no Critical, no High, at most one Medium") &&
+        !content.includes("score >= 9.0") &&
+        !content.includes("critical_issues[]"),
     },
     {
       label: "test-runner performs scope and runtime reachability audits",
@@ -1230,13 +1262,13 @@ async function runOpenCodeInstallerFixtureTests() {
     const metadata = JSON.parse(await readFile(join(root, ".opencode", "cafekit.json"), "utf8"));
     const opencodeConfig = JSON.parse(await readFile(join(root, "opencode.json"), "utf8"));
     const agentsMd = await readFile(join(root, "AGENTS.md"), "utf8");
-    const godDeveloperAgent = await readFile(
-      join(root, ".opencode", "agents", "god-developer.md"),
+    const implementerAgent = await readFile(
+      join(root, ".opencode", "agents", "implementer.md"),
       "utf8",
     );
     const specsCommand = await readFile(join(root, ".opencode", "commands", "specs.md"), "utf8");
     const questionCommand = await readFile(join(root, ".opencode", "commands", "question.md"), "utf8");
-    const agentFrontmatter = godDeveloperAgent.split("---")[1] || "";
+    const agentFrontmatter = implementerAgent.split("---")[1] || "";
     const commandFrontmatter = specsCommand.split("---")[1] || "";
     const questionFrontmatter = questionCommand.split("---")[1] || "";
     const failures = [];
@@ -1244,10 +1276,10 @@ async function runOpenCodeInstallerFixtureTests() {
     if (metadata.platform !== "opencode") {
       failures.push("OpenCode cafekit.json metadata has wrong platform");
     }
-    if (!(await fileExists(join(root, ".opencode", "agents", "god-developer.md")))) {
+    if (!(await fileExists(join(root, ".opencode", "agents", "implementer.md")))) {
       failures.push("OpenCode agent bundle was not installed");
     }
-    if (!godDeveloperAgent.includes("mode: subagent")) {
+    if (!implementerAgent.includes("mode: subagent")) {
       failures.push("OpenCode agent was not converted to OpenCode mode frontmatter");
     }
     if (
@@ -1258,7 +1290,7 @@ async function runOpenCodeInstallerFixtureTests() {
     ) {
       failures.push("OpenCode agent tools were not converted to OpenCode permission flags");
     }
-    if (agentFrontmatter.includes("name: god-developer") || agentFrontmatter.includes("tools:")) {
+    if (agentFrontmatter.includes("name:") || agentFrontmatter.includes("tools:")) {
       failures.push("OpenCode agent still contains Claude-specific frontmatter");
     }
     if (!(await fileExists(join(root, ".opencode", "commands", "specs.md")))) {

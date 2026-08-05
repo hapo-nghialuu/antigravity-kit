@@ -12,7 +12,7 @@ metadata:
 ---
 # Research (Delegation Facade)
 
-**Mantra:** YAGNI, KISS, DRY. Be brutal, straight to the point, and strictly authoritative.
+**Mantra:** Return ranked recommendations with sources; never an unsorted list of options.
 
 This skill acts as a **Command Facade**. When invoked, the main Orchestrator MUST NOT attempt to run WebSearch itself. Instead, it must instantly delegate the operation to the Specialized Subagent.
 
@@ -40,7 +40,7 @@ Output Format: Must strictly follow the 'Standard Research Report' layout.
 The subagent MUST return the findings formatted EXACTLY according to the built-in specification template.
 
 Instruct the Researcher Subagent with this strict requirement:
-> "Sử dụng nguyên bản template tại `packages/spec/src/claude/skills/specs/templates/research.md`. Tuyệt đối không tự ý đẻ thêm các đề mục ngoài phạm vi file template này."
+> "Use the template at .claude/skills/specs/templates/research.md verbatim. Do not add sections beyond it."
 
 ## Post-Execution
 Once the `researcher` completes the Task and returns the Markdown output, save it based on context:

@@ -39,7 +39,7 @@ Registry: A (deps: –), B (deps: –), C (deps: A), D (deps: – but shares
 - Wave 1 = A, B (D excluded: path collision with B; C excluded: dep on A)
 - Wave 2 = C, D (A done unblocks C; B done releases D's path)
 
-## 3. Dispatch (one god-developer per wave task)
+## 3. Dispatch (one implementer per wave task)
 
 Every dispatch uses worktree isolation + background execution and a
 self-contained prompt per `rules/orchestrator.md` (task file content, design and

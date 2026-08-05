@@ -11,7 +11,7 @@ Security best practices, OWASP Top 10 mitigation, and modern security standards 
 ### Top Vulnerabilities & Mitigation
 
 #### 1. Broken Access Control
-**Risk:** Users access unauthorized resources (28% of vulnerabilities)
+**Risk:** Users access unauthorized resources
 
 **Mitigation:**
 - Implement RBAC (Role-Based Access Control)
@@ -52,7 +52,7 @@ ph.verify(hash, "password123")  # Verify password
 #### 3. Injection Attacks
 **Risk:** SQL injection, NoSQL injection, command injection (6x increase 2020-2024)
 
-**Mitigation (98% vulnerability reduction):**
+**Mitigation:** Parameterized queries prevent SQL injection.
 - Use parameterized queries ALWAYS
 - Input validation with allow-lists
 - Escape special characters
@@ -156,7 +156,7 @@ pip-audit --fix
 - Network segmentation
 - Disable unnecessary protocols (file://, gopher://)
 
-## Input Validation (Prevents 70%+ Vulnerabilities)
+## Input Validation (Prevents Vulnerabilities)
 
 ### Validation Strategies
 
