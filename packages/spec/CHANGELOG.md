@@ -20,10 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.16.0] - 2026-08-04
 
 ### Changed
+
 - **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
-- **Canonical instruction install**: added one shared `src/common/AGENTS.md` core and made Claude installs create/update the imported root `AGENTS.md` block while preserving Codex/OpenCode managed blocks.
+- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
 - **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
 - **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
+
+### Fixed
+
+- **Instruction hook safety**: Claude, Codex, and OpenCode rules hooks now inject nothing and exit 0 when their runtime configuration is missing, malformed, or unreadable. Claude subagent paths now prefer payload `cwd` over stale `PROJECT_ROOT`.
+- **OpenCode instruction localization**: OpenCode managed instructions now receive `--lang` and addressing updates using OpenCode-specific markers.
+- **Runtime gotchas**: Claude, Codex, and OpenCode installed instructions now document project-local skill paths, macOS/Linux and Windows Python venv commands, and the prohibition on editing global `~/.claude/skills`.
+- **Combined instruction installs**: root `AGENTS.md` now stores shared core once with a dedicated marker; Codex and OpenCode blocks remain runtime-specific and idempotent across repeated installs.
+- **Shipped-output self-tests**: installer fixtures now verify all three runtimes, missing-runtime silence, language localization, managed markers, evidence contracts, and combined-install idempotence.
 
 ## [0.15.2] - 2026-07-29
 

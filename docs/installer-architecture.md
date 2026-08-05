@@ -52,20 +52,18 @@ bin/lib/
 4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
    (skipped in dry-run). Claude snapshots `.claude/`, `CLAUDE.md`, and `AGENTS.md`;
    Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
-5. **Per platform** — read ownership baseline, start a tracker, then: copy payload →
-   Claude, Codex, or OpenCode runtime → copy AGENTS.md (Claude only) → write metadata + manifest.
+5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude, Codex, or OpenCode runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, installer ensures one shared `src/common/AGENTS.md` core block for every selected runtime.
 
    The Claude-specific per-platform sequence is:
    - copyClaudeRuntimeFiles (ROUTING, rules, scripts, references)
    - removeObsoleteClaudeRuntimeFiles
    - mergeClaudeSettings
-   - **copyClaudeAgentsMdFile** — installs the shared `src/common/AGENTS.md` core into the root `AGENTS.md` block, making it the always-on instruction surface for Claude Code
+   - **ensureSharedAgentsMdCore** — installs/refreshes the shared `src/common/AGENTS.md` core exactly once in root `AGENTS.md`; Codex/OpenCode writers append only their runtime-specific managed blocks
    - copyClaudeMdFile — writes `CLAUDE.md` with `@AGENTS.md` import and Claude-specific runtime guidance
    - copyRulesDirectory
 6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.codex/`,
    `.agents/`, `.opencode/`, `.cafekit-backup/`, `.cafekit.lock`).
-7. **Post-install** — OpenCode model, runtime locale, Gemini, and managed
-   `CLAUDE.md`/`AGENTS.md` addressing.
+7. **Post-install** — OpenCode model, runtime locale, language and managed-block addressing for Claude, Codex, and OpenCode.
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
 10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
@@ -121,7 +119,7 @@ and logs so partial un-ignores and force-adds stay safer.
 .codex/hooks/               native event handlers and state/privacy libraries
 .codex/{rules,scripts,references}/
 .codex/{runtime,cafekit}.json
-AGENTS.md                    CafeKit-owned marked block, built from `src/common/AGENTS.md` + `src/codex/AGENTS.md`
+AGENTS.md                    shared CafeKit core block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
 ```
 
 The installer does not create `.codex/config.toml` or change user-global trust.

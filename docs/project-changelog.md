@@ -7,7 +7,10 @@ All notable changes to CafeKit are documented here, following
 
 ### Changed
 - **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
-- **Canonical instruction install**: added one shared `src/common/AGENTS.md` core and made Claude installs create/update the imported root `AGENTS.md` block while preserving Codex/OpenCode managed blocks.
+- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
+- **Instruction hook safety**: rules hooks are silent when runtime configuration is missing, malformed, or unreadable; Claude subagent paths prefer payload `cwd` over stale `PROJECT_ROOT`.
+- **OpenCode instruction updates**: OpenCode language and addressing patches use its own managed block, and all runtimes ship project-local skill/venv gotchas with correct paths.
+- **Combined-install regression coverage**: real temp installs verify one shared core, runtime-specific blocks, localization, evidence contracts, and idempotent reruns.
 - **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
 - **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
 
