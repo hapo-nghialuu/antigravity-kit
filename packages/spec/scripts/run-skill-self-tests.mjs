@@ -1702,7 +1702,7 @@ async function runWave1InstructionFixtureTests() {
     const content = await readFile(join(root, fileName), "utf8");
     const required = [skillPath, "~/.claude/skills", "macOS/Linux", "Windows"];
     if (includeCore) {
-      required.push("Completion Criteria", "## Evidence", "NO_TESTS", "0 tests + exit 0");
+      required.push("Completion Criteria` and `## Evidence` are the source of truth", "NO_TESTS", "0 tests + exit 0");
     }
     for (const text of required) {
       if (!content.includes(text)) fail(`${platform}: ${fileName} missing ${JSON.stringify(text)}`);
@@ -1712,7 +1712,7 @@ async function runWave1InstructionFixtureTests() {
 
   const assertSharedCore = async (root, platform) => {
     const content = await readFile(join(root, "AGENTS.md"), "utf8");
-    for (const text of ["Completion Criteria", "## Evidence", "NO_TESTS", "0 tests + exit 0"]) {
+    for (const text of ["Completion Criteria` and `## Evidence` are the source of truth", "NO_TESTS", "0 tests + exit 0"]) {
       if (!content.includes(text)) fail(`${platform}: AGENTS.md missing ${JSON.stringify(text)}`);
     }
   };
