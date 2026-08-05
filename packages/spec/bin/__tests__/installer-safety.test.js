@@ -15,8 +15,9 @@ const {
   commandFailureReason,
   resolvePackageCommand
 } = require('../lib/skill-deps');
-const { copyClaudeMdFile } = require('../phases/claude-runtime');
+const { copyClaudeMdFile, copyClaudeAgentsMdFile } = require('../phases/claude-runtime');
 const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
+const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
@@ -129,6 +130,22 @@ test('legacy pristine CLAUDE template migrates to one managed block', () => {
   });
 });
 
+test('legacy shared AGENTS block migrates to one core marker', () => {
+  inTempProject(() => {
+    const shared = fs.readFileSync(path.join(__dirname, '../../src/common/AGENTS.md'), 'utf8');
+    fs.writeFileSync(
+      'AGENTS.md',
+      `# User instructions\n\n<!-- CAFEKIT CLAUDE AGENTS START -->\n${shared.trimEnd()}\n<!-- CAFEKIT CLAUDE AGENTS END -->\n`
+    );
+
+    copyClaudeAgentsMdFile(installContext([]), 'claude');
+
+    const content = fs.readFileSync('AGENTS.md', 'utf8');
+    assert.equal((content.match(/<!-- CAFEKIT CORE START -->/g) || []).length, 1);
+    assert.equal((content.match(/<!-- CAFEKIT CLAUDE AGENTS START -->/g) || []).length, 0);
+    assert.ok(content.startsWith('# User instructions'));
+  });
+});
 test('addressing changes remain inside the managed CLAUDE block', () => {
   inTempProject(() => {
     const userSection = '## Addressing (Context Overflow Indicator)\n\nUser-owned wording.';
@@ -180,7 +197,7 @@ test('legacy unmarked OpenCode AGENTS content is wrapped without duplication', (
 
     const content = fs.readFileSync('AGENTS.md', 'utf8');
     assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
-    assert.equal((content.match(/^# AGENTS\.md$/gm) || []).length, 1);
+    assert.ok(content.includes('## OpenCode Runtime Mapping'));
     assert.ok(content.includes(codexBlock.trim()));
   });
 });

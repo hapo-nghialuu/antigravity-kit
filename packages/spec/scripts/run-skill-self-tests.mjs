@@ -667,6 +667,24 @@ async function runStaticSemanticTests() {
         content.includes(".claude/skills/.venv/bin/python3"),
     },
     {
+      label: "all runtime instruction templates carry local venv guidance",
+      files: ["src/claude/CLAUDE.md", "src/codex/AGENTS.md", "src/opencode/AGENTS.md"],
+      assert: (content) =>
+        content.includes("macOS/Linux") &&
+        content.includes("Windows") &&
+        content.includes(".claude/skills/.venv") &&
+        content.includes(".agents/skills/.venv") &&
+        content.includes(".opencode/skills/.venv") &&
+        content.includes("~/.claude/skills"),
+    },
+    {
+      label: "rules hooks stay silent when runtime.json is absent",
+      files: ["src/claude/hooks/rules.cjs", "src/codex/hooks/rules.cjs", "src/opencode/plugins/rules.ts"],
+      assert: (content) =>
+        content.includes("return null") &&
+        content.includes("runtime === null"),
+    },
+    {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
       assert: (content) =>
@@ -1654,6 +1672,199 @@ async function runReconstructValidatorFixtureTests() {
   }
 }
 
+async function runWave1InstructionFixtureTests() {
+  const roots = [];
+  const installer = join(packageRoot, "bin", "install.js");
+  const install = (root, platforms, extraArgs = []) => spawnSync(
+    process.execPath,
+    [installer, "--platform", platforms, "--yes", ...extraArgs],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: "/usr/bin:/bin",
+        OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514",
+        OPENCODE_DEFAULT_MODEL: "",
+      },
+    },
+  );
+
+  const fail = (message, result) => {
+    if (result && result.status !== 0) {
+      message += `\\n${result.stdout}\\n${result.stderr}`;
+    }
+    console.error(`[FAIL] Wave 1 install fixture: ${message}`);
+    process.exit(1);
+  };
+
+  const assertInstalledInstruction = async (root, platform, fileName, skillPath, includeCore = true) => {
+    const content = await readFile(join(root, fileName), "utf8");
+    const required = [skillPath, "~/.claude/skills", "macOS/Linux", "Windows"];
+    if (includeCore) {
+      required.push("Completion Criteria", "## Evidence", "NO_TESTS", "0 tests + exit 0");
+    }
+    for (const text of required) {
+      if (!content.includes(text)) fail(`${platform}: ${fileName} missing ${JSON.stringify(text)}`);
+    }
+    return content;
+  };
+
+  const assertSharedCore = async (root, platform) => {
+    const content = await readFile(join(root, "AGENTS.md"), "utf8");
+    for (const text of ["Completion Criteria", "## Evidence", "NO_TESTS", "0 tests + exit 0"]) {
+      if (!content.includes(text)) fail(`${platform}: AGENTS.md missing ${JSON.stringify(text)}`);
+    }
+  };
+
+  const runHook = (root, hook, payload, env) => spawnSync(
+    process.execPath,
+    [join(packageRoot, hook)],
+    {
+      cwd: root,
+      input: JSON.stringify(payload),
+      encoding: "utf8",
+      env: { ...process.env, PROJECT_ROOT: env },
+    },
+  );
+
+  try {
+    const standalone = [
+      ["claude", ".claude/skills/.venv/bin/python3", "CLAUDE.md"],
+      ["codex", ".agents/skills/.venv/bin/python3", "AGENTS.md"],
+      ["opencode", ".opencode/skills/.venv/bin/python3", "AGENTS.md"],
+    ];
+
+    for (const [platform, skillPath, fileName] of standalone) {
+      const root = await mkdtemp(join(tmpdir(), `cafekit-wave1-${platform}-`));
+      roots.push(root);
+      const result = install(root, platform);
+      if (result.status !== 0) fail(`${platform} install failed`, result);
+      await assertInstalledInstruction(root, platform, fileName, skillPath, platform !== "claude");
+      await assertSharedCore(root, platform);
+    }
+
+    const claudeRoot = roots[0];
+    const codexRoot = roots[1];
+    const decoy = await mkdtemp(join(tmpdir(), "cafekit-wave1-decoy-"));
+    roots.push(decoy);
+    const cwdAuthority = runHook(
+      claudeRoot,
+      "src/claude/hooks/rules.cjs",
+      { cwd: claudeRoot, session_id: `${claudeRoot}-cwd-authority` },
+      decoy,
+    );
+    if (
+      cwdAuthority.status !== 0
+      || !cwdAuthority.stdout.includes(`${claudeRoot}/plans/`)
+      || cwdAuthority.stdout.includes(`${decoy}/plans/`)
+    ) {
+      fail("Claude rules hook did not prefer payload.cwd over PROJECT_ROOT", cwdAuthority);
+    }
+    const agentAuthority = runHook(
+      claudeRoot,
+      "src/claude/hooks/agent.cjs",
+      { cwd: claudeRoot, agent_id: `${claudeRoot}-agent-authority` },
+      decoy,
+    );
+    if (
+      agentAuthority.status !== 0
+      || !agentAuthority.stdout.includes(`${claudeRoot}/plans/`)
+      || agentAuthority.stdout.includes(`${decoy}/plans/`)
+    ) {
+      fail("Claude agent hook did not prefer payload.cwd over PROJECT_ROOT", agentAuthority);
+    }
+    await rm(join(claudeRoot, ".claude", "runtime.json"), { force: true });
+    await rm(join(codexRoot, ".codex", "runtime.json"), { force: true });
+
+    const claudeRules = runHook(
+      claudeRoot,
+      "src/claude/hooks/rules.cjs",
+      { cwd: claudeRoot, session_id: `${claudeRoot}-missing-claude` },
+      decoy,
+    );
+    if (claudeRules.status !== 0 || claudeRules.stdout.trim() !== "") {
+      fail("Claude rules hook injected with runtime.json missing", claudeRules);
+    }
+    const claudeAgent = runHook(
+      claudeRoot,
+      "src/claude/hooks/agent.cjs",
+      { cwd: claudeRoot, agent_id: `${claudeRoot}-missing-agent` },
+      decoy,
+    );
+    if (claudeAgent.status !== 0 || claudeAgent.stdout.trim() !== "") {
+      fail("Claude agent hook injected with runtime.json missing", claudeAgent);
+    }
+    const codexRules = runHook(
+      codexRoot,
+      "src/codex/hooks/rules.cjs",
+      { cwd: codexRoot, session_id: `${codexRoot}-missing-codex` },
+      decoy,
+    );
+    if (codexRules.status !== 0 || codexRules.stdout.trim() !== "") {
+      fail("Codex rules hook injected with runtime.json missing", codexRules);
+    }
+
+    const combined = await mkdtemp(join(tmpdir(), "cafekit-wave1-combined-"));
+    roots.push(combined);
+    await writeFile(join(combined, "AGENTS.md"), "# User instructions\\n\\nKeep this sentinel.\\n");
+    const first = spawnSync(
+      process.execPath,
+      [installer, "--platform", "claude,codex,opencode", "--lang", "vi", "--yes"],
+      {
+        cwd: combined,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: "/usr/bin:/bin",
+          OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514",
+          OPENCODE_DEFAULT_MODEL: "",
+        },
+      },
+    );
+    if (first.status !== 0) fail("combined install failed", first);
+
+    const agentsBefore = await readFile(join(combined, "AGENTS.md"), "utf8");
+    const claudeBefore = await readFile(join(combined, "CLAUDE.md"), "utf8");
+    const counts = (content, marker) => (content.match(new RegExp(marker, "g")) || []).length;
+    for (const [marker, label] of [
+      ["<!-- CAFEKIT CORE START -->", "core"],
+      ["<!-- CAFEKIT CODEX START -->", "Codex"],
+      ["<!-- CAFEKIT OPENCODE START -->", "OpenCode"],
+    ]) {
+      if (counts(agentsBefore, marker) !== 1) fail(`combined install has duplicate/missing ${label} marker`);
+    }
+    if (counts(agentsBefore, "Completion Criteria") !== 1) fail("shared core duplicated in combined install");
+    if (!agentsBefore.includes("Keep this sentinel.")) fail("combined install removed user AGENTS content");
+    if (!agentsBefore.includes("Always respond in **Vietnamese**")) fail("--lang vi did not patch AGENTS.md");
+    if (!claudeBefore.includes("Always respond in **Vietnamese**")) fail("--lang vi did not patch CLAUDE.md");
+    if (counts(agentsBefore, "cafekit:lang") < 3) fail("combined install lost managed language markers");
+
+    const second = spawnSync(
+      process.execPath,
+      [installer, "--platform", "claude,codex,opencode", "--lang", "vi", "--yes", "--force-overwrite"],
+      {
+        cwd: combined,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: "/usr/bin:/bin",
+          OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514",
+          OPENCODE_DEFAULT_MODEL: "",
+        },
+      },
+    );
+    if (second.status !== 0) fail("combined second install failed", second);
+    const agentsAfter = await readFile(join(combined, "AGENTS.md"), "utf8");
+    if (agentsAfter !== agentsBefore) fail("combined second install changed AGENTS.md bytes");
+    if (counts(agentsAfter, "Completion Criteria") !== 1) fail("combined rerun duplicated shared core");
+
+    console.log("✔ Wave 1 real installs cover three runtimes, missing-runtime silence, vi localization, and combined idempotence");
+    return 1;
+  } finally {
+    for (const root of roots) await rm(root, { recursive: true, force: true });
+  }
+}
 async function main() {
   const chromeTestsDir = join(
     packageRoot,
@@ -1729,6 +1940,7 @@ async function main() {
   totalTests += await runLocalePreservationFixtureTest();
   console.log("\n[skill-test] OpenCode installer fixtures");
   totalTests += await runOpenCodeInstallerFixtureTests();
+  totalTests += await runWave1InstructionFixtureTests();
   console.log("\n[skill-test] spec artifact validator fixtures");
   totalTests += await runSpecValidatorFixtureTests();
   console.log("\n[skill-test] reconstruct docs validator fixtures");
