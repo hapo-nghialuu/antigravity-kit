@@ -20,21 +20,27 @@ bin/lib/
   managed-writer.js         ownership-aware single-file + tree writer (core of selective update)
   backup.js                 snapshot / restore / prune  (.cafekit-backup/<runId>/)
   lock.js                   acquire / release / stale-PID reclaim  (.cafekit.lock)
-  copy-utils.js             copyRecursive / isTextAsset / readJsonFile  (existing)
-  opencode-install.js       OpenCode conversion + writers
+  copy-utils.js             copyRecursive / isTextAsset / isGeneratedArtifact /
+                            normalizeSourcePaths / readJsonFile  (existing)
+  instruction-blocks.js     shared CORE block upsert/migrate + Addressing-section
+                            extract/preserve primitives
+  opencode-install.js       OpenCode conversion + writers (plugin copy skips
+                            generated artifacts, normalizes text plugins)
   codex-install.js          Codex path/tool/skill transforms + managed AGENTS block
   codex-frontmatter.js      minimal agent frontmatter reader for TOML conversion
   path-safety.js            reject managed targets that traverse project symlinks
 bin/phases/
   select-platform.js        detect platforms, prompt, legacy warning
   copy-payload.js           skills / agents / references / scripts / commands
-  claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md, AGENTS.md, rules
+  claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md,
+                            AGENTS core + wrappers, rules (Addressing-preserving)
   claude-settings.js        settings.json merge + obsolete-hook pruning
   opencode-runtime.js       delegates to opencode-install.js (plugins, commands, AGENTS, config)
   codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
-  post-install.js           OpenCode model, Gemini API key, addressing (platform-aware)
+  post-install.js           OpenCode model, Gemini API key, language + managed-block
+                            addressing for Claude, Codex, and OpenCode
   skills-setup.js           opt-in: venv+pip, skill npm, Chromium; detect+guide system tools
   setup-rtk.js              opt-in: rtk token-saver binary + Claude Code hook registration
   summary.js / report.js    summary output + per-action reporting helper
@@ -52,7 +58,7 @@ bin/lib/
 4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
    (skipped in dry-run). Claude snapshots `.claude/`, `CLAUDE.md`, and `AGENTS.md`;
    Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
-5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude, Codex, or OpenCode runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, installer ensures one shared `src/common/AGENTS.md` core block for every selected runtime.
+5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude, Codex, or OpenCode runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, the installer runs **`ensureSharedAgentsMdCore`** once for every selected runtime, installing/refreshing the shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START/END -->`) in root `AGENTS.md`; Codex/OpenCode writers append only their runtime-specific managed blocks.
 
    The Claude-specific per-platform sequence is:
    - copyClaudeRuntimeFiles (ROUTING, rules, scripts, references)
@@ -119,7 +125,7 @@ and logs so partial un-ignores and force-adds stay safer.
 .codex/hooks/               native event handlers and state/privacy libraries
 .codex/{rules,scripts,references}/
 .codex/{runtime,cafekit}.json
-AGENTS.md                    shared CafeKit core block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
+AGENTS.md                    shared CafeKit CORE block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
 ```
 
 The installer does not create `.codex/config.toml` or change user-global trust.
@@ -146,6 +152,18 @@ keywords such as Python `prompt=` or `description=` from being corrupted.
 - **Selective refresh** — re-running the same version updates pristine payload
   files and preserves user modifications; only explicit `--force-overwrite`
   resets them.
+- **Managed Addressing survives reinstall** — Claude, Codex, and OpenCode block
+  upserts carry over the exact saved `## Addressing (Context Overflow Indicator)`
+  section from the existing managed block when a newer template drops it, so the
+  user's address is not lost; only reads the managed body, never user-owned or
+  shared-CORE content.
+- **Generated-artifact filtering** — `.coverage`, `__pycache__`, and `.pyc`/`.pyo`
+  are never copied as runtime payload, in `copyRecursive`, `copyManagedTree`, and
+  the OpenCode plugin copy path.
+- **Source-path tripwire** — install self-tests assert no installed payload under
+  `.claude`, `.codex`, or `.opencode` leaks a `packages/spec/src/` source path,
+  covering standalone and combined installs; direct text plugin files are also
+  byte-normalized.
 - **Codex privacy/state** — sensitive approval is one-use and bound to the exact
   session/tool/canonical path set. State, locks, resume context, and archives are
   isolated by hashed session ID. Hooks remain guardrails: hosted or specialized

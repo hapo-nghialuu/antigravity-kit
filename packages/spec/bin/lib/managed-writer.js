@@ -20,7 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isTextAsset } = require('./copy-utils');
+const { isTextAsset, isGeneratedArtifact } = require('./copy-utils');
 const manifest = require('./manifest');
 const { assertNoSymlinkPath } = require('./path-safety');
 
@@ -151,6 +151,9 @@ function copyManagedTree(opts) {
   const stats = fs.statSync(src);
   if (stats.isDirectory()) {
     for (const childName of fs.readdirSync(src)) {
+      // Generated artifacts (coverage, Python bytecode) are not runtime
+      // payload — skip so they never ship.
+      if (isGeneratedArtifact(childName)) continue;
       const destName = childName === 'gitignore' ? '.gitignore' : childName;
       const childAgg = copyManagedTree({
         ...opts,

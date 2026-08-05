@@ -19,7 +19,11 @@ const { sha256 } = require('../lib/manifest');
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
 const { normalizeOpenCodeBody } = require('../lib/opencode-install');
-const { upsertManagedCoreBlock, migrateExactLegacyBlock } = require('../lib/instruction-blocks');
+const {
+  upsertManagedCoreBlock,
+  migrateExactLegacyBlock,
+  preserveAddressingSection
+} = require('../lib/instruction-blocks');
 
 const SRC = path.join(__dirname, '../../src');
 const CLAUDE_START = '<!-- CAFEKIT CLAUDE START -->';
@@ -48,7 +52,18 @@ function transformManagedClaudeContent(content, transform) {
 }
 
 function upsertManagedClaudeBlock(existing, template, legacyOwned) {
-  const block = managedClaudeBlock(template);
+  // When an existing managed block present, reinstall replaces it. If the new
+  // template dropped its Addressing section, carry the saved section over from
+  // the existing managed block so the user's address survives for setupAddressing.
+  const existingRange = managedClaudeRange(existing);
+  const existingManagedBody = existingRange
+    ? existing.slice(existingRange.bodyStart, existingRange.bodyEnd)
+    : '';
+  let body = template;
+  if (existingRange) {
+    body = preserveAddressingSection(template, existingManagedBody);
+  }
+  const block = managedClaudeBlock(body);
   const range = managedClaudeRange(existing);
   if (range) {
     return `${existing.slice(0, range.start)}${block}${existing.slice(range.end)}`;

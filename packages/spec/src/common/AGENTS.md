@@ -2,10 +2,10 @@
 
 ## Shared CafeKit instructions
 
-- Keep scope surgical. Match existing code style and structure.
-- For spec work, `Completion Criteria` and `## Evidence` are the source of truth.
-- `NO_TESTS` and `0 tests + exit 0` do not pass when automated tests are required.
-- Hook blocks are instruction boundaries. Do not bypass them.
+- Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.
+- For spec work, `Completion Criteria` and `## Evidence` in `specs/<feature>/tasks/*.md` are the source of truth for task state.
+- `NO_TESTS` and `0 tests + exit 0` do not pass when the task requires automated tests.
+- When a hook blocks an action, that is an instruction boundary — do not work around it.
 - Use conventional commits. Do not add AI attribution unless requested.
 
 ## Response style
@@ -18,7 +18,7 @@ Say when you are unsure and what would settle it. Label inferences instead of pr
 
 ## Delegation
 
-Do the work yourself when it takes a handful of tool calls. Delegate genuinely independent parallel tracks. Verification comes from machine gates, not from spawning more agents.
+Do the work yourself when it takes a handful of tool calls. Delegate genuinely independent parallel tracks. Verification comes from the project's hooks and validators, not from spawning more agents.
 
 ## Commands
 
@@ -34,4 +34,4 @@ Do the work yourself when it takes a handful of tool calls. Delegate genuinely i
 
 ## Language Consistency <!-- cafekit:lang -->
 
-Use the configured project language for explanations, comments directed at the user, and structured output. Technical terms, code identifiers, and file paths may remain in English.
+Match the language the user writes in. Technical terms, code identifiers, and file paths may remain in English.

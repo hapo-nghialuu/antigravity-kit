@@ -3,7 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { copyRecursive, isTextAsset } = require('./copy-utils');
+const { copyRecursive, isTextAsset, isGeneratedArtifact, normalizeSourcePaths } = require('./copy-utils');
+const { preserveAddressingSection } = require('./instruction-blocks');
 
 const SPEC_ROOT = path.resolve(__dirname, '..', '..');
 const OPENCODE_FOLDER = '.opencode';
@@ -268,7 +269,10 @@ function formatOpenCodeValue(value) {
 // Applied to every text asset copied into .opencode/ so the installed
 // content points at the self-contained OpenCode runtime layout.
 function normalizeOpenCodeBody(content) {
-  return content
+  return normalizeSourcePaths(content, {
+    runtimeRoot: '.opencode',
+    skillsRoot: '.opencode/skills'
+  })
     .replace(/(?<!~\/)\.claude\/(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode/$1')
     .replace(/(?<!~\\)\.claude\\(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode\\$1')
     .replace(/\.claude\/runtime\.json/g, '.opencode/runtime.json')
@@ -431,8 +435,17 @@ function managedOpenCodeRange(content) {
 function upsertCafeKitAgentsBlock(existingContent, blockContent) {
   const start = '<!-- CAFEKIT OPENCODE START -->';
   const end = '<!-- CAFEKIT OPENCODE END -->';
-  const managedBlock = `${start}\n${blockContent.trim()}\n${end}`;
+  let body = String(blockContent).trim();
+  // Reinstall replaces the managed block in place. If the new template dropped
+  // its Addressing section, carry the exact section over from the existing
+  // managed block so the saved address survives for setupAddressing. Only reads
+  // the managed body — never user-owned sections outside the block.
   const range = managedOpenCodeRange(existingContent);
+  if (range) {
+    const existingBody = existingContent.slice(range.bodyStart, range.bodyEnd);
+    body = preserveAddressingSection(body, existingBody);
+  }
+  const managedBlock = `${start}\n${body}\n${end}`;
   if (range === false) return existingContent;
   if (range) {
     return `${existingContent.slice(0, range.start)}${managedBlock}${existingContent.slice(range.end)}`;
@@ -554,6 +567,10 @@ function copyOpenCodePlugins(platformKey, results, options = {}) {
 
   const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
   entries.forEach(entry => {
+    // Skip generated artifacts before any directory/file handling, matching
+    // the filter copyRecursive applies to directory children.
+    if (isGeneratedArtifact(entry.name)) return;
+
     const sourcePath = path.join(sourceDir, entry.name);
     const destPath = path.join(targetDir, entry.name);
 
@@ -572,8 +589,12 @@ function copyOpenCodePlugins(platformKey, results, options = {}) {
       return;
     }
 
-    const sourceContent = fs.readFileSync(sourcePath, 'utf8');
-    fs.writeFileSync(destPath, sourceContent, 'utf8');
+    if (isTextAsset(sourcePath)) {
+      const sourceContent = fs.readFileSync(sourcePath, 'utf8');
+      fs.writeFileSync(destPath, normalizeOpenCodeBody(sourceContent), 'utf8');
+    } else {
+      fs.copyFileSync(sourcePath, destPath);
+    }
 
     if (destExists) {
       console.log(`  ↻ Plugin updated: ${entry.name}`);

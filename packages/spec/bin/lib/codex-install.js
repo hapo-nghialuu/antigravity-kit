@@ -1,7 +1,9 @@
 'use strict';
 
 const path = require('path');
+const { normalizeSourcePaths } = require('./copy-utils');
 const { splitFrontmatter } = require('./codex-frontmatter');
+const { preserveAddressingSection } = require('./instruction-blocks');
 
 const CODEX_BLOCK_START = '<!-- CAFEKIT CODEX START -->';
 const CODEX_BLOCK_END = '<!-- CAFEKIT CODEX END -->';
@@ -63,7 +65,10 @@ function applyReplacements(content, replacements) {
 }
 
 function normalizeRuntimePaths(content) {
-  return content
+  return normalizeSourcePaths(content, {
+    runtimeRoot: '.codex',
+    skillsRoot: '.agents/skills'
+  })
     .replace(/(?<!~\/)\.claude\/skills\b/g, '.agents/skills')
     .replace(/(?<!~\\)\.claude\\skills\b/g, '.agents\\skills')
     .replace(/(?<!~\/)\.claude(?=[/\\])/g, '.codex')
@@ -163,8 +168,17 @@ function managedRange(content) {
 
 function upsertManagedCodexBlock(existingContent, blockContent) {
   const existing = String(existingContent || '');
-  const block = `${CODEX_BLOCK_START}\n${String(blockContent).trim()}\n${CODEX_BLOCK_END}`;
+  let body = String(blockContent).trim();
+  // Reinstall replaces the managed block in place. If the new template dropped
+  // its Addressing section, carry the exact section over from the existing
+  // managed block so the saved address survives for setupAddressing. Only reads
+  // the managed body — never user-owned sections outside the block.
   const range = managedRange(existing);
+  if (range) {
+    const existingBody = existing.slice(range.start + CODEX_BLOCK_START.length, range.end);
+    body = preserveAddressingSection(body, existingBody);
+  }
+  const block = `${CODEX_BLOCK_START}\n${body}\n${CODEX_BLOCK_END}`;
   if (range === false) return existing;
   if (range) {
     return `${existing.slice(0, range.start)}${block}${existing.slice(range.end + CODEX_BLOCK_END.length)}`;

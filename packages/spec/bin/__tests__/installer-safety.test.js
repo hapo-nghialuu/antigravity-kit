@@ -18,10 +18,15 @@ const {
 const { copyClaudeMdFile, copyClaudeAgentsMdFile } = require('../phases/claude-runtime');
 const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
 const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
+const { upsertManagedCodexBlock, normalizeCodexBody } = require('../lib/codex-install');
+const { copyRecursive } = require('../lib/copy-utils');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
+const CORE_START = '<!-- CAFEKIT CORE START -->';
+const CORE_END = '<!-- CAFEKIT CORE END -->';
 const TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/claude/CLAUDE.md'), 'utf8');
+const SHARED_TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/common/AGENTS.md'), 'utf8');
 
 test('skill dependency package commands use cmd.exe for Windows npm launchers', () => {
   const windows = resolvePackageCommand(
@@ -165,6 +170,31 @@ test('addressing changes remain inside the managed CLAUDE block', () => {
     const content = fs.readFileSync('CLAUDE.md', 'utf8');
     assert.ok(content.startsWith(`${userSection}\n\n${START}`));
     assert.ok(content.includes('Claude Code always addresses the user as "anh"'));
+  });
+});
+
+test('addressing appends when template has no section without entering shared CORE', () => {
+  inTempProject(() => {
+    const templateWithoutAddressing = TEMPLATE
+      .replace(/\n## Addressing \(Context Overflow Indicator\)[\s\S]*$/m, '')
+      .trimEnd();
+    fs.writeFileSync('CLAUDE.md', `${START}\n${templateWithoutAddressing}\n${END}\n`);
+    fs.writeFileSync('AGENTS.md', upsertManagedCoreBlock('', SHARED_TEMPLATE));
+    const ctx = {
+      platforms: ['claude'],
+      ui: { success() {}, warn() {} },
+      t: () => 'updated'
+    };
+
+    configureAddressing(ctx, 'bro');
+
+    const claude = fs.readFileSync('CLAUDE.md', 'utf8');
+    const agents = fs.readFileSync('AGENTS.md', 'utf8');
+    const core = agents.slice(agents.indexOf(CORE_START), agents.indexOf(CORE_END));
+    assert.match(claude, /## Addressing \(Context Overflow Indicator\)/);
+    assert.match(claude, /Claude Code always addresses the user as "bro"/);
+    assert.doesNotMatch(core, /## Addressing \(Context Overflow Indicator\)/);
+    assert.doesNotMatch(core, /always addresses the user as "bro"/);
   });
 });
 
@@ -315,5 +345,94 @@ test('managed targets and snapshots reject project symlink traversal', () => {
       () => backup.snapshot(['.agents'], '20260729-symlink-test'),
       /Refusing to follow symlinked managed path/
     );
+  });
+});
+
+test('managed Claude Addressing survives force refresh when template drops it', () => {
+  inTempProject(() => {
+    const before = '# User preface\n\n';
+    const after = '\n\n## User tail\nKeep this exactly.\n';
+    const configuredAddressing = '## Addressing (Context Overflow Indicator)\n\nThe AI always addresses the user as "anh" throughout the conversation.';
+    fs.writeFileSync(
+      'CLAUDE.md',
+      `${before}${START}\nManaged line.\n\n${configuredAddressing}\n${END}${after}`
+    );
+
+    const pruned = [];
+    copyClaudeMdFile(installContext(pruned), 'claude');
+
+    const content = fs.readFileSync('CLAUDE.md', 'utf8');
+    assert.ok(content.startsWith(before));
+    assert.ok(content.endsWith(after));
+    assert.ok(content.includes(TEMPLATE.trimEnd()));
+    assert.equal((content.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
+    assert.ok(content.includes('The AI always addresses the user as "anh"'));
+    assert.equal(content.match(new RegExp(START, 'g')).length, 1);
+    assert.deepEqual(pruned, ['../CLAUDE.md']);
+  });
+});
+
+test('managed Codex block Addressing survives upsert with the current template', () => {
+  inTempProject(() => {
+    const codexTemplate = normalizeCodexBody(
+      fs.readFileSync(path.join(__dirname, '../../src/codex/AGENTS.md'), 'utf8')
+    );
+    const userTop = '# User codex notes\n\n';
+    const userBottom = '\n\n## User section\nKeep me.\n';
+    const configuredAddressing = '## Addressing (Context Overflow Indicator)\n\nThe AI always addresses the user as "bro" throughout the conversation.';
+    const existing =
+      `${userTop}<!-- CAFEKIT CODEX START -->\nCodex runtime line.\n\n${configuredAddressing}\n<!-- CAFEKIT CODEX END -->${userBottom}`;
+
+    const next = upsertManagedCodexBlock(existing, codexTemplate);
+
+    assert.ok(next.startsWith(userTop));
+    assert.ok(next.endsWith(userBottom));
+    assert.ok(next.includes(codexTemplate.trim()));
+    assert.equal((next.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
+    assert.ok(next.includes('The AI always addresses the user as "bro"'));
+    assert.equal((next.match(/<!-- CAFEKIT CODEX START -->/g) || []).length, 1);
+  });
+});
+
+test('managed OpenCode block Addressing survives force refresh with the current template', () => {
+  inTempProject(() => {
+    const userContent = '# User instructions\n\nKeep this exact.\n';
+    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
+    const configuredAddressing = '## Addressing (Context Overflow Indicator)\n\nThe AI always addresses the user as "anh" throughout the conversation.';
+    fs.writeFileSync(
+      'AGENTS.md',
+      `${userContent}<!-- CAFEKIT OPENCODE START -->\nOpenCode runtime line.\n\n${configuredAddressing}\n<!-- CAFEKIT OPENCODE END -->\n${codexBlock}`
+    );
+    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
+
+    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
+
+    const content = fs.readFileSync('AGENTS.md', 'utf8');
+    assert.ok(content.startsWith(userContent));
+    assert.ok(content.includes(codexBlock.trim()));
+    assert.equal((content.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
+    assert.ok(content.includes('The AI always addresses the user as "anh"'));
+    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
+    assert.equal(results.updated, 1);
+  });
+});
+
+test('copyRecursive skips generated artifacts while copying normal files', () => {
+  inTempProject(() => {
+    fs.mkdirSync('src/__pycache__', { recursive: true });
+    fs.mkdirSync('src/extra', { recursive: true });
+    fs.writeFileSync('src/normal.txt', 'normal\n');
+    fs.writeFileSync('src/.coverage', 'coverage database\n');
+    fs.writeFileSync('src/module.pyc', 'bytecode\n');
+    fs.writeFileSync('src/__pycache__/module.pyc', 'cached bytecode\n');
+    fs.writeFileSync('src/extra/bundle.pyo', 'pyo bytecode\n');
+
+    copyRecursive('src', 'dest');
+
+    assert.equal(fs.readFileSync('dest/normal.txt', 'utf8'), 'normal\n');
+    assert.equal(fs.existsSync('dest/.coverage'), false);
+    assert.equal(fs.existsSync('dest/__pycache__'), false);
+    assert.equal(fs.existsSync('dest/module.pyc'), false);
+    assert.equal(fs.existsSync('dest/extra/bundle.pyo'), false);
   });
 });

@@ -16,6 +16,7 @@ const packageJson = require('../../package.json');
 const { getOpenCodeCopyOptions } = require('./opencode-install');
 const { isInteractive, createUI } = require('./ui');
 const { resolveLang, createTranslator } = require('./i18n');
+const { normalizeSourcePaths } = require('./copy-utils');
 
 const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
@@ -216,7 +217,16 @@ function getCopyOptions(platformKey, baseOptions = {}) {
     // during module initialization.
     return require('./codex-install').getCodexCopyOptions(baseOptions);
   }
-  return baseOptions;
+  if (platformKey !== 'claude') return baseOptions;
+  return {
+    ...baseOptions,
+    transform: (content, sourcePath) => normalizeSourcePaths(
+      typeof baseOptions.transform === 'function'
+        ? baseOptions.transform(content, sourcePath)
+        : content,
+      { runtimeRoot: '.claude', skillsRoot: '.claude/skills' }
+    )
+  };
 }
 
 // ═══════════════════════════════════════════════════════════

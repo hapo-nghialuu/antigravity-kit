@@ -186,7 +186,7 @@ async function runStaticSemanticTests() {
         content.includes("without the `hapo:` prefix") &&
         content.includes("/question <question>") &&
         content.includes("/specs <feature-or-spec-command>") &&
-        content.includes("Claude Code hooks/statusline/settings do not run in OpenCode"),
+        content.includes("Claude Code hooks, statusline, and settings do not run in OpenCode."),
     },
     {
       label: "README platform status lists OpenCode",
@@ -657,14 +657,25 @@ async function runStaticSemanticTests() {
         content.includes("Do not write \"user selected\""),
     },
     {
-      label: "CafeKit keeps canonical AGENTS core and Claude wrapper",
-      files: ["src/claude/CLAUDE.md", "src/common/AGENTS.md"],
+      label: "shared AGENTS core keeps exact behavior and evidence wording",
+      file: "src/common/AGENTS.md",
+      assert: (content) =>
+        content.includes("Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.") &&
+        content.includes("For spec work, `Completion Criteria` and `## Evidence` in `specs/<feature>/tasks/*.md` are the source of truth for task state.") &&
+        content.includes("When a hook blocks an action, that is an instruction boundary — do not work around it.") &&
+        content.includes("Verification comes from the project's hooks and validators, not from spawning more agents.") &&
+        content.includes("## Language Consistency <!-- cafekit:lang -->") &&
+        (content.match(/## Language Consistency <!-- cafekit:lang -->/g) || []).length === 1,
+    },
+    {
+      label: "Claude wrapper keeps runtime delta without template Language or Addressing",
+      file: "src/claude/CLAUDE.md",
       assert: (content) =>
         content.includes("@AGENTS.md") &&
-        content.includes("## Response style") &&
-        content.includes("## Commands") &&
-        content.includes("## Language Consistency <!-- cafekit:lang -->") &&
-        content.includes(".claude/skills/.venv/bin/python3"),
+        content.includes("## Claude Code runtime") &&
+        content.includes(".claude/skills/.venv/bin/python3") &&
+        !content.includes("## Language Consistency") &&
+        !content.includes("## Addressing (Context Overflow Indicator)"),
     },
     {
       label: "all runtime instruction templates carry local venv guidance",
@@ -674,8 +685,31 @@ async function runStaticSemanticTests() {
         content.includes("Windows") &&
         content.includes(".claude/skills/.venv") &&
         content.includes(".agents/skills/.venv") &&
-        content.includes(".opencode/skills/.venv") &&
-        content.includes("~/.claude/skills"),
+        content.includes(".opencode/skills/.venv"),
+    },
+    {
+      label: "Codex instruction template avoids global Claude skills path",
+      file: "src/codex/AGENTS.md",
+      assert: (content) => !content.includes("~/.claude/skills"),
+    },
+    {
+      label: "OpenCode instruction template avoids global Claude skills path",
+      file: "src/opencode/AGENTS.md",
+      assert: (content) => !content.includes("~/.claude/skills"),
+    },
+    {
+      label: "Codex warning describes local hook bypass risk",
+      file: "src/codex/AGENTS.md",
+      assert: (content) => content.includes(
+        "Do not edit global trust configuration. Hooks are not a complete security boundary; hosted tools and untrusted project hooks can bypass the local hook path.",
+      ),
+    },
+    {
+      label: "OpenCode limits name supported gates and missing Claude behavior",
+      file: "src/opencode/AGENTS.md",
+      assert: (content) => content.includes(
+        "## OpenCode limits\n\nClaude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent.",
+      ),
     },
     {
       label: "rules hooks stay silent when runtime.json is absent",
@@ -945,13 +979,13 @@ function runSkillCatalogTests() {
   }
   for (const expected of [
     "CafeKit Skills Catalog",
-    "`hapo:specs`",
-    "`hapo:develop`",
-    "`hapo:docs`",
-    "`hapo:question`",
-    "`hapo:debug`",
-    "`hapo:hotfix`",
-    "`hapo:react-best-practices`",
+    "`hapo-specs`",
+    "`hapo-develop`",
+    "`hapo-docs`",
+    "`hapo-question`",
+    "`hapo-debug`",
+    "`hapo-hotfix`",
+    "`hapo-react-best-practices`",
   ]) {
     if (!result.stdout.includes(expected)) {
       console.error(result.stdout);
@@ -1362,6 +1396,45 @@ async function writeText(filePath, content) {
   await writeFile(filePath, content, "utf8");
 }
 
+async function listFilesRecursively(directory) {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const filePath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listFilesRecursively(filePath));
+    } else if (entry.isFile()) {
+      files.push(filePath);
+    }
+  }
+  return files;
+}
+
+async function assertNoSourcePayloadPaths(root, platform, reportFailure) {
+  const payloadRoots = {
+    claude: [".claude/skills", ".claude/rules", ".claude/agents"],
+    codex: [".agents/skills", ".codex/rules", ".codex/agents"],
+    opencode: [".opencode/skills", ".opencode/rules", ".opencode/agents"],
+  };
+  const files = [];
+  for (const relativeRoot of payloadRoots[platform] || []) {
+    files.push(...await listFilesRecursively(join(root, relativeRoot)));
+  }
+
+  for (const filePath of files) {
+    const content = await readFile(filePath, "utf8");
+    if (content.includes("packages/spec/src/")) {
+      reportFailure(`${platform}: installed payload leaks packages/spec/src/ in ${filePath}`);
+    }
+  }
+}
+
 function runSpecValidator(specDir) {
   const validator = join(packageRoot, "src/claude/scripts/validate-spec-output.cjs");
   return spawnSync(process.execPath, [validator, specDir], {
@@ -1700,20 +1773,78 @@ async function runWave1InstructionFixtureTests() {
 
   const assertInstalledInstruction = async (root, platform, fileName, skillPath, includeCore = true) => {
     const content = await readFile(join(root, fileName), "utf8");
-    const required = [skillPath, "~/.claude/skills", "macOS/Linux", "Windows"];
+    const required = [skillPath, "macOS/Linux", "Windows"];
     if (includeCore) {
-      required.push("Completion Criteria` and `## Evidence` are the source of truth", "NO_TESTS", "0 tests + exit 0");
+      required.push(
+        "Completion Criteria` and `## Evidence` in `specs/<feature>/tasks/*.md` are the source of truth for task state.",
+        "NO_TESTS",
+        "0 tests + exit 0",
+      );
     }
     for (const text of required) {
       if (!content.includes(text)) fail(`${platform}: ${fileName} missing ${JSON.stringify(text)}`);
+    }
+    if ((platform === "codex" || platform === "opencode") && content.includes("~/.claude/skills")) {
+      fail(`${platform}: ${fileName} contains global Claude skills path`);
     }
     return content;
   };
 
   const assertSharedCore = async (root, platform) => {
     const content = await readFile(join(root, "AGENTS.md"), "utf8");
-    for (const text of ["Completion Criteria` and `## Evidence` are the source of truth", "NO_TESTS", "0 tests + exit 0"]) {
+    for (const text of [
+      "Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.",
+      "Completion Criteria` and `## Evidence` in `specs/<feature>/tasks/*.md` are the source of truth for task state.",
+      "When a hook blocks an action, that is an instruction boundary — do not work around it.",
+      "Verification comes from the project's hooks and validators, not from spawning more agents.",
+      "NO_TESTS",
+      "0 tests + exit 0",
+    ]) {
       if (!content.includes(text)) fail(`${platform}: AGENTS.md missing ${JSON.stringify(text)}`);
+    }
+    if ((content.match(/## Language Consistency <!-- cafekit:lang -->/g) || []).length !== 1) {
+      fail(`${platform}: AGENTS.md must contain one managed language section`);
+    }
+    return content;
+  };
+
+  const assertVietnameseInstructions = async (root, platform) => {
+    const files = [];
+    for (const fileName of ["AGENTS.md", "CLAUDE.md"]) {
+      const filePath = join(root, fileName);
+      if (await fileExists(filePath)) files.push([fileName, await readFile(filePath, "utf8")]);
+    }
+    for (const [fileName, content] of files) {
+      if (content.includes("Always respond in **English**")) {
+        fail(`${platform}: ${fileName} still contains English language instruction`);
+      }
+    }
+    const payloadRoots = platform === "combined"
+      ? [".claude/skills", ".claude/rules", ".claude/agents", ".agents/skills", ".codex/rules", ".codex/agents", ".opencode/skills", ".opencode/rules", ".opencode/agents"]
+      : {
+        claude: [".claude/skills", ".claude/rules", ".claude/agents"],
+        codex: [".agents/skills", ".codex/rules", ".codex/agents"],
+        opencode: [".opencode/skills", ".opencode/rules", ".opencode/agents"],
+      }[platform] || [];
+    for (const relativeRoot of payloadRoots) {
+      for (const filePath of await listFilesRecursively(join(root, relativeRoot))) {
+        const content = await readFile(filePath, "utf8");
+        if (content.includes("Always respond in **English**")) {
+          fail(`${platform}: installed payload ${filePath} still contains English language instruction`);
+        }
+      }
+    }
+    const agents = files.find(([fileName]) => fileName === "AGENTS.md")?.[1] || "";
+    const coreStart = agents.indexOf("<!-- CAFEKIT CORE START -->");
+    const coreEnd = agents.indexOf("<!-- CAFEKIT CORE END -->");
+    if (coreStart < 0 || coreEnd <= coreStart) fail(`${platform}: AGENTS.md has no valid core block`);
+    const core = agents.slice(coreStart, coreEnd);
+    if (!core.includes("Always respond in **Vietnamese**")) {
+      fail(`${platform}: Vietnamese language instruction is not inside CORE`);
+    }
+    if (agents.slice(0, coreStart).includes("Always respond in **Vietnamese**")
+      || agents.slice(coreEnd).includes("Always respond in **Vietnamese**")) {
+      fail(`${platform}: Vietnamese language instruction escaped CORE`);
     }
   };
 
@@ -1738,10 +1869,12 @@ async function runWave1InstructionFixtureTests() {
     for (const [platform, skillPath, fileName] of standalone) {
       const root = await mkdtemp(join(tmpdir(), `cafekit-wave1-${platform}-`));
       roots.push(root);
-      const result = install(root, platform);
+      const result = install(root, platform, ["--lang", "vi"]);
       if (result.status !== 0) fail(`${platform} install failed`, result);
       await assertInstalledInstruction(root, platform, fileName, skillPath, platform !== "claude");
       await assertSharedCore(root, platform);
+      await assertVietnameseInstructions(root, platform);
+      await assertNoSourcePayloadPaths(root, platform, fail);
     }
 
     const claudeRoot = roots[0];
@@ -1857,10 +1990,17 @@ async function runWave1InstructionFixtureTests() {
       if (counts(agentsBefore, marker) !== 1) fail(`combined install has duplicate/missing ${label} marker`);
     }
     if (counts(agentsBefore, "Completion Criteria") !== 1) fail("shared core duplicated in combined install");
+    if (counts(agentsBefore, "cafekit:lang") !== 1) fail("combined install must have one managed language marker");
     if (!agentsBefore.includes("Keep this sentinel.")) fail("combined install removed user AGENTS content");
-    if (!agentsBefore.includes("Always respond in **Vietnamese**")) fail("--lang vi did not patch AGENTS.md");
-    if (!claudeBefore.includes("Always respond in **Vietnamese**")) fail("--lang vi did not patch CLAUDE.md");
-    if (counts(agentsBefore, "cafekit:lang") < 3) fail("combined install lost managed language markers");
+    await assertVietnameseInstructions(combined, "combined");
+    if (claudeBefore.includes("cafekit:lang")
+      || claudeBefore.includes("## Language Consistency")
+      || claudeBefore.includes("## Addressing (Context Overflow Indicator)")) {
+      fail("combined CLAUDE.md contains template Language or Addressing section");
+    }
+    await assertNoSourcePayloadPaths(combined, "claude", fail);
+    await assertNoSourcePayloadPaths(combined, "codex", fail);
+    await assertNoSourcePayloadPaths(combined, "opencode", fail);
 
     const second = spawnSync(
       process.execPath,
@@ -1878,8 +2018,15 @@ async function runWave1InstructionFixtureTests() {
     );
     if (second.status !== 0) fail("combined second install failed", second);
     const agentsAfter = await readFile(join(combined, "AGENTS.md"), "utf8");
+    const claudeAfter = await readFile(join(combined, "CLAUDE.md"), "utf8");
     if (agentsAfter !== agentsBefore) fail("combined second install changed AGENTS.md bytes");
+    if (claudeAfter !== claudeBefore) fail("combined second install changed CLAUDE.md bytes");
     if (counts(agentsAfter, "Completion Criteria") !== 1) fail("combined rerun duplicated shared core");
+    if (counts(agentsAfter, "cafekit:lang") !== 1) fail("combined rerun duplicated managed language marker");
+    if (!agentsAfter.includes("Keep this sentinel.")) fail("combined rerun removed user AGENTS content");
+    await assertNoSourcePayloadPaths(combined, "claude", fail);
+    await assertNoSourcePayloadPaths(combined, "codex", fail);
+    await assertNoSourcePayloadPaths(combined, "opencode", fail);
 
     console.log("✔ Wave 1 real installs cover three runtimes, missing-runtime silence, vi localization, and combined idempotence");
     return 1;

@@ -18,6 +18,7 @@ const { LANGUAGE_LABELS } = require('../lib/i18n');
 const { setupOpenCodeModel, transformManagedOpenCodeContent } = require('../lib/opencode-install');
 const { transformManagedCodexContent } = require('../lib/codex-install');
 const { transformManagedClaudeContent } = require('./claude-runtime');
+const { transformManagedCoreContent } = require('../lib/instruction-blocks');
 const ASSISTANT_NAMES = {
   claude: 'Claude Code',
   codex: 'Codex CLI',
@@ -95,37 +96,36 @@ function patchSettingsLanguage(ctx) {
 }
 
 /**
- * Patch the "## Language Consistency" section in CLAUDE.md with the chosen
- * language so every AI session knows which language to respond in — without
- * relying on hooks reading runtime.json.
- *
- * The section is identified by a stable marker comment so subsequent installs
- * can update it idempotently.
+ * Patch the "## Language Consistency" section in the shared AGENTS.md core
+ * block so every installed platform uses the chosen response language.
  */
 function patchLanguageSection(ctx) {
-  // Skip when locale is English (default — no override needed in CLAUDE.md).
+  // Skip when locale is English (default — no override needed in AGENTS.md).
   const locale = ctx.locale || ctx.lang;
   if (!locale || locale === 'en' || locale === 'English') return;
 
   // Use locale directly when set (e.g. "Korean"), or map from lang code.
   const label = locale in LANGUAGE_LABEL_BY_CODE ? LANGUAGE_LABEL_BY_CODE[locale] : locale;
-
   const newSection = `## Language Consistency <!-- cafekit:lang -->
 
-Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.
+Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but explanations, comments directed at the user, and structured output must be in ${label}.
 
 `;
-
-  // Replace only inside the installer-owned block.
   const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
   const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
-  for (const target of instructionTargets(ctx)) {
-    updateInstructionTarget(target, (managed) => {
+  const target = path.join(process.cwd(), 'AGENTS.md');
+
+  updateInstructionTarget(
+    {
+      file: target,
+      transform: transformManagedCoreContent
+    },
+    (managed) => {
       if (markerRe.test(managed)) return managed.replace(markerRe, newSection);
       if (genericRe.test(managed)) return managed.replace(genericRe, newSection);
       return `${managed.trimEnd()}\n\n${newSection}\n`;
-    });
-  }
+    }
+  );
 }
 
 function patchRuntimeLocale(ctx) {
@@ -247,7 +247,7 @@ async function runPostInstall(ctx) {
 
   await setupAddressing(ctx);
 
-  // Patch Language Consistency section in CLAUDE.md so AI responds in the chosen language.
+  // Patch Language Consistency section in the shared AGENTS.md core block.
   patchLanguageSection(ctx);
 
   // Persist chosen language into each platform's runtime.json (records in tracker).

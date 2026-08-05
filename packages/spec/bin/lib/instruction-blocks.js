@@ -50,11 +50,36 @@ function transformManagedCoreContent(content, transform) {
   return `${existing.slice(0, range.bodyStart)}${transform(body)}${existing.slice(range.bodyEnd)}`;
 }
 
+// Mirrors the section regex used by post-install configureAddressing so an
+// extracted section round-trips exactly back into the managed body.
+const ADDRESSING_SECTION_RE = /##[^\n]*Context Overflow Indicator[^\n]*[\s\S]*?(?=\n##|\n*$)/;
+
+/** Extract the exact Addressing section (heading through next `##`) from a body, or null. */
+function extractAddressingSection(body) {
+  const match = String(body || '').match(ADDRESSING_SECTION_RE);
+  return match ? match[0].replace(/\n+$/, '') : null;
+}
+
+/**
+ * When a reinstall template drops the Addressing section, carry the exact one
+ * from the existing CafeKit-managed block so the saved address survives for
+ * setupAddressing. Only reads the managed block body — never user-owned
+ * sections outside the block, never the shared CORE block.
+ */
+function preserveAddressingSection(newBody, existingManagedBody) {
+  if (extractAddressingSection(newBody) !== null) return newBody;
+  const section = extractAddressingSection(existingManagedBody);
+  if (section === null) return newBody;
+  return `${String(newBody).trimEnd()}\n\n${section}`;
+}
+
 module.exports = {
   CORE_BLOCK_START,
   CORE_BLOCK_END,
   managedRange,
   migrateExactLegacyBlock,
   upsertManagedCoreBlock,
-  transformManagedCoreContent
+  transformManagedCoreContent,
+  extractAddressingSection,
+  preserveAddressingSection
 };
