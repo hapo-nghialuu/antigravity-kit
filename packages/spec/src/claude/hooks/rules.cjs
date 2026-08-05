@@ -19,7 +19,7 @@ try {
   function readRuntime(cwd) {
     try {
       const p = path.join(cwd, '.claude', 'runtime.json');
-      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
     } catch { return null; }
   }
 
@@ -50,7 +50,8 @@ try {
 
   const payload   = JSON.parse(stdin);
   const sessionId = payload.session_id || null;
-  const cwd       = payload.cwd || process.cwd();
+  const payloadCwd = typeof payload.cwd === 'string' ? payload.cwd.trim() : '';
+  const cwd       = payloadCwd || process.env.PROJECT_ROOT || process.cwd();
 
   // No session identity or reservation means no injection. Fail open.
   if (reserveSession(sessionId) !== true) process.exit(0);
@@ -64,7 +65,7 @@ try {
   const effectThink = thinkLang || (respondLang ? 'en' : '');
 
   // Paths
-  const baseDir   = process.env.PROJECT_ROOT || cwd;
+  const baseDir   = cwd;
   const plansPath = path.join(baseDir, runtime.paths?.plans || 'plans');
   const docsPath  = path.join(baseDir, runtime.paths?.docs  || 'docs');
   const maxLoc    = runtime.docs?.maxLoc || 800;

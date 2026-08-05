@@ -36,8 +36,12 @@ function reserveSession(projectRoot, sessionId) {
 }
 
 function readRuntime(projectRoot) {
-  const file = path.join(projectRoot, '.codex', 'runtime.json');
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+  try {
+    const file = path.join(projectRoot, '.codex', 'runtime.json');
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
+  } catch {
+    return null;
+  }
 }
 
 try {
@@ -46,6 +50,7 @@ try {
   const { projectRoot } = getHookContext(payload);
   if (reserveSession(projectRoot, payload.session_id) !== true) process.exit(0);
   const runtime = readRuntime(projectRoot);
+  if (runtime === null) process.exit(0);
 
   const respondLang = runtime.locale?.responseLanguage || '';
   const thinkLang = runtime.locale?.thinkingLanguage || (respondLang ? 'en' : '');

@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { LANGUAGE_LABELS } = require('../lib/i18n');
-const { setupOpenCodeModel } = require('../lib/opencode-install');
+const { setupOpenCodeModel, transformManagedOpenCodeContent } = require('../lib/opencode-install');
 const { transformManagedCodexContent } = require('../lib/codex-install');
 const { transformManagedClaudeContent } = require('./claude-runtime');
 const ASSISTANT_NAMES = {
@@ -48,6 +48,10 @@ function instructionTargets(ctx) {
     codex: {
       file: path.join(process.cwd(), 'AGENTS.md'),
       transform: transformManagedCodexContent
+    },
+    opencode: {
+      file: path.join(process.cwd(), 'AGENTS.md'),
+      transform: transformManagedOpenCodeContent
     }
   };
   return Object.keys(targets)
@@ -181,7 +185,7 @@ ${name} always addresses the user as "${userAddress}" throughout the conversatio
 }
 
 async function setupAddressing(ctx) {
-  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex')) return;
+  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex' || key === 'opencode')) return;
 
   let existingName = null;
   for (const target of instructionTargets(ctx)) {

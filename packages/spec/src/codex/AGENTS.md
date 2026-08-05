@@ -1,7 +1,10 @@
 ## Codex runtime
 
 - Repository instructions live in `AGENTS.md`.
-- CafeKit skills live in `.agents/skills/`; invoke them as `$hapo-<name>` or browse with `/skills`.
+- CafeKit skills live in `.agents/skills/`; invoke them as `$hapo-<name>` or browse with `/skills`. Edit project-local skills there, not global `~/.claude/skills`.
+- Run Python skill scripts with the project venv:
+  - macOS/Linux: `.agents/skills/.venv/bin/python3 scripts/<script>.py`
+  - Windows: `.agents\\skills\\.venv\\Scripts\\python.exe scripts\\<script>.py`
 - CafeKit agents live in `.codex/agents/*.toml` and are auto-discovered after the repository is trusted.
 - Runtime support lives in `.codex/rules/`, `.codex/scripts/`, `.codex/references/`, and `.codex/runtime.json`.
 - Project hooks live in `.codex/hooks.json`; review trusted hooks with `/hooks`.

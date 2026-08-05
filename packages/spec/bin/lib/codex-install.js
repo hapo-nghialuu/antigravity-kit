@@ -64,9 +64,9 @@ function applyReplacements(content, replacements) {
 
 function normalizeRuntimePaths(content) {
   return content
-    .replace(/\.claude\/skills\b/g, '.agents/skills')
-    .replace(/\.claude\\skills\b/g, '.agents\\skills')
-    .replace(/\.claude(?=[/\\])/g, '.codex')
+    .replace(/(?<!~\/)\.claude\/skills\b/g, '.agents/skills')
+    .replace(/(?<!~\\)\.claude\\skills\b/g, '.agents\\skills')
+    .replace(/(?<!~\/)\.claude(?=[/\\])/g, '.codex')
     .replace(/(['"])\.claude\1/g, '$1.codex$1')
     .replace(/`\.claude`/g, '`.codex`');
 }

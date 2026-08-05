@@ -28,7 +28,7 @@ const {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
-  copyClaudeAgentsMdFile,
+  ensureSharedAgentsMdCore,
   copyRulesDirectory
 } = require('./phases/claude-runtime');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
@@ -64,7 +64,6 @@ function installPlatform(ctx, platformKey) {
     copyClaudeRuntimeFiles(ctx, platformKey);
     removeObsoleteClaudeRuntimeFiles(ctx, platformKey);
     mergeClaudeSettings(ctx, platformKey);
-    copyClaudeAgentsMdFile(ctx, platformKey);
     copyClaudeMdFile(ctx, platformKey);
     copyRulesDirectory(ctx, platformKey);
   }
@@ -176,6 +175,7 @@ async function main() {
       ctx.backupDir = backup.snapshot([...targets, '.gitignore'], ctx.runId);
     }
 
+    ensureSharedAgentsMdCore(ctx);
     for (const platformKey of ctx.platforms) {
       installPlatform(ctx, platformKey);
     }

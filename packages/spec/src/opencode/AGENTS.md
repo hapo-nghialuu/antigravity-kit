@@ -5,7 +5,10 @@ Primary operating instructions for OpenCode using the CafeKit runtime.
 - Project instructions live in `AGENTS.md`.
 - CafeKit commands live in `.opencode/commands/` and use OpenCode-native slash names.
 - CafeKit agents live in `.opencode/agents/` using OpenCode frontmatter.
-- CafeKit skills live in `.opencode/skills/` and are read natively by OpenCode.
+- CafeKit skills live in `.opencode/skills/` and are read natively by OpenCode; edit project-local skills there, not global `~/.claude/skills`.
+- Run Python skill scripts with the project venv:
+  - macOS/Linux: `.opencode/skills/.venv/bin/python3 scripts/<script>.py`
+  - Windows: `.opencode\\skills\\.venv\\Scripts\\python.exe scripts\\<script>.py`
 - Support files live in `.opencode/rules/`, `.opencode/scripts/`, `.opencode/references/`, and `.opencode/runtime.json`.
 - OpenCode config is merged into `opencode.json`; keep project model/provider choices there.
 

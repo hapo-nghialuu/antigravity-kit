@@ -19,8 +19,8 @@ try {
   function readRuntime(cwd) {
     try {
       const p = path.join(cwd, '.claude', 'runtime.json');
-      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
-    } catch { return {}; }
+      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+    } catch { return null; }
   }
 
   /** Resolve Python venv executable path if it exists */
@@ -39,8 +39,10 @@ try {
 
   const payload    = JSON.parse(stdin);
   // Use payload.cwd for monorepo support — subagent may run in a different dir
-  const agentCwd   = payload.cwd?.trim() || process.cwd();
+  const payloadCwd = typeof payload.cwd === 'string' ? payload.cwd.trim() : '';
+  const agentCwd   = payloadCwd || process.env.PROJECT_ROOT || process.cwd();
   const runtime    = readRuntime(agentCwd);
+  if (runtime === null) process.exit(0);
 
   // Language config from runtime.json
   const thinkLang    = runtime.locale?.thinkingLanguage || '';
@@ -49,7 +51,7 @@ try {
   const effectThink  = thinkLang || (respondLang ? 'en' : '');
 
   // Resolve paths from env (set by session.cjs) or runtime defaults
-  const baseDir    = process.env.PROJECT_ROOT || agentCwd;
+  const baseDir    = agentCwd;
   const plansPath  = path.join(baseDir, runtime.paths?.plans || 'plans');
   const docsPath   = path.join(baseDir, runtime.paths?.docs  || 'docs');
 

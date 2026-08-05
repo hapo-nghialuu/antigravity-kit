@@ -50,7 +50,7 @@ function readRuntime(cwd: string): Record<string, any> | null {
     /* fail-open */
     return null;
   }
-  return {};
+  return null;
 }
 
 function reserveSession(cwd: string, sessionId?: string): boolean {
