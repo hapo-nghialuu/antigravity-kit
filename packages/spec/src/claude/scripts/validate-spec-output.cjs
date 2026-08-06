@@ -88,10 +88,8 @@ function extractRequirementIds(requirementsText) {
 /**
  * Extract sub-criteria IDs (e.g. R3.4) ONLY when requirements.md declares them
  * as explicit literals — bold `**R3.4**` or a line-leading `R3.4`. Specs that
- * write acceptance criteria as a plain numbered list under a heading declare no
- * such literals, so this returns empty and per-criterion coverage is skipped
- * for them (no behaviour change). This is a progressive check: it rewards an
- * unambiguous format, it never penalises the legacy one.
+ * write acceptance criteria as a plain numbered list declare no such literals.
+ * Every declared literal must have an explicit numeric task mapping.
  */
 function extractSubCriteriaIds(requirementsText) {
   const ids = new Set();
@@ -125,6 +123,7 @@ function validateTaskSections(taskPath, content, errors) {
   if (!hasSteps) errors.push(`${taskPath}: missing Steps/Implementation Steps`);
   if (!hasRequirements) errors.push(`${taskPath}: missing Requirements mapping`);
   if (!hasRelatedFiles) errors.push(`${taskPath}: missing Related Files`);
+  else if (relatedFilesSection(content).rows.length === 0) errors.push(`${taskPath}: Related Files section must not be empty`);
   if (!hasCompletionCriteria) errors.push(`${taskPath}: missing Completion Criteria`);
   if (!hasEvidence) errors.push(`${taskPath}: missing Evidence or task test plan`);
   if (!hasRiskAssessment) errors.push(`${taskPath}: missing Risk Assessment`);
@@ -227,6 +226,146 @@ function extractTaskContracts(taskText) {
   return { names, blocks, firstBlock };
 }
 
+const RELATED_FILE_ACTIONS = new Set(['create', 'modify', 'delete', 'read']);
+
+function relatedFilesSection(content) {
+  const lines = content.split('\n');
+  const headingIndex = lines.findIndex((line) => /^##+\s+Related Files\s*$/i.test(line));
+  if (headingIndex < 0) return { present: false, rows: [] };
+  const rows = [];
+  for (let index = headingIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^##+\s+/.test(line)) break;
+    if (!line.trim().startsWith('|')) continue;
+    const cells = line.split('|').map((cell) => cell.trim());
+    const filePath = (cells[1] || '').replace(/`/g, '').trim();
+    const action = (cells[2] || '').replace(/`/g, '').trim().toLowerCase();
+    if (!filePath || filePath.toLowerCase() === 'path' || /^-+$/.test(filePath)) continue;
+    rows.push({ path: filePath, action });
+  }
+  return { present: true, rows };
+}
+
+function unsafeRelatedPath(filePath) {
+  return path.isAbsolute(filePath)
+    || /^[A-Za-z]:[\\/]/.test(filePath)
+    || filePath.split(/[\\/]+/).includes('..');
+}
+
+function validateRelatedFiles(taskPath, content, errors) {
+  const section = relatedFilesSection(content);
+  if (!section.present || section.rows.length === 0) return;
+  for (const row of section.rows) {
+    if (!RELATED_FILE_ACTIONS.has(row.action)) {
+      errors.push(`${taskPath}: unsupported Related Files action "${row.action}" for ${row.path}`);
+    }
+    if (unsafeRelatedPath(row.path)) {
+      errors.push(`${taskPath}: Related Files path must be relative and stay within work root: ${row.path}`);
+    }
+  }
+}
+
+function validateStateTransitions(spec, errors) {
+  for (const [stage, approval] of Object.entries(spec.approvals || {})) {
+    if (!approval || typeof approval !== 'object') {
+      errors.push(`spec.json.approvals.${stage}: must be an object`);
+      continue;
+    }
+    if (approval.approved === true && approval.generated !== true) {
+      errors.push(`spec.json.approvals.${stage}: approved transition requires generated=true`);
+    }
+  }
+
+  if (spec.validation?.status === 'completed' && !spec.timestamps?.validation_done) {
+    errors.push('spec.json.validation: completed transition requires timestamps.validation_done');
+  }
+
+  if (spec.ready_for_implementation === true) {
+    for (const stage of ['requirements', 'design', 'tasks']) {
+      const approval = spec.approvals?.[stage];
+      if (approval?.generated !== true || approval?.approved !== true) {
+        errors.push(`spec.json.ready_for_implementation: requires generated and approved ${stage} evidence`);
+      }
+    }
+    if (spec.validation?.status === 'in_progress' || spec.validation?.status === 'not-run') {
+      errors.push('spec.json.ready_for_implementation: cannot be true while validation evidence is incomplete');
+    }
+  }
+}
+
+function validateDependencyTopology(spec, taskFiles, registry, taskRecords, errors) {
+  const dependencies = new Map(taskFiles.map((taskFile) => [taskFile, new Set(registry?.[taskFile]?.dependencies || [])]));
+  if (dependencies.size === 0) return;
+
+  const visiting = new Set();
+  const visited = new Set();
+  function visit(taskFile, stack = []) {
+    if (visiting.has(taskFile)) {
+      const cycleStart = stack.indexOf(taskFile);
+      errors.push(`spec.json.task_registry.dependencies: dependency cycle detected (${stack.slice(cycleStart).concat(taskFile).join(' -> ')})`);
+      return;
+    }
+    if (visited.has(taskFile)) return;
+    visiting.add(taskFile);
+    for (const dependency of dependencies.get(taskFile) || []) visit(dependency, [...stack, taskFile]);
+    visiting.delete(taskFile);
+    visited.add(taskFile);
+  }
+  for (const taskFile of taskFiles) visit(taskFile);
+
+  const roots = taskFiles.filter((taskFile) => (dependencies.get(taskFile) || new Set()).size === 0);
+  const reachable = new Set();
+  const dependents = new Map(taskFiles.map((taskFile) => [taskFile, []]));
+  for (const [taskFile, deps] of dependencies) {
+    for (const dependency of deps) dependents.get(dependency)?.push(taskFile);
+  }
+  const queue = [...roots];
+  while (queue.length > 0) {
+    const taskFile = queue.shift();
+    if (reachable.has(taskFile)) continue;
+    reachable.add(taskFile);
+    queue.push(...(dependents.get(taskFile) || []));
+  }
+  for (const taskFile of taskFiles) {
+    if (!reachable.has(taskFile)) errors.push(`spec.json.task_registry.${taskFile}: orphan or unreachable task in dependency graph`);
+  }
+
+  function dependsOn(taskFile, ancestor, seen = new Set()) {
+    if (taskFile === ancestor) return true;
+    if (seen.has(taskFile)) return false;
+    seen.add(taskFile);
+    return [...(dependencies.get(taskFile) || [])].some((dependency) => dependsOn(dependency, ancestor, seen));
+  }
+
+  const producers = new Map();
+  for (const [taskFile, record] of taskRecords) {
+    for (const [index, row] of record.rows.entries()) {
+      if (row.action !== 'create') continue;
+      const prior = producers.get(row.path);
+      if (prior && prior.taskFile !== taskFile) {
+        errors.push(`${taskFile}: Related Files path ${row.path} is created by multiple tasks (${prior.taskFile}, ${taskFile})`);
+      } else {
+        producers.set(row.path, { taskFile, index });
+      }
+    }
+  }
+  for (const [taskFile, record] of taskRecords) {
+    for (const [index, row] of record.rows.entries()) {
+      if (!['modify', 'delete'].includes(row.action)) continue;
+      const producer = producers.get(row.path);
+      if (!producer || producer.taskFile === taskFile) {
+        if (producer && producer.index > index) {
+          errors.push(`${taskFile}: Create must precede ${row.action} for ${row.path} within Related Files order`);
+        }
+        continue;
+      }
+      if (!dependsOn(taskFile, producer.taskFile)) {
+        errors.push(`${taskFile}: ${row.action} of ${row.path} must depend on creator ${producer.taskFile}`);
+      }
+    }
+  }
+}
+
 function validateSpec(specDir) {
   const errors = [];
   const warnings = [];
@@ -256,6 +395,7 @@ function validateSpec(specDir) {
   }
 
   validateTimestamps(spec, errors);
+  validateStateTransitions(spec, errors);
 
   const taskFiles = listTaskFiles(specDir);
   const taskFileSet = new Set(taskFiles);
@@ -361,6 +501,7 @@ function validateSpec(specDir) {
 
   const coveredRequirementIds = new Set();
   const coveredSubCriteriaIds = new Set();
+  const taskRecords = new Map();
   // Cross-layer contract defs (opt-in): empty unless design.md uses
   // <!-- contract:NAME --> markers, so legacy specs are unaffected.
   const contractDefs = fs.existsSync(designPath)
@@ -376,15 +517,11 @@ function validateSpec(specDir) {
     const content = fs.readFileSync(fullPath, 'utf8');
     validateTaskSections(taskFile, content, errors);
     validateTaskPlaceholders(taskFile, content, errors, warnings);
-
-    const idRe = /\b((?:REQ-\d+)|(?:R\d+))\b/gi;
-    let match;
-    while ((match = idRe.exec(content)) !== null) {
-      const id = match[1].toUpperCase();
-      if (id !== 'R0') coveredRequirementIds.add(id);
-    }
+    validateRelatedFiles(taskFile, content, errors);
+    taskRecords.set(taskFile, { rows: relatedFilesSection(content).rows });
 
     const numericMappingRe = /_Requirements:\s*([^_\n]+)_/gi;
+    let match;
     while ((match = numericMappingRe.exec(content)) !== null) {
       for (const token of match[1].split(',')) {
         const trimmed = token.trim();
@@ -397,12 +534,16 @@ function validateSpec(specDir) {
     }
 
     // Cross-layer contract check (opt-in via design.md markers). When a task
-    // claims `Contracts: NAME`, that name must exist in design.md and the task's
-    // local copy of the block must match the canonical definition byte-for-byte
-    // (after whitespace normalization). This catches BE/FE drift like
-    // user_name vs userName before integration.
+    // claims `Contracts: NAME`, design.md must define the name and the task's
+    // local copy must match the canonical definition byte-for-byte (after
+    // whitespace normalization). This catches BE/FE drift like user_name vs
+    // userName before integration, and rejects declarations with no canonical
+    // source instead of silently accepting an orphan contract.
+    const { names, blocks, firstBlock } = extractTaskContracts(content);
+    if (names.length > 0 && contractDefs.size === 0) {
+      errors.push(`${taskFile}: declares contract(s) but design.md defines no canonical contract blocks`);
+    }
     if (contractDefs.size > 0) {
-      const { names, blocks, firstBlock } = extractTaskContracts(content);
       for (const name of names) {
         if (!contractDefs.has(name)) {
           errors.push(`${taskFile}: declares unknown contract "${name}" (not defined in design.md)`);
@@ -414,9 +555,7 @@ function validateSpec(specDir) {
           ? blocks.get(name)
           : (names.length === 1 ? firstBlock : null);
         if (localCopy === null) {
-          if (names.length > 1) {
-            errors.push(`${taskFile}: contract "${name}" has no <!-- contract:${name} --> tagged block (multi-contract tasks must tag each copy)`);
-          }
+          errors.push(`${taskFile}: contract "${name}" is missing a copied canonical block`);
           continue;
         }
         if (localCopy !== contractDefs.get(name)) {
@@ -432,17 +571,17 @@ function validateSpec(specDir) {
     }
   }
 
+  validateDependencyTopology(spec, taskFiles, spec.task_registry, taskRecords, errors);
+
   for (const requirementId of requirementIds) {
     if (!coveredRequirementIds.has(requirementId)) {
       errors.push(`requirements.md:${requirementId}: not covered by any task`);
     }
   }
 
-  // Per-criterion coverage: only enforced when requirements.md declares explicit
-  // R{N}.{M} literals AND tasks use the numeric `_Requirements: x.y_` mapping.
-  // If a spec declares sub-criteria but no task maps any at sub-level, that is the
-  // legacy coarse format (major-only) — skip silently to avoid false failures.
-  if (subCriteriaIds.length > 0 && coveredSubCriteriaIds.size > 0) {
+  // Per-criterion coverage: every explicit R{N}.{M} literal in requirements.md
+  // must appear in a numeric `_Requirements: x.y_` task mapping.
+  if (subCriteriaIds.length > 0) {
     for (const subId of subCriteriaIds) {
       if (!coveredSubCriteriaIds.has(subId)) {
         errors.push(`requirements.md:${subId}: acceptance criterion not covered by any task`);
