@@ -90,6 +90,8 @@ test('legacy managed root gitignore migrates A13 plan patterns and preserves use
       'keep-before.txt',
       '',
       '# CafeKit / Ecosystem',
+      '',
+      '# legacy managed note',
       'specs/_shared/',
       'plans/',
       '!plans/templates/*',
@@ -118,6 +120,8 @@ test('legacy managed root gitignore migrates A13 plan patterns and preserves use
     const headerIndex = lines.indexOf('# CafeKit / Ecosystem');
     const userSectionIndex = lines.indexOf('# User-owned section');
     assert.deepEqual(lines.slice(headerIndex + 1, userSectionIndex - 1), [
+      '',
+      '# legacy managed note',
       'specs/_shared/',
       'plans/*',
       '!plans/*.md',

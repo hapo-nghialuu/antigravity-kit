@@ -42,6 +42,11 @@ function isManagedPattern(line, patterns) {
   return patterns.has(line.trim());
 }
 
+function isTrivia(line) {
+  const trimmed = line.trim();
+  return trimmed === '' || trimmed.startsWith('#');
+}
+
 function migrateManagedPlanPatterns(lines, header, patterns) {
   const headerIndex = lines.findIndex((line) => line.trim() === header);
   if (headerIndex < 0) return false;
@@ -49,9 +54,26 @@ function migrateManagedPlanPatterns(lines, header, patterns) {
   const managedPatterns = new Set([...patterns, ...PLAN_PATTERNS]);
   const blockStart = headerIndex + 1;
   let blockEnd = blockStart;
-  while (blockEnd < lines.length && isManagedPattern(lines[blockEnd], managedPatterns)) {
-    blockEnd++;
+  let pendingTriviaStart = null;
+  let sawManagedPattern = false;
+
+  for (let index = blockStart; index < lines.length; index++) {
+    if (isManagedPattern(lines[index], managedPatterns)) {
+      sawManagedPattern = true;
+      pendingTriviaStart = null;
+      blockEnd = index + 1;
+      continue;
+    }
+    if (isTrivia(lines[index])) {
+      if (pendingTriviaStart === null) pendingTriviaStart = index;
+      continue;
+    }
+    blockEnd = pendingTriviaStart ?? index;
+    break;
   }
+
+  if (!sawManagedPattern) return false;
+  if (blockEnd === blockStart && pendingTriviaStart !== null) return false;
 
   const block = lines.slice(blockStart, blockEnd);
   const existingPlanPatterns = block
