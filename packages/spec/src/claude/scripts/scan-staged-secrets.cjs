@@ -3,27 +3,59 @@
 
 const { spawnSync } = require('node:child_process');
 
-const SENSITIVE_NAMES = new Set([
-  'api_key', 'apikey', 'api-key', 'secret', 'secret_key', 'secret-key',
-  'password', 'passwd', 'credential', 'credentials', 'token', 'access_token',
+const STRONG_SENSITIVE_NAMES = new Set([
+  'api_key', 'apikey', 'api-key', 'password', 'passwd', 'access_token',
   'auth_token', 'bearer_token', 'client_secret', 'private_key',
   'aws_secret_access_key', 'aws_access_key_id', 'github_token', 'jwt_secret',
-  'openai_api_key', 'anthropic_api_key'
+  'openai_api_key', 'anthropic_api_key', 'credential_url', 'credentials_url',
+  'database_url', 'connection_string', 'connection_url', 'dsn', 'basic_auth',
+  'basic-auth', 'auth_header', 'authorization'
+]);
+const GENERIC_SENSITIVE_NAMES = new Set([
+  'secret', 'token', 'key', 'auth'
 ]);
 const SAFE_SUFFIXES = /(?:_label|_hint|_path|_file)$/i;
-const PLACEHOLDER = /^(?:$|(?:your|my|replace|change|set)[-_ ]?(?:value|secret|key|token|password)?$|(?:changeme|change-me|example|sample|dummy|placeholder|test|testing|fake|xxx+|<[^>]+>|\.{3,}|\*{3,}|process\.env(?:\.|\[)))/i;
+const PLACEHOLDER = /^(?:$|(?:your|my|replace|change|set)[-_ ]?(?:value|secret|key|token|password)?$|(?:changeme|change-me|example|sample|dummy|placeholder|test|testing|fake|xxx+|<[^>]+>|\.{3,}|\*{3,}))/i;
+const ENV_REFERENCE = /^(?:\$\{?[A-Z0-9_]+\}?|process\.env(?:\.|\[)|import\.meta\.env(?:\.|\[)|(?:env|os\.environ)\s*\()/i;
 const VALUE_SIGNAL = /(?:^|[-_])(sk-[a-z0-9_-]{8,}|gh[pousr]_[a-z0-9_]{8,}|ey[a-z0-9_-]{20,}|[a-f0-9]{24,}|[a-z0-9+/]{20,}={0,2})(?:$|[^a-z0-9_])/i;
+const PEM_SIGNAL = /-----BEGIN [A-Z0-9 ]*(?:PRIVATE KEY|CERTIFICATE)[A-Z0-9 ]*-----/i;
+const CREDENTIAL_URL_SIGNAL = /\b(?:https?|postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s/@:]+(?::[^\s/@]*)?@[^\s/]+/i;
+const BASIC_AUTH_SIGNAL = /\bBasic\s+[A-Za-z0-9+/]{4,}={0,2}\b/i;
+const SAFE_LITERAL = /^(?:true|false|null|undefined|enabled|disabled|none|safe)$/i;
 
-function identifierIsSensitive(name) {
-  const normalized = name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-  if (SAFE_SUFFIXES.test(normalized) || normalized === 'tokenizer') return false;
-  if (SENSITIVE_NAMES.has(normalized)) return true;
-  return /(?:^|_)(?:api[_-]?key|secret|password|passwd|credential|token|private[_-]?key)(?:_|$)/i.test(normalized);
+function normalizeIdentifier(name) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/-/g, '_').toLowerCase();
 }
 
-function valueLooksSecret(value) {
-  const clean = String(value || '').trim().replace(/^['"`]|['"`,;]$/g, '');
-  if (!clean || PLACEHOLDER.test(clean) || /^\$\{?[A-Z0-9_]+\}?$/.test(clean)) return false;
+function sensitivityLevel(name) {
+  const normalized = normalizeIdentifier(name);
+  if (SAFE_SUFFIXES.test(normalized) || normalized === 'tokenizer') return null;
+  if (STRONG_SENSITIVE_NAMES.has(normalized)
+    || /(?:^|_)(?:api_key|password|passwd|private_key|client_secret|access_token|auth_token|credential|credentials)(?:_|$)/i.test(normalized)) {
+    return 'strong';
+  }
+  if (GENERIC_SENSITIVE_NAMES.has(normalized)
+    || /(?:^|_)(?:secret|token|key|auth)(?:_|$)/i.test(normalized)) {
+    return 'generic';
+  }
+  return null;
+}
+
+function identifierIsSensitive(name) {
+  return sensitivityLevel(name) !== null;
+}
+
+function stripValue(value) {
+  return String(value || '').trim().replace(/^(['"`])([\s\S]*)\1$/, '$2').replace(/[;,]$/, '');
+}
+
+function valueLooksSecret(value, level = 'generic') {
+  const clean = stripValue(value);
+  if (!clean || PLACEHOLDER.test(clean) || ENV_REFERENCE.test(clean)) return false;
+  if (PEM_SIGNAL.test(clean) || CREDENTIAL_URL_SIGNAL.test(clean) || BASIC_AUTH_SIGNAL.test(clean)) return true;
+  if (level === 'strong') {
+    return clean.length >= 4 && !SAFE_LITERAL.test(clean);
+  }
   return VALUE_SIGNAL.test(clean) || (clean.length >= 20 && /[A-Za-z]/.test(clean) && /\d/.test(clean));
 }
 
@@ -53,14 +85,22 @@ function parseDiff(diff) {
 }
 
 function inspectAddedLine(text, file, sourceLine, findings) {
-  const assignment = /(?:^|[\s,{])(["']?[A-Za-z][A-Za-z0-9_-]*["']?)\s*(?::|=)\s*([^\s#]+)/g;
+  const assignment = /(?:^|[\s,{])(["']?[A-Za-z][A-Za-z0-9_-]*["']?)\s*(?::|=)\s*(?:"([^"]*)"|'([^']*)'|`([^`]*)`|([^\s#},]+))/g;
+  const lineHasSpecializedValue = PEM_SIGNAL.test(text) || CREDENTIAL_URL_SIGNAL.test(text) || BASIC_AUTH_SIGNAL.test(text);
   let match;
+  let matchedAssignment = false;
   while ((match = assignment.exec(text)) !== null) {
-    const name = match[1].replace(/^['"]|['"]$/g, '');
-    const value = match[2];
-    if (identifierIsSensitive(name) && valueLooksSecret(value)) {
+    matchedAssignment = true;
+    const name = match[1].replace(/^["']|["']$/g, '');
+    const value = match[2] ?? match[3] ?? match[4] ?? match[5] ?? '';
+    const level = sensitivityLevel(name);
+    const specializedValue = PEM_SIGNAL.test(value) || CREDENTIAL_URL_SIGNAL.test(value) || BASIC_AUTH_SIGNAL.test(value);
+    if ((level && valueLooksSecret(value, level)) || (!level && specializedValue)) {
       findings.push({ file, sourceLine, name });
     }
+  }
+  if (!matchedAssignment && lineHasSpecializedValue) {
+    findings.push({ file, sourceLine, name: 'inline-secret' });
   }
 }
 

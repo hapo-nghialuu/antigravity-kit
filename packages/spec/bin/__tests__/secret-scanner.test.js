@@ -71,6 +71,38 @@ test('staged secret scanner handles JSON/YAML names and safe-name exclusions', (
   });
 });
 
+test('staged secret scanner detects short passwords, PEM, credential URLs, and basic auth', () => {
+  withRepo((root) => {
+    fs.writeFileSync(
+      path.join(root, 'secrets.env'),
+      [
+        'password="s3cr3t!"',
+        'PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\\nredacted\\n-----END RSA PRIVATE KEY-----"',
+        'DATABASE_URL="postgres://app:short-pass@db.example.invalid/app"',
+        'Authorization="Basic dXNlcjpwYXNz"',
+        'tokenizer="not-a-secret"',
+        'password_hint="Password"',
+        'api_key_file="./fixtures/key.txt"',
+        'TOKEN="${TOKEN_FROM_ENV}"',
+        'url="https://example.invalid/docs"',
+        '',
+      ].join('\n'),
+    );
+    git(root, ['add', 'secrets.env']);
+
+    const result = spawnSync(process.execPath, [HELPER], { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+    for (const name of ['password', 'PRIVATE_KEY', 'DATABASE_URL', 'Authorization']) {
+      assert.match(result.stdout, new RegExp('`' + name + '` at secrets\\.env:'));
+    }
+    for (const name of ['tokenizer', 'password_hint', 'api_key_file', 'TOKEN', 'url']) {
+      assert.doesNotMatch(result.stdout, new RegExp('`' + name + '`'));
+    }
+    assert.doesNotMatch(result.stdout, /s3cr3t|short-pass|dXNlcjpwYXNz|redacted/);
+    assert.doesNotMatch(result.stderr, /s3cr3t|short-pass|dXNlcjpwYXNz|redacted/);
+  });
+});
+
 test('staged secret scanner ignores deleted and context lines', () => {
   withRepo((root) => {
     const oldValue = ['sk-old-', '0123456789abcdef0123456789'].join('');

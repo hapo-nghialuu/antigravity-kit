@@ -9,15 +9,25 @@
     "cafekit": "bin/install.js"
   },
   "scripts": {
-    "test": "node scripts/run-skill-self-tests.mjs"
+    "test": "node scripts/run-skill-self-tests.mjs",
+    "test:package": "node --test bin/__tests__/package-inventory.test.js",
+    "test:secrets": "node --test bin/__tests__/secret-scanner.test.js",
+    "test:policy": "node --test bin/__tests__/develop-contract.test.js"
   },
   "files": [
     "bin",
     "src",
     "README.md",
+    "!src/**/.logs/**",
+    "!src/**/*.log",
     "!src/**/.coverage",
-    "!src/**/__pycache__",
-    "!src/**/*.pyc"
+    "!src/**/.coverage/**",
+    "!src/**/__pycache__/**",
+    "!src/**/*.pyc",
+    "!src/**/.cache/**",
+    "!src/**/.state/**",
+    "!src/**/.tmp/**",
+    "!src/.codex/**"
   ],
   "repository": {
     "type": "git",
