@@ -58,6 +58,8 @@ Use this only when `/hapo:develop ... --flash` is present.
   - `Mode: --flash`
   - `Tests: skipped by user request`
   - `Evidence: FLASH_UNVERIFIED`
+  - `Status: in_progress`
+  - `Blocker: awaiting /hapo:test <feature>`
   - `Next verification: /hapo:test <feature>`
 
 Terminal log:

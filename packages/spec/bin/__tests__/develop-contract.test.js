@@ -59,6 +59,8 @@ test('review verdict consumer stops on BLOCKED and retries only FAIL', () => {
   assert.equal(consumer('FAIL'), 'fix-and-rerun');
   assert.equal(consumer('BLOCKED'), 'stop-no-retry');
   const gate = fs.readFileSync(GATE, 'utf8');
+  assert.match(gate, /Status: in_progress/);
+  assert.match(gate, /Blocker: awaiting \/hapo:test <feature>/);
   assert.doesNotMatch(gate, /SPEC_PASS|NEEDS FIXES|Incomplete PASS|USER INTERVENTION/);
 });
 

@@ -1,6 +1,6 @@
 # Plan thi công — Track A fixup PR #76 · Track B hậu merge
 
-**Ngày**: 2026-08-06 · **Trạng thái**: SẴN SÀNG DISPATCH TRACK A — CHƯA KHỞI CÔNG; plan đã nhận fixup review, còn 1 lựa chọn tracking không chặn thi công
+**Ngày**: 2026-08-06 · **Trạng thái**: TRACK A ĐÃ TRIỂN KHAI — VERIFICATION PENDING; plan đã nhận fixup review, còn 1 lựa chọn tracking không chặn thi công
 **Nguồn finding**: 3 vòng review với 4 reviewer (2 Claude + 2 Codex gpt-5.6-sol), các finding blocking đã verify độc lập — chi tiết PHẦN 6 `plans/20260805-instructions-semantic-review.md`
 **Branch Track A**: `refactor/instructions-2026` (PR #76, 11 commits, chưa merge) · **Track B**: sau merge, branch/spec riêng
 

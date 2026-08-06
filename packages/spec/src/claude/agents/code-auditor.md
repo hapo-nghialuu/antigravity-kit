@@ -100,7 +100,7 @@ Classify each issue by severity (no numeric scoring):
 - **Scope:** [N files, ~N lines of code]
 - **Verdict:** [PASS | FAIL | BLOCKED]
 - **PASS:** no Critical findings, no High findings, at most one Medium.
-- **FAIL:** findings are actionable and map to a file/task/surface. `NEEDS FIXES` is not a verdict; report findings under FAIL.
+- **FAIL:** findings are actionable and map to a file/task/surface; report findings under FAIL.
 - **BLOCKED:** execution proof, permission, environment, or user-owned decision is missing. Stop without blind retries.
 
 ### Task / Spec Compliance

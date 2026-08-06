@@ -16,11 +16,12 @@ const {
   commandFailureReason,
   resolvePackageCommand
 } = require('../lib/skill-deps');
-const { copyClaudeMdFile, copyClaudeAgentsMdFile } = require('../phases/claude-runtime');
+const { copyClaudeMdFile, copyClaudeAgentsMdFile, removeObsoleteAgents } = require('../phases/claude-runtime');
 const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
 const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
 const { upsertManagedCodexBlock, normalizeCodexBody } = require('../lib/codex-install');
 const { copyRecursive } = require('../lib/copy-utils');
+const { createTracker, sha256 } = require('../lib/manifest');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
@@ -114,6 +115,81 @@ test('malformed managed marker topology fails transactionally and preserves exac
   }
 });
 
+test('malformed CLAUDE.md marker topology preserves exact bytes and reports an error', () => {
+  inTempProject(() => {
+    const content = `${START}\nuser managed content without end\n`;
+    fs.writeFileSync('CLAUDE.md', content, 'utf8');
+    const ctx = installContext([]);
+    copyClaudeMdFile(ctx, 'claude');
+    assert.equal(fs.readFileSync('CLAUDE.md', 'utf8'), content);
+    assert.equal(ctx.results.errors, 1);
+  });
+});
+
+test('fresh no-lang install leaves locale unset and rules hook silent', () => {
+  inTempProject((root) => {
+    const result = spawnSync(
+      process.execPath,
+      [INSTALLER, '--platform', 'claude', '--yes'],
+      { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
+    );
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const runtime = JSON.parse(fs.readFileSync('.claude/runtime.json', 'utf8'));
+    assert.equal(runtime.locale.responseLanguage, null);
+    const hook = spawnSync(
+      process.execPath,
+      [path.join(root, '.claude/hooks/rules.cjs')],
+      { cwd: root, input: JSON.stringify({ cwd: root, session_id: 'fresh-no-lang' }), encoding: 'utf8' }
+    );
+    assert.equal(hook.status, 0, hook.stderr);
+    assert.doesNotMatch(hook.stdout, /Language Consistency|Always respond in|Respond in/);
+  });
+});
+
+test('obsolete agent pruning is ownership-aware across Claude, Codex, and OpenCode', () => {
+  const cases = {
+    claude: ['agents/god-developer.md', '.claude'],
+    codex: ['agents/god_developer.toml', '.codex'],
+    opencode: ['agents/god-developer.md', '.opencode']
+  };
+  for (const [platformKey, [relative, folder]] of Object.entries(cases)) {
+    for (const state of ['pristine', 'modified', 'untracked']) {
+      inTempProject(() => {
+        const target = path.join(folder, relative);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, 'old agent\n', 'utf8');
+        const tracker = platformKey === 'codex'
+          ? createTracker(folder, 'test', { recordRoot: '.', allowedRoots: ['.codex', '.agents'] })
+          : createTracker(folder, 'test');
+        const key = tracker.keyFor(target);
+        const ownership = state === 'untracked'
+          ? { files: {} }
+          : { files: { [key]: { sha256: sha256(state === 'pristine' ? 'old agent\n' : 'different\n') } } };
+        const warnings = [];
+        const ctx = {
+          dryRun: false,
+          manifest: { obsolete: { agents: { [platformKey]: [relative] } } },
+          ownership: { [folder]: ownership },
+          trackers: { [platformKey]: tracker },
+          ui: { detail() {}, warn(message) { warnings.push(message); } },
+          results: { updated: 0, preserved: 0, preservedFiles: [] }
+        };
+        removeObsoleteAgents(ctx, platformKey);
+        if (state === 'pristine') {
+          assert.equal(fs.existsSync(target), false);
+          assert.equal(tracker._pruned.has(key), true);
+          assert.equal(warnings.length, 0);
+        } else {
+          assert.equal(fs.existsSync(target), true);
+          assert.equal(warnings.length, 1);
+          assert.equal(ctx.results.preserved, 1);
+          assert.equal(tracker._pruned.has(key), false);
+        }
+      });
+    }
+  }
+});
+
 function installContext(pruned) {
   return {
     dryRun: false,
@@ -133,6 +209,7 @@ function installContext(pruned) {
       unchanged: 0,
       preserved: 0,
       missingDependencies: 0,
+      errors: 0,
       preservedFiles: []
     }
   };
