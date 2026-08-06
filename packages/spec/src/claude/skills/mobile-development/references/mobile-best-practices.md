@@ -86,8 +86,8 @@ User opens screen
 - Background App Refresh (iOS)
 
 **Targets:**
-- Active use: <5% per hour
-- Background: <1% per hour
+- Active use: minimize foreground energy use
+- Background: minimize background energy use
 
 ## Offline-First Architecture
 
@@ -460,7 +460,7 @@ const token = credentials.password;
 1. Build signed AAB (Android App Bundle)
 2. Upload to Play Console
 3. Submit to production track
-4. Staged rollout (10% → 50% → 100%)
+4. Staged rollout (pilot → partial → full)
 
 **Review Time:**
 - Average: 1-3 days
@@ -468,22 +468,21 @@ const token = credentials.password;
 
 ### Staged Rollout Strategy
 
-**Week 1:**
-- 10% of users
+**Pilot:**
+- Release to a small audience
 - Monitor crash-free rate
 - Watch for critical bugs
 
-**Week 2:**
-- 50% of users
+**Partial rollout:**
+- Expand audience after pilot
 - Validate performance metrics
 - Check user feedback
 
-**Week 3:**
-- 100% of users
-- Full release if metrics healthy
+**Full rollout:**
+- Release to all users when metrics are healthy
 
 **Rollback Triggers:**
-- Crash-free rate drops >5%
+- Crash-free rate shows a material drop
 - Critical bug discovered
 - Major user complaints
 
@@ -493,12 +492,12 @@ const token = credentials.password;
 
 | Metric | React Native | Flutter |
 |--------|--------------|---------|
-| **Adoption** | 35% | 46% |
-| **Performance** | 80-90% | 85-95% |
-| **App Size** | 40-50MB | 15-20MB |
-| **Dev Speed** | Fast | Very Fast |
-| **Commercial** | 12.57% | 5.24% |
-| **Developers** | 20:1 ratio | 1 ratio |
+| **Adoption** | Established | Established |
+| **Performance** | Near-native when profiled | Near-native when profiled |
+| **App Size** | Moderate | Moderate |
+| **Dev Speed** | Fast | Very fast |
+| **Commercial footprint** | Established | Established |
+| **Developers** | Broad ecosystem | Broad ecosystem |
 | **Best For** | JS teams | Performance |
 
 ### Architecture Comparison

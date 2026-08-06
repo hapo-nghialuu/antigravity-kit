@@ -92,7 +92,7 @@ See: `references/mobile-mindset.md` for thinking patterns and decision framework
 - Implement proper session management
 
 **Testing Strategy:**
-- Unit tests: 70%+ coverage for business logic
+- Unit tests: meaningful coverage for business logic
 - Integration tests: Critical user flows
 - E2E tests: Detox (React Native), Appium (cross-platform), XCUITest (iOS), Espresso (Android)
 - Real device testing mandatory before release
@@ -121,9 +121,9 @@ See: `references/mobile-mindset.md` for thinking patterns and decision framework
 
 | Criterion | React Native | Flutter | Swift/SwiftUI | Kotlin/Compose |
 |-----------|--------------|---------|---------------|----------------|
-| **Stars** | 121K | 170K | N/A | N/A |
-| **Adoption** | 35% | 46% | iOS only | Android only |
-| **Performance** | 80-90% native | 85-95% native | 100% native | 100% native |
+| **Community footprint** | Large | Large | Apple ecosystem | Android ecosystem |
+| **Adoption** | Established | Established | iOS only | Android only |
+| **Performance** | Near-native when profiled | Near-native when profiled | Native baseline | Native baseline |
 | **Dev Speed** | Fast (hot reload) | Very fast (hot reload) | Fast (Xcode Previews) | Fast (Live Edit) |
 | **Learning Curve** | Easy (JavaScript) | Medium (Dart) | Medium (Swift) | Medium (Kotlin) |
 | **UI Paradigm** | Component-based | Widget-based | Declarative | Declarative |

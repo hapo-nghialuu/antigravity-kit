@@ -20,7 +20,10 @@ Quality-gate input MUST include `execution_tier` and `ship_point`:
 
 Checklist and FAIL conditions stay identical for every tier; tier changes only who executes each check and when.
 
-## Ship point semantics
+## Spec compliance review
+
+Stage A applies same spec compliance review checklist for every tier: scope, requirements, completion criteria, evidence, and runtime reachability. A missing or unreachable deliverable is a FAIL.
+
 
 - **Specific-task mode:** requested task is ship point. Review that task packet and its diff exactly once.
 - **Full-spec Standard:** intermediate tasks receive only the main-session gate. After the final task and Final Integration Scout, run one combined auditor over the cumulative feature diff, all acceptance criteria, and runtime reachability.
@@ -110,9 +113,10 @@ START_LOOP:
 
 STAGE B:
   ---------------------------------------------------------------
-  COMBINED CODE QUALITY + SPEC REVIEW (Standard ship point)
+  CODE QUALITY REVIEW (only after spec compliance passes)
   ---------------------------------------------------------------
-  → `code-auditor` runs once with both scopes at the declared ship point.
+  Standard uses the combined auditor described above; Deep retains the existing
+  Stage B quality review chain inside each worktree.
   → PASS = no Critical, no High, at most one Medium; proceed to sync.
   → FAIL = findings mapped to task/surface; fix affected scope and rerun only
     affected evidence plus this combined review.

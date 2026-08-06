@@ -105,8 +105,10 @@ apps/go-gateway/main
 .claude_cc/
 
 # CafeKit / Ecosystem
-plans/
+plans/*
+!plans/*.md
 !plans/templates/
+!plans/templates/**
 .env*.local
 .sync_hash
 .cafekit-backup/

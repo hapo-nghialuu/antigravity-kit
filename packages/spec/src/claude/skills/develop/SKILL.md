@@ -290,7 +290,7 @@ Flash mode is an explicit speed trade-off requested by the user.
   - If `none`: record that explicitly in the completion report and stop
   - If `minor` or `major`: trigger `docs-keeper` to surgically update affected existing docs under `./docs`
   - Default to **lightweight docs sync**: update only the docs touched by this task and its verified behavior; do NOT run `repomix` unless `docs-keeper` truly cannot verify the required architecture/context from the code, spec, and current docs
-- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and will fail to locate the root docs/ folder.
+- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, set its Current Working Directory (CWD context) to the **Workspace Root**, not the inner package directory.
 - Task-level docs sync happens after every verified completed task, but actual edits still depend on `Docs impact`.
 - In **Specific-Task Mode**, STOP after sync and report the result.
 - In **Full-Spec Mode**, only after sync may you re-read `task_registry`, pick the next unblocked pending task, and repeat from Step 1 for that task.
