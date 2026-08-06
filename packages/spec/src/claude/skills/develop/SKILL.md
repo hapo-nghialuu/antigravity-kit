@@ -41,7 +41,13 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 
 ## Argument validation
 
-Parse flags before loading or mutating spec state. If both `--flash` and `--parallel` are present, print:
+Run policy pre-state guard before loading spec files or mutating state. For the incompatible flag pair, the command must exit nonzero and write no state, receipt, worktree, subagent, or commit:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --flash --parallel --json
+```
+
+Expected JSON contract: `{"ok":false,"contract":"execution-policy","failFast":true,...}` with exit code `2`. If both `--flash` and `--parallel` are present, print:
 
 ```text
 Unsupported flags: --flash and --parallel are incompatible.

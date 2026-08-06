@@ -71,6 +71,38 @@ test('staged secret scanner handles JSON/YAML names and safe-name exclusions', (
   });
 });
 
+test('staged secret scanner maps multiline YAML/JSON values to key lines', () => {
+  withRepo((root) => {
+    const value = ['sk-live-', 'abcdef0123456789abcdef0123456789'].join('');
+    fs.writeFileSync(
+      path.join(root, 'multiline.yml'),
+      [
+        'OPENAI_API_KEY:',
+        `  "${value}"`,
+        'PRIVATE_KEY: |',
+        '  -----BEGIN PRIVATE KEY-----',
+        '  redacted-material',
+        '  -----END PRIVATE KEY-----',
+        'public_url: https://example.invalid/docs',
+        'password = getPassword()',
+        'TOKEN: process.env.TOKEN',
+        '',
+      ].join('\n'),
+    );
+    git(root, ['add', 'multiline.yml']);
+
+    const result = spawnSync(process.execPath, [HELPER], { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /`OPENAI_API_KEY` at multiline\.yml:1/);
+    assert.match(result.stdout, /`PRIVATE_KEY` at multiline\.yml:3/);
+    assert.doesNotMatch(result.stdout, /public_url|password|TOKEN/);
+    assert.doesNotMatch(result.stdout, new RegExp(value));
+    assert.doesNotMatch(result.stdout, /redacted-material/);
+    assert.doesNotMatch(result.stderr, new RegExp(value));
+  });
+});
+
+
 test('staged secret scanner detects short passwords, PEM, credential URLs, and basic auth', () => {
   withRepo((root) => {
     fs.writeFileSync(

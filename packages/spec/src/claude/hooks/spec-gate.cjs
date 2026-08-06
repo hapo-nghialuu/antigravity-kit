@@ -16,6 +16,8 @@
 try {
   const fs   = require('fs');
   const path = require('path');
+  const policyPath = path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs');
+  const POLICY = require(policyPath);
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
@@ -67,6 +69,17 @@ try {
   const currentStatuses = {};
   for (const [tp, task] of Object.entries(taskRegistry)) {
     currentStatuses[tp] = task?.status || 'pending';
+  }
+
+  const staleFlashTasks = Object.entries(taskRegistry)
+    .filter(([, task]) => POLICY.isStaleFlashDone(task))
+    .map(([taskPath]) => taskPath);
+  if (staleFlashTasks.length > 0) {
+    process.stdout.write(JSON.stringify({
+      decision: 'block',
+      reason: `Completion gate: ${staleFlashTasks.length} task(s) marked done with FLASH_UNVERIFIED (${staleFlashTasks.join(', ')}). Run /hapo:test for exact proof, then use explicit sync-finalize.`
+    }) + '\n');
+    process.exit(0);
   }
 
   // First run: treat all current done as historical — seed cache, never block.

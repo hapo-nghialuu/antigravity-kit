@@ -93,10 +93,10 @@ START_LOOP:
     artifact checks, and reachability checks; spawn 0 subagents.
   → Standard: main session executes exact Evidence commands and spec checklist;
     defer one combined auditor to the ship point.
-  → Deep / --parallel: run the existing test-runner + spec-review chain in the
+  → Deep / --parallel: run the documented per-task sequence `inspector → implementer → test-runner → code-auditor` in the
     task worktree, then preserve its documented merge/integration gates.
 
-  Test result and spec-review result use the review enum only: PASS | FAIL | BLOCKED.
+  Test result and review result use the review enum only: PASS | FAIL | BLOCKED.
   PASS proceeds. FAIL returns actionable findings to implementer. BLOCKED means
   execution proof, permissions, environment, or a user-owned decision is missing:
   stop immediately and do not blind-retry.

@@ -14,6 +14,7 @@
 try {
   const fs   = require('fs');
   const path = require('path');
+  const POLICY = require(path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs'));
 
   // ── Main ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ try {
 
   const phase = activeSpec.current_phase || activeSpec.phase || 'unknown';
   const taskRegistry = activeSpec.task_registry || {};
+  const flashTasks = POLICY.flashState(taskRegistry);
   const taskEntries = Object.entries(taskRegistry);
   const taskCounts = taskEntries.reduce((acc, [, task]) => {
     const status = task?.status || 'pending';
@@ -112,6 +114,9 @@ try {
       : ''));
   if (nextUnblocked) {
     lines.push(`- Next unblocked: \`${nextUnblocked[0]}\``);
+  }
+  if (flashTasks.length > 0) {
+    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. PASS promotion keeps task in_progress until explicit sync-finalize.`);
   }
   lines.push(`- Sync \`spec.json\` + task file after verified work; run \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` before \`ready_for_implementation=true\`.`);
   lines.push(`- A completion gate verifies receipts when you end a turn with newly-done tasks.`);

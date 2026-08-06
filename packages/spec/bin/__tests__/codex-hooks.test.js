@@ -27,6 +27,10 @@ function inHookFixture(run) {
   try {
     fs.cpSync(CODEX_HOOKS, hooks, { recursive: true });
     fs.mkdirSync(path.join(root, '.codex', 'scripts'), { recursive: true });
+    fs.copyFileSync(
+      path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs'),
+      path.join(root, '.codex', 'scripts', 'workflow-policy.cjs'),
+    );
     fs.writeFileSync(path.join(root, '.codex', 'scripts', 'spec-scaffold.cjs'), '');
     return run(root, hooks);
   } finally {

@@ -49,7 +49,7 @@ Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/cl
 
 When `/hapo:test <feature>` finds a task with `status: "in_progress"` and receipt `FLASH_UNVERIFIED`, evaluate that task's exact Evidence and runtime reachability only:
 
-- PASS → replace receipt with concrete proof, clear blocker, then `/hapo:sync ... done`; only then may dependents unblock.
+- PASS → replace receipt with concrete proof while keeping `status: "in_progress"`, `dependencyBlocked: true`, `unblocks: false`, and `readyForSync: true`; only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock dependents.
 - FAIL, BLOCKED, or NO_TESTS → keep `status: "in_progress"`, keep or update blocker, and do not promote any other flash task.
 - Never blanket-promote every flash task in a feature because one task passed.
 

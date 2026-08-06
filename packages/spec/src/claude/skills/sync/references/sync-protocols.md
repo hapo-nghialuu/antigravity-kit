@@ -2,7 +2,7 @@
 
 The following guidelines dictate exactly how `hapo:sync` should interact with files to prevent data corruption.
 
-**Flash implementation state:** `FLASH_UNVERIFIED` MUST remain `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`. It never unblocks dependencies. Only a task-scoped `/hapo:test` PASS may replace receipt with proof, clear blocker, and then permit `/hapo:sync ... done`; FAIL, BLOCKED, and NO_TESTS stay `in_progress`.
+**Flash implementation state:** `FLASH_UNVERIFIED` MUST remain `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`. It never unblocks dependencies. A task-scoped `/hapo:test` PASS replaces receipt with real `Verification: PASS`, clears blocker, and sets `readyForSync: true` while dependency blocking remains. Only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock; FAIL, BLOCKED, and NO_TESTS stay `in_progress`.
 
 ## 1. Updating `spec.json`
 

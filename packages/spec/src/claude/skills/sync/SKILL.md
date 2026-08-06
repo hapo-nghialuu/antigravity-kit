@@ -44,11 +44,17 @@ Scans the `spec.json` against all physical `task-R*.md` files to detect mismatch
 5. **Task Docs Hook:** Every time `hapo:sync` marks a task as `done`, it must flag that a task-level docs checkpoint is now due for that verified task.
 6. **Phase Prompt Rule:** When `hapo:sync` marks the final pending task in the whole feature as `done`, it should automatically prompt the user if they'd like to advance the phase, but only after the docs checkpoint for that last completed task has been considered.
 
+### 4. Explicit Flash Finalization
+
+**Usage:** `/hapo:sync <feature_name> <task_id|task-file> sync-finalize`
+
+This is the only operation allowed to turn a flash-promoted task (`Verification: PASS`, `status: in_progress`, `readyForSync: true`) into `done` and unblock dependencies. A normal `done` request cannot bypass flash promotion or stale `FLASH_UNVERIFIED` state.
+
 ### Flash implementation state
 
 Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Use `promoteFlashTask` only after exact task Evidence and reachability return PASS; FAIL, BLOCKED, and NO_TESTS remain blocked in progress.
 
-`FLASH_UNVERIFIED` is storage for implemented-but-unverified work, not a completion status. Store it as `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`; do not unblock dependencies. `/hapo:test` may promote one task only after its exact Evidence and reachability PASS, replacing the receipt with proof and clearing blocker before `/hapo:sync ... done`. FAIL, BLOCKED, and NO_TESTS remain `in_progress`.
+`FLASH_UNVERIFIED` is storage for implemented-but-unverified work, not a completion status. Store it as `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`; do not unblock dependencies. `/hapo:test` may promote one task only after its exact Evidence and reachability PASS, replacing the receipt with proof, clearing blocker, and setting `readyForSync: true` while dependencies remain blocked. Only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock. FAIL, BLOCKED, and NO_TESTS remain `in_progress`.
 
 ## References
 Read `references/sync-protocols.md` for exact Search/Replace regex patterns and JSON schema expectations before acting on the files.
