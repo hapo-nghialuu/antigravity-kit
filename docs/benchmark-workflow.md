@@ -31,9 +31,9 @@ Corpus JSON có dạng:
 }
 ```
 
-Mỗi entry bắt buộc có `task_id`, `lane` (`Direct|Standard|Critical`), đúng một trong `prompt` hoặc `prompt_sha256`, `repo_sample`, và object `acceptance`/`risk` không rỗng. Corpus nên gồm task thật trên 1–2 repo/sample, task nhỏ reversible, Standard multi-file, và Critical negative controls. Không chỉ dùng installer/hook/skill edits.
+Mỗi entry bắt buộc có `task_id`, `lane` (`Direct|Standard|Critical`), đúng một trong `prompt` hoặc `prompt_sha256`, `repo_sample`, và object `acceptance`/`risk` không rỗng. `prompt` phải là nội dung cụ thể, không chứa placeholder/template marker; dùng `prompt_sha256` nếu không muốn lưu prompt trong corpus. Corpus nên gồm task thật trên 1–2 repo/sample, task nhỏ reversible, Standard multi-file, và Critical negative controls. Không chỉ dùng installer/hook/skill edits.
 
-`status: example_template` chỉ dành cho fixture/template. Không coi nó là corpus live.
+`status: example_template` chỉ dành cho fixture/template. Validator từ chối receipt validation và live summary có receipts trên corpus này; fixture/live test phải dùng `status: frozen`.
 
 ## Freeze config
 
@@ -50,7 +50,7 @@ Mỗi arm có config riêng; summary nhận nhiều `--config` để so baseline
 
 Hash dùng canonical JSON: object keys sort đệ quy, array giữ nguyên thứ tự, không whitespace. `corpus_sha256` hash toàn corpus. `config_sha256` hash config sau khi bỏ field `config_sha256`. Dùng prefix `sha256:` và 64 hex. Missing, placeholder (`<...>`, `{{...}}`, `example`, `TODO`, zero hash) hoặc status không phải `frozen` bị reject fail-closed.
 
-Baseline là workflow hiện tại. Treatment là Direct/Standard/Critical thật sau B2–B5. Hai arm phải dùng cùng corpus, repeat policy, context isolation, và freeze metadata tương thích; không thay bằng prompt mock.
+Baseline là workflow hiện tại. Treatment là Direct/Standard/Critical thật sau B2–B5. Khi truyền cả hai config, mọi freeze metadata phải giống hệt nhau và `arm` là khác biệt có chủ đích duy nhất: gồm experiment/model/reasoning, repo identifier/commit/clean-tree hash, permissions/tool fingerprints, repeat policy, và cả cost rates nếu có. Không thay bằng prompt mock.
 
 ## Immutable receipt
 
@@ -82,11 +82,15 @@ Receipt là object append-only trong array hoặc `{ "receipts": [] }`. Các fie
   "user_corrections": 0,
   "useful_reviewer_findings": 1,
   "false_positive_reviewer_findings": 0,
-  "evidence": {"artifact_ref": "reports/run-001.json", "command": "..."}
+  "evidence": {
+    "artifact_ref": "reports/run-001.json",
+    "artifact_sha256": "sha256:<64-hex-raw-file-digest>",
+    "command": "..."
+  }
 }
 ```
 
-CLI reject duplicate `arm/task_id/repeat`, unknown task, invalid lane, missing/non-negative metrics, mismatched corpus/config/model/repo/permission/tool hashes, and missing or placeholder evidence. Receipt không được sửa để biến run fail thành pass; correction/adjudication ghi artifact mới.
+CLI reject duplicate `arm/task_id/repeat`, unknown task, invalid lane, missing/non-negative metrics, mismatched corpus/config/model/repo/permission/tool hashes, and missing or placeholder evidence. `artifact_ref` phải là path tương đối tới local file cạnh receipt bundle; validator đọc raw bytes và so khớp `artifact_sha256`, không truy cập network, URI, hay evidence ngoài local file. Receipt không được sửa để biến run fail thành pass; correction/adjudication ghi artifact mới.
 
 ## Commands
 
@@ -109,6 +113,8 @@ node packages/spec/scripts/benchmark-workflow.mjs validate \
   --receipts /path/to/receipts.json
 ```
 
+`validate` kiểm tra từng receipt và tính expected task/repeat matrix cho mọi arm đã cung cấp. Có receipts nhưng thiếu bất kỳ ô matrix nào thì thoát `2` với lỗi `incomplete receipt matrix`; chỉ matrix đầy đủ mới trả `status: "valid"`. `summarize` dùng cùng coverage nhưng không fail process khi matrix thiếu: trả `status: "not-ready"` để giữ chẩn đoán thiếu coverage.
+
 Summary tách theo `arm` rồi `lane`, không collapse thành một score:
 
 ```bash
@@ -121,7 +127,7 @@ node packages/spec/scripts/benchmark-workflow.mjs summarize \
 
 Mỗi group có `p25`, `median`, `p75` cho wall time, token, context, tool/subagent calls, reviewer/correction counts, và estimated cost. `quality_rates` tách correctness, regression, unsupported completion claims, user-correction, useful/false-positive reviewer findings.
 
-Không có receipts: summary trả `status: "exploratory/no-live-runs"`, `live_runs: false`. Có receipts nhưng thiếu arm/task tương ứng hoặc gate fail: `not-ready`. Rollout chỉ có thể `ready` khi hai arm có task set comparable và lane gates pass. Direct/Standard cần giảm median latency **và** estimated cost mà không tăng quality failures; Critical giữ hoặc tăng correctness, không tăng regression/unsupported claims.
+Không có receipts: summary trả `status: "exploratory/no-live-runs"`, `live_runs: false`. Có receipts nhưng thiếu arm/task/repeat tương ứng hoặc gate fail: `not-ready`. Rollout chỉ có thể `ready` khi hai arm có task set comparable và lane gates pass. Direct/Standard cần giảm median latency **và** estimated cost mà không tăng quality failures; Critical giữ hoặc tăng correctness, không tăng regression/unsupported claims/user corrections/false-positive reviewer finding rate, và không làm giảm useful reviewer finding rate. Các `quality_rates` useful/false-positive được so trực tiếp treatment với baseline.
 
 ## Repeat và blind adjudication
 

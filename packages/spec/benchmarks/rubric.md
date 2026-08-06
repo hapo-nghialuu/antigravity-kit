@@ -11,7 +11,7 @@ Rubric này dùng cho adjudication độc lập, ưu tiên evidence cụ thể. 
 - `useful_reviewer_findings`: finding reviewer đúng, actionable, và bắt lỗi thật trước ship.
 - `false_positive_reviewer_findings`: finding reviewer không tái hiện được hoặc ngoài contract/scope.
 
-Mỗi receipt phải ghi boolean quality fields và count nguyên không âm. Ghi failure category trong artifact adjudication; không suy ra correctness từ `npm test` một mình.
+Mỗi receipt phải ghi boolean quality fields và count nguyên không âm. `evidence.artifact_ref` phải là path tương đối tới local artifact; `evidence.artifact_sha256` bắt buộc và phải khớp SHA-256 raw bytes của file. URI/network evidence hoặc artifact không tồn tại là invalid. Ghi failure category trong artifact adjudication; không suy ra correctness từ `npm test` một mình.
 
 ## Gate theo lane
 
@@ -19,21 +19,21 @@ Mỗi receipt phải ghi boolean quality fields và count nguyên không âm. Gh
 
 - Reversible, isolated, low-risk.
 - `correctness = true`, `regression = false`, `unsupported_completion_claim = false`.
-- Treatment phải giảm rõ median `wall_ms` và `estimated_cost_usd` so với baseline trên cùng task set; không tăng user-correction rate.
+- Treatment phải giảm rõ median `wall_ms` và `estimated_cost_usd` so với baseline trên cùng task set; không tăng user-correction rate, không tăng `false_positive_reviewer_finding_rate`, và không giảm `useful_reviewer_finding_rate`.
 
 ### Standard
 
 - Multi-file hoặc workflow mặc định, có acceptance/review evidence.
 - Cùng quality gate như Direct.
-- Treatment chỉ đạt khi giảm rõ median latency và cost, đồng thời không tăng regression hoặc user correction. Review findings phải phân biệt useful và false-positive.
+- Treatment chỉ đạt khi giảm rõ median latency và cost, đồng thời không tăng regression hoặc user correction, không tăng false-positive reviewer finding rate, và không giảm useful reviewer finding rate. Review findings phải phân biệt useful và false-positive.
 
 ### Critical
 
 - Auth/privacy, migration, public contract, cross-runtime, destructive hoặc rollback khó.
 - Không được đánh đổi security/contract/evidence quality lấy latency/cost.
-- Treatment phải có correctness không thấp hơn baseline, regression và unsupported-completion rate không cao hơn baseline; evidence phải truy được và reviewer finding không bị bỏ qua.
+- Treatment phải có correctness không thấp hơn baseline, regression và unsupported-completion rate không cao hơn baseline; useful reviewer finding rate không thấp hơn và false-positive reviewer finding rate không cao hơn baseline; evidence phải truy được và reviewer finding không bị bỏ qua.
 
-Nếu thiếu task tương ứng ở một arm, thiếu repeat, hash freeze không khớp, hoặc evidence placeholder/non-clean: `not-ready`, không extrapolate.
+Nếu thiếu task tương ứng ở một arm, thiếu repeat, hash freeze không khớp, hoặc evidence placeholder/non-clean: `summarize` trả `not-ready`; `validate` thoát `2` với lỗi `incomplete receipt matrix` khi expected task/repeat matrix chưa đủ, không extrapolate.
 
 ## Adjudication record
 

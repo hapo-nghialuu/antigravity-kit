@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -274,6 +275,17 @@ function benchmarkHash(value) {
   return `sha256:${crypto.createHash('sha256').update(canonicalBenchmark(value)).digest('hex')}`;
 }
 
+function benchmarkRawHash(value) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function writeBenchmarkConfig(file, config) {
+  const frozen = { ...config };
+  delete frozen.config_sha256;
+  frozen.config_sha256 = benchmarkHash(frozen);
+  fs.writeFileSync(file, JSON.stringify(frozen));
+}
+
 function makeBenchmarkFixture(root) {
   const corpus = {
     schema_version: 'b1.v1', status: 'frozen', corpus_id: 'fixture-only-corpus',
@@ -296,6 +308,10 @@ function makeBenchmarkFixture(root) {
     config.config_sha256 = benchmarkHash(config);
     return config;
   });
+  const artifactRef = 'fixture-artifact.bin';
+  const artifactBytes = Buffer.from('fixture-only benchmark artifact\n');
+  fs.writeFileSync(path.join(root, artifactRef), artifactBytes);
+  const artifactSha = benchmarkRawHash(artifactBytes);
   const receipts = [];
   for (const config of configs) for (const task of corpus.tasks) for (const repeat of [1, 2]) {
     const treatment = config.arm === 'treatment';
@@ -313,7 +329,7 @@ function makeBenchmarkFixture(root) {
       tool_calls: 2, subagent_calls: critical ? 1 : 0, correctness: true, regression: false,
       unsupported_completion_claim: false, user_corrections: 0, useful_reviewer_findings: 1,
       false_positive_reviewer_findings: 0,
-      evidence: { artifact_ref: 'fixture-only://synthetic-receipt', command: 'fixture-only command' },
+      evidence: { artifact_ref: artifactRef, artifact_sha256: artifactSha, command: 'fixture-only command' },
     });
   }
   const paths = { corpus: path.join(root, 'corpus.json'), receipts: path.join(root, 'receipts.json') };
@@ -341,6 +357,7 @@ test('B1 validator rejects missing freeze fields and accepts fixture-only corpus
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-validation-'));
   const fixture = makeBenchmarkFixture(root);
   try {
+    assert.equal(JSON.parse(read(fixture.corpus)).status, 'frozen');
     const valid = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', fixture.receipts], { encoding: 'utf8' });
     assert.equal(valid.status, 0, `${valid.stdout}\n${valid.stderr}`);
     assert.equal(JSON.parse(valid.stdout).status, 'valid');
@@ -352,6 +369,73 @@ test('B1 validator rejects missing freeze fields and accepts fixture-only corpus
     const invalid = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', invalidPath], { encoding: 'utf8' });
     assert.equal(invalid.status, 2);
     assert.match(invalid.stderr, /missing or placeholder freeze field/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 validator fails closed for templates, prompts, parity, and artifacts', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-integrity-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const templateCorpus = JSON.parse(read(fixture.corpus));
+    templateCorpus.status = 'example_template';
+    const templatePath = path.join(root, 'template-corpus.json');
+    fs.writeFileSync(templatePath, JSON.stringify(templateCorpus));
+    const template = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', templatePath, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', fixture.receipts], { encoding: 'utf8' });
+    assert.equal(template.status, 2);
+    assert.match(template.stderr, /example_template.*receipt validation.*live summary/);
+
+    const placeholderCorpus = JSON.parse(read(fixture.corpus));
+    placeholderCorpus.tasks[0].prompt = '{{replace_me}}';
+    const placeholderPath = path.join(root, 'placeholder-corpus.json');
+    fs.writeFileSync(placeholderPath, JSON.stringify(placeholderCorpus));
+    const placeholder = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', placeholderPath, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(placeholder.status, 2);
+    assert.match(placeholder.stderr, /tasks\[0\]\.prompt.*missing or placeholder/);
+
+    const treatment = JSON.parse(read(fixture.configs[1]));
+    treatment.experiment_id = 'different-experiment';
+    const parityPath = path.join(root, 'parity-treatment.json');
+    writeBenchmarkConfig(parityPath, treatment);
+    const parity = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', parityPath], { encoding: 'utf8' });
+    assert.equal(parity.status, 2);
+    assert.match(parity.stderr, /differ only by arm/);
+
+    const receipts = JSON.parse(read(fixture.receipts));
+    const missingArtifactHash = JSON.parse(read(fixture.receipts));
+    delete missingArtifactHash.receipts[0].evidence.artifact_sha256;
+    const missingArtifactHashPath = path.join(root, 'missing-artifact-hash.json');
+    fs.writeFileSync(missingArtifactHashPath, JSON.stringify(missingArtifactHash));
+    const missingHash = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', missingArtifactHashPath], { encoding: 'utf8' });
+    assert.equal(missingHash.status, 2);
+    assert.match(missingHash.stderr, /evidence\.artifact_sha256.*missing or placeholder/);
+
+    receipts.receipts[0].evidence.artifact_sha256 = benchmarkRawHash(Buffer.from('wrong artifact'));
+    const wrongHashPath = path.join(root, 'wrong-artifact-hash.json');
+    fs.writeFileSync(wrongHashPath, JSON.stringify(receipts));
+    const wrongHash = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', wrongHashPath], { encoding: 'utf8' });
+    assert.equal(wrongHash.status, 2);
+    assert.match(wrongHash.stderr, /artifact_sha256.*raw-byte hash mismatch/);
+
+    receipts.receipts[0].evidence.artifact_ref = 'https://example.invalid/artifact.json';
+    const uriPath = path.join(root, 'uri-artifact.json');
+    fs.writeFileSync(uriPath, JSON.stringify(receipts));
+    const uri = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', uriPath], { encoding: 'utf8' });
+    assert.equal(uri.status, 2);
+    assert.match(uri.stderr, /artifact_ref.*relative local file.*URI/);
+
+    const outsideArtifact = path.join(path.dirname(root), `${path.basename(root)}-outside.bin`);
+    fs.writeFileSync(outsideArtifact, Buffer.from('outside receipt bundle'));
+    const traversalReceipts = JSON.parse(read(fixture.receipts));
+    traversalReceipts.receipts[0].evidence.artifact_ref = path.relative(root, outsideArtifact);
+    traversalReceipts.receipts[0].evidence.artifact_sha256 = benchmarkRawHash(fs.readFileSync(outsideArtifact));
+    const traversalPath = path.join(root, 'traversal-artifact.json');
+    fs.writeFileSync(traversalPath, JSON.stringify(traversalReceipts));
+    const traversal = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', traversalPath], { encoding: 'utf8' });
+    assert.equal(traversal.status, 2);
+    assert.match(traversal.stderr, /artifact_ref.*path escapes receipt bundle directory/);
+    fs.rmSync(outsideArtifact, { force: true });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -370,6 +454,19 @@ test('B1 summary groups fixture-only receipts by arm/lane with deterministic qua
     assert.equal(summary.groups.baseline.Direct.metrics.wall_ms.p75, 175);
     assert.equal(summary.groups.treatment.Direct.quality_rates.correctness, 1);
     assert.equal(summary.rollout_recommendation.gates.Critical.pass, true);
+    const degraded = JSON.parse(read(fixture.receipts));
+    for (const receipt of degraded.receipts.filter((item) => item.arm === 'treatment')) {
+      receipt.useful_reviewer_findings = 0;
+      receipt.false_positive_reviewer_findings = 1;
+    }
+    const degradedPath = path.join(root, 'degraded-review-quality.json');
+    fs.writeFileSync(degradedPath, JSON.stringify(degraded));
+    const degradedResult = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', degradedPath], { encoding: 'utf8' });
+    assert.equal(degradedResult.status, 0, `${degradedResult.stdout}\n${degradedResult.stderr}`);
+    const degradedSummary = JSON.parse(degradedResult.stdout);
+    assert.equal(degradedSummary.status, 'not-ready');
+    assert.equal(degradedSummary.rollout_recommendation.gates.Critical.quality_pass, false);
+    assert.equal(degradedSummary.rollout_recommendation.gates.Critical.pass, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -388,6 +485,9 @@ test('B1 rollout rejects incomplete fixture-only lane/repeat matrices', () => {
     const partialSummary = JSON.parse(partial.stdout);
     assert.equal(partialSummary.status, 'not-ready');
     assert.equal(partialSummary.rollout_recommendation.gates.Direct.treatment_matrix.complete, false);
+    const incompleteValidation = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', partialPath], { encoding: 'utf8' });
+    assert.equal(incompleteValidation.status, 2);
+    assert.match(incompleteValidation.stderr, /incomplete receipt matrix.*treatment\/Direct\/fixture-direct\/1/);
 
     const missingLanePath = path.join(root, 'missing-lane.json');
     fs.writeFileSync(missingLanePath, JSON.stringify({ receipts: completeReceipts.filter((receipt) => !(receipt.arm === 'treatment' && receipt.lane === 'Critical')) }));
