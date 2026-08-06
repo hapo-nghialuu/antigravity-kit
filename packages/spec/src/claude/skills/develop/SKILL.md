@@ -16,6 +16,8 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 
 **Principles:** YAGNI, KISS, DRY | Continuous execution | Smart self-healing
 
+**Executable policy source:** `src/claude/scripts/workflow-policy.cjs` defines mode conflict fail-fast, Light/Standard/Deep delegation, review verdict handling, and flash promotion. Installed Claude runtime uses `.claude/scripts/workflow-policy.cjs`; contracts below must match it.
+
 ## Usage
 
 ```bash
@@ -34,7 +36,7 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 | default (specific-task / full-spec) | per tier | full (Step 4) | verified | |
 | `--flash` | per tier | Flash Gate (4F) | `FLASH_UNVERIFIED` | |
 | `--parallel` | inspector per task | full, inside each worktree | verified | implies Deep tier |
-| `--flash --parallel` | **unsupported — no execution** | | | reject before state/worktree changes |
+| `--flash --parallel` | **flash+parallel fail-fast — no execution** | | | reject before state/worktree changes |
 | `--no-notes` | — | — | — | composable with all modes |
 
 ## Argument validation

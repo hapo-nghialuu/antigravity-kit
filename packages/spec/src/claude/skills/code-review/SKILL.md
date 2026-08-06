@@ -24,6 +24,9 @@ Before executing any review, firmly grasp these two pillars:
 - `references/adversarial-review.md` (Stage 3 rules)
 
 ## Core Principles
+
+Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Review outputs and consumers must use its exact `PASS | FAIL | BLOCKED` verdict enum.
+
 1. **YAGNI**, **KISS**, **DRY** always prevail. 
 2. Technical correctness over social comfort. Be honest and straight to the point.
 3. If Specs are provided as PDF or Design Images, do not guess — use `hapo:ai-multimodal` to verify.

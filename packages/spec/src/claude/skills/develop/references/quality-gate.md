@@ -10,6 +10,8 @@ Green tests are NOT enough. The gate requires four proofs:
 
 `--flash` is the explicit fast path. It bypasses this full gate and uses the Flash Gate defined below.
 
+Executable policy source: `src/claude/scripts/workflow-policy.cjs` (installed as `.claude/scripts/workflow-policy.cjs`). Use its tier delegation, verdict consumer, flash conflict, and promotion semantics; do not duplicate policy in prose or tests.
+
 ## Tier input (from develop Delegation policy)
 
 Quality-gate input MUST include `execution_tier` and `ship_point`:

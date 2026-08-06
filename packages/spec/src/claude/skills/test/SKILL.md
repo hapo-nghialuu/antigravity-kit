@@ -45,6 +45,8 @@ The verdict MUST compare executed/reachable behavior against `scope_lock`, requi
 Build/typecheck success without scoped runtime proof is not PASS.
 ## Flash promotion contract
 
+Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Its `consumeReviewVerdict` and `promoteFlashTask` functions are sole source for PASS/FAIL/BLOCKED handling and task-scoped promotion.
+
 When `/hapo:test <feature>` finds a task with `status: "in_progress"` and receipt `FLASH_UNVERIFIED`, evaluate that task's exact Evidence and runtime reachability only:
 
 - PASS → replace receipt with concrete proof, clear blocker, then `/hapo:sync ... done`; only then may dependents unblock.

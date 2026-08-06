@@ -46,6 +46,8 @@ Scans the `spec.json` against all physical `task-R*.md` files to detect mismatch
 
 ### Flash implementation state
 
+Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Use `promoteFlashTask` only after exact task Evidence and reachability return PASS; FAIL, BLOCKED, and NO_TESTS remain blocked in progress.
+
 `FLASH_UNVERIFIED` is storage for implemented-but-unverified work, not a completion status. Store it as `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`; do not unblock dependencies. `/hapo:test` may promote one task only after its exact Evidence and reachability PASS, replacing the receipt with proof and clearing blocker before `/hapo:sync ... done`. FAIL, BLOCKED, and NO_TESTS remain `in_progress`.
 
 ## References

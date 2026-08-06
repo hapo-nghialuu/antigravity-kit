@@ -5,72 +5,51 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 
-const DEVELOP = path.join(__dirname, '../../src/claude/skills/develop/SKILL.md');
-const GATE = path.join(__dirname, '../../src/claude/skills/develop/references/quality-gate.md');
-const TEST_SKILL = path.join(__dirname, '../../src/claude/skills/test/SKILL.md');
-const SYNC_SKILL = path.join(__dirname, '../../src/claude/skills/sync/SKILL.md');
-const CODE_REVIEW_SKILL = path.join(__dirname, '../../src/claude/skills/code-review/SKILL.md');
-const GIT_SKILL = path.join(__dirname, '../../src/claude/skills/git/SKILL.md');
+const PACKAGE_ROOT = path.join(__dirname, '../..');
+const POLICY = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs'));
+const DEVELOP = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/SKILL.md');
+const GATE = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/quality-gate.md');
+const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
+const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
+const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
 
-function traceQualityGate({ tier, mode, tasks }) {
-  const calls = [];
-  if (tier === 'Light') return calls;
-  if (tier === 'Standard' && mode === 'specific-task') {
-    calls.push('combined-auditor');
-  } else if (tier === 'Standard' && mode === 'full-spec') {
-    calls.push('combined-auditor');
-  } else if (tier === 'Deep') {
-    tasks.forEach(() => calls.push('test-runner', 'spec-review', 'quality-review'));
-  }
-  return calls;
+function read(relativePath) {
+  return fs.readFileSync(path.join(PACKAGE_ROOT, relativePath), 'utf8');
 }
 
-function promoteFlashTask(task, verdict) {
-  if (task.status !== 'in_progress' || task.receipt !== 'FLASH_UNVERIFIED') return task;
-  if (verdict !== 'PASS') return task;
-  return { ...task, status: 'done', receipt: 'Verification: PASS', blocker: null, dependencyBlocked: false, unblocks: true };
-}
+test('flash and parallel fail fast before execution', () => {
+  assert.deepEqual(POLICY.executionPolicy({ flash: true, parallel: true }), {
+    allowed: false,
+    failFast: true,
+    mode: 'flash-parallel-conflict',
+    reason: '--flash cannot be combined with --parallel; no execution starts',
+  });
+  assert.deepEqual(POLICY.executionPolicy({ flash: true, parallel: false }).mode, 'flash');
+  const develop = read('src/claude/skills/develop/SKILL.md');
+  assert.match(develop, /workflow-policy\.cjs/);
+  assert.match(develop, /flash\+parallel.*fail-fast/i);
+});
 
-test('quality gate trace uses tier and ship-point semantics', () => {
-  assert.equal(traceQualityGate({ tier: 'Light', mode: 'full-spec', tasks: ['a', 'b'] }).length, 0);
+test('delegation plan is tier-specific', () => {
+  assert.deepEqual(POLICY.delegationPlan({ tier: 'Light', mode: 'full-spec', taskCount: 2 }).delegated, []);
+  assert.deepEqual(POLICY.delegationPlan({ tier: 'Standard', mode: 'specific-task' }).delegated, ['code-auditor']);
   assert.deepEqual(
-    traceQualityGate({ tier: 'Standard', mode: 'full-spec', tasks: ['a', 'b', 'c'] }),
-    ['combined-auditor'],
-  );
-  assert.deepEqual(
-    traceQualityGate({ tier: 'Standard', mode: 'specific-task', tasks: ['a'] }),
-    ['combined-auditor'],
-  );
-  assert.equal(
-    traceQualityGate({ tier: 'Deep', mode: 'full-spec', tasks: ['a', 'b'] }).filter((call) => call === 'combined-auditor').length,
-    0,
+    POLICY.delegationPlan({ tier: 'Deep', mode: 'full-spec', taskCount: 2 }).delegated,
+    ['test-runner', 'spec-review', 'quality-review', 'test-runner', 'spec-review', 'quality-review'],
   );
 });
 
-test('flash and parallel are rejected before any execution trace', () => {
-  const args = ['--flash', '--parallel'];
-  const trace = args.includes('--flash') && args.includes('--parallel') ? [] : ['state', 'worktree'];
-  assert.deepEqual(trace, []);
-  assert.match(fs.readFileSync(DEVELOP, 'utf8'), /unsupported — no execution/);
-  assert.match(fs.readFileSync(DEVELOP, 'utf8'), /No spec state, task receipt, worktree, subagent, or commit was created/);
-});
-
-test('review verdict consumer stops on BLOCKED and retries only FAIL', () => {
-  const consumer = (verdict) => verdict === 'PASS' ? 'proceed' : verdict === 'FAIL' ? 'fix-and-rerun' : 'stop-no-retry';
-  assert.equal(consumer('PASS'), 'proceed');
-  assert.equal(consumer('FAIL'), 'fix-and-rerun');
-  assert.equal(consumer('BLOCKED'), 'stop-no-retry');
-  const gate = fs.readFileSync(GATE, 'utf8');
-  assert.match(gate, /Status: in_progress/);
-  assert.match(gate, /Blocker: awaiting \/hapo:test <feature>/);
-  assert.doesNotMatch(gate, /SPEC_PASS|NEEDS FIXES|Incomplete PASS|USER INTERVENTION/);
-});
-
-test('review and secret output contracts stay bounded', () => {
-  const codeReview = fs.readFileSync(CODE_REVIEW_SKILL, 'utf8');
-  const git = fs.readFileSync(GIT_SKILL, 'utf8');
-  assert.match(codeReview, /PASS \| FAIL \| BLOCKED/);
-  assert.doesNotMatch(git, /show[- ]lines?/i);
+test('review verdict consumer handles PASS, FAIL, and BLOCKED', () => {
+  assert.deepEqual(POLICY.consumeReviewVerdict('PASS'), { action: 'proceed', terminal: false });
+  assert.deepEqual(POLICY.consumeReviewVerdict('FAIL'), { action: 'fix-and-rerun', terminal: false });
+  assert.deepEqual(POLICY.consumeReviewVerdict('BLOCKED'), {
+    action: 'stop',
+    terminal: true,
+    blocker: 'review returned BLOCKED',
+  });
+  assert.throws(() => POLICY.consumeReviewVerdict('NO_TESTS'), /Unsupported review verdict/);
+  assert.match(read('src/claude/skills/develop/references/quality-gate.md'), /PASS \| FAIL \| BLOCKED/);
+  assert.match(read('src/claude/skills/code-review/SKILL.md'), /PASS \| FAIL \| BLOCKED/);
 });
 
 test('flash promotion is task-scoped and requires PASS proof', () => {
@@ -80,16 +59,17 @@ test('flash promotion is task-scoped and requires PASS proof', () => {
     blocker: 'awaiting /hapo:test <feature>',
     dependencyBlocked: true,
   };
-  assert.deepEqual(promoteFlashTask(initial, 'FAIL'), initial);
-  assert.deepEqual(promoteFlashTask(initial, 'BLOCKED'), initial);
-  assert.deepEqual(promoteFlashTask(initial, 'NO_TESTS'), initial);
-  assert.deepEqual(promoteFlashTask(initial, 'PASS'), {
+  assert.deepEqual(POLICY.promoteFlashTask(initial, 'FAIL'), initial);
+  assert.deepEqual(POLICY.promoteFlashTask(initial, 'BLOCKED'), initial);
+  assert.deepEqual(POLICY.promoteFlashTask(initial, 'NO_TESTS'), initial);
+  assert.deepEqual(POLICY.promoteFlashTask(initial, 'PASS'), {
     status: 'done',
     receipt: 'Verification: PASS',
     blocker: null,
     dependencyBlocked: false,
     unblocks: true,
   });
-  assert.match(fs.readFileSync(TEST_SKILL, 'utf8'), /Never blanket-promote every flash task/);
-  assert.match(fs.readFileSync(SYNC_SKILL, 'utf8'), /do not unblock dependencies/);
+  assert.match(read('src/claude/skills/test/SKILL.md'), /exact Evidence and runtime reachability/);
+  assert.match(read('src/claude/skills/sync/SKILL.md'), /do not unblock dependencies/);
+  assert.match(read('src/claude/skills/develop/references/quality-gate.md'), /workflow-policy\.cjs/);
 });

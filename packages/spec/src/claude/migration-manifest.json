@@ -60,7 +60,8 @@
       "validate-docs-reconstruct.cjs",
       "generate-skill-catalog.cjs",
       "validate-spec-output.cjs",
-      "scan-staged-secrets.cjs"
+      "scan-staged-secrets.cjs",
+      "workflow-policy.cjs"
     ]
   },
   "agentReferences": {
