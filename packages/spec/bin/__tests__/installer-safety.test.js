@@ -17,6 +17,7 @@ const {
   resolvePackageCommand
 } = require('../lib/skill-deps');
 const { copyClaudeMdFile, copyClaudeAgentsMdFile, removeObsoleteAgents } = require('../phases/claude-runtime');
+const { ensureGitignore } = require('../phases/root-config');
 const { configureAddressing, patchRuntimeLocale } = require('../phases/post-install');
 const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
 const { upsertManagedCodexBlock, normalizeCodexBody } = require('../lib/codex-install');
@@ -81,6 +82,84 @@ function inTempProject(run) {
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
+
+test('legacy managed root gitignore migrates A13 plan patterns and preserves user content', () => {
+  inTempProject((root) => {
+    fs.writeFileSync('.gitignore', [
+      '# User preface',
+      'keep-before.txt',
+      '',
+      '# CafeKit / Ecosystem',
+      'specs/_shared/',
+      'plans/',
+      '!plans/templates/*',
+      '.cafekit-backup/',
+      '.cafekit.lock',
+      '.claude/',
+      '.opencode/',
+      '.codex/',
+      '.agents/',
+      '',
+      '# User-owned section',
+      'custom-ignore/',
+      'keep-after.txt',
+      ''
+    ].join('\n'), 'utf8');
+
+    const context = {
+      dryRun: false,
+      ui: { detail() {} },
+      results: { copied: 0, updated: 0, skipped: 0 }
+    };
+    ensureGitignore(context);
+
+    const migrated = fs.readFileSync('.gitignore', 'utf8');
+    const lines = migrated.split('\n');
+    const headerIndex = lines.indexOf('# CafeKit / Ecosystem');
+    const userSectionIndex = lines.indexOf('# User-owned section');
+    assert.deepEqual(lines.slice(headerIndex + 1, userSectionIndex - 1), [
+      'specs/_shared/',
+      'plans/*',
+      '!plans/*.md',
+      '!plans/templates/',
+      '!plans/templates/**',
+      '.cafekit-backup/',
+      '.cafekit.lock',
+      '.claude/',
+      '.opencode/',
+      '.codex/',
+      '.agents/'
+    ]);
+    assert.match(migrated, /# User preface\nkeep-before\.txt/);
+    assert.match(migrated, /# User-owned section\ncustom-ignore\/\nkeep-after\.txt/);
+    assert.doesNotMatch(migrated, /^plans\/$/m);
+    assert.doesNotMatch(migrated, /^!plans\/templates\/\*$/m);
+
+    const firstPass = Buffer.from(migrated);
+    assert.equal(context.results.updated, 1);
+    ensureGitignore(context);
+    assert.deepEqual(fs.readFileSync('.gitignore'), firstPass);
+    assert.equal(context.results.updated, 1);
+    assert.equal(context.results.skipped, 1);
+
+    fs.mkdirSync(path.join(root, 'plans/reports'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'plans/example.md'), 'top-level markdown\n');
+    fs.writeFileSync(path.join(root, 'plans/reports/example.md'), 'nested markdown\n');
+    fs.writeFileSync(path.join(root, 'plans/example.html'), 'html artifact\n');
+    const init = spawnSync('git', ['init', '-q'], { cwd: root, encoding: 'utf8' });
+    assert.equal(init.status, 0, init.stderr);
+    const status = spawnSync(
+      'git',
+      ['status', '--short', '--ignored', '--untracked-files=all'],
+      { cwd: root, encoding: 'utf8' }
+    );
+    assert.equal(status.status, 0, status.stderr);
+    assert.match(status.stdout, /^\?\? plans\/example\.md$/m);
+    assert.match(status.stdout, /^!! plans\/reports\/example\.md$/m);
+    assert.match(status.stdout, /^!! plans\/example\.html$/m);
+    assert.doesNotMatch(status.stdout, /^!! plans\/example\.md$/m);
+  });
+});
 
 test('malformed managed marker topology fails transactionally and preserves exact bytes', () => {
   const markers = {

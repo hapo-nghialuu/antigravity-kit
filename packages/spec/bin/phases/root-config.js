@@ -24,6 +24,56 @@ function hasPattern(lines, pattern) {
   return lines.includes(pattern) || lines.includes(bare) || lines.includes(withSlash);
 }
 
+const PLAN_PATTERNS = new Set([
+  'plans',
+  'plans/',
+  'plans/*',
+  'plans/**',
+  'plans/**/*',
+  '!plans/*.md',
+  '!plans/templates',
+  '!plans/templates/',
+  '!plans/templates/*',
+  '!plans/templates/**',
+  '!plans/templates/**/*'
+]);
+
+function isManagedPattern(line, patterns) {
+  return patterns.has(line.trim());
+}
+
+function migrateManagedPlanPatterns(lines, header, patterns) {
+  const headerIndex = lines.findIndex((line) => line.trim() === header);
+  if (headerIndex < 0) return false;
+
+  const managedPatterns = new Set([...patterns, ...PLAN_PATTERNS]);
+  const blockStart = headerIndex + 1;
+  let blockEnd = blockStart;
+  while (blockEnd < lines.length && isManagedPattern(lines[blockEnd], managedPatterns)) {
+    blockEnd++;
+  }
+
+  const block = lines.slice(blockStart, blockEnd);
+  const existingPlanPatterns = block
+    .filter((line) => PLAN_PATTERNS.has(line.trim()))
+    .map((line) => line.trim());
+  const canonicalPlanPatterns = patterns.slice(1, 5);
+  if (
+    existingPlanPatterns.length === canonicalPlanPatterns.length &&
+    existingPlanPatterns.every((pattern, index) => pattern === canonicalPlanPatterns[index])
+  ) {
+    return false;
+  }
+
+  const firstPlanIndex = block.findIndex((line) => PLAN_PATTERNS.has(line.trim()));
+  if (firstPlanIndex < 0) return false;
+
+  const withoutPlans = block.filter((line) => !PLAN_PATTERNS.has(line.trim()));
+  withoutPlans.splice(firstPlanIndex, 0, ...canonicalPlanPatterns);
+  lines.splice(blockStart, block.length, ...withoutPlans);
+  return true;
+}
+
 function ensureGitignore(ctx) {
   const gitignorePath = path.join(process.cwd(), '.gitignore');
   const header = '# CafeKit / Ecosystem';
@@ -52,16 +102,21 @@ function ensureGitignore(ctx) {
   }
 
   const content = fs.readFileSync(gitignorePath, 'utf8');
-  const lines = content.split('\n').map((l) => l.trim());
-  const missing = patterns.filter((p) => !hasPattern(lines, p));
+  const lines = content.split('\n');
+  const migrated = migrateManagedPlanPatterns(lines, header, patterns);
+  const normalizedLines = lines.map((line) => line.trim());
+  const missing = patterns.filter((p) => !hasPattern(normalizedLines, p));
 
-  if (missing.length > 0) {
-    let newContent = content;
-    if (!newContent.endsWith('\n')) newContent += '\n';
-    if (!content.includes(header)) newContent += `\n${header}\n`;
-    newContent += missing.join('\n') + '\n';
+  if (migrated || missing.length > 0) {
+    let newContent = lines.join('\n');
+    if (missing.length > 0) {
+      if (!newContent.endsWith('\n')) newContent += '\n';
+      if (!content.includes(header)) newContent += `\n${header}\n`;
+      newContent += missing.join('\n') + '\n';
+    }
     if (!ctx.dryRun) fs.writeFileSync(gitignorePath, newContent, 'utf8');
-    ctx.ui.detail(`  ↻ ${prefix}.gitignore updated: added ${missing.join(', ')}`);
+    const details = migrated ? 'normalized managed plans patterns' : `added ${missing.join(', ')}`;
+    ctx.ui.detail(`  ↻ ${prefix}.gitignore updated: ${details}`);
     ctx.results.updated++;
   } else {
     ctx.ui.detail(`  → ${prefix}.gitignore already up to date`);
