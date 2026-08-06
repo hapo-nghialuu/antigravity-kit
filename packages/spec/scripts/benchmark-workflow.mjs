@@ -43,11 +43,11 @@ function validateCorpus(corpus) {
     concrete(task.task_id, `${p}.task_id`);
     if (ids.has(task.task_id)) fail(`duplicate task_id: ${task.task_id}`); ids.add(task.task_id);
     if (!LANES.includes(task.lane)) fail(`${p}.lane: invalid lane`);
-    const hasPrompt = typeof task.prompt === 'string' && task.prompt.trim();
-    const hasPromptHash = typeof task.prompt_sha256 === 'string' && task.prompt_sha256.trim();
-    if (Boolean(hasPrompt) === Boolean(hasPromptHash)) fail(`${p}: exactly one of prompt or prompt_sha256 required`);
+    const hasPrompt = Object.hasOwn(task, 'prompt');
+    const hasPromptHash = Object.hasOwn(task, 'prompt_sha256');
+    if (hasPrompt === hasPromptHash) fail(`${p}: exactly one of prompt or prompt_sha256 required`);
     if (hasPrompt) concrete(task.prompt, `${p}.prompt`);
-    if (hasPromptHash) hash(task.prompt_sha256, `${p}.prompt_sha256`);
+    else hash(task.prompt_sha256, `${p}.prompt_sha256`);
     concrete(task.repo_sample, `${p}.repo_sample`);
     object(task.acceptance, `${p}.acceptance`); object(task.risk, `${p}.risk`);
     if (!Object.keys(task.acceptance).length || !Object.keys(task.risk).length) fail(`${p}: acceptance/risk metadata cannot be empty`);
@@ -168,7 +168,7 @@ function summarize(receipts, configs, corpus, suppliedCoverage) {
     const values = { ...receipt, estimated_cost_usd: (receipt.input_tokens * (config.input_usd_per_1k ?? 0) + receipt.output_tokens * (config.output_usd_per_1k ?? 0)) / 1000 };
     for (const key of [...RECEIPT_METRICS, 'estimated_cost_usd']) (group.metrics[key] ??= []).push(values[key]);
     for (const key of QUALITY) (group.quality_rates[key] ??= []).push(receipt[key] ? 1 : 0);
-    for (const [key, value] of Object.entries({ user_correction_rate: receipt.user_corrections > 0, useful_reviewer_finding_rate: receipt.useful_reviewer_findings > 0, false_positive_reviewer_finding_rate: receipt.false_positive_reviewer_findings > 0 })) (group.quality_rates[key] ??= []).push(value ? 1 : 0);
+    for (const [key, value] of Object.entries({ user_correction_rate: receipt.user_corrections, useful_reviewer_finding_rate: receipt.useful_reviewer_findings, false_positive_reviewer_finding_rate: receipt.false_positive_reviewer_findings })) (group.quality_rates[key] ??= []).push(value);
   }
   for (const arm of Object.keys(groups)) for (const lane of Object.keys(groups[arm])) {
     const group = groups[arm][lane]; group.task_ids = [...group.task_ids].sort();
@@ -185,7 +185,9 @@ function summarize(receipts, configs, corpus, suppliedCoverage) {
     const treatment = coverage.arms.treatment?.[lane] ?? emptyMatrix;
     const complete = baseline.complete && treatment.complete;
     const base = groups.baseline?.[lane]; const current = groups.treatment?.[lane];
-    const quality = complete && current.quality_rates.correctness >= base.quality_rates.correctness && current.quality_rates.regression <= base.quality_rates.regression && current.quality_rates.unsupported_completion_claim <= base.quality_rates.unsupported_completion_claim && current.quality_rates.user_correction_rate <= base.quality_rates.user_correction_rate && current.quality_rates.useful_reviewer_finding_rate >= base.quality_rates.useful_reviewer_finding_rate && current.quality_rates.false_positive_reviewer_finding_rate <= base.quality_rates.false_positive_reviewer_finding_rate;
+    const relativeQuality = complete && current.quality_rates.correctness >= base.quality_rates.correctness && current.quality_rates.regression <= base.quality_rates.regression && current.quality_rates.unsupported_completion_claim <= base.quality_rates.unsupported_completion_claim && current.quality_rates.user_correction_rate <= base.quality_rates.user_correction_rate && current.quality_rates.useful_reviewer_finding_rate >= base.quality_rates.useful_reviewer_finding_rate && current.quality_rates.false_positive_reviewer_finding_rate <= base.quality_rates.false_positive_reviewer_finding_rate;
+    const absoluteQuality = !['Direct', 'Standard'].includes(lane) || (complete && current.quality_rates.correctness === 1 && current.quality_rates.regression === 0 && current.quality_rates.unsupported_completion_claim === 0);
+    const quality = complete && relativeQuality && absoluteQuality;
     const efficiency = quality && ['Direct', 'Standard'].includes(lane) && current.metrics.wall_ms.median < base.metrics.wall_ms.median && current.metrics.estimated_cost_usd.median < base.metrics.estimated_cost_usd.median;
     const pass = complete && (lane === 'Critical' ? quality : efficiency);
     gates[lane] = { comparable_tasks: complete, baseline_matrix: baseline, treatment_matrix: treatment, quality_pass: Boolean(quality), efficiency_pass: Boolean(efficiency), pass };

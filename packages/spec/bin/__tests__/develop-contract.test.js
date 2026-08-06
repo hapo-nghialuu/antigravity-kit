@@ -394,6 +394,15 @@ test('B1 validator fails closed for templates, prompts, parity, and artifacts', 
     assert.equal(placeholder.status, 2);
     assert.match(placeholder.stderr, /tasks\[0\]\.prompt.*missing or placeholder/);
 
+    const emptyPromptWithHashCorpus = JSON.parse(read(fixture.corpus));
+    emptyPromptWithHashCorpus.tasks[0].prompt = '';
+    emptyPromptWithHashCorpus.tasks[0].prompt_sha256 = `sha256:${'1'.repeat(64)}`;
+    const emptyPromptWithHashPath = path.join(root, 'empty-prompt-with-hash-corpus.json');
+    fs.writeFileSync(emptyPromptWithHashPath, JSON.stringify(emptyPromptWithHashCorpus));
+    const emptyPromptWithHash = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', emptyPromptWithHashPath, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(emptyPromptWithHash.status, 2);
+    assert.match(emptyPromptWithHash.stderr, /tasks\[0\]: exactly one of prompt or prompt_sha256 required/);
+
     const treatment = JSON.parse(read(fixture.configs[1]));
     treatment.experiment_id = 'different-experiment';
     const parityPath = path.join(root, 'parity-treatment.json');
@@ -454,6 +463,21 @@ test('B1 summary groups fixture-only receipts by arm/lane with deterministic qua
     assert.equal(summary.groups.baseline.Direct.metrics.wall_ms.p75, 175);
     assert.equal(summary.groups.treatment.Direct.quality_rates.correctness, 1);
     assert.equal(summary.rollout_recommendation.gates.Critical.pass, true);
+
+    const countAggregation = JSON.parse(read(fixture.receipts));
+    const countedReceipt = countAggregation.receipts.find((item) => item.arm === 'baseline' && item.lane === 'Direct' && item.repeat === 1);
+    countedReceipt.user_corrections = 2;
+    countedReceipt.useful_reviewer_findings = 3;
+    countedReceipt.false_positive_reviewer_findings = 4;
+    const countAggregationPath = path.join(root, 'count-aggregation.json');
+    fs.writeFileSync(countAggregationPath, JSON.stringify(countAggregation));
+    const countAggregationResult = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', countAggregationPath], { encoding: 'utf8' });
+    assert.equal(countAggregationResult.status, 0, `${countAggregationResult.stdout}\n${countAggregationResult.stderr}`);
+    const countAggregationSummary = JSON.parse(countAggregationResult.stdout);
+    assert.equal(countAggregationSummary.groups.baseline.Direct.quality_rates.user_correction_rate, 1);
+    assert.equal(countAggregationSummary.groups.baseline.Direct.quality_rates.useful_reviewer_finding_rate, 2);
+    assert.equal(countAggregationSummary.groups.baseline.Direct.quality_rates.false_positive_reviewer_finding_rate, 2);
+
     const degraded = JSON.parse(read(fixture.receipts));
     for (const receipt of degraded.receipts.filter((item) => item.arm === 'treatment')) {
       receipt.useful_reviewer_findings = 0;
@@ -467,6 +491,17 @@ test('B1 summary groups fixture-only receipts by arm/lane with deterministic qua
     assert.equal(degradedSummary.status, 'not-ready');
     assert.equal(degradedSummary.rollout_recommendation.gates.Critical.quality_pass, false);
     assert.equal(degradedSummary.rollout_recommendation.gates.Critical.pass, false);
+
+    const lowRiskQualityFailure = JSON.parse(read(fixture.receipts));
+    for (const receipt of lowRiskQualityFailure.receipts.filter((item) => item.lane === 'Direct')) receipt.correctness = false;
+    const lowRiskQualityFailurePath = path.join(root, 'low-risk-quality-failure.json');
+    fs.writeFileSync(lowRiskQualityFailurePath, JSON.stringify(lowRiskQualityFailure));
+    const lowRiskQualityFailureResult = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', lowRiskQualityFailurePath], { encoding: 'utf8' });
+    assert.equal(lowRiskQualityFailureResult.status, 0, `${lowRiskQualityFailureResult.stdout}\n${lowRiskQualityFailureResult.stderr}`);
+    const lowRiskQualityFailureSummary = JSON.parse(lowRiskQualityFailureResult.stdout);
+    assert.equal(lowRiskQualityFailureSummary.rollout_recommendation.gates.Direct.quality_pass, false);
+    assert.equal(lowRiskQualityFailureSummary.rollout_recommendation.gates.Direct.pass, false);
+    assert.equal(lowRiskQualityFailureSummary.rollout_recommendation.gates.Critical.pass, true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
