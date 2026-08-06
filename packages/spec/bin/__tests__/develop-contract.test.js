@@ -256,3 +256,189 @@ test('provenance ledger defines reuse contract and source anchors', () => {
   assert.match(provenance, /AgentKit|cafekit-ref/);
   assert.match(provenance, /before implementation/i);
 });
+
+const BENCHMARK_SCRIPT = path.join(PACKAGE_ROOT, 'scripts/benchmark-workflow.mjs');
+const BENCHMARK_CORPUS_SCHEMA = path.join(PACKAGE_ROOT, 'benchmarks/corpus.schema.json');
+const BENCHMARK_CONFIG_EXAMPLE = path.join(PACKAGE_ROOT, 'benchmarks/benchmark-config.example.json');
+const BENCHMARK_RUBRIC = path.join(PACKAGE_ROOT, 'benchmarks/rubric.md');
+const BENCHMARK_DOCS = path.join(PACKAGE_ROOT, '../../docs/benchmark-workflow.md');
+
+function canonicalBenchmark(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalBenchmark).join(',')}]`;
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalBenchmark(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
+function benchmarkHash(value) {
+  const crypto = require('node:crypto');
+  return `sha256:${crypto.createHash('sha256').update(canonicalBenchmark(value)).digest('hex')}`;
+}
+
+function makeBenchmarkFixture(root) {
+  const corpus = {
+    schema_version: 'b1.v1', status: 'frozen', corpus_id: 'fixture-only-corpus',
+    tasks: [
+      { task_id: 'fixture-direct', lane: 'Direct', prompt: 'fixture-only reversible task', repo_sample: 'fixture-repo', acceptance: { criteria: ['fixture criterion'] }, risk: { level: 'low' } },
+      { task_id: 'fixture-critical', lane: 'Critical', prompt: 'fixture-only negative control', repo_sample: 'fixture-repo', acceptance: { criteria: ['fixture contract'] }, risk: { level: 'high', reasons: ['fixture negative control'] } },
+    ],
+  };
+  const corpusSha = benchmarkHash(corpus);
+  const common = {
+    schema_version: 'b1.v1', status: 'frozen', experiment_id: 'fixture-only-experiment',
+    model: { name: 'fixture-model', version: 'fixture-version' }, reasoning_effort: 'fixture',
+    repo: { identifier: 'fixture-repo', commit: 'abc1234567890', clean_initial_tree_sha: benchmarkHash('fixture-clean-tree') },
+    permissions_fingerprint: benchmarkHash('fixture-permissions'), tool_availability_fingerprint: benchmarkHash('fixture-tools'),
+    corpus_sha256: corpusSha, repeat_policy: { repeats_per_task: 2, context_isolated: true },
+    input_usd_per_1k: 1, output_usd_per_1k: 2,
+  };
+  const configs = ['baseline', 'treatment'].map((arm) => {
+    const config = { ...common, arm };
+    config.config_sha256 = benchmarkHash(config);
+    return config;
+  });
+  const receipts = [];
+  for (const config of configs) for (const task of corpus.tasks) for (const repeat of [1, 2]) {
+    const treatment = config.arm === 'treatment';
+    const critical = task.lane === 'Critical';
+    const wall = critical ? 300 : (treatment ? 50 : 100) * repeat;
+    const input = (treatment ? 100 : 200) * repeat;
+    const output = (treatment ? 50 : 100) * repeat;
+    receipts.push({
+      task_id: task.task_id, lane: task.lane, arm: config.arm, repeat,
+      model: config.model, reasoning_effort: config.reasoning_effort,
+      repo_commit: config.repo.commit, clean_initial_tree_sha: config.repo.clean_initial_tree_sha,
+      permissions_fingerprint: config.permissions_fingerprint, tool_availability_fingerprint: config.tool_availability_fingerprint,
+      corpus_sha256: config.corpus_sha256, config_sha256: config.config_sha256,
+      wall_ms: wall, input_tokens: input, output_tokens: output, context_loaded_tokens: 500,
+      tool_calls: 2, subagent_calls: critical ? 1 : 0, correctness: true, regression: false,
+      unsupported_completion_claim: false, user_corrections: 0, useful_reviewer_findings: 1,
+      false_positive_reviewer_findings: 0,
+      evidence: { artifact_ref: 'fixture-only://synthetic-receipt', command: 'fixture-only command' },
+    });
+  }
+  const paths = { corpus: path.join(root, 'corpus.json'), receipts: path.join(root, 'receipts.json') };
+  fs.writeFileSync(paths.corpus, JSON.stringify(corpus));
+  fs.writeFileSync(paths.receipts, JSON.stringify({ receipts }));
+  paths.configs = configs.map((config, index) => {
+    const file = path.join(root, `${config.arm}-${index}.json`);
+    fs.writeFileSync(file, JSON.stringify(config));
+    return file;
+  });
+  return paths;
+}
+
+test('B1 benchmark artifacts expose bounded CLI contract', () => {
+  for (const file of [BENCHMARK_SCRIPT, BENCHMARK_CORPUS_SCHEMA, BENCHMARK_CONFIG_EXAMPLE, BENCHMARK_RUBRIC, BENCHMARK_DOCS]) assert.equal(fs.existsSync(file), true, file);
+  assert.match(read(BENCHMARK_DOCS), /live baseline.*treatment.*pending/i);
+  assert.match(read(BENCHMARK_DOCS), /`npm test`.*workflow correctness/i);
+  assert.match(read(BENCHMARK_CONFIG_EXAMPLE), /TEMPLATE ONLY|example.template/i);
+  assert.match(read(BENCHMARK_RUBRIC), /Direct/);
+  assert.match(read(BENCHMARK_RUBRIC), /Standard/);
+  assert.match(read(BENCHMARK_RUBRIC), /Critical/);
+});
+
+test('B1 validator rejects missing freeze fields and accepts fixture-only corpus', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-validation-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const valid = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', fixture.receipts], { encoding: 'utf8' });
+    assert.equal(valid.status, 0, `${valid.stdout}\n${valid.stderr}`);
+    assert.equal(JSON.parse(valid.stdout).status, 'valid');
+    const invalidConfig = JSON.parse(read(fixture.configs[0]));
+    delete invalidConfig.clean_initial_tree_sha;
+    delete invalidConfig.config_sha256;
+    const invalidPath = path.join(root, 'missing-freeze.json');
+    fs.writeFileSync(invalidPath, JSON.stringify(invalidConfig));
+    const invalid = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', invalidPath], { encoding: 'utf8' });
+    assert.equal(invalid.status, 2);
+    assert.match(invalid.stderr, /missing or placeholder freeze field/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 summary groups fixture-only receipts by arm/lane with deterministic quantiles', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-summary-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const result = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', fixture.receipts], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.status, 'ready');
+    assert.equal(summary.groups.baseline.Direct.metrics.wall_ms.median, 150);
+    assert.equal(summary.groups.baseline.Direct.metrics.wall_ms.p25, 125);
+    assert.equal(summary.groups.baseline.Direct.metrics.wall_ms.p75, 175);
+    assert.equal(summary.groups.treatment.Direct.quality_rates.correctness, 1);
+    assert.equal(summary.rollout_recommendation.gates.Critical.pass, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 rollout rejects incomplete fixture-only lane/repeat matrices', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-completeness-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const payload = JSON.parse(read(fixture.receipts));
+    const completeReceipts = payload.receipts;
+    const partialPath = path.join(root, 'partial.json');
+    fs.writeFileSync(partialPath, JSON.stringify({ receipts: completeReceipts.filter((receipt) => !(receipt.arm === 'treatment' && receipt.lane === 'Direct' && receipt.repeat === 1)) }));
+    const partial = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', partialPath], { encoding: 'utf8' });
+    assert.equal(partial.status, 0, `${partial.stdout}\n${partial.stderr}`);
+    const partialSummary = JSON.parse(partial.stdout);
+    assert.equal(partialSummary.status, 'not-ready');
+    assert.equal(partialSummary.rollout_recommendation.gates.Direct.treatment_matrix.complete, false);
+
+    const missingLanePath = path.join(root, 'missing-lane.json');
+    fs.writeFileSync(missingLanePath, JSON.stringify({ receipts: completeReceipts.filter((receipt) => !(receipt.arm === 'treatment' && receipt.lane === 'Critical')) }));
+    const missingLane = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', missingLanePath], { encoding: 'utf8' });
+    assert.equal(missingLane.status, 0, `${missingLane.stdout}\n${missingLane.stderr}`);
+    const missingLaneSummary = JSON.parse(missingLane.stdout);
+    assert.equal(missingLaneSummary.status, 'not-ready');
+    assert.equal(missingLaneSummary.rollout_recommendation.gates.Critical.treatment_matrix.complete, false);
+
+    const outOfRange = JSON.parse(JSON.stringify(completeReceipts));
+    outOfRange[0].repeat = 3;
+    const outOfRangePath = path.join(root, 'out-of-range.json');
+    fs.writeFileSync(outOfRangePath, JSON.stringify({ receipts: outOfRange }));
+    const invalidRepeat = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', outOfRangePath], { encoding: 'utf8' });
+    assert.equal(invalidRepeat.status, 2);
+    assert.match(invalidRepeat.stderr, /exceeds repeat_policy/);
+
+    const duplicateArm = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(duplicateArm.status, 2);
+    assert.match(duplicateArm.stderr, /duplicate arm/);
+
+    const invalidCorpus = JSON.parse(read(fixture.corpus));
+    delete invalidCorpus.corpus_id;
+    const invalidCorpusPath = path.join(root, 'missing-corpus-id.json');
+    fs.writeFileSync(invalidCorpusPath, JSON.stringify(invalidCorpus));
+    const missingCorpusId = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', invalidCorpusPath, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(missingCorpusId.status, 2);
+    assert.match(missingCorpusId.stderr, /corpus_id.*missing or placeholder/);
+
+    const invalidCost = JSON.parse(read(fixture.configs[0]));
+    invalidCost.input_usd_per_1k = 'not-a-rate';
+    const invalidCostPath = path.join(root, 'invalid-cost.json');
+    fs.writeFileSync(invalidCostPath, JSON.stringify(invalidCost));
+    const invalidCostResult = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', invalidCostPath], { encoding: 'utf8' });
+    assert.equal(invalidCostResult.status, 2);
+    assert.match(invalidCostResult.stderr, /config\.input_usd_per_1k.*non-negative number/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 summary marks no receipts exploratory instead of claiming a run', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-empty-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const result = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.status, 'exploratory/no-live-runs');
+    assert.equal(summary.live_runs, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
