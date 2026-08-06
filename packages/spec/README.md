@@ -68,8 +68,10 @@ On install, CafeKit updates the **project-root** `.gitignore` with:
 ```text
 # CafeKit / Ecosystem
 specs/_shared/
-plans/
+plans/*
+!plans/*.md
 !plans/templates/
+!plans/templates/**
 .cafekit-backup/
 .cafekit.lock
 .claude/

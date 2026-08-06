@@ -29,8 +29,10 @@ function ensureGitignore(ctx) {
   const header = '# CafeKit / Ecosystem';
   const patterns = [
     'specs/_shared/',
-    'plans/',
+    'plans/*',
+    '!plans/*.md',
     '!plans/templates/',
+    '!plans/templates/**',
     '.cafekit-backup/',
     '.cafekit.lock',
     // Local runtime payload — reinstall with npx; keep out of git

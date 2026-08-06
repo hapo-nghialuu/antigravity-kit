@@ -22,7 +22,7 @@ All notable changes to CafeKit are documented here, following
 - **Reinstall preserves managed Addressing**: when a newer template drops its `## Addressing (Context Overflow Indicator)` section, the exact saved section is carried over from the existing managed block (Claude, Codex, and OpenCode) so the user's address survives for `setupAddressing`.
 - **OpenCode direct plugin copy hardening**: plugin copies skip generated artifacts (`.coverage`, `__pycache__`, `.pyc`/`.pyo`) and byte-normalize direct text plugin files via `normalizeOpenCodeBody`.
 - **Source-path tripwire self-test**: real install fixtures assert no installed payload under `.claude|.codex|.opencode` still references `packages/spec/src/`, covering all three runtimes including combined installs.
-- `npm test` in `packages/spec` passes `240` tests.
+- `npm test` in `packages/spec` passes `241` tests.
 
 ## [0.15.2] - 2026-07-29
 

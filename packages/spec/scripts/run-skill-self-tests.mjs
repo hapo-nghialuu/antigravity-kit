@@ -221,6 +221,10 @@ async function runStaticSemanticTests() {
       label: "installer root gitignore ignores runtime folders",
       file: "bin/phases/root-config.js",
       assert: (content) =>
+        content.includes("'plans/*'") &&
+        content.includes("'!plans/*.md'") &&
+        content.includes("'!plans/templates/'") &&
+        content.includes("'!plans/templates/**'") &&
         content.includes("'.claude/'") &&
         content.includes("'.opencode/'") &&
         content.includes("'.codex/'") &&
@@ -563,6 +567,9 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("verdict and severity-classified findings") &&
         content.includes("no Critical, no High, at most one Medium") &&
+        content.includes("PASS | FAIL | BLOCKED") &&
+        content.includes("BLOCKED` is terminal") &&
+        content.includes("Only `FAIL` may enter remediation retry") &&
         !content.includes("score >= 9.0") &&
         !content.includes("critical_issues[]"),
     },
