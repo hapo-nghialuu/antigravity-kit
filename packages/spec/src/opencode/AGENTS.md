@@ -29,3 +29,7 @@ The underlying CafeKit skills are still named `hapo:*` in their documentation.
 ## OpenCode limits
 
 Claude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent.
+
+## Combined-install boundary
+
+OpenCode's native project instruction surface is root `AGENTS.md`. Combined installs keep this OpenCode block there because CafeKit has not proven a separate project instruction entrypoint for OpenCode. Other runtimes may read the same root file; this shared-root trade-off is intentional and must not be treated as filesystem isolation.

@@ -19,6 +19,7 @@ All notable changes to CafeKit are documented here, following
 
 ### Changed
 - **Shared CORE instruction block (Đợt 1)**: root `AGENTS.md` now stores one shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START -->` / `<!-- CAFEKIT CORE END -->`) installed once per run by `ensureSharedAgentsMdCore`, before the per-platform loop. Claude/Codex/OpenCode runtimes carry only their own runtime-specific wrapper content; language patching stays in the shared CORE while addressing remains per-platform.
+- **Combined-install boundary**: documented the tested shared-root trade-off (neutral CORE plus native Codex/OpenCode blocks in `AGENTS.md`, also imported by Claude) and added regression coverage for marker topology, ownership-preserving reruns, locale/addressing placement, and malformed-marker rollback.
 - **Reinstall preserves managed Addressing**: when a newer template drops its `## Addressing (Context Overflow Indicator)` section, the exact saved section is carried over from the existing managed block (Claude, Codex, and OpenCode) so the user's address survives for `setupAddressing`.
 - **OpenCode direct plugin copy hardening**: plugin copies skip generated artifacts (`.coverage`, `__pycache__`, `.pyc`/`.pyo`) and byte-normalize direct text plugin files via `normalizeOpenCodeBody`.
 - **Source-path tripwire self-test**: real install fixtures assert no installed payload under `.claude|.codex|.opencode` still references `packages/spec/src/`, covering all three runtimes including combined installs.

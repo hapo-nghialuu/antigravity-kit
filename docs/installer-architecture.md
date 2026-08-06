@@ -139,7 +139,10 @@ and logs so partial un-ignores and force-adds stay safer.
 AGENTS.md                    shared CafeKit CORE block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
 ```
 
+Codex and OpenCode use root `AGENTS.md` as their native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block remains runtime-neutral while Codex/OpenCode managed markers preserve ownership and user bytes; markers do not isolate runtime visibility. Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
+
 The installer does not create `.codex/config.toml` or change user-global trust.
+
 Codex loads project agents/hooks after the repository is trusted; users review
 hook definitions with `/hooks`. It uses Codex's native status/usage UI, not the
 Claude statusline.

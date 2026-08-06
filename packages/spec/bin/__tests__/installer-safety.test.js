@@ -31,6 +31,25 @@ const CORE_END = '<!-- CAFEKIT CORE END -->';
 const TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/claude/CLAUDE.md'), 'utf8');
 const SHARED_TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/common/AGENTS.md'), 'utf8');
 const INSTALLER = path.join(__dirname, '../install.js');
+const CODEX_START = '<!-- CAFEKIT CODEX START -->';
+const CODEX_END = '<!-- CAFEKIT CODEX END -->';
+const OPENCODE_START = '<!-- CAFEKIT OPENCODE START -->';
+const OPENCODE_END = '<!-- CAFEKIT OPENCODE END -->';
+
+function managedBody(content, start, end) {
+  const startIndex = content.indexOf(start);
+  const endIndex = content.indexOf(end);
+  assert.ok(startIndex >= 0 && endIndex > startIndex, `missing managed block: ${start}`);
+  return content.slice(startIndex + start.length, endIndex);
+}
+
+function runCombinedInstaller(root, extraArgs = []) {
+  return spawnSync(
+    process.execPath,
+    [INSTALLER, '--platform', 'claude,codex,opencode', '--yes', ...extraArgs],
+    { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
+  );
+}
 
 test('skill dependency package commands use cmd.exe for Windows npm launchers', () => {
   const windows = resolvePackageCommand(
@@ -196,6 +215,93 @@ test('malformed managed marker topology fails transactionally and preserves exac
       });
     }
   }
+});
+
+test('combined install keeps CORE neutral and records native shared-root trade-off', () => {
+  inTempProject((root) => {
+    const result = runCombinedInstaller(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const agents = fs.readFileSync('AGENTS.md', 'utf8');
+    const claude = fs.readFileSync('CLAUDE.md', 'utf8');
+    const core = managedBody(agents, CORE_START, CORE_END);
+    const codex = managedBody(agents, CODEX_START, CODEX_END);
+    const opencode = managedBody(agents, OPENCODE_START, OPENCODE_END);
+    const claudeBlock = managedBody(claude, START, END);
+
+    for (const [content, marker] of [
+      [agents, CORE_START],
+      [claude, START],
+      [agents, CODEX_START],
+      [agents, OPENCODE_START]
+    ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
+
+    assert.doesNotMatch(core, /Claude|Codex|OpenCode|\.claude|\.codex|\.opencode|\/hapo:|\$hapo-/i);
+    assert.doesNotMatch(claudeBlock, /Codex|OpenCode|\.codex|\.opencode|\$hapo-/i);
+    assert.match(codex, /native project instruction surface is root `AGENTS\.md`/);
+    assert.match(opencode, /native project instruction surface is root `AGENTS\.md`/);
+    assert.match(agents, /shared-root trade-off is intentional/);
+
+    const userAgents = '\n## User-owned combined note\nKeep this exact.\n';
+    const userClaude = '\n## User-owned Claude note\nKeep this exact.\n';
+    fs.appendFileSync('AGENTS.md', userAgents);
+    fs.appendFileSync('CLAUDE.md', userClaude);
+    const rerun = runCombinedInstaller(root, ['--force-overwrite']);
+    assert.equal(rerun.status, 0, `${rerun.stdout}\\n${rerun.stderr}`);
+    const afterAgents = fs.readFileSync('AGENTS.md', 'utf8');
+    const afterClaude = fs.readFileSync('CLAUDE.md', 'utf8');
+    assert.match(afterAgents, /User-owned combined note\nKeep this exact\./);
+    assert.match(afterClaude, /User-owned Claude note\nKeep this exact\./);
+    assert.equal((afterAgents.match(new RegExp(CORE_START, 'g')) || []).length, 1);
+    assert.equal((afterAgents.match(new RegExp(CODEX_START, 'g')) || []).length, 1);
+    assert.equal((afterAgents.match(new RegExp(OPENCODE_START, 'g')) || []).length, 1);
+    assert.equal((afterClaude.match(new RegExp(START, 'g')) || []).length, 1);
+    assert.equal(afterAgents.slice(-userAgents.length), userAgents);
+    assert.equal(afterClaude.slice(-userClaude.length), userClaude);
+  });
+});
+
+test('combined locale stays in CORE and addressing stays in each native managed block', () => {
+  inTempProject((root) => {
+    const result = spawnSync(
+      process.execPath,
+      [INSTALLER, '--platform', 'claude,codex,opencode', '--yes', '--lang', 'vi'],
+      { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
+    );
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const agents = fs.readFileSync('AGENTS.md', 'utf8');
+    const claude = fs.readFileSync('CLAUDE.md', 'utf8');
+    const core = managedBody(agents, CORE_START, CORE_END);
+    assert.equal((core.match(/## Language Consistency <!-- cafekit:lang -->/g) || []).length, 1);
+    assert.equal((claude.match(/## Language Consistency <!-- cafekit:lang -->/g) || []).length, 0);
+
+    configureAddressing({
+      platforms: ['claude', 'codex', 'opencode'],
+      ui: { success() {}, warn() {} },
+      t: () => 'updated'
+    }, 'anh');
+
+    const addressedAgents = fs.readFileSync('AGENTS.md', 'utf8');
+    const addressedClaude = fs.readFileSync('CLAUDE.md', 'utf8');
+    assert.equal((addressedAgents.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 2);
+    assert.equal((addressedClaude.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
+    assert.equal((managedBody(addressedAgents, CORE_START, CORE_END).match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 0);
+    assert.match(managedBody(addressedAgents, CODEX_START, CODEX_END), /Codex CLI always addresses the user as "anh"/);
+    assert.match(managedBody(addressedAgents, OPENCODE_START, OPENCODE_END), /OpenCode always addresses the user as "anh"/);
+    assert.match(managedBody(addressedClaude, START, END), /Claude Code always addresses the user as "anh"/);
+  });
+});
+test('combined malformed runtime marker rolls back exact root bytes', () => {
+  inTempProject((root) => {
+    const before = `user bytes\n${CODEX_START}\nunterminated\n`;
+    fs.writeFileSync('AGENTS.md', before, 'utf8');
+    const result = runCombinedInstaller(root, ['--force-overwrite']);
+    assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.equal(fs.readFileSync('AGENTS.md', 'utf8'), before);
+    assert.match(`${result.stdout}\n${result.stderr}`, /malformed .*marker topology/i);
+    assert.match(`${result.stdout}\n${result.stderr}`, /Installation failed|Changes rolled back/);
+  });
 });
 
 test('malformed CLAUDE.md marker topology preserves exact bytes and reports an error', () => {

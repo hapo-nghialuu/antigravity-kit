@@ -14,3 +14,7 @@
 - Custom agents use snake_case names and `fork_turns: "none"` for explicit delegation.
 - Use Codex-native subagent delegation and task-state tools; do not rely on Claude-only tool labels.
 - Do not edit global trust configuration. Hooks are not a complete security boundary; hosted tools and untrusted project hooks can bypass the local hook path.
+
+## Combined-install boundary
+
+Codex's native project instruction surface is root `AGENTS.md`. Combined installs keep this Codex block there because no separate Codex project entrypoint is configured by CafeKit. Other runtimes may read the same root file; this shared-root trade-off is intentional and must not be treated as filesystem isolation.

@@ -84,6 +84,34 @@ function runInstaller(installer, root, platforms, lang) {
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 }
 
+function managedBlock(content, start, end) {
+  const startIndex = content.indexOf(start);
+  const endIndex = content.indexOf(end);
+  assert.ok(startIndex >= 0 && endIndex > startIndex, `missing managed block: ${start}`);
+  return content.slice(startIndex + start.length, endIndex);
+}
+
+function assertCombinedInstructionIsolation(root) {
+  const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+  const claude = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+  const core = managedBlock(agents, '<!-- CAFEKIT CORE START -->', '<!-- CAFEKIT CORE END -->');
+  const claudeBlock = managedBlock(claude, '<!-- CAFEKIT CLAUDE START -->', '<!-- CAFEKIT CLAUDE END -->');
+  const codexBlock = managedBlock(agents, '<!-- CAFEKIT CODEX START -->', '<!-- CAFEKIT CODEX END -->');
+  const opencodeBlock = managedBlock(agents, '<!-- CAFEKIT OPENCODE START -->', '<!-- CAFEKIT OPENCODE END -->');
+
+  for (const [content, marker] of [
+    [agents, '<!-- CAFEKIT CORE START -->'],
+    [agents, '<!-- CAFEKIT CODEX START -->'],
+    [agents, '<!-- CAFEKIT OPENCODE START -->'],
+    [claude, '<!-- CAFEKIT CLAUDE START -->']
+  ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
+
+  assert.doesNotMatch(core, /Claude|Codex|OpenCode|\.claude|\.codex|\.opencode|\/hapo:|\$hapo-/i);
+  assert.doesNotMatch(claudeBlock, /Codex|OpenCode|\.codex|\.opencode|\$hapo-/i);
+  assert.match(codexBlock, /native project instruction surface is root `AGENTS\.md`/);
+  assert.match(opencodeBlock, /native project instruction surface is root `AGENTS\.md`/);
+  assert.match(agents, /shared-root trade-off is intentional/);
+}
 function stableInstallSnapshot(root, platforms) {
   const files = ['AGENTS.md', 'CLAUDE.md', '.gitignore'];
   for (const platform of platforms) files.push(RUNTIMES[platform].root);
@@ -199,13 +227,19 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
           assertInstalledScripts(project, platform);
           assertTransforms(project, platform);
         }
+        if (matrixCase.platforms.length === 3) assertCombinedInstructionIsolation(project);
         if (matrixCase.rerun) {
+          fs.appendFileSync(path.join(project, 'AGENTS.md'), '\n## User matrix note\nKeep this exact.\n');
+          fs.appendFileSync(path.join(project, 'CLAUDE.md'), '\n## User Claude matrix note\nKeep this exact.\n');
           const before = stableInstallSnapshot(project, matrixCase.platforms);
           runInstaller(installer, project, matrixCase.platforms, lang);
           const after = stableInstallSnapshot(project, matrixCase.platforms);
           const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
             .filter((file) => !before[file] || !after[file] || !before[file].equals(after[file]));
           assert.deepEqual(changed, [], `${matrixCase.name} rerun must be byte-idempotent`);
+          assertCombinedInstructionIsolation(project);
+          assert.match(fs.readFileSync(path.join(project, 'AGENTS.md'), 'utf8'), /User matrix note\nKeep this exact\./);
+          assert.match(fs.readFileSync(path.join(project, 'CLAUDE.md'), 'utf8'), /User Claude matrix note\nKeep this exact\./);
         }
       }
     }
