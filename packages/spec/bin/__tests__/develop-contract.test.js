@@ -15,6 +15,8 @@ const GATE = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/quali
 const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
 const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
 const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
+const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/parallel-waves.md');
+const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -219,4 +221,38 @@ test('spec-gate rejects stale FLASH_UNVERIFIED done state', () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('parallel waves require immutable provenance receipts and safe recovery', () => {
+  const waves = read(PARALLEL_WAVES);
+  for (const field of ['base_sha', 'head_sha', 'branch', 'worktree_path', 'commit_range']) {
+    assert.match(waves, new RegExp(`\\b${field}\\b`));
+  }
+  assert.match(waves, /git diff(?: --stat)? [^\\n]*(?:BASE_SHA|base_sha)[^\\n]*(?:HEAD_SHA|head_sha)/i);
+  assert.match(waves, /new commit|new commits|Every fix is a new commit/i);
+  assert.match(waves, /destination tree must be clean/i);
+  assert.match(waves, /compatible with the selected base/i);
+  assert.match(waves, /consent.*commit|commit.*consent/i);
+  assert.match(waves, /retention.*retained|retained.*worktree/i);
+  assert.match(waves, /cleanup_authorization|explicit discard/i);
+  assert.match(waves, /directory overlap|lockfiles|manifests|export barrels|migrations|registries|generated artifacts|shared state writers/i);
+  assert.match(waves, /affected integration|final.*integration/i);
+  for (const category of ['baseline', 'environment', 'spec', 'code']) {
+    assert.match(waves, new RegExp(`\\b${category}\\b`));
+  }
+  assert.match(waves, /Do not blind-retry/i);
+});
+
+test('provenance ledger defines reuse contract and source anchors', () => {
+  assert.equal(fs.existsSync(PROVENANCE), true);
+  const provenance = read(PROVENANCE);
+  assert.match(provenance, /\bidea\b/);
+  assert.match(provenance, /\bclean-room\b/);
+  assert.match(provenance, /copied-text.*never valid|never valid.*copied-text/i);
+  assert.match(provenance, /never copy source text verbatim/i);
+  for (const column of ['Pattern', 'Source anchor', 'Reuse type', 'CafeKit destination', 'Evidence/status']) {
+    assert.match(provenance, new RegExp(`\\b${column.replace('/', '\\/')}\\b`, 'i'));
+  }
+  assert.match(provenance, /AgentKit|cafekit-ref/);
+  assert.match(provenance, /before implementation/i);
 });
