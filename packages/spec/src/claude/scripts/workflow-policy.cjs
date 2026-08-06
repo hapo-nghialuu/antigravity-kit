@@ -2,7 +2,185 @@
 
 const REVIEW_VERDICTS = Object.freeze(['PASS', 'FAIL', 'BLOCKED']);
 const EXECUTION_TIERS = Object.freeze(['Light', 'Standard', 'Deep']);
+const LANES = Object.freeze(['Direct', 'Standard', 'Critical']);
 const DEEP_TASK_SEQUENCE = Object.freeze(['inspector', 'implementer', 'test-runner', 'code-auditor']);
+const CRITICAL_LANE_SEQUENCE = Object.freeze(['inspector', 'implementer', 'test-runner', 'code-auditor']);
+const LANE_DELEGATION = Object.freeze({
+  Direct: Object.freeze([]),
+  Standard: Object.freeze(['code-auditor']),
+  Critical: CRITICAL_LANE_SEQUENCE,
+});
+const LANE_RISK_KEYS = Object.freeze({
+  reversibility: ['reversible', 'reversibility', 'irreversible', 'non-reversible'],
+  destructive: ['destructive', 'deletion', 'delete', 'destroy'],
+  auth: ['auth', 'authentication', 'authorization'],
+  payment: ['payment', 'billing', 'charge'],
+  privacy: ['privacy', 'pii', 'personal data'],
+  data: ['data', 'dataset', 'records'],
+  schema: ['schema'],
+  migration: ['migration', 'migrate', 'database migration'],
+  publicContract: ['publicContract', 'public_contract', 'public contract', 'api contract', 'breaking change', 'backward compatibility'],
+  crossRuntime: ['crossRuntime', 'cross-runtime', 'cross runtime', 'cross_service', 'cross-service', 'runtime coupling', 'worker', 'webhook'],
+  ambiguity: ['ambiguous', 'ambiguity', 'unclear', 'unknown requirements', 'underspecified'],
+  rollback: ['rollback', 'rollback difficulty', 'hard to rollback', 'cannot rollback', 'no rollback'],
+});
+
+function assertLane(lane) {
+  if (!LANES.includes(lane)) {
+    throw new TypeError(`Unsupported workflow lane: ${String(lane)}`);
+  }
+  return lane;
+}
+
+function asTrue(value) {
+  return value === true || value === 1 || value === 'true' || value === 'yes';
+}
+
+function signalValue(source, keys) {
+  return keys.some((key) => asTrue(source[key]));
+}
+
+function textValue(input) {
+  const files = Array.isArray(input.files) ? input.files : [];
+  return [input.title, input.description, input.summary, input.operation, ...files]
+    .filter((value) => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+}
+
+function classifyRiskSignals(input = {}) {
+  const nestedSignals = input.signals && typeof input.signals === 'object' ? input.signals : {};
+  const declaredSignals = [input.riskSignals, input.risks]
+    .flatMap((value) => Array.isArray(value) ? value : [])
+    .filter((value) => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+  const source = {
+    ...input,
+    ...nestedSignals,
+    ...(input.riskSignals && typeof input.riskSignals === 'object' && !Array.isArray(input.riskSignals) ? input.riskSignals : {}),
+  };
+  const text = `${textValue(input)} ${declaredSignals}`;
+  const hasTerm = (terms) => terms.some((term) => {
+    const escaped = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    return new RegExp(`(?:^|[^a-z0-9_])${escaped}(?:$|[^a-z0-9_])`).test(text);
+  });
+  const reversibility = String(source.reversibility || '').toLowerCase();
+  const rollback = String(source.rollback || source.rollbackDifficulty || '').toLowerCase();
+  const signals = {
+    reversibility: source.reversible === false
+      || ['irreversible', 'non-reversible', 'not reversible'].includes(reversibility)
+      || hasTerm(['irreversible', 'non-reversible', 'not reversible']),
+    destructive: signalValue(source, LANE_RISK_KEYS.destructive) || hasTerm(LANE_RISK_KEYS.destructive),
+    auth: signalValue(source, LANE_RISK_KEYS.auth) || hasTerm(LANE_RISK_KEYS.auth),
+    payment: signalValue(source, LANE_RISK_KEYS.payment) || hasTerm(LANE_RISK_KEYS.payment),
+    privacy: signalValue(source, LANE_RISK_KEYS.privacy) || hasTerm(LANE_RISK_KEYS.privacy),
+    data: signalValue(source, LANE_RISK_KEYS.data) || hasTerm(LANE_RISK_KEYS.data) || /\bdata\b/.test(declaredSignals),
+    schema: signalValue(source, LANE_RISK_KEYS.schema) || hasTerm(LANE_RISK_KEYS.schema),
+    migration: signalValue(source, LANE_RISK_KEYS.migration) || hasTerm(LANE_RISK_KEYS.migration),
+    publicContract: signalValue(source, LANE_RISK_KEYS.publicContract) || hasTerm(LANE_RISK_KEYS.publicContract),
+    crossRuntime: signalValue(source, LANE_RISK_KEYS.crossRuntime) || hasTerm(LANE_RISK_KEYS.crossRuntime),
+    ambiguity: signalValue(source, LANE_RISK_KEYS.ambiguity)
+      || ['high', 'severe'].includes(String(source.ambiguity || '').toLowerCase())
+      || hasTerm(LANE_RISK_KEYS.ambiguity),
+    rollback: signalValue(source, LANE_RISK_KEYS.rollback)
+      || ['difficult', 'hard', 'none', 'impossible'].includes(rollback)
+      || hasTerm(LANE_RISK_KEYS.rollback),
+  };
+  return signals;
+}
+
+function explicitReversible(input = {}) {
+  const source = {
+    ...input,
+    ...(input.signals && typeof input.signals === 'object' ? input.signals : {}),
+    ...(input.riskSignals && typeof input.riskSignals === 'object' ? input.riskSignals : {}),
+  };
+  return source.reversible === true
+    || String(source.reversibility || '').toLowerCase() === 'reversible';
+}
+
+function overrideLane(input = {}) {
+  if (typeof input === 'string') return input;
+  return input.override ?? input.laneOverride ?? input.requestedLane ?? input.lane ?? null;
+}
+
+function classifyLane(input = {}) {
+  if (typeof input === 'string') return { lane: assertLane(input), automaticLane: input, overridden: false, warnings: [], risks: [] };
+  if (!input || typeof input !== 'object') throw new TypeError('Lane classification input must be an object');
+
+  const signals = classifyRiskSignals(input);
+  const risks = Object.entries(signals).filter(([, active]) => active).map(([name]) => name);
+  const taskCount = input.taskCount === undefined ? 1 : input.taskCount;
+  if (!Number.isInteger(taskCount) || taskCount < 1) throw new RangeError('taskCount must be a positive integer');
+
+  const automaticLane = risks.length > 0
+    ? 'Critical'
+    : explicitReversible(input) && input.lowRisk === true && input.isolated === true && taskCount <= 2
+      ? 'Direct'
+      : 'Standard';
+  const requested = overrideLane(input);
+  if (requested === null || requested === undefined) {
+    return {
+      lane: automaticLane,
+      automaticLane,
+      overridden: false,
+      warnings: [],
+      risks,
+      signals,
+    };
+  }
+  assertLane(requested);
+  const warnings = [`Explicit lane override selected: ${requested}.`];
+  if (requested !== automaticLane) {
+    warnings.push(`Override changes automatic ${automaticLane} classification to ${requested}.`);
+    if (LANES.indexOf(requested) < LANES.indexOf(automaticLane)) {
+      warnings.push(`Downgrading risk lane may reduce review and evidence coverage: ${risks.join(', ') || 'default risk policy'}.`);
+    }
+  }
+  return {
+    lane: requested,
+    automaticLane,
+    overridden: true,
+    warnings,
+    risks,
+    signals,
+  };
+}
+
+function lanePolicy(input = {}) {
+  const classification = typeof input === 'string'
+    ? classifyLane(input)
+    : input && LANES.includes(input.lane) && Object.hasOwn(input, 'automaticLane')
+      ? input
+      : classifyLane(input);
+  const lane = assertLane(classification.lane);
+  const delegated = [...LANE_DELEGATION[lane]];
+  return {
+    lane,
+    executionTier: lane === 'Critical' ? 'Deep' : lane === 'Direct' ? 'Light' : 'Standard',
+    automaticLane: classification.automaticLane,
+    overridden: classification.overridden,
+    warnings: [...classification.warnings],
+    risks: [...classification.risks],
+    delegated,
+    requiresSpec: lane !== 'Direct',
+    requiresState: lane !== 'Direct',
+    qualityGate: lane === 'Direct' ? 'main-session' : lane === 'Standard' ? 'combined-feature-review' : 'strict-evidence',
+    shipPoint: lane === 'Direct' ? 'task' : 'feature',
+    evidence: lane === 'Critical' ? 'strict' : lane === 'Standard' ? 'bounded' : 'targeted',
+  };
+}
+
+function approvalState(state = {}) {
+  const source = state && state.approvals && typeof state.approvals === 'object' ? state.approvals : state;
+  const result = {
+    generated: source?.generated === true,
+    agent_validated: source?.agent_validated === true,
+    user_approved: source?.user_approved === true,
+  };
+  return { ...result, ready: result.generated && result.agent_validated && result.user_approved };
+}
 
 function assertVerdict(verdict) {
   if (!REVIEW_VERDICTS.includes(verdict)) {
@@ -28,7 +206,19 @@ function executionPolicy({ flash = false, parallel = false } = {}) {
   };
 }
 
-function delegationPlan({ tier, mode = 'full-spec', taskCount = 1 } = {}) {
+function delegationPlan({ tier, lane = null, mode = 'full-spec', taskCount = 1 } = {}) {
+  if (lane !== null && lane !== undefined) {
+    const policy = lanePolicy(lane);
+    return {
+      lane: policy.lane,
+      executionTier: policy.executionTier,
+      tier: tier || null,
+      mode,
+      delegated: policy.delegated,
+      qualityGate: policy.qualityGate,
+      shipPoint: policy.shipPoint,
+    };
+  }
   if (!EXECUTION_TIERS.includes(tier)) {
     throw new TypeError(`Unsupported execution tier: ${String(tier)}`);
   }
@@ -136,6 +326,8 @@ function parseCliArgs(argv) {
     verdict: null,
     task: null,
     action: null,
+    lane: null,
+    override: null,
     proof: 'Verification: PASS',
   };
   const args = [...argv];
@@ -147,6 +339,11 @@ function parseCliArgs(argv) {
     else if (arg === '--consume-verdict') options.action = 'consume-verdict';
     else if (arg === '--promote-flash') options.action = 'promote-flash';
     else if (arg === '--sync-finalize') options.action = 'sync-finalize';
+    else if (arg === '--classify-lane') options.action = 'classify-lane';
+    else if (arg === '--lane-policy') options.action = 'lane-policy';
+    else if (arg === '--approval-state') options.action = 'approval-state';
+    else if (arg === '--lane') options.lane = args[++i];
+    else if (arg === '--override') options.override = args[++i];
     else if (arg === '--verdict') {
       options.verdict = args[++i];
       if (!options.verdict) throw new Error('--verdict requires a value');
@@ -183,6 +380,22 @@ function runCli(argv = process.argv.slice(2)) {
       }, options.json);
     }
 
+    if (options.action === 'classify-lane') {
+      const input = options.task || {};
+      const classification = classifyLane({ ...input, ...(options.lane ? { override: options.lane } : {}), ...(options.override ? { override: options.override } : {}) });
+      return cliResult({ ok: true, classification, policy: lanePolicy(classification), exitCode: 0, message: `Lane: ${classification.lane}` }, options.json);
+    }
+    if (options.action === 'lane-policy') {
+      const input = options.task || options.lane;
+      if (!input) throw new Error('--lane-policy requires --lane or --task-json');
+      const policy = lanePolicy(input);
+      return cliResult({ ok: true, policy, exitCode: 0, message: `Lane: ${policy.lane}` }, options.json);
+    }
+    if (options.action === 'approval-state') {
+      if (!options.task) throw new Error('--approval-state requires --task-json');
+      const state = approvalState(options.task);
+      return cliResult({ ok: true, state, exitCode: 0, message: `Approval ready: ${state.ready}` }, options.json);
+    }
     if (options.action === 'consume-verdict') {
       const result = consumeReviewVerdict(options.verdict);
       return cliResult({ ok: true, ...result, exitCode: 0, message: `Verdict ${options.verdict}: ${result.action}` }, options.json);
@@ -210,8 +423,13 @@ if (require.main === module) process.exitCode = runCli();
 module.exports = {
   REVIEW_VERDICTS,
   EXECUTION_TIERS,
+  LANES,
   DEEP_TASK_SEQUENCE,
+  CRITICAL_LANE_SEQUENCE,
   executionPolicy,
+  classifyLane,
+  lanePolicy,
+  approvalState,
   delegationPlan,
   consumeReviewVerdict,
   isFlashUnverified,

@@ -88,6 +88,20 @@ Forbidden generated artifacts:
 - Concise, prefer bullet lists; no fluff
 - Unresolved questions → list at the end of each document
 
+## Lane selection before spec gate
+
+Classify task risk before starting spec state or approval flow. Use the executable policy, not keyword count alone:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+```
+
+- **Direct** — clear, isolated, reversible, low-risk work. May skip spec files, registry/state, and subagents. Still run targeted verification, diff self-check, and evidence proportional to blast radius.
+- **Standard** — default lane. Create one bounded spec artifact (`requirements.md` + `design.md` in the current layout), keep one canonical receipt, and run exactly one combined `code-auditor` review at feature ship point.
+- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Require strict spec/state/evidence; default delegation is `inspector → implementer → test-runner → code-auditor`.
+
+Explicit `override` is allowed in either direction. Always surface warning, automatic classification, and risk signals; downgrading Critical must state reduced review/evidence coverage. Never infer `user_approved` from `generated` or `agent_validated`.
+
 ## Default Behavior
 
 > **This section is the entry/dispatch layer ONLY.** It decides *which part of the pipeline to run and where to stop*. It does NOT change any pipeline step, the validator, templates, or rules.
@@ -219,7 +233,7 @@ Record in `spec.json.design_context.execution_tier`.
 | **Standard** | default / 3-4 tasks | targeted | light | per Step 8 | all of the above |
 | **Deep** | Complex/Critical / security-migration / 5+ tasks | full | full | Red-Team → Validate | all of the above |
 
-Grounding + validator + scope_lock never skip. Auth/payment/migration/schema/privacy force Deep. Tier never changes Hard Output Contract or DoCT.
+Grounding + validator + scope_lock never skip. Auth/payment/migration/schema/privacy force Deep. Tier remains backward-compatible execution metadata; lane controls ceremony and delegation for B2.
 
 ### Step 4: Init
 - Check duplicate slugs; create `specs/<feature-name>/`

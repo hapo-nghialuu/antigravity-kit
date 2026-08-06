@@ -16,7 +16,7 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 
 **Principles:** YAGNI, KISS, DRY | Continuous execution | Smart self-healing
 
-**Executable policy source:** `src/claude/scripts/workflow-policy.cjs` defines mode conflict fail-fast, Light/Standard/Deep delegation, review verdict handling, and flash promotion. Installed Claude runtime uses `.claude/scripts/workflow-policy.cjs`; contracts below must match it.
+**Executable policy source:** `src/claude/scripts/workflow-policy.cjs` defines Direct/Standard/Critical lane classification, lane delegation, approval-state semantics, mode conflict fail-fast, legacy Light/Standard/Deep delegation, review verdict handling, and flash promotion. Installed Claude runtime uses `.claude/scripts/workflow-policy.cjs`; contracts below must match it.
 
 ## Usage
 
@@ -57,6 +57,22 @@ No spec state, task receipt, worktree, subagent, or commit was created.
 
 Then STOP with no execution. Never silently drop `--flash`, prefer `--parallel`, or start a more expensive workflow.
 
+
+## Lane selection before spec gate
+
+Run lane classification before loading spec files or mutating state:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+```
+
+- **Direct** — clear, isolated, reversible, low-risk work. May skip spec/state/subagents; execute targeted test, diff self-check, and proportional evidence.
+- **Standard** — default. Use one bounded spec artifact (`requirements.md` + `design.md` in current layout), one canonical receipt, and exactly one combined `code-auditor` review at feature ship point.
+- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Use strict durable state and evidence with `inspector → implementer → test-runner → code-auditor`.
+
+Explicit overrides must return automatic lane, selected lane, risk signals, and warning. Downgrading Critical does not silently remove the warning. Keep `generated`, `agent_validated`, and `user_approved` independent; never auto-approve user state.
+
+Direct may bypass the approved-spec hard gate only for low-risk reversible work. Standard and Critical still require their lane-appropriate spec/state gate.
 
 ### 1. Specific-Task Mode
 Triggered by `/hapo:develop <feature> <task-file>`.
@@ -110,10 +126,10 @@ Triggered by adding `--flash` to either specific-task or full-spec mode.
 - Final output MUST recommend `/hapo:test <feature>` before merge, release, or publish.
 
 ### 4. Implementation Notes
-Enabled by default for all develop modes. Disable only with `--no-notes`.
+Implementation notes apply to Standard/Critical modes by default; Direct stays artifact-free unless user explicitly requests a receipt. Disable notes with `--no-notes`.
 
-- Maintain `specs/<feature-name>/implementation-notes.html`.
-- Use `references/implementation-notes-template.html` when the file does not exist.
+- **Standard/Critical**: maintain `specs/<feature-name>/implementation-notes.html`.
+- **Standard/Critical**: use `references/implementation-notes-template.html` when the file does not exist.
 - Keep the file self-contained: inline CSS, no JS, no external fonts, no network assets.
 - Style notes as readable Claude Code-like blocks: compact cards, left accent bars, category badges, monospace file paths, and a task timeline.
 - Record decisions and caveats while implementing, not only at the end.
@@ -124,16 +140,21 @@ Enabled by default for all develop modes. Disable only with `--no-notes`.
 Implement in the main session by default. Do not spawn a subagent because a step
 mentions an agent name — spawn only per this table:
 
-| Tier (from spec `execution_tier`) | Delegation |
-|---|---|
-| Light — clear + isolated + ≤2 tasks | None. Main session scouts, implements, verifies. |
-| Standard — default / 3-4 tasks | Main session scouts + implements; one independent `code-auditor` review at ship point. |
-| Deep — Complex/Critical, auth/payment/migration/schema, 5+ tasks, or `--parallel` | `inspector` scout per task, one `implementer` per worktree (parallel wave), `test-runner` + `code-auditor` gates. |
+| Lane | Delegation | Quality gate |
+|---|---|---|
+| Direct | None | Main-session targeted verification and diff self-check |
+| Standard | Exactly one combined `code-auditor` | Feature-level ship point |
+| Critical | `inspector → implementer → test-runner → code-auditor` | Strict evidence gate |
 
-<HARD-GATE>
-DO NOT write implementation code until an approved spec exists.
-- If the directory `specs/<feature-name>` DOES NOT EXIST or `spec.json` is not ready, automatically trigger `/hapo:specs <feature-name> --auto` first to create the specification end-to-end (non-interactive). Do not improvise.
-</HARD-GATE>
+Legacy `execution_tier` (`Light | Standard | Deep`) remains accepted for compatibility. `Light` keeps zero delegation, `Standard` keeps one `code-auditor`, and `Deep` keeps its per-task `inspector → implementer → test-runner → code-auditor` sequence. When both exist, lane policy controls ceremony/delegation and tier remains metadata.
+
+<LANE-GATE>
+Do not write implementation code until lane classification runs.
+- **Direct** may bypass spec/state/registry only when classifier confirms clear, isolated, reversible, low-risk work; targeted verification and evidence remain mandatory.
+- **Standard** requires one bounded approved spec artifact (`requirements.md` + `design.md` in current layout) and canonical receipt before implementation.
+- **Critical** requires approved lane-appropriate spec/state plus strict evidence before implementation.
+Never treat a Direct override as automatic low risk; preserve its warning and risk signals.
+</LANE-GATE>
 
 <DEFINITION-OF-DONE>
 A task is NOT done because code compiles or a placeholder renders.
@@ -155,10 +176,12 @@ You MUST implement all scoped behavior for the active task, MUST NOT add out-of-
 
 ```mermaid
 flowchart TD
-    A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
-    B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Task-Aware Scout (per Delegation policy)]
-    C --> D[Step 3: Implement (per Delegation policy)]
+    A["/hapo:develop \u003cfeature\u003e"] --> L[Classify lane]
+    L -->|Direct| D[Step 3: Implement (targeted or lane-scoped)]
+    L -->|Standard/Critical| B[Step 1: Load lane spec/state]
+    B -->|Missing or not approved| Z[Stop: Run lane-appropriate /hapo:specs]
+    B -->|Ready| C[Step 2: Task-Aware Scout (per lane policy)]
+    C --> D
     D --> E{Flash Mode?}
     E -->|No| Q[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
     E -->|Yes| R[Step 4F: Flash Gate: Minimal Preflight + Scope Sanity]
@@ -172,27 +195,19 @@ flowchart TD
 ```
 
 ### Step 1: Initialize & Load Spec
-- Identify input: Open `specs/<feature-name>/spec.json`.
-- Check `ready_for_implementation` status. If not ready, notify user.
-- Load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
-- Unless `--no-notes` is present, initialize or update `specs/<feature-name>/implementation-notes.html`:
+- **Direct**: after classifier confirms low-risk reversible work, skip spec/state/registry initialization and continue with targeted implementation/evidence.
+- **Standard/Critical**: identify input and open the lane-appropriate `spec.json` plus bounded spec artifacts; require approved state before implementation.
+- Check `ready_for_implementation` only for Standard/Critical specs. If not ready, notify user.
+- **Standard/Critical only**: load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
+- **Standard/Critical only**: unless `--no-notes` is present, initialize or update `specs/<feature-name>/implementation-notes.html`:
   - If missing, create it from `references/implementation-notes-template.html`.
   - Replace template placeholders for feature name, spec path, creation timestamp, and current mode.
   - If present, preserve existing note cards and update the summary/timeline/status fields.
-- **Task Scoping (CRITICAL):**
-  - If the user specifies a particular task file (e.g., `task-R0-02...md`), load **ONLY** that specific file into working memory.
-  - If no specific task is mentioned, DO NOT load all tasks into working memory. Resolve the next single unblocked `pending` task from `task_registry` and load only that task packet.
-- **Task Packet Extraction (MANDATORY):** Before coding, extract from the active task file(s):
-  - Objective + Constraints
-  - Related Files
-  - Completion Criteria
-  - `## Evidence` (legacy heading aliases still parse)
-  - Exact executable verification commands named in the task
-  - Requirement IDs referenced by the task
-  - Named technologies, frameworks, protocols, and data stores that the task/spec explicitly requires
-  - Relevant `Canonical Contracts & Invariants` from `design.md`
-- If the task file is missing actionable completion or verification detail, STOP and route back to spec correction. Do not guess.
-- Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
+- **Direct** does not create or update spec implementation notes unless user explicitly asks for a receipt.
+- **Standard/Critical only**: load exactly one task packet for specific-task mode, or resolve one unblocked task from `task_registry` for full-spec mode.
+- **Standard/Critical only**: extract Objective + Constraints, Related Files, Completion Criteria, Evidence commands, requirement IDs, named technologies, and canonical contracts before coding.
+- If a Standard/Critical task file lacks actionable completion or verification detail, stop and route back to spec correction. Direct does not use this packet gate.
+- **Standard/Critical only**: set the active task to `in_progress` in markdown and `spec.json.task_registry` before coding. Direct has no registry mutation.
 
 ### Step 2: Scout (Codebase Inspection)
 - **Scout per Delegation policy** — Deep tier delegates to `inspector`; Light/Standard scouts in the main session with the same required outputs:
@@ -215,7 +230,7 @@ flowchart TD
 - Act as the `implementer` per the Delegation policy (default: the main session), executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - You MUST use the Step 2 scout report as implementation context. If code reality contradicts the task packet, stop and reconcile the spec before coding.
-- Unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
+- **Standard/Critical only**: unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
   - `decision`: a necessary implementation choice not specified by the spec
   - `spec-gap`: missing or ambiguous spec detail discovered during implementation
   - `codebase-reality`: existing code requires a different integration path than the task implied

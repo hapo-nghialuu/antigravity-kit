@@ -14,8 +14,21 @@ metadata:
 
 This skill safely bridges the gap between active development state and physical documentation files (`spec.json` + `task_registry` + `tasks/task-R*.md`). Instead of relying on risky raw AI edits, this skill executes precise contextual replacements.
 
-## Supported Commands
+## Lane-aware synchronization
 
+Read lane policy before mutating state:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+```
+
+- Direct may have no spec/state/registry; sync only concrete targeted evidence and never invents approval state.
+- Standard stores one bounded spec and one canonical feature receipt; one combined `code-auditor` review gates feature closeout.
+- Critical requires strict durable evidence and `inspector → implementer → test-runner → code-auditor` delegation by default.
+- `generated`, `agent_validated`, and `user_approved` are independent. Missing `user_approved` stays false; sync never auto-approves user-owned state.
+- Explicit lane overrides must preserve automatic classification and warning in receipt/state output, especially Critical downgrades.
+
+## Supported Commands
 ### 1. Task Synchronization
 Update a specific task's status and automatically check its relevant sub-checkboxes.
 

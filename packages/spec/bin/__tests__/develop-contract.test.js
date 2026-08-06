@@ -67,6 +67,81 @@ test('delegation plan uses only shipped agents and exact Deep sequence', () => {
   assert.doesNotMatch(read(DEVELOP), /spec-review|quality-review/);
 });
 
+test('lane classifier selects Direct for explicit reversible low-risk work', () => {
+  const result = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1 });
+  assert.equal(result.lane, 'Direct');
+  assert.equal(result.automaticLane, 'Direct');
+  assert.deepEqual(result.risks, []);
+  assert.deepEqual(POLICY.delegationPlan({ lane: 'Direct' }).delegated, []);
+  assert.equal(POLICY.lanePolicy(result).requiresSpec, false);
+});
+
+test('lane classifier forces Critical for named high-risk signals', () => {
+  const result = POLICY.classifyLane({
+    reversible: true,
+    riskSignals: { auth: true, migration: true, publicContract: true },
+  });
+  assert.equal(result.lane, 'Critical');
+  assert.deepEqual(result.risks, ['auth', 'migration', 'publicContract']);
+  assert.deepEqual(POLICY.delegationPlan({ lane: 'Critical' }).delegated, [
+    'inspector', 'implementer', 'test-runner', 'code-auditor',
+  ]);
+});
+
+test('lane override keeps automatic result and surfaces downgrade warning', () => {
+  const result = POLICY.classifyLane({
+    reversible: true,
+    riskSignals: { privacy: true },
+    override: 'Direct',
+  });
+  assert.equal(result.lane, 'Direct');
+  assert.equal(result.automaticLane, 'Critical');
+  assert.equal(result.overridden, true);
+  assert.match(result.warnings.join(' '), /downgrad|review and evidence coverage/i);
+  assert.ok(POLICY.lanePolicy(result).warnings.length >= 2);
+});
+
+test('approval state never infers user approval from generated or agent validation', () => {
+  assert.deepEqual(POLICY.approvalState({ generated: true, agent_validated: true }), {
+    generated: true,
+    agent_validated: true,
+    user_approved: false,
+    ready: false,
+  });
+  assert.equal(POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true }).ready, true);
+  const cli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--approval-state',
+    '--task-json',
+    JSON.stringify({ generated: true, agent_validated: true }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, `${cli.stdout}\n${cli.stderr}`);
+  assert.equal(JSON.parse(cli.stdout).state.user_approved, false);
+});
+
+test('CLI exposes JSON lane classification and develop has no universal spec hard gate', () => {
+  const cli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--classify-lane',
+    '--task-json',
+    JSON.stringify({ reversible: true, lowRisk: true, isolated: true }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, `${cli.stdout}\n${cli.stderr}`);
+  const payload = JSON.parse(cli.stdout);
+  assert.equal(payload.classification.lane, 'Direct');
+  assert.equal(payload.policy.requiresSpec, false);
+  const develop = read(DEVELOP);
+  assert.doesNotMatch(develop, /DO NOT write implementation code until an approved spec exists/i);
+  assert.match(develop, /Direct.*bypass spec\/state/i);
+  assert.match(develop, /Standard.*approved.*spec/i);
+  assert.match(develop, /Critical.*strict evidence/i);
+  assert.match(develop, /C --> D\s*$/m);
+  assert.doesNotMatch(develop, /D2\[Step 3/);
+  assert.match(read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md')), /requirements\.md.*design\.md.*current layout/i);
+});
+
 test('review verdict consumer handles PASS, FAIL, and BLOCKED', () => {
   assert.deepEqual(POLICY.consumeReviewVerdict('PASS'), { action: 'proceed', terminal: false });
   assert.deepEqual(POLICY.consumeReviewVerdict('FAIL'), { action: 'fix-and-rerun', terminal: false });
