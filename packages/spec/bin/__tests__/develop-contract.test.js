@@ -9,6 +9,8 @@ const DEVELOP = path.join(__dirname, '../../src/claude/skills/develop/SKILL.md')
 const GATE = path.join(__dirname, '../../src/claude/skills/develop/references/quality-gate.md');
 const TEST_SKILL = path.join(__dirname, '../../src/claude/skills/test/SKILL.md');
 const SYNC_SKILL = path.join(__dirname, '../../src/claude/skills/sync/SKILL.md');
+const CODE_REVIEW_SKILL = path.join(__dirname, '../../src/claude/skills/code-review/SKILL.md');
+const GIT_SKILL = path.join(__dirname, '../../src/claude/skills/git/SKILL.md');
 
 function traceQualityGate({ tier, mode, tasks }) {
   const calls = [];
@@ -62,6 +64,13 @@ test('review verdict consumer stops on BLOCKED and retries only FAIL', () => {
   assert.match(gate, /Status: in_progress/);
   assert.match(gate, /Blocker: awaiting \/hapo:test <feature>/);
   assert.doesNotMatch(gate, /SPEC_PASS|NEEDS FIXES|Incomplete PASS|USER INTERVENTION/);
+});
+
+test('review and secret output contracts stay bounded', () => {
+  const codeReview = fs.readFileSync(CODE_REVIEW_SKILL, 'utf8');
+  const git = fs.readFileSync(GIT_SKILL, 'utf8');
+  assert.match(codeReview, /PASS \| FAIL \| BLOCKED/);
+  assert.doesNotMatch(git, /show[- ]lines?/i);
 });
 
 test('flash promotion is task-scoped and requires PASS proof', () => {

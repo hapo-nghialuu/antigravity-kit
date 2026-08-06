@@ -63,15 +63,16 @@ Actively try to break the code.
 
 ## Output
 
-Your report MUST classify every finding by severity and return a verdict.
+Your report MUST classify every finding by severity and return exactly one verdict from `PASS | FAIL | BLOCKED`. Every review verdict/output consumer MUST accept only `PASS | FAIL | BLOCKED` and reject any other value.
 - **PASS:** no Critical findings, no High findings, at most one Medium.
 - **FAIL:** one or more Critical or High findings, or two or more Medium findings.
+- **BLOCKED:** missing execution proof, permission, environment, or user-owned decision prevents review completion. Stop without blind retry; report blocker and required input.
 
 Format:
 ```markdown
 # Code Review Results [hapo:code-review]
 
-**Verdict:** PASS | FAIL
+**Verdict:** PASS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
 
 ## Stage 1: Spec Compliance

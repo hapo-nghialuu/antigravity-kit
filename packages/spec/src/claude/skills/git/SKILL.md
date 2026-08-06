@@ -49,7 +49,7 @@ Single commit when: same type+scope, ≤3 files, ≤50 lines.
 ## Errors
 | Error | Action |
 |---|---|
-| Secrets matched | Block; show lines |
+| Secrets matched | Block; report only file/source line/identifier. Never show secret value, diff line, or surrounding context. |
 | Nothing staged | Exit cleanly |
 | Push rejected | Suggest `git pull --rebase` |
 | Conflicts | List files; never auto-resolve |
