@@ -89,8 +89,8 @@ function patchSettingsLanguage(ctx) {
   }
 
   // Use locale (freeform label) so "Korean" shows correctly, not just "en".
-  const label = ctx.locale || LANGUAGE_LABELS[ctx.lang] || ctx.lang;
-  if (settings.language === label) return;
+  const label = ctx.locale;
+  if (!label) return;
   settings.language = label;
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
 }
@@ -100,8 +100,9 @@ function patchSettingsLanguage(ctx) {
  * block so every installed platform uses the chosen response language.
  */
 function patchLanguageSection(ctx) {
-  // Skip when locale is English (default — no override needed in AGENTS.md).
-  const locale = ctx.locale || ctx.lang;
+  // No explicit/saved locale means follow the user's language; do not inject an
+  // English override into the shared core block.
+  const locale = ctx.locale;
   if (!locale || locale === 'en' || locale === 'English') return;
 
   // Use locale directly when set (e.g. "Korean"), or map from lang code.
@@ -140,7 +141,9 @@ function patchRuntimeLocale(ctx) {
     }
     data.locale = data.locale || {};
     // Use locale (freeform label) so custom languages propagate to the AI hook.
-    const locale = ctx.locale || ctx.lang;
+    // A null locale intentionally leaves the runtime's current value untouched.
+    const locale = ctx.locale;
+    if (!locale) continue;
     if (data.locale.responseLanguage === locale) continue;
     // Hardening: never downgrade an existing configured label to a bare default
     // code when this run never made an explicit language choice (ctx.locale

@@ -12,7 +12,7 @@ const skillGroups: Array<[string, string[]]> = [
 const agents = [
   ['brainstormer', 'Pressure-tests product and architecture choices before specs.', Sparkles],
   ['spec-maker', 'Creates spec.json, requirements, design, research, and task files.', PenTool],
-  ['god-developer', 'Implements approved task packets as production code.', Wrench],
+  ['implementer', 'Implements approved task packets as production code.', Wrench],
   ['test-runner', 'Runs exact verification and rejects green lies.', TestTube2],
   ['code-auditor', 'Findings-first review for security, logic, architecture, and drift.', Shield],
   ['debugger', 'Traces failures with evidence before fixes.', Bug],

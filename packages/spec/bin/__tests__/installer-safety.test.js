@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 
 const backup = require('../lib/backup');
@@ -27,6 +28,7 @@ const CORE_START = '<!-- CAFEKIT CORE START -->';
 const CORE_END = '<!-- CAFEKIT CORE END -->';
 const TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/claude/CLAUDE.md'), 'utf8');
 const SHARED_TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/common/AGENTS.md'), 'utf8');
+const INSTALLER = path.join(__dirname, '../install.js');
 
 test('skill dependency package commands use cmd.exe for Windows npm launchers', () => {
   const windows = resolvePackageCommand(
@@ -78,6 +80,39 @@ function inTempProject(run) {
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
+
+test('malformed managed marker topology fails transactionally and preserves exact bytes', () => {
+  const markers = {
+    claude: ['<!-- CAFEKIT CORE START -->', '<!-- CAFEKIT CORE END -->'],
+    codex: ['<!-- CAFEKIT CODEX START -->', '<!-- CAFEKIT CODEX END -->'],
+    opencode: ['<!-- CAFEKIT OPENCODE START -->', '<!-- CAFEKIT OPENCODE END -->']
+  };
+  const topologies = (start, end) => [
+    `user\n${end}\n`,
+    `user\n${start}\n`,
+    `${start}\na\n${start}\nb\n${end}\n`,
+    `${start}\na\n${end}\nb\n${end}\n`,
+    `${end}\nuser\n${start}\n`
+  ];
+
+  for (const [platform, [start, end]] of Object.entries(markers)) {
+    for (const content of topologies(start, end)) {
+      inTempProject((root) => {
+        fs.writeFileSync('AGENTS.md', content, 'utf8');
+        const before = fs.readFileSync('AGENTS.md');
+        const result = spawnSync(
+          process.execPath,
+          [INSTALLER, '--platform', platform, '--yes', '--force-overwrite'],
+          { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
+        );
+        assert.notEqual(result.status, 0, `${platform}\n${result.stdout}\n${result.stderr}`);
+        assert.deepEqual(fs.readFileSync('AGENTS.md'), before);
+        assert.match(`${result.stdout}\n${result.stderr}`, /malformed .*marker topology/i);
+        assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /unchanged|success/i);
+      });
+    }
+  }
+});
 
 function installContext(pruned) {
   return {

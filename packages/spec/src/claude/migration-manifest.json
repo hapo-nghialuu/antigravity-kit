@@ -59,7 +59,8 @@
       "validate-docs.cjs",
       "validate-docs-reconstruct.cjs",
       "generate-skill-catalog.cjs",
-      "validate-spec-output.cjs"
+      "validate-spec-output.cjs",
+      "scan-staged-secrets.cjs"
     ]
   },
   "agentReferences": {
@@ -69,6 +70,11 @@
     "assumed": []
   },
   "obsolete": {
+    "agents": {
+      "claude": ["agents/god-developer.md"],
+      "codex": ["agents/god_developer.toml"],
+      "opencode": ["agents/god-developer.md"]
+    },
     "runtimeFiles": [
       "hooks/skill-router.cjs",
       "hooks/lib/skill-router-routes.cjs",

@@ -204,6 +204,7 @@ module.exports = {
   getCodexCopyOptions,
   codexAgentName,
   convertCodexAgentContent,
+  managedRange,
   upsertManagedCodexBlock,
   transformManagedCodexContent
 };

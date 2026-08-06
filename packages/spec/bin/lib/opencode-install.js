@@ -492,6 +492,11 @@ function copyOpenCodeAgentsMdFile(platformKey, results, options = {}) {
   if (content) {
     const destinationExists = fs.existsSync(dest);
     const existingContent = destinationExists ? fs.readFileSync(dest, 'utf8') : '';
+    if (managedOpenCodeRange(existingContent) === false) {
+      console.log(`  ⚠ AGENTS.md: malformed CafeKit OPENCODE marker topology; preserved ${dest} without writing`);
+      results.errors++;
+      return;
+    }
     const nextContent = upsertCafeKitAgentsBlock(existingContent, content);
 
     if (nextContent === existingContent) {
@@ -884,6 +889,7 @@ module.exports = {
   convertOpenCodeAgentContent,
   convertOpenCodeCommandContent,
   copyOpenCodeAgentsMdFile,
+  managedOpenCodeRange,
   transformManagedOpenCodeContent,
   copyOpenCodeSharedRuntimeFiles,
   copyOpenCodePlugins,

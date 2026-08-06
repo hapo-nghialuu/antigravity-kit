@@ -18,9 +18,9 @@ Git operations and worktree management using plain `git` commands.
 Present options via AskUserQuestion — header "Git Operation": commit / push / pr / finish / worktree.
 
 ## Commands
-- `commit`: secret scan → analyze diff → split into conventional commits.
+- `commit`: run installed secret scanner → analyze diff → split into conventional commits.
 - `push`: push current branch.
-- `pr`: push + open PR. Target = the repo's integration branch — detect via
+- `pr`: push + open PR. Target = repo's integration branch — detect via
   `gh repo view --json defaultBranchRef` or `origin/HEAD`; never assume `main`/`develop`.
 - `finish`: fresh `git status` + verification, then present exactly 4 options:
   merge locally / push + PR / keep branch-worktree / discard (typed confirmation).
@@ -28,10 +28,11 @@ Present options via AskUserQuestion — header "Git Operation": commit / push / 
 
 ## Secret scan (before every commit)
 ```bash
-git diff --cached | grep -inE '\b(api[_-]?key|secret|password|credential(s)?|token)\b\s*[:=]'
+node .claude/scripts/scan-staged-secrets.cjs
 ```
-Match → STOP: show the lines, refuse to commit, suggest `.gitignore` + `git rm --cached`.
-(Word-boundary + assignment context: "tokenizer" no longer false-positives.)
+The helper parses `git diff --cached --unified=0 --no-color --diff-filter=ACMR`, checks added lines only, maps hunks to source lines, and prints only file, line, and identifier. It never prints secret values or context.
+
+Match → STOP. For an untracked secret, add an appropriate `.gitignore` rule. For a tracked secret, stop, rotate it, and ask the user before changing history or index state.
 
 ## Split rules
 Split when: mixed types (feat+fix), mixed scopes, config/deps mixed with code, >10 unrelated files.
@@ -55,5 +56,5 @@ Single commit when: same type+scope, ≤3 files, ≤50 lines.
 
 Never force-push or delete a worktree without explicit confirmation.
 
-## References (unchanged)
+## References
 - `references/commit-protocols.md` · `references/finish-branch.md` · `references/worktree-blueprint.md`

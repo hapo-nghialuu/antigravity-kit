@@ -315,11 +315,12 @@ function buildContext(argv, runId) {
   const options = parseInstallerArgs(argv);
   // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
   const interactive = isInteractive() && !options.yes;
-  // Language: --lang wins; otherwise English (an interactive prompt may change it).
+  // Language: --lang wins; otherwise English for installer UI only (an interactive
+  // prompt or saved runtime locale may change both values).
   const lang = options.lang ? resolveLang(options.lang) : 'en';
-  // ctx.locale = the string that gets written to CLAUDE.md / runtime.json as the AI's response language.
-  // For known codes it mirrors lang; for "other", it's set later by setLang.
-  const locale = options.lang || 'en';
+  // A missing locale means "follow the user's language". Never persist the UI
+  // fallback as an AI response-language override on fresh installs/upgrades.
+  const locale = options.lang ? options.lang : null;
   return {
     argv,
     runId,

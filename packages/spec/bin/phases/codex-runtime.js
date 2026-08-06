@@ -8,6 +8,7 @@ const { report, treeAction } = require('./report');
 const { copyRulesDirectory } = require('./claude-runtime');
 const {
   normalizeCodexBody,
+  managedRange,
   upsertManagedCodexBlock
 } = require('../lib/codex-install');
 
@@ -116,6 +117,11 @@ function installManagedAgentsMd(ctx) {
   const destination = 'AGENTS.md';
   const exists = fs.existsSync(destination);
   const existing = exists ? fs.readFileSync(destination, 'utf8') : '';
+  if (managedRange(existing) === false) {
+    ctx.ui.warn(`AGENTS.md: malformed CafeKit CODEX marker topology; preserved ${destination} without writing`);
+    ctx.results.errors++;
+    return;
+  }
   const block = normalizeCodexBody(fs.readFileSync(runtimeSource, 'utf8'));
   const next = upsertManagedCodexBlock(existing, block);
   const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';

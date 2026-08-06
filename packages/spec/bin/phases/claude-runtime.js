@@ -21,6 +21,7 @@ const { report, treeAction } = require('./report');
 const { normalizeOpenCodeBody } = require('../lib/opencode-install');
 const {
   upsertManagedCoreBlock,
+  managedRange,
   migrateExactLegacyBlock,
   preserveAddressingSection
 } = require('../lib/instruction-blocks');
@@ -37,9 +38,11 @@ function managedClaudeBlock(template) {
 
 function managedClaudeRange(content) {
   const start = content.indexOf(CLAUDE_START);
-  if (start === -1) return null;
-  const endStart = content.indexOf(CLAUDE_END, start + CLAUDE_START.length);
-  if (endStart === -1) return null;
+  const endStart = content.indexOf(CLAUDE_END);
+  if (start === -1 && endStart === -1) return null;
+  const duplicateStart = content.indexOf(CLAUDE_START, start + CLAUDE_START.length);
+  const duplicateEnd = content.indexOf(CLAUDE_END, endStart + CLAUDE_END.length);
+  if (start === -1 || endStart <= start || duplicateStart >= 0 || duplicateEnd >= 0) return false;
   return { start, end: endStart + CLAUDE_END.length, bodyStart: start + CLAUDE_START.length, bodyEnd: endStart };
 }
 
@@ -56,6 +59,7 @@ function upsertManagedClaudeBlock(existing, template, legacyOwned) {
   // template dropped its Addressing section, carry the saved section over from
   // the existing managed block so the user's address survives for setupAddressing.
   const existingRange = managedClaudeRange(existing);
+  if (existingRange === false) return existing;
   const existingManagedBody = existingRange
     ? existing.slice(existingRange.bodyStart, existingRange.bodyEnd)
     : '';
@@ -90,6 +94,11 @@ function ensureSharedAgentsMdCore(ctx) {
   const template = fs.readFileSync(src, 'utf8');
   const exists = fs.existsSync(dest);
   const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  if (managedRange(existing) === false) {
+    ctx.ui.warn(`AGENTS.md: malformed CafeKit CORE marker topology; preserved ${dest} without writing`);
+    ctx.results.errors++;
+    return;
+  }
   const migrated = migrateExactLegacyBlock(
     existing,
     LEGACY_CORE_START,
@@ -183,6 +192,37 @@ function removeObsoleteClaudeRuntimeFiles(ctx, platformKey) {
   });
 }
 
+/** Remove renamed agents only when ownership manifest proves pristine bytes. */
+function removeObsoleteAgents(ctx, platformKey) {
+  const platform = PLATFORMS[platformKey];
+  const obsolete = ctx.manifest?.obsolete?.agents?.[platformKey] || [];
+  const tracker = ctx.trackers?.[platformKey];
+  if (!platform || !tracker || obsolete.length === 0) return;
+
+  const ownership = ctx.ownership?.[platform.folder] || { files: {} };
+  for (const relPath of obsolete) {
+    const targetPath = path.join(platform.folder, relPath);
+    if (!fs.existsSync(targetPath)) continue;
+
+    const key = tracker.keyFor(targetPath);
+    const recorded = ownership.files?.[key];
+    const currentHash = sha256(fs.readFileSync(targetPath));
+    if (recorded?.sha256 === currentHash) {
+      if (!ctx.dryRun) {
+        fs.rmSync(targetPath, { force: true });
+        tracker.prune(key);
+      }
+      ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed obsolete agent: ${targetPath}`);
+      ctx.results.updated++;
+      continue;
+    }
+
+    ctx.ui.warn(`Preserved user-owned obsolete agent: ${targetPath}`);
+    ctx.results.preserved++;
+    ctx.results.preservedFiles.push(targetPath);
+  }
+}
+
 /** Install CLAUDE.md at the project root (ownership-aware). Claude only. */
 function copyClaudeMdFile(ctx, platformKey) {
   if (platformKey !== 'claude') return;
@@ -203,6 +243,11 @@ function copyClaudeMdFile(ctx, platformKey) {
   const template = fs.readFileSync(src, 'utf8');
   const exists = fs.existsSync(dest);
   const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  if (managedClaudeRange(existing) === false) {
+    ctx.ui.warn(`CLAUDE.md: malformed CafeKit CLAUDE marker topology; preserved ${dest} without writing`);
+    ctx.results.errors++;
+    return;
+  }
   const legacyRecord = ctx.ownership?.[PLATFORMS.claude.folder]?.files?.['../CLAUDE.md'];
   const legacyOwned = Boolean(legacyRecord && legacyRecord.sha256 === sha256(existing));
   const next = upsertManagedClaudeBlock(existing, template, legacyOwned);
@@ -241,5 +286,6 @@ module.exports = {
   copyClaudeAgentsMdFile,
   ensureSharedAgentsMdCore,
   copyRulesDirectory,
+  removeObsoleteAgents,
   transformManagedClaudeContent
 };
