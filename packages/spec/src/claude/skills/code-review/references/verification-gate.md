@@ -28,6 +28,6 @@ To clear the Verification Gate, you must cite one of the following concrete proo
 - **Multimodal Visual Evidence:** `hapo:ai-multimodal` confirming that the visual rendering perfectly matches the design layout.
 
 ## 4. How to Handle Missing Proof
-If you are asked to review a PR or commit and no execution proof is available in the memory or context:
-1. **Demand Action:** Instruct the `implementer` or `test-runner` to run the test suite and provide you with the terminal logs.
-2. **Issue an Incomplete PASS:** If you must proceed due to workflow limitations, explicitly state: *"Verdict is tentative. Cannot issue an unconditional PASS because execution logs were not provided."*
+If you are asked to review a PR or commit and no execution proof is available:
+1. **Return `BLOCKED`** and name missing commands, artifacts, permissions, or environment access.
+2. Do not issue `PASS`, do not downgrade to a tentative pass, and do not blind-retry. Resume only after proof arrives.

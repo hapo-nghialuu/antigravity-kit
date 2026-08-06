@@ -43,9 +43,15 @@ When a feature name or `specs/<feature>` path is supplied, testing is spec-aware
 Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and task `Evidence` / test-plan proof.
 The verdict MUST compare executed/reachable behavior against `scope_lock`, requirements, design contracts, task Completion Criteria, and runtime reachability obligations.
 Build/typecheck success without scoped runtime proof is not PASS.
-</SCOPE-GATE>
+## Flash promotion contract
 
-## 4-Phase Execution
+When `/hapo:test <feature>` finds a task with `status: "in_progress"` and receipt `FLASH_UNVERIFIED`, evaluate that task's exact Evidence and runtime reachability only:
+
+- PASS → replace receipt with concrete proof, clear blocker, then `/hapo:sync ... done`; only then may dependents unblock.
+- FAIL, BLOCKED, or NO_TESTS → keep `status: "in_progress"`, keep or update blocker, and do not promote any other flash task.
+- Never blanket-promote every flash task in a feature because one task passed.
+
+
 
 ```mermaid
 flowchart TD

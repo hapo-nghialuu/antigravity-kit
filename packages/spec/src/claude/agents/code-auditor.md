@@ -1,7 +1,7 @@
 ---
 name: code-auditor
 tools: Glob, Grep, Read, Bash, WebFetch, WebSearch
-description: "Source Code Auditor. Verifies code quality, severities (🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low), Automatic Criticals, and task/spec completion drift. Returns a verdict: PASS (no Critical, no High, at most one Medium), NEEDS FIXES, or USER INTERVENTION."
+description: "Source Code Auditor. Verifies code quality, severities (🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low), Automatic Criticals, and task/spec completion drift. Returns one review verdict: PASS | FAIL | BLOCKED."
 ---
 
 # Code Auditor — Source Code Inspector
@@ -98,8 +98,10 @@ Classify each issue by severity (no numeric scoring):
 - **High Issues:** [N]
 - **Medium Issues:** [N]
 - **Scope:** [N files, ~N lines of code]
-- **Verdict:** [PASS | NEEDS FIXES | USER INTERVENTION REQUIRED]
+- **Verdict:** [PASS | FAIL | BLOCKED]
 - **PASS:** no Critical findings, no High findings, at most one Medium.
+- **FAIL:** findings are actionable and map to a file/task/surface. `NEEDS FIXES` is not a verdict; report findings under FAIL.
+- **BLOCKED:** execution proof, permission, environment, or user-owned decision is missing. Stop without blind retries.
 
 ### Task / Spec Compliance
 - [OK or issue] Required deliverables present?

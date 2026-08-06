@@ -125,7 +125,7 @@ Before writing `design.md`, select a discovery mode and record the reason:
 - Task size: 1-3 hours per sub-task
 - Reject tasks outside `scope_lock.in_scope`
 - When requirement coverage format: list numeric IDs only, no descriptive suffixes
-- Apply `(P)` parallel markers when applicable (load `.claude/skills/specs/rules/tasks-parallel-analysis.md`)
+- Apply `(P)` parallel markers when applicable (load `.claude/skills/specs/rules/tasks-generation.md`)
 - Every task MUST use the compact implementation-ready shape: `Context`, `Steps`, `Requirements`, `Related Files`, `Completion Criteria`, `Evidence`, `Risk Assessment`.
 - `## Evidence` (legacy heading aliases still parse) MUST include exact commands, artifacts/runtime surfaces, runtime reachability proof, and negative-path checks.
 - Completion criteria MUST be objective enough that a downstream quality gate can prove them without guesswork.

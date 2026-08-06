@@ -99,7 +99,7 @@ These rules override any self-reasoning or optimization the system may attempt:
 Each reviewer receives:
 - Their specific lens and persona
 - Spec file paths to read directly
-- Instructions: find 5-10 flaws, findings only, NO praise
+- Instructions: report findings only when backed by concrete citations
 
 **Reviewer instructions:**
 ```
@@ -111,8 +111,8 @@ Rules:
 - Be concrete: describe failure scenario, not just "could be a problem"
 - Rate severity: Critical (blocks success) | High (significant risk) | Medium (notable concern)
 - Skip trivial observations (style, naming, formatting)
-- No praise. No "overall looks good". Only findings.
-- 5-10 findings. Quality over quantity.
+- No praise. No "overall looks good". Only evidence-backed findings.
+- Quality over quantity; do not pad to a count.
 ```
 
 #### Step 5: Collect → Deduplicate → Cap

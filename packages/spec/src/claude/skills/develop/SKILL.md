@@ -34,10 +34,21 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 | default (specific-task / full-spec) | per tier | full (Step 4) | verified | |
 | `--flash` | per tier | Flash Gate (4F) | `FLASH_UNVERIFIED` | |
 | `--parallel` | inspector per task | full, inside each worktree | verified | implies Deep tier |
-| `--flash --parallel` | **not supported** — `--parallel` wins, state this to the user | | | waves always run the quality gate |
+| `--flash --parallel` | **unsupported — no execution** | | | reject before state/worktree changes |
 | `--no-notes` | — | — | — | composable with all modes |
 
-## Execution Modes
+## Argument validation
+
+Parse flags before loading or mutating spec state. If both `--flash` and `--parallel` are present, print:
+
+```text
+Unsupported flags: --flash and --parallel are incompatible.
+Remediation: run `/hapo:develop <feature> --flash` or `/hapo:develop <feature> --parallel [N]`.
+No spec state, task receipt, worktree, subagent, or commit was created.
+```
+
+Then STOP with no execution. Never silently drop `--flash`, prefer `--parallel`, or start a more expensive workflow.
+
 
 ### 1. Specific-Task Mode
 Triggered by `/hapo:develop <feature> <task-file>`.
@@ -56,7 +67,7 @@ Triggered by `/hapo:develop <feature>` or `/hapo:develop specs/<feature>`.
 - Sync state.
 - Recompute the queue and continue.
 - STOP the overall run on the first blocked task, unresolved gate failure, or missing proof.
-- In `--flash` mode, missing full test proof does not stop the loop; record `FLASH_UNVERIFIED` and continue to the next unblocked task.
+- In `--flash` mode, missing full test proof stores the task as `status: "in_progress"` with receipt `FLASH_UNVERIFIED` and blocker `awaiting /hapo:test <feature>`. It does not unblock dependencies or mark the task done.
 
 ### 2b. Parallel Wave Mode (opt-in)
 Triggered by adding `--parallel [N]` to Full-Spec mode. Load `references/parallel-waves.md` and follow it exactly — it is the operating procedure (wave planning, dispatch, merge, cleanup).
@@ -87,7 +98,7 @@ Triggered by adding `--flash` to either specific-task or full-spec mode.
 - Skip dedicated test suites, E2E/browser/manual QA loops, full task evidence execution, and code-review retry loops.
 - Run only cheap preflight checks when available and fast: syntax, typecheck, or build commands that do not require installing dependencies or starting external services.
 - Never weaken, delete, or rewrite tests to avoid running them.
-- Sync completed implementation with an explicit `FLASH_UNVERIFIED` receipt; do not claim production-ready quality.
+- Sync the implementation as `status: "in_progress"` with receipt `FLASH_UNVERIFIED`, blocker `awaiting /hapo:test <feature>`, and no dependency unblocking. Do not claim task or feature completion.
 - Final output MUST recommend `/hapo:test <feature>` before merge, release, or publish.
 
 ### 4. Implementation Notes
@@ -257,7 +268,7 @@ Flash mode is an explicit speed trade-off requested by the user.
 
 ### Step 5: State Sync + Task-Level Docs Sync
 - Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps/task_registry.
-- In `--flash` mode, Step 4F may sync the task only as a fast implementation closeout with an explicit `FLASH_UNVERIFIED` receipt.
+- In `--flash`, Step 4F may record implementation closeout only as `status: "in_progress"` with `FLASH_UNVERIFIED` and blocker `awaiting /hapo:test <feature>`; it never syncs `done` or unblocks dependencies.
 - If verification is partial or blocked by environment, keep the task in `pending` or `in_progress` and record the blocker instead of pretending completion.
 - A completed task MUST leave behind:
   - markdown `**Status:** done`
@@ -265,7 +276,7 @@ Flash mode is an explicit speed trade-off requested by the user.
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
   - a human-readable verification receipt inside the task's `Evidence` section showing which commands ran, their outcomes, and what proof was observed
-- In `--flash` mode, the receipt MUST include `Mode: --flash`, `Tests: skipped by user request`, `Evidence: FLASH_UNVERIFIED`, and `Next verification: /hapo:test <feature>`.
+- In `--flash`, the receipt MUST include `Mode: --flash`, `Tests: skipped by user request`, `Evidence: FLASH_UNVERIFIED`, `Status: in_progress`, `Blocker: awaiting /hapo:test <feature>`, and `Next verification: /hapo:test <feature>`.
 - Verification receipts with `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation intentionally simplified a named contract MUST NOT be synchronized as `done`.
 - Exception: `FLASH_UNVERIFIED` is allowed only when `--flash` is explicitly present. It records fast implementation completion, not full verification completion.
 - Unless `--no-notes` is present, update `implementation-notes.html` before reporting the task:

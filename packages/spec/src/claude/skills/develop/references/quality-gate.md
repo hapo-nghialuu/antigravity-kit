@@ -10,6 +10,23 @@ Green tests are NOT enough. The gate requires four proofs:
 
 `--flash` is the explicit fast path. It bypasses this full gate and uses the Flash Gate defined below.
 
+## Tier input (from develop Delegation policy)
+
+Quality-gate input MUST include `execution_tier` and `ship_point`:
+
+- **Light:** main session runs verification commands and the same spec-compliance checklist. Spawn zero `test-runner` or `code-auditor` subagents.
+- **Standard:** main session runs tests and spec checks. At the ship point, run exactly one combined `code-auditor` review for spec compliance plus code quality.
+- **Deep / `--parallel`:** retain the documented per-worktree Stage A+B chain in Track A. Do not treat that chain as a permanent product contract.
+
+Checklist and FAIL conditions stay identical for every tier; tier changes only who executes each check and when.
+
+## Ship point semantics
+
+- **Specific-task mode:** requested task is ship point. Review that task packet and its diff exactly once.
+- **Full-spec Standard:** intermediate tasks receive only the main-session gate. After the final task and Final Integration Scout, run one combined auditor over the cumulative feature diff, all acceptance criteria, and runtime reachability.
+- Do not set feature-level `code_done` or completion before combined auditor returns `PASS`.
+- Auditor `FAIL` maps each finding to its owning task/surface. Fix only affected evidence, then rerun affected checks and the combined review; do not replay unrelated gates already passed.
+
 ## Automation Semantics
 
 - If the task names exact commands in `## Evidence` (legacy heading aliases still parse), those exact commands are mandatory and must run before any fallback repo defaults.
@@ -65,46 +82,41 @@ START_LOOP:
   ---------------------------------------------------------------
   STAGE A: Test + SPEC COMPLIANCE review
   ---------------------------------------------------------------
-  → Agent(subagent_type="test-runner",
-        prompt="Run task-aware verification for the recently implemented code. Read the active task file(s) and execute the exact verification commands named there first, in order. Preflight compile/typecheck/build failures must be reported as PRECHECK_FAIL and take precedence over NO_TESTS. After that, run any additional repo-level typecheck/test/build checks needed for confidence. Inspect named artifacts/runtime outputs and prove runtime reachability from declared entrypoints/callers. For multi-service tasks, verify the flow does not rely on process-local stand-ins masquerading as shared state. Return PASS only if automated checks and task evidence both pass. Mark anything unexecuted as UNVERIFIED. Treat NO_TESTS as non-passing unless the task did not require a dedicated test suite.",
-        description="Test [feature]")
+  → Light: main session executes exact Evidence commands, spec checklist,
+    artifact checks, and reachability checks; spawn 0 subagents.
+  → Standard: main session executes exact Evidence commands and spec checklist;
+    defer one combined auditor to the ship point.
+  → Deep / --parallel: run the existing test-runner + spec-review chain in the
+    task worktree, then preserve its documented merge/integration gates.
 
-  → Agent(subagent_type="code-auditor",
-        prompt="SPEC COMPLIANCE REVIEW ONLY. Do not trust the implementer's report. Read the active task file(s), scope_lock, referenced requirements, design contracts, task-aware scout report, and actual code. Verify line by line that every scoped requirement and completion criterion is implemented, nothing out-of-scope was added, and every runtime-facing artifact is reachable from the declared entrypoint/caller or explicitly deferred to a named later task. Missing deliverables, placeholder-only wiring, orphan components/services, unmounted UI, unregistered routes, uncalled loaders, missing runtime entrypoints, overscope edits outside the task packet, silent replacement of named technologies/contracts, or fake cross-service proof via process-local state are Critical even if build/tests pass. Return SPEC_PASS or SPEC_FAIL, critical count, file:line findings, and evidence gaps.",
-        description="Spec review [feature]")
+  Test result and spec-review result use the review enum only: PASS | FAIL | BLOCKED.
+  PASS proceeds. FAIL returns actionable findings to implementer. BLOCKED means
+  execution proof, permissions, environment, or a user-owned decision is missing:
+  stop immediately and do not blind-retry.
 
-  Wait for BOTH to return results.
+  Standard specific-task ship point:
+    → run exactly one combined code-auditor review after Stage A PASS.
+  Standard full-spec ship point:
+    → run exactly one combined code-auditor review after the final task and
+      Final Integration Scout over the cumulative feature diff.
 
-  CASE 1 — PRECHECK_FAIL OR Automated FAIL OR required command missing OR Evidence FAIL / UNVERIFIED OR Reachability FAIL / SPEC_FAIL OR NO_TESTS when tests were required:
-    - Increment retry_count++
-    - If retry_count >= 3:
-        → COLLAPSE! AskUserQuestion: "Quality gate cannot prove this task is complete! User intervention required!"
-    - If retry_count < 3:
-        → Return to Step 3 (implementer). Fix the failing checks, spec gaps, or missing evidence first.
-        → GOTO START_LOOP
+  CASE 1 — PRECHECK_FAIL OR Automated FAIL OR required command missing OR Evidence FAIL / UNVERIFIED OR Reachability FAIL:
+    - For FAIL: increment retry_count; return to implementation while retry_count < 3.
+    - For BLOCKED: stop without retry; record blocker and await resolution.
+    - If retry_count >= 3: COLLAPSE and ask for user intervention.
 
-  CASE 2 — Test PASS + Evidence PASS + SPEC_PASS:
-    → Proceed to STAGE B code quality review.
+  CASE 2 — Test PASS + Evidence PASS + spec checklist PASS:
+    → Proceed to the ship-point review for Standard, or the Deep Stage B review.
 
 STAGE B:
   ---------------------------------------------------------------
-  CODE QUALITY REVIEW (only after spec compliance passes)
+  COMBINED CODE QUALITY + SPEC REVIEW (Standard ship point)
   ---------------------------------------------------------------
-  → Agent(subagent_type="code-auditor",
-        prompt="CODE QUALITY REVIEW. Spec compliance already passed. Review recently written code for security, logic correctness, architecture, YAGNI/KISS/DRY, maintainability, tests, and project conventions. Also re-check that no recent edits broke dependents found by the task-aware scout report. Return a verdict (PASS = no Critical, no High, at most one Medium), critical/high/medium finding lists, and concrete file:line findings.",
-        description="Quality review [feature]")
-
-  CASE 3 — Code quality review FAIL (one or more Critical or High findings, or two or more Medium findings):
-    - Increment retry_count++
-    - If retry_count >= 3:
-        → COLLAPSE! AskUserQuestion: "Code does not meet minimum standards! User intervention required!"
-    - If retry_count < 3:
-        → Fix each review issue.
-        → GOTO START_LOOP unless the fix is prose-only and cannot affect evidence; otherwise re-run Stage B.
-
-  CASE 4 — Test PASS + Evidence PASS + SPEC_PASS + Code quality review PASS (no Critical, no High, at most one Medium):
-    → PASS! Auto-approved.
-    → PROCEED to completion report with a verification receipt summarizing exact commands executed, artifact/runtime/reachability proof, spec review result, and code quality review result.
+  → `code-auditor` runs once with both scopes at the declared ship point.
+  → PASS = no Critical, no High, at most one Medium; proceed to sync.
+  → FAIL = findings mapped to task/surface; fix affected scope and rerun only
+    affected evidence plus this combined review.
+  → BLOCKED = missing proof/permission/environment/user decision; stop, no blind retry.
 ```
 
 ## Critical Issue Definitions
