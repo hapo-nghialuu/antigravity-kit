@@ -1,8 +1,8 @@
 # B1 benchmark workflow
 
-B1 là harness bounded cho baseline/treatment của CafeKit. Script chỉ đọc JSON, kiểm tra freeze/receipt, và tính summary. Script không gọi model, API, network, agent, hay tool workflow; không tự chạy task.
+B1 là harness bounded cho baseline/treatment của CafeKit. Script kiểm tra freeze/receipt, tính summary, và **thực thi có ghi nhận** qua runner-adapter tường minh. Script không tự gọi model/API/network; chỉ chạy runner do người dùng chỉ định qua hợp đồng argv rõ ràng.
 
-**Trạng thái hiện tại (2026-08-06):** chỉ có harness, schema, rubric, và template/fixture contract. Live baseline và treatment runs vẫn **pending**. **Live baseline and treatment runs remain pending.** Không có benchmark result nào được claim từ task này.
+**Trạng thái hiện tại (2026-08-07):** harness Track B đã triển khai — gồm freeze corpus/config, runner contract, thực thi ghi receipt bất biến, và validate/summarize honest (example_template và thiếu receipts không bao giờ báo live success). **Live baseline và treatment runs vẫn pending / chưa chạy (no-live-runs).** Không có benchmark result nào được claim từ task này.
 
 ## Files
 
@@ -92,6 +92,45 @@ Receipt là object append-only trong array hoặc `{ "receipts": [] }`. Các fie
 
 CLI reject duplicate `arm/task_id/repeat`, unknown task, invalid lane, missing/non-negative metrics, mismatched corpus/config/model/repo/permission/tool hashes, and missing or placeholder evidence. `artifact_ref` phải là path tương đối tới local file cạnh receipt bundle; validator đọc raw bytes và so khớp `artifact_sha256`, không truy cập network, URI, hay evidence ngoài local file. Receipt không được sửa để biến run fail thành pass; correction/adjudication ghi artifact mới.
 
+## Runner contract & reproducible execution (B1 Track B harness)
+
+Harness **không** tự gọi model/workflow ngầm. Mọi live execution phải đi qua **runner-adapter boundary** tường minh:
+
+**Runner contract JSON** (`--runner FILE`):
+
+```json
+{
+  "schema_version": "b1.v1",
+  "command": ["node", "scripts/my-benchmark-runner.mjs"],
+  "timeout_ms": 120000
+}
+```
+
+- `command` là **argv array** rõ ràng, không phải shell string. `runner.shell` hoặc `command` dạng string bị reject fail-closed. Mỗi phần tử bị kiểm placeholder (`<...>`, `{{}}`, `example`, `replace_me`, …) và `missing or placeholder freeze field`.
+- `timeout_ms` optional, >0, ≤600s.
+- Thiếu `--runner`, runner invalid, hoặc shell ngầm → `benchmark validation failed: runner contract is required …` exit `2`.
+
+**Thực thi (deterministic, fail-closed):**
+
+- Freeze corpus/config/repo/permissions/tool metadata được kiểm trước khi spawn (mismatched `corpus_sha256`, `config_sha256`, `example_template` corpus, hoặc placeholder → reject).
+- Mỗi `config.arm × task × repeat` được spawn **không shell** (`spawnSync` với `shell:false`, argv array), env được lọc allowlist (`PATH`, `HOME`, `TMPDIR`, … — không truyền secrets/API keys), `stdin` là JSON payload chứa `task_id/lane/arm/repeat`, `corpus_sha256/config_sha256`, `model/reasoning_effort`, `repo`, fingerprints, `prompt`/`prompt_sha256`, `acceptance/risk`, và `artifact_path` tuyệt đối trong bundle.
+- Harness đo `wall_ms` (thời gian thực quanh spawn), capture `command` (joined argv), `exit` (exit code), và đọc **raw bytes** artifact do runner ghi tại `artifacts/<arm>/<task_id>__<repeat>.bin`, tính `artifact_sha256` (raw-byte digest) — không log secret hay dump log runner.
+- Runner phải thoát `0` và in ra **stdout JSON duy nhất** với metrics:
+  `input_tokens`, `output_tokens`, `context_loaded_tokens`, `tool_calls`, `subagent_calls` (non-negative int), `correctness`, `regression`, `unsupported_completion_claim` (boolean), `user_corrections`, `useful_reviewer_findings`, `false_positive_reviewer_findings` (non-negative int).
+  Thiếu field, sai kiểu, exit non-zero, timeout, hoặc không tạo artifact → fail-closed, **không fabricate receipt** (partial run sẽ ghi `receipts.json` kèm `_incomplete:true` để debug nhưng `validate`/`summarize` vẫn báo `incomplete receipt matrix`).
+- Mỗi runner invocation là `context_isolated`; không dùng output/memory của run trước. Artifact `artifact_ref` được ghi tương đối trong bundle (`artifacts/...`), validator kiểm `path escapes receipt bundle directory` cả trên path lẫn realpath (symlink traversal) và so `artifact_sha256` trên raw bytes.
+- Sau khi chạy đủ ma trận, receipts được sắp deterministically (`arm/task_id/repeat`), kiểm `matrixCoverage` completeness (thiếu ô → `incomplete receipt matrix: missing …` exit 2), rồi ghi atomically `receipts.json` (`<out>/receipts.json` hoặc `--receipts FILE`). File này được `validate`/`summarize` tiêu thụ trực tiếp.
+
+**Không có live runs:** khi chưa supply `--runner` và chưa có `receipts`, `summarize` vẫn trả `status: "exploratory/no-live-runs"`, `live_runs: false` — honest, không claim success. Đây là trạng thái hiện tại của repo (harness đã sẵn, baseline/treatment thực tế chưa chạy).
+
+**An toàn artifact/secret:**
+
+- `artifact_ref` phải relative, không URI, không absolute, không `..` escape; harness `validateArtifact` kiểm cả `path.relative` lẫn `realpath` để chặn symlink escape.
+- Runner `command` là **argv array, `shell:false`**; nếu bất kỳ phần tử chứa secret-like assignment/flag (`OPENAI_API_KEY=...`, `--api-key=sk-...`, `--api-key <value>`, `--password=...`, `GITHUB_TOKEN=ghp_...`, `JWT_SECRET=ey...`…) harness **fail-closed** `secret-like assignment/flag is forbidden (Value not shown)` — không ghi receipt, không echo giá trị. Các tên an toàn như `tokenizer`, `api_key_file`, `token_path`, `*_label/*_hint/*_path/*_file` không bị false-positive (theo `scan-staged-secrets` safe-suffix).
+- `stderr` khi runner exit non-zero được **redact** trước khi đưa vào error: các `name=value`, `flag value`, credential URL, PEM, và token high-entropy (`sk-…`, `ghp_…`, `ey…`) được thay bằng `[REDACTED]`; chỉ báo exit code + snippet đã redact, không rò rỉ `OPENAI_API_KEY`, `AWS_SECRET`, `GITHUB_TOKEN`, `password`, `JWT`.
+- Không in secret value ra stdout/stderr; Runner env được allowlist (`PATH,HOME,TMPDIR,…`) để tránh rò rỉ `*_API_KEY`, `*_TOKEN`, … qua log.
+- Không fabricate: mọi validation (placeholder, hash mismatch, partial matrix, artifact hash) fail-closed exit 2.
+
 ## Commands
 
 Validate one frozen arm:
@@ -115,6 +154,35 @@ node packages/spec/scripts/benchmark-workflow.mjs validate \
 
 `validate` kiểm tra từng receipt và tính expected task/repeat matrix cho mọi arm đã cung cấp. Có receipts nhưng thiếu bất kỳ ô matrix nào thì thoát `2` với lỗi `incomplete receipt matrix`; chỉ matrix đầy đủ mới trả `status: "valid"`. `summarize` dùng cùng coverage nhưng không fail process khi matrix thiếu: trả `status: "not-ready"` để giữ chẩn đoán thiếu coverage.
 
+Execute (reproducible, runner-adapter) — minimal CLI cho baseline và treatment arms (dùng lại cùng corpus/config freeze, chỉ khác runner/out):
+
+```bash
+# Baseline arm
+node packages/spec/scripts/benchmark-workflow.mjs run \
+  --corpus /path/to/corpus.json \
+  --config /path/to/baseline-config.json \
+  --runner /path/to/runner.json \
+  --out /path/to/out-baseline
+
+# Treatment arm (cùng corpus, config khác arm)
+node packages/spec/scripts/benchmark-workflow.mjs run \
+  --corpus /path/to/corpus.json \
+  --config /path/to/treatment-config.json \
+  --runner /path/to/runner.json \
+  --out /path/to/out-treatment
+
+# Hoặc chạy cả hai arm cùng lúc (một receipts bundle so sánh được)
+node packages/spec/scripts/benchmark-workflow.mjs run \
+  --corpus /path/to/corpus.json \
+  --config /path/to/baseline-config.json \
+  --config /path/to/treatment-config.json \
+  --runner /path/to/runner.json \
+  --out /path/to/out-both
+# → ghi /path/to/out-both/receipts.json + artifacts/… ; có thể validate/summarize như trên
+```
+
+Thiếu `--runner`, runner placeholder, `example_template` corpus, `corpus_sha256`/`config_sha256` mismatch, hoặc artifact escape đều fail-closed exit 2. Partial matrix (runner crash/timeout hoặc thiếu repeat) cũng fail với `incomplete receipt matrix`.
+
 Summary tách theo `arm` rồi `lane`, không collapse thành một score:
 
 ```bash
@@ -135,4 +203,4 @@ Chọn repeat policy trước freeze; mục tiêu 2–3 repeats/task. Một repe
 
 ## Boundary của verification
 
-`npm test` hoặc contract tests chỉ chứng minh script/schema contract và fixture math. Chúng **không** chứng minh workflow correctness, model quality, baseline/treatment parity, hay rollout readiness. Live runs phải được thực hiện riêng, ghi exact commands/artifacts, freeze metadata, immutable receipts, rồi adjudicate theo `rubric.md`.
+`npm test` hoặc contract tests chỉ chứng minh script/schema contract và fixture math. Chúng **không** chứng minh workflow correctness, model quality, baseline/treatment parity, hay rollout readiness. Live runs phải được thực hiện riêng qua `run --runner` (ghi exact commands/artifacts, freeze metadata, immutable receipts), rồi adjudicate theo `rubric.md`. Hiện tại harness đã triển khai nhưng **chưa có live baseline/treatment run** — mọi `summarize` không receipts vẫn báo `exploratory/no-live-runs` trung thực.

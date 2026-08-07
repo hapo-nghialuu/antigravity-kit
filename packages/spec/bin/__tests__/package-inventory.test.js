@@ -111,6 +111,15 @@ function assertCombinedInstructionIsolation(root) {
   assert.match(codexBlock, /native project instruction surface is root `AGENTS\.md`/);
   assert.match(opencodeBlock, /native project instruction surface is root `AGENTS\.md`/);
   assert.match(agents, /shared-root trade-off is intentional/);
+  // H5 ownership/ignore contract
+  assert.match(core, /runtime-neutral/i);
+  assert.match(core, /fail-safe/i);
+  assert.match(codexBlock, /owned by Codex/i);
+  assert.match(codexBlock, /ignore this entire Codex block/i);
+  assert.match(opencodeBlock, /owned by OpenCode/i);
+  assert.match(opencodeBlock, /ignore this entire OpenCode block/i);
+  assert.doesNotMatch(core, /\$hapo-|hapo:/i);
+  assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT (CODEX|OPENCODE) /);
 }
 function stableInstallSnapshot(root, platforms) {
   const files = ['AGENTS.md', 'CLAUDE.md', '.gitignore'];

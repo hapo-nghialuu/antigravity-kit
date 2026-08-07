@@ -96,6 +96,7 @@ test('lane override keeps automatic result and surfaces downgrade warning', () =
     reversible: true,
     riskSignals: { privacy: true },
     override: 'Direct',
+    userAuthorized: true,
   });
   assert.equal(result.lane, 'Direct');
   assert.equal(result.automaticLane, 'Critical');
@@ -104,13 +105,48 @@ test('lane override keeps automatic result and surfaces downgrade warning', () =
   assert.ok(POLICY.lanePolicy(result).warnings.length >= 2);
 });
 
+test('unsafe downgrade without user authorization is blocked', () => {
+  assert.throws(() => POLICY.classifyLane({
+    reversible: true,
+    riskSignals: { privacy: true },
+    override: 'Direct',
+  }), /requires explicit user authorization/);
+  // also via CLI
+  const cli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--classify-lane',
+    '--task-json',
+    JSON.stringify({ riskSignals: { auth: true }, override: 'Direct' }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(cli.status, 2);
+  assert.match(cli.stderr, /requires explicit user authorization/);
+});
+
+test('forged approval via legacy approved field is rejected', () => {
+  assert.throws(() => POLICY.approvalState({ generated: true, approved: true }), /Legacy approval state/);
+  const cli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--approval-state',
+    '--task-json',
+    JSON.stringify({ generated: true, approved: true }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(cli.status, 2);
+  assert.match(cli.stderr, /Legacy approval state/);
+  const legacyCheck = POLICY.validateApprovalSchema({ approvals: { requirements: { generated: true, approved: true } } });
+  assert.equal(legacyCheck.valid, false);
+  assert.equal(legacyCheck.legacy, true);
+  assert.match(legacyCheck.error, /Legacy/);
+});
+
 test('approval state never infers user approval from generated or agent validation', () => {
-  assert.deepEqual(POLICY.approvalState({ generated: true, agent_validated: true }), {
-    generated: true,
-    agent_validated: true,
-    user_approved: false,
-    ready: false,
-  });
+  const state = POLICY.approvalState({ generated: true, agent_validated: true });
+  assert.equal(state.generated, true);
+  assert.equal(state.agent_validated, true);
+  assert.equal(state.user_approved, false);
+  assert.equal(state.ready, false);
+  assert.equal(state.schema_version, '2.0');
   assert.equal(POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true }).ready, true);
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
@@ -224,6 +260,197 @@ test('spec-gate rejects stale FLASH_UNVERIFIED done state', () => {
   }
 });
 
+test('first-run cache bypass is blocked - canonical receipt required even without cache', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-first-run-'));
+  const claude = path.join(root, '.claude');
+  fs.mkdirSync(path.join(claude, 'hooks'), { recursive: true });
+  fs.mkdirSync(path.join(claude, 'scripts'), { recursive: true });
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs'), path.join(claude, 'hooks/spec-gate.cjs'));
+  fs.copyFileSync(POLICY_PATH, path.join(claude, 'scripts/workflow-policy.cjs'));
+  const specDir = path.join(root, 'specs', 'demo', 'tasks');
+  fs.mkdirSync(specDir, { recursive: true });
+  // Done task without canonical receipt (missing Command, provenance)
+  fs.writeFileSync(path.join(root, 'specs', 'demo', 'spec.json'), JSON.stringify({
+    status: 'in_progress',
+    task_registry: { 'tasks/task.md': { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } },
+  }));
+  fs.writeFileSync(path.join(specDir, 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\n```\nnpm test\n```\n');
+  try {
+    const result = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
+      cwd: root,
+      env: { ...process.env, PROJECT_ROOT: root },
+      input: JSON.stringify({ cwd: root }),
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.decision, 'block', 'first-run without canonical receipt must block');
+    assert.match(payload.reason, /tasks\/task\.md/);
+    // Also test that with canonical receipt it passes
+    fs.writeFileSync(path.join(specDir, 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nBase: abc123\nHead: def456\n```\nnpm test\nPASS\n```\n');
+    // Clear cache to simulate fresh first-run with valid receipt
+    try { fs.unlinkSync(path.join(claude, 'hooks', '.logs', 'spec-gate-last.json')); } catch {}
+    try { fs.unlinkSync(path.join(__dirname, '..', '.logs', 'spec-gate-last.json')); } catch {}
+    // Need to clear the cache that the hook uses (under claude hooks .logs) - we already cleared above
+    // Re-run with valid receipt - should not block
+    const result2 = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
+      cwd: root,
+      env: { ...process.env, PROJECT_ROOT: root },
+      input: JSON.stringify({ cwd: root }),
+      encoding: 'utf8',
+    });
+    assert.equal(result2.stdout, '', 'valid canonical receipt on first run must not block');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    try { fs.unlinkSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/.logs/spec-gate-last.json')); } catch {}
+  }
+});
+
+test('canonical receipt requires command, exit, provenance and unambiguous PASS', () => {
+  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead: def\n'), []);
+  const missingCommand = POLICY.validateCanonicalReceipt('Verification: PASS\nExit: 0\nBase: a\nHead: b\n');
+  assert.ok(missingCommand.includes('command'));
+  const missingProvenance = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\n');
+  assert.ok(missingProvenance.includes('provenance'));
+  const missingVerification = POLICY.validateCanonicalReceipt('Command: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  assert.ok(missingVerification.includes('verification_state'));
+  const artifactWithoutHash = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact: dist/bundle.js\n');
+  assert.ok(artifactWithoutHash.includes('artifact_hash'));
+  // CLI validation
+  const cli = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n' }), '--json'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0);
+  assert.equal(JSON.parse(cli.stdout).ok, true);
+});
+
+test('canonical receipt provenance requires both Base and Head (or both base_sha and head_sha)', () => {
+  // Only Base fails - single endpoint must not satisfy provenance
+  const onlyBase = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\n');
+  assert.ok(onlyBase.includes('provenance'), 'only Base should fail provenance');
+  // Only Head fails
+  const onlyHead = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nHead: def456\n');
+  assert.ok(onlyHead.includes('provenance'), 'only Head should fail provenance');
+  // Both Base and Head passes
+  const bothLabels = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n');
+  assert.deepEqual(bothLabels, [], 'both Base and Head should pass');
+  // Only base_sha fails
+  const onlyBaseSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc123\n');
+  assert.ok(onlyBaseSha.includes('provenance'), 'only base_sha should fail provenance');
+  // Only head_sha fails
+  const onlyHeadSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nhead_sha: def456\n');
+  assert.ok(onlyHeadSha.includes('provenance'), 'only head_sha should fail provenance');
+  // Both base_sha and head_sha passes
+  const bothSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc123\nhead_sha: def456\n');
+  assert.deepEqual(bothSha, [], 'both base_sha and head_sha should pass');
+  // Alternation-precedence false acceptance check: ensure single Head or base_sha alone does not pass
+  const singleHeadLower = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nHead: single\n');
+  assert.ok(singleHeadLower.includes('provenance'));
+  // Empty / bare provenance must fail — same-line non-empty value required
+  const emptyBase = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def456\n');
+  assert.ok(emptyBase.includes('provenance'), 'empty Base: should fail');
+  const spacesBase = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:   \nHead: def456\n');
+  assert.ok(spacesBase.includes('provenance'), 'Base: with only spaces should fail');
+  const emptyHead = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead:\n');
+  assert.ok(emptyHead.includes('provenance'), 'empty Head: should fail');
+  const spacesHead = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead:   \n');
+  assert.ok(spacesHead.includes('provenance'), 'Head: with only spaces should fail');
+  const bareBaseSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha\nhead_sha: def\n');
+  assert.ok(bareBaseSha.includes('provenance'), 'bare base_sha without colon/value should fail');
+  const emptyBaseSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha:\nhead_sha: def\n');
+  assert.ok(emptyBaseSha.includes('provenance'), 'empty base_sha: should fail');
+  const spacesBaseSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha:   \nhead_sha: def\n');
+  assert.ok(spacesBaseSha.includes('provenance'), 'base_sha: with only spaces should fail');
+  const bareHeadSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc\nhead_sha\n');
+  assert.ok(bareHeadSha.includes('provenance'), 'bare head_sha without colon/value should fail');
+  const bareBoth = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha head_sha\n');
+  assert.ok(bareBoth.includes('provenance'), 'bare base_sha head_sha without colon/value should fail');
+  const baseEmptyHeadValid = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def\n');
+  assert.ok(baseEmptyHeadValid.includes('provenance'));
+  const validWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n');
+  assert.deepEqual(validWithValues, [], 'valid Base and Head with values should pass');
+  const validShaWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc\nhead_sha: def\n');
+  assert.deepEqual(validShaWithValues, [], 'valid base_sha and head_sha with values should pass');
+  // CLI: only Base via --validate-receipt should fail
+  const cliOnlyBase = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\n' }), '--json'], { encoding: 'utf8' });
+  assert.equal(cliOnlyBase.status, 2);
+  assert.equal(JSON.parse(cliOnlyBase.stdout).ok, false);
+  assert.ok(JSON.parse(cliOnlyBase.stdout).failures.includes('provenance'));
+  const cliBoth = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n' }), '--json'], { encoding: 'utf8' });
+  assert.equal(cliBoth.status, 0);
+  assert.equal(JSON.parse(cliBoth.stdout).ok, true);
+  // CLI empty Base should fail
+  const cliEmptyBase = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: b\n' }), '--json'], { encoding: 'utf8' });
+  assert.equal(cliEmptyBase.status, 2);
+  assert.ok(JSON.parse(cliEmptyBase.stdout).failures.includes('provenance'));
+});
+
+test('lane traces - Direct, Standard, Critical classification, override, state mutation and completion', () => {
+  // Direct: isolated reversible low-risk
+  const direct = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1 });
+  assert.equal(direct.lane, 'Direct');
+  assert.equal(direct.automaticLane, 'Direct');
+  assert.deepEqual(POLICY.lanePolicy(direct).delegated, []);
+  assert.equal(POLICY.lanePolicy(direct).requiresSpec, false);
+  assert.equal(POLICY.lanePolicy(direct).shipPoint, 'task');
+  // Standard: default
+  const standard = POLICY.classifyLane({ title: 'add pagination to list', taskCount: 1 });
+  assert.equal(standard.lane, 'Standard');
+  assert.deepEqual(POLICY.lanePolicy(standard).delegated, ['code-auditor']);
+  assert.equal(POLICY.lanePolicy(standard).shipPoint, 'feature');
+  // Critical: auth signal
+  const critical = POLICY.classifyLane({ riskSignals: { auth: true }, taskCount: 1 });
+  assert.equal(critical.lane, 'Critical');
+  assert.ok(critical.risks.includes('auth'));
+  assert.deepEqual(POLICY.lanePolicy(critical).delegated, ['inspector', 'implementer', 'test-runner', 'code-auditor']);
+  // Override: Direct requesting Critical is allowed (upgrade) without extra auth
+  const upgrade = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1, override: 'Critical' });
+  assert.equal(upgrade.lane, 'Critical');
+  assert.equal(upgrade.automaticLane, 'Direct');
+  // Downgrade without auth is blocked
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard' }), /requires explicit user authorization/);
+  // Downgrade with auth succeeds and surfaces warning
+  const downgrade = POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', userAuthorized: true });
+  assert.equal(downgrade.lane, 'Standard');
+  assert.match(downgrade.warnings.join(' '), /Downgrade authorized by user/);
+  // State mutation: approvalState
+  const pendingApproval = POLICY.approvalState({ generated: true, agent_validated: false, user_approved: false });
+  assert.equal(pendingApproval.ready, false);
+  const agentValidated = POLICY.approvalState({ generated: true, agent_validated: true, user_approved: false });
+  assert.equal(agentValidated.ready, false, 'agent_validated alone must not imply ready');
+  const approved = POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true });
+  assert.equal(approved.ready, true);
+  // Completion: flash work remains in_progress and does not unblock
+  const flashTask = { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', blocker: 'awaiting /hapo:test <feature>', dependencyBlocked: true, unblocks: false };
+  const failRemains = POLICY.promoteFlashTask(flashTask, 'FAIL');
+  assert.equal(failRemains.status, 'in_progress');
+  assert.equal(failRemains.unblocks, false);
+  const blockedRemains = POLICY.promoteFlashTask(flashTask, 'BLOCKED');
+  assert.equal(blockedRemains.unblocks, false);
+  const noTestsRemains = POLICY.promoteFlashTask(flashTask, 'NO_TESTS');
+  assert.equal(noTestsRemains.unblocks, false);
+  const promoted = POLICY.promoteFlashTask(flashTask, 'PASS', 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  assert.equal(promoted.readyForSync, true);
+  assert.equal(promoted.unblocks, false, 'promoted flash must not unblock until sync-finalize');
+  const finalized = POLICY.finalizeFlashTask(promoted, 'sync-finalize');
+  assert.equal(finalized.status, 'done');
+  assert.equal(finalized.unblocks, true);
+});
+
+test('flash selective promotion - only specific task is promoted, not blanket', () => {
+  const registry = {
+    'tasks/task-a.md': { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', dependencyBlocked: true, unblocks: false },
+    'tasks/task-b.md': { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', dependencyBlocked: true, unblocks: false },
+  };
+  const promotedA = POLICY.promoteFlashTask(registry['tasks/task-a.md'], 'PASS', 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  const notPromotedB = registry['tasks/task-b.md']; // unchanged
+  assert.equal(promotedA.readyForSync, true);
+  assert.equal(notPromotedB.receipt, 'FLASH_UNVERIFIED');
+  assert.equal(notPromotedB.readyForSync, undefined);
+  // FAIL on B does not affect A
+  const failB = POLICY.promoteFlashTask(notPromotedB, 'FAIL');
+  assert.equal(failB.receipt, 'FLASH_UNVERIFIED');
+  assert.equal(promotedA.receipt.startsWith('Verification: PASS'), true);
+});
+
 test('parallel waves require immutable provenance receipts and safe recovery', () => {
   const waves = read(PARALLEL_WAVES);
   for (const field of ['base_sha', 'head_sha', 'branch', 'worktree_path', 'commit_range']) {
@@ -256,6 +483,18 @@ test('provenance ledger defines reuse contract and source anchors', () => {
   }
   assert.match(provenance, /AgentKit|cafekit-ref/);
   assert.match(provenance, /before implementation/i);
+  // H1 remediation: distinguish survey vs verified implementation, fail unsupported claims
+  assert.match(provenance, /external survey|not committed/i);
+  assert.match(provenance, /survey only|not used|No borrowed text recorded/i);
+  assert.match(provenance, /Source anchor.*plans\//);
+  assert.match(provenance, /Evidence\/status/i);
+  assert.match(provenance, /grep -r.*cafekit-ref/i);
+  assert.doesNotMatch(provenance, /AgentKit T1.*implemented as direct source/i);
+  // shipped runtime must not contain cafekit-ref/AgentKit verbatim (only ledger/plans may)
+  const shippedHits = spawnSync('grep', ['-rn', 'cafekit-ref', 'packages/spec/src', '--include=*.md', '--include=*.cjs', '--include=*.ts'], { encoding: 'utf8' });
+  const agentKitHits = spawnSync('grep', ['-rn', 'AgentKit', 'packages/spec/src', '--include=*.md', '--include=*.cjs', '--include=*.ts'], { encoding: 'utf8' });
+  assert.equal(shippedHits.stdout.trim(), '', 'shipped runtime must not contain cafekit-ref verbatim');
+  assert.equal(agentKitHits.stdout.trim(), '', 'shipped runtime must not contain AgentKit verbatim');
 });
 
 const BENCHMARK_SCRIPT = path.join(PACKAGE_ROOT, 'scripts/benchmark-workflow.mjs');
@@ -573,6 +812,308 @@ test('B1 summary marks no receipts exploratory instead of claiming a run', () =>
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.status, 'exploratory/no-live-runs');
     assert.equal(summary.live_runs, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 run requires explicit runner contract and rejects placeholders/shell strings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-run-runner-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    // Missing runner
+    const missing = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--out', path.join(root, 'out-missing')], { encoding: 'utf8' });
+    assert.equal(missing.status, 2);
+    assert.match(missing.stderr, /runner contract is required/);
+    assert.match(missing.stderr, /explicit command array/);
+
+    // Placeholder runner (command contains placeholder)
+    const placeholderRunner = path.join(root, 'placeholder-runner.json');
+    fs.writeFileSync(placeholderRunner, JSON.stringify({ schema_version: 'b1.v1', command: ['node', '{{replace_me}}'] }));
+    const placeholder = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', placeholderRunner, '--out', path.join(root, 'out-placeholder')], { encoding: 'utf8' });
+    assert.equal(placeholder.status, 2);
+    assert.match(placeholder.stderr, /missing or placeholder freeze field/);
+
+    // Shell string forbidden (command as string)
+    const shellRunner = path.join(root, 'shell-runner.json');
+    fs.writeFileSync(shellRunner, JSON.stringify({ schema_version: 'b1.v1', command: 'node runner.mjs' }));
+    const shell = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', shellRunner, '--out', path.join(root, 'out-shell')], { encoding: 'utf8' });
+    assert.equal(shell.status, 2);
+    assert.match(shell.stderr, /explicit argv|shell string is forbidden/);
+
+    // Missing out/receipts
+    const minimalRunner = path.join(root, 'minimal-runner.json');
+    fs.writeFileSync(minimalRunner, JSON.stringify({ schema_version: 'b1.v1', command: ['node', '-e', 'process.exit(0)'] }));
+    const noOut = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', minimalRunner], { encoding: 'utf8' });
+    assert.equal(noOut.status, 2);
+    assert.match(noOut.stderr, /output is required/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 run executes via explicit argv, captures wall_ms/artifact, and remains honest no-live-runs without execution', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-run-execute-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    // Honest no-live-runs: summarize without receipts must stay exploratory
+    const noLive = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'summarize', '--corpus', fixture.corpus, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(noLive.status, 0);
+    const noLiveSummary = JSON.parse(noLive.stdout);
+    assert.equal(noLiveSummary.status, 'exploratory/no-live-runs');
+    assert.equal(noLiveSummary.live_runs, false);
+    assert.equal(noLiveSummary.rollout_recommendation.status, 'exploratory');
+    // Also validate without receipts is valid_no_receipts, not fabricated success
+    const validNoReceipts = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0]], { encoding: 'utf8' });
+    assert.equal(validNoReceipts.status, 0);
+    assert.equal(JSON.parse(validNoReceipts.stdout).status, 'valid_no_receipts');
+
+    // Create minimal deterministic runner that writes artifact and emits metrics JSON
+    const runnerScript = path.join(root, 'runner.mjs');
+    fs.writeFileSync(runnerScript, `
+import fs from 'node:fs';
+import path from 'node:path';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  const payload=JSON.parse(input);
+  fs.mkdirSync(path.dirname(payload.artifact_path), {recursive:true});
+  fs.writeFileSync(payload.artifact_path, 'artifact:'+payload.task_id+'/'+payload.repeat+'\\n');
+  const out={input_tokens:100, output_tokens:50, context_loaded_tokens:500, tool_calls:2, subagent_calls:0, correctness:true, regression:false, unsupported_completion_claim:false, user_corrections:0, useful_reviewer_findings:1, false_positive_reviewer_findings:0};
+  process.stdout.write(JSON.stringify(out));
+});
+`);
+    const runnerJson = path.join(root, 'runner.json');
+    fs.writeFileSync(runnerJson, JSON.stringify({ schema_version: 'b1.v1', command: ['node', runnerScript] }));
+    const outDir = path.join(root, 'out-live');
+    const run = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', runnerJson, '--out', outDir], { encoding: 'utf8' });
+    assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+    const runResult = JSON.parse(run.stdout);
+    assert.equal(runResult.status, 'executed');
+    assert.equal(runResult.live_runs, true);
+    assert.ok(fs.existsSync(path.join(outDir, 'receipts.json')), 'receipts.json must be written');
+    // Receipts must be consumable by existing validate/summarize path
+    const receipts = JSON.parse(fs.readFileSync(path.join(outDir, 'receipts.json'), 'utf8'));
+    assert.ok(Array.isArray(receipts.receipts) || Array.isArray(receipts));
+    const validate = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--receipts', path.join(outDir, 'receipts.json')], { encoding: 'utf8' });
+    assert.equal(validate.status, 0, `${validate.stdout}\n${validate.stderr}`);
+    assert.equal(JSON.parse(validate.stdout).status, 'valid');
+    // Ensure receipts capture wall_ms, command, artifact hash and are frozen
+    const firstReceipt = (receipts.receipts || receipts)[0];
+    assert.ok(typeof firstReceipt.wall_ms === 'number' && firstReceipt.wall_ms >= 0, 'wall_ms captured');
+    assert.ok(typeof firstReceipt.evidence.command === 'string' && firstReceipt.evidence.command.includes('node'), 'command captured');
+    assert.match(firstReceipt.evidence.artifact_sha256, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(firstReceipt.corpus_sha256, JSON.parse(fs.readFileSync(fixture.corpus, 'utf8')).corpus_sha256 || runResult.corpus_sha256 || firstReceipt.corpus_sha256);
+    // Artifact file must exist and hash must match raw bytes
+    const artifactPath = path.join(outDir, firstReceipt.evidence.artifact_ref);
+    assert.ok(fs.existsSync(artifactPath), 'artifact file must exist inside bundle');
+    const bytes = fs.readFileSync(artifactPath);
+    const expectedHash = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+    assert.equal(firstReceipt.evidence.artifact_sha256, expectedHash);
+    // Ensure no secrets leakage: receipts must not contain env secrets (check that known secret pattern not in file)
+    const receiptsText = fs.readFileSync(path.join(outDir, 'receipts.json'), 'utf8');
+    assert.doesNotMatch(receiptsText, /OPENAI_API_KEY|AWS_SECRET|GITHUB_TOKEN/);
+    // Ensure artifact_ref is relative and does not escape
+    assert.doesNotMatch(firstReceipt.evidence.artifact_ref, /^\//);
+    assert.doesNotMatch(firstReceipt.evidence.artifact_ref, /^\.\./);
+    assert.doesNotMatch(firstReceipt.evidence.artifact_ref, /^https?:/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 run rejects mismatched corpus hash, artifact escape, and partial matrices fail-closed', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-run-safety-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    const runnerScript = path.join(root, 'safe-runner.mjs');
+    fs.writeFileSync(runnerScript, `
+import fs from 'node:fs';
+import path from 'node:path';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  const payload=JSON.parse(input);
+  fs.mkdirSync(path.dirname(payload.artifact_path), {recursive:true});
+  fs.writeFileSync(payload.artifact_path, 'ok');
+  const out={input_tokens:100, output_tokens:50, context_loaded_tokens:500, tool_calls:2, subagent_calls:0, correctness:true, regression:false, unsupported_completion_claim:false, user_corrections:0, useful_reviewer_findings:1, false_positive_reviewer_findings:0};
+  process.stdout.write(JSON.stringify(out));
+});
+`);
+    const runnerJson = path.join(root, 'runner.json');
+    fs.writeFileSync(runnerJson, JSON.stringify({ schema_version: 'b1.v1', command: ['node', runnerScript] }));
+
+    // Mismatched corpus_sha256 in config must be rejected before execution
+    const badCorpus = JSON.parse(fs.readFileSync(fixture.corpus, 'utf8'));
+    badCorpus.corpus_id = 'tampered-id';
+    const badCorpusPath = path.join(root, 'bad-corpus.json');
+    fs.writeFileSync(badCorpusPath, JSON.stringify(badCorpus));
+    const mismatch = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', badCorpusPath, '--config', fixture.configs[0], '--runner', runnerJson, '--out', path.join(root, 'out-mismatch')], { encoding: 'utf8' });
+    assert.equal(mismatch.status, 2);
+    assert.match(mismatch.stderr, /corpus_sha256.*does not match corpus|freeze hash mismatch/);
+
+    // Artifact escape via validator: craft receipt with traversal artifact_ref and expect reject
+    const traversalReceipts = JSON.parse(fs.readFileSync(fixture.receipts, 'utf8'));
+    const outsideArtifact = path.join(path.dirname(root), 'outside.bin');
+    fs.writeFileSync(outsideArtifact, Buffer.from('outside'));
+    traversalReceipts.receipts[0].evidence.artifact_ref = path.relative(root, outsideArtifact);
+    traversalReceipts.receipts[0].evidence.artifact_sha256 = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(outsideArtifact)).digest('hex')}`;
+    const traversalPath = path.join(root, 'traversal.json');
+    fs.writeFileSync(traversalPath, JSON.stringify(traversalReceipts));
+    const traversal = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--config', fixture.configs[1], '--receipts', traversalPath], { encoding: 'utf8' });
+    assert.equal(traversal.status, 2);
+    assert.match(traversal.stderr, /path escapes receipt bundle directory/);
+    fs.rmSync(outsideArtifact, { force: true });
+
+    // Partial matrix: run with runner that fails on one task/repeat must not be reported as valid success
+    // Simulate by creating a runner that exits non-zero for one specific task
+    const flakyRunner = path.join(root, 'flaky-runner.mjs');
+    fs.writeFileSync(flakyRunner, `
+import fs from 'node:fs';
+import path from 'node:path';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  const payload=JSON.parse(input);
+  if (payload.task_id==='fixture-direct' && payload.repeat===1 && payload.arm==='baseline') process.exit(7);
+  fs.mkdirSync(path.dirname(payload.artifact_path), {recursive:true});
+  fs.writeFileSync(payload.artifact_path, 'ok');
+  const out={input_tokens:100, output_tokens:50, context_loaded_tokens:500, tool_calls:2, subagent_calls:0, correctness:true, regression:false, unsupported_completion_claim:false, user_corrections:0, useful_reviewer_findings:1, false_positive_reviewer_findings:0};
+  process.stdout.write(JSON.stringify(out));
+});
+`);
+    const flakyJson = path.join(root, 'flaky.json');
+    fs.writeFileSync(flakyJson, JSON.stringify({ schema_version: 'b1.v1', command: ['node', flakyRunner] }));
+    const flakyOut = path.join(root, 'out-flaky');
+    const flakyRun = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', flakyJson, '--out', flakyOut], { encoding: 'utf8' });
+    assert.equal(flakyRun.status, 2);
+    assert.match(flakyRun.stderr, /runner exited non-zero|no receipt fabricated/);
+    // No valid live success should be claimed from partial run
+    if (fs.existsSync(path.join(flakyOut, 'receipts.json'))) {
+      const maybeReceipts = JSON.parse(fs.readFileSync(path.join(flakyOut, 'receipts.json'), 'utf8'));
+      if (maybeReceipts.receipts) {
+        const incompleteValidate = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'validate', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--receipts', path.join(flakyOut, 'receipts.json')], { encoding: 'utf8' });
+        assert.equal(incompleteValidate.status, 2);
+        assert.match(incompleteValidate.stderr, /incomplete receipt matrix|runner exited/);
+      }
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B1 runner secret safety: command argv with secret-like assignment/flag is fail-closed and stderr is redacted', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-b1-secret-'));
+  const fixture = makeBenchmarkFixture(root);
+  try {
+    // Helper runner that would succeed if not blocked
+    const okRunnerScript = path.join(root, 'ok.mjs');
+    fs.writeFileSync(okRunnerScript, `
+import fs from 'node:fs';
+import path from 'node:path';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  const p=JSON.parse(input);
+  fs.mkdirSync(path.dirname(p.artifact_path), {recursive:true});
+  fs.writeFileSync(p.artifact_path,'ok');
+  process.stdout.write(JSON.stringify({input_tokens:1,output_tokens:1,context_loaded_tokens:1,tool_calls:0,subagent_calls:0,correctness:true,regression:false,unsupported_completion_claim:false,user_corrections:0,useful_reviewer_findings:0,false_positive_reviewer_findings:0}));
+});
+`);
+    // Secret-like argv must be rejected fail-closed, value not shown, keep shell:false
+    const cases = [
+      { desc: 'env assignment', command: ['node', okRunnerScript, 'OPENAI_API_KEY=sk-1234567890abcdefghij123456'] },
+      { desc: 'flag equals', command: ['node', okRunnerScript, '--api-key=sk-1234567890abcdefghij123456'] },
+      { desc: 'flag spaced', command: ['node', okRunnerScript, '--api-key', 'sk-1234567890abcdefghij123456'] },
+      { desc: 'password', command: ['node', okRunnerScript, '--password=supersecret1234'] },
+      { desc: 'jwt', command: ['node', okRunnerScript, '--jwt-secret=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9abcdefghij'] },
+      { desc: 'github token', command: ['node', okRunnerScript, 'GITHUB_TOKEN=ghp_1234567890abcdefghijklmnopqrstuv'] },
+    ];
+    for (const c of cases) {
+      const runnerJson = path.join(root, `runner-${c.desc.replace(/\s+/g,'-')}.json`);
+      fs.writeFileSync(runnerJson, JSON.stringify({ schema_version: 'b1.v1', command: c.command }));
+      const out = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', runnerJson, '--out', path.join(root, `out-${c.desc}`)], { encoding: 'utf8' });
+      assert.equal(out.status, 2, `case ${c.desc} should be blocked`);
+      assert.match(out.stderr, /secret-like assignment\/flag is forbidden/);
+      assert.match(out.stderr, /Value not shown/);
+      // Must not leak secret value in error or evidence
+      assert.doesNotMatch(out.stderr, /sk-1234567890/);
+      assert.doesNotMatch(out.stderr, /supersecret/);
+      assert.doesNotMatch(out.stderr, /ghp_/);
+      assert.doesNotMatch(out.stderr, /eyJhbGci/);
+      // Also ensure stderr snippet does not contain raw secret if leaked via stderr
+      // (the runner never executed, so no stderr from runner, just validation error)
+    }
+
+    // Safe names must NOT be flagged (no false positive)
+    const safeCases = [
+      ['node', okRunnerScript, '--tokenizer', 'bert-base'],
+      ['node', okRunnerScript, '--api-key-file', '/tmp/keyfile'],
+      ['node', okRunnerScript, '--token-path', '/tmp/token'],
+      ['node', okRunnerScript, '--password-hint', 'my hint'],
+      ['node', okRunnerScript, '--password-label', 'label'],
+    ];
+    for (const [idx, command] of safeCases.entries()) {
+      const runnerJson = path.join(root, `safe-${idx}.json`);
+      fs.writeFileSync(runnerJson, JSON.stringify({ schema_version: 'b1.v1', command }));
+      const out = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', runnerJson, '--out', path.join(root, `out-safe-${idx}`)], { encoding: 'utf8' });
+      // Should not be blocked for secret-like; it should either succeed or fail for other reasons but not secret-like
+      assert.doesNotMatch(out.stderr, /secret-like assignment\/flag is forbidden/, `safe case ${command.join(' ')} must not be flagged`);
+      assert.equal(out.status, 0, `safe case ${command.join(' ')} should execute (got ${out.stderr})`);
+      // Clean out for next
+      fs.rmSync(path.join(root, `out-safe-${idx}`), { recursive: true, force: true });
+    }
+
+    // Stderr redaction: runner that exits non-zero and leaks secret in stderr must have [REDACTED] and not raw secret
+    const leakyRunner = path.join(root, 'leaky.mjs');
+    fs.writeFileSync(leakyRunner, `
+import fs from 'node:fs';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  console.error('failed to connect with OPENAI_API_KEY=sk-1234567890abcdefghijklmnopqrstuv and token ghp_1234567890abcdefghijklmnopqrstuv');
+  console.error('also password supersecret1234 and jwt eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9abcdefghij');
+  process.exit(2);
+});
+`);
+    const leakyJson = path.join(root, 'leaky.json');
+    fs.writeFileSync(leakyJson, JSON.stringify({ schema_version: 'b1.v1', command: ['node', leakyRunner] }));
+    const leakyOut = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', leakyJson, '--out', path.join(root, 'out-leaky')], { encoding: 'utf8' });
+    assert.equal(leakyOut.status, 2);
+    assert.match(leakyOut.stderr, /runner exited non-zero/);
+    assert.match(leakyOut.stderr, /\[REDACTED\]/);
+    assert.doesNotMatch(leakyOut.stderr, /sk-1234567890/);
+    assert.doesNotMatch(leakyOut.stderr, /ghp_1234567890/);
+    assert.doesNotMatch(leakyOut.stderr, /supersecret/);
+    assert.doesNotMatch(leakyOut.stderr, /eyJhbGci/);
+    // Ensure no receipt was fabricated
+    assert.equal(fs.existsSync(path.join(root, 'out-leaky', 'receipts.json')), false, 'no receipt should be fabricated on stderr secret leak');
+
+    // Also test that evidence.command never contains secret when runner would have been allowed (it is blocked, so no evidence)
+    // For a runner that does not contain secret, evidence should contain the safe command
+    const safeRunnerForEvidence = path.join(root, 'evidence.mjs');
+    fs.writeFileSync(safeRunnerForEvidence, `
+import fs from 'node:fs';
+import path from 'node:path';
+let input='';
+process.stdin.on('data', c=>input+=c);
+process.stdin.on('end', ()=>{
+  const p=JSON.parse(input);
+  fs.mkdirSync(path.dirname(p.artifact_path),{recursive:true});
+  fs.writeFileSync(p.artifact_path,'evidence');
+  process.stdout.write(JSON.stringify({input_tokens:1,output_tokens:1,context_loaded_tokens:1,tool_calls:0,subagent_calls:0,correctness:true,regression:false,unsupported_completion_claim:false,user_corrections:0,useful_reviewer_findings:0,false_positive_reviewer_findings:0}));
+});
+`);
+    const evidenceRunnerJson = path.join(root, 'evidence.json');
+    fs.writeFileSync(evidenceRunnerJson, JSON.stringify({ schema_version: 'b1.v1', command: ['node', safeRunnerForEvidence, '--verbose'] }));
+    const evidenceOut = path.join(root, 'out-evidence');
+    const evidenceRun = spawnSync(process.execPath, [BENCHMARK_SCRIPT, 'run', '--corpus', fixture.corpus, '--config', fixture.configs[0], '--runner', evidenceRunnerJson, '--out', evidenceOut], { encoding: 'utf8' });
+    assert.equal(evidenceRun.status, 0);
+    const evidenceReceipts = JSON.parse(fs.readFileSync(path.join(evidenceOut, 'receipts.json'), 'utf8'));
+    const ev = (evidenceReceipts.receipts || evidenceReceipts)[0].evidence;
+    assert.match(ev.command, /node/);
+    assert.doesNotMatch(ev.command, /sk-|ghp_|eyJ/);
+    assert.doesNotMatch(JSON.stringify(evidenceReceipts), /OPENAI_API_KEY/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
