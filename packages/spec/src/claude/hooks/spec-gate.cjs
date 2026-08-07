@@ -9,8 +9,8 @@
  * Block contract (exit 0 + stdout): {"decision":"block","reason":"..."}.
  *
  * Safety: stop_hook_active loop guard; runtime.spec.completion_gate=false
- * escape hatch (missing key → ON); first-run seeds cache without blocking;
- * crash → fail-open + hooks/.logs/hook-log.jsonl. Exit: 0 always.
+ * escape hatch (missing key → ON); cache is optimization only - every
+ * done transition is validated even on first run / empty cache; crash → fail-open + hooks/.logs/hook-log.jsonl. Exit: 0 always.
  */
 
 try {
@@ -82,20 +82,13 @@ try {
     process.exit(0);
   }
 
-  // First run: treat all current done as historical — seed cache, never block.
-  if (!cacheExists) {
-    try {
-      fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
-      cache[featureName] = currentStatuses;
-      fs.writeFileSync(cacheFile, JSON.stringify(cache));
-    } catch { /* fail-open */ }
-    process.exit(0);
-  }
-
-  const featureCache = cache[featureName] || {};
-  // Newly done: status is done now AND cached status differs or is absent.
-  const newlyDone = Object.keys(taskRegistry).filter((tp) =>
-    (taskRegistry[tp]?.status || 'pending') === 'done' && featureCache[tp] !== 'done'
+  // Cache hardening: every Stop revalidates the canonical receipt for
+  // every task currently marked done, so a cached PASS cannot hide later
+  // mutations (deletion, placeholder, changed Verification/Command/Exit/
+  // Base/Head, stale provenance). Cache is an optimization, not truth.
+  const featureCache = cacheExists ? (cache[featureName] || {}) : {};
+  const allDoneTasks = Object.keys(taskRegistry).filter((tp) =>
+    (taskRegistry[tp]?.status || 'pending') === 'done'
   );
   // /m so ^ matches line starts (Evidence is never at byte 0 of the file).
   // legacy heading aliases: read-compat only, no longer advertised
@@ -121,12 +114,35 @@ try {
     return lines.slice(start, end).join('\n');
   }
 
-  // Receipt checks a–d → failed letter list.
-  // a: file + Status header has "done"; b: Evidence heading; c: no {{...}} + (fence|proof); d: completed_at
+  function validateCanonicalReceipt(body) {
+    const fails = [];
+    if (!/^\s*Verification:\s*PASS\s*$/m.test(body)) fails.push('verification_state');
+    if (!/^\s*Command(?:\(s\))?\s*:/m.test(body)) fails.push('command');
+    if (!/^\s*Exit\s*:|exit\s+code\s*[:=]|\bResult\s*:\s*PASS\b/im.test(body)) fails.push('exit_result');
+    const hasBase = /^\s*Base[ \t]*:[ \t]*\S/im.test(body);
+    const hasHead = /^\s*Head[ \t]*:[ \t]*\S/im.test(body);
+    const hasBaseSha = /\bbase_sha[ \t]*:[ \t]*\S/im.test(body);
+    const hasHeadSha = /\bhead_sha[ \t]*:[ \t]*\S/im.test(body);
+    if (!((hasBase && hasHead) || (hasBaseSha && hasHeadSha))) fails.push('provenance');
+    if (/\bartifact\b/i.test(body) && !/sha256:/i.test(body)) fails.push('artifact_hash');
+    return fails;
+  }
+
+  // Receipt checks a–h → failed letter list.
+  // a: file + Status header has "done"; b: Evidence heading; c: no {{...}} + unambiguous PASS; d: completed_at; e: command; f: exit/result; g: provenance; h: artifact hash
+  function safeTaskFile(featureDir, taskPath) {
+    const target = path.resolve(featureDir, taskPath);
+    const relative = path.relative(featureDir, target);
+    // sibling-prefix safe: must not be .., ../..., or absolute (cross-platform)
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+    return target;
+  }
+
   function checkReceipt(taskPath) {
     const fails = [];
-    const abs = path.join(specsPath, featureName, taskPath);
-    if (!fs.existsSync(abs)) return ['a'];
+    const featureDir = path.join(specsPath, featureName);
+    const abs = safeTaskFile(featureDir, taskPath);
+    if (!abs || !fs.existsSync(abs)) return ['a'];
     let text = '';
     try { text = fs.readFileSync(abs, 'utf8'); } catch { return ['a']; }
 
@@ -142,6 +158,20 @@ try {
       !(PASS_MARKER_RE.test(body) || LEGACY_SUCCESS_RE.test(body))
     ) {
       fails.push('c');
+    } else {
+      // Canonical receipt checks for done tasks
+      const canonicalFails = validateCanonicalReceipt(body);
+      const map = { verification_state: 'c', command: 'e', exit_result: 'f', provenance: 'g', artifact_hash: 'h' };
+      for (const cf of canonicalFails) {
+        if (cf === 'verification_state') {
+          if (!PASS_MARKER_RE.test(body) && !fails.includes('c')) fails.push('c');
+          continue;
+        }
+        const letter = map[cf];
+        if (letter && !fails.includes(letter)) fails.push(letter);
+      }
+      // Enforce strict Verification: PASS, not just legacy success
+      if (!PASS_MARKER_RE.test(body) && !fails.includes('c')) fails.push('c');
     }
 
     const at = taskRegistry[taskPath]?.completed_at;
@@ -153,12 +183,14 @@ try {
     return fails;
   }
 
-  const failures = newlyDone
+  const failures = allDoneTasks
     .map((tp) => ({ taskPath: tp, fails: checkReceipt(tp) }))
     .filter((f) => f.fails.length > 0);
 
-  // Always persist status transitions, including done → pending. Leave failing
-  // newly-done tasks at their old status so the gate re-fires next Stop.
+  // Always persist status transitions, including done → pending. Keep
+  // failing done tasks at their previous cached status so a stale valid
+  // entry cannot mask a mutated receipt on the next Stop; with
+  // revalidation of every done task the gate still re-fires regardless.
   try {
     const nextFeature = { ...featureCache, ...currentStatuses };
     for (const { taskPath } of failures) {
@@ -170,7 +202,7 @@ try {
     fs.writeFileSync(cacheFile, JSON.stringify(cache));
   } catch { /* fail-open */ }
 
-  if (newlyDone.length === 0) process.exit(0);
+  if (allDoneTasks.length === 0) process.exit(0);
   if (failures.length === 0) process.exit(0);
 
   const lines = [

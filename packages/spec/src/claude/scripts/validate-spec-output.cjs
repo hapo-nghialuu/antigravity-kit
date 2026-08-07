@@ -20,6 +20,9 @@ const REQUIRED_REGISTRY_KEYS = [
   'completed_at',
   'last_updated_at',
 ];
+const APPROVAL_SCHEMA_VERSION = '2.0';
+const LEGACY_APPROVAL_ERROR =
+  `Legacy approval field "approved" detected. Migration required: replace "approved" with "agent_validated" and "user_approved" per schema v${APPROVAL_SCHEMA_VERSION} (schema_version: "${APPROVAL_SCHEMA_VERSION}"). See spec-state.json template. Refusing to infer user approval.`;
 
 function usage() {
   console.error('Usage: node .claude/scripts/validate-spec-output.cjs specs/<feature>');
@@ -61,6 +64,17 @@ function listTaskFiles(specDir) {
 function hasHeading(content, heading) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`^##\\s+${escaped}\\s*$`, 'm').test(content);
+}
+
+function extractSection(content, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^##\\s+${escaped}\\s*$`, 'im');
+  const match = content.match(re);
+  if (!match) return null;
+  const start = match.index + match[0].length;
+  const after = content.slice(start);
+  const next = after.match(/^##\s+/m);
+  return next ? after.slice(0, next.index) : after;
 }
 
 function extractRequirementIds(requirementsText) {
@@ -127,8 +141,35 @@ function validateTaskSections(taskPath, content, errors) {
   if (!hasCompletionCriteria) errors.push(`${taskPath}: missing Completion Criteria`);
   if (!hasEvidence) errors.push(`${taskPath}: missing Evidence or task test plan`);
   if (!hasRiskAssessment) errors.push(`${taskPath}: missing Risk Assessment`);
-  if (hasEvidence && !/Runtime reachability verification/i.test(content)) {
-    errors.push(`${taskPath}: missing Runtime reachability verification`);
+  if (hasEvidence) {
+    const evidenceSection = extractSection(content, 'Evidence')
+      || extractSection(content, 'Task Test Plan & Verification Evidence')
+      || extractSection(content, 'Verification & Evidence')
+      || '';
+    if (!/Runtime reachability verification/i.test(evidenceSection)) {
+      errors.push(`${taskPath}: missing Runtime reachability verification`);
+    } else {
+      // Reachability must prove a concrete path/anchor, not just the phrase.
+      // Require at least one of: backtick file path, Entrypoint/caller line, or anchor.
+      const hasConcreteAnchor =
+        /`[^`]*\.[a-z]{1,4}`/i.test(evidenceSection) ||
+        /Entrypoint\/caller\s*:/i.test(evidenceSection) ||
+        /Route is registered|import.*from|anchor:\s*`/i.test(evidenceSection);
+      if (!hasConcreteAnchor) {
+        errors.push(`${taskPath}: Runtime reachability verification must reference a concrete file path or anchor (e.g. \`src/...\` or Entrypoint/caller)`);
+      } else {
+        // Cross-check against declared Related Files paths
+        const relatedPaths = new Set(relatedFilesSection(content).rows.map((r) => r.path));
+        const referencedPaths = [...evidenceSection.matchAll(/`([^`]*\.[a-z0-9]{1,4})`/gi)].map((m) => m[1].replace(/^\.\//, ''));
+        // At least one referenced path should correspond to a declared Related Files entry (or be clearly external)
+        if (referencedPaths.length > 0 && relatedPaths.size > 0) {
+          const overlaps = referencedPaths.some((p) => [...relatedPaths].some((rp) => p === rp || p.endsWith(rp) || rp.endsWith(p) || p.includes(rp.split('/').pop())));
+          if (!overlaps && !/Entrypoint\/caller/i.test(evidenceSection)) {
+            errors.push(`${taskPath}: Runtime reachability verification references no Related Files path — must anchor to a declared file`);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -266,13 +307,37 @@ function validateRelatedFiles(taskPath, content, errors) {
 }
 
 function validateStateTransitions(spec, errors) {
-  for (const [stage, approval] of Object.entries(spec.approvals || {})) {
+  // Approval schema v2: generated, agent_validated, user_approved independent.
+  // Legacy "approved" field is rejected fail-closed with migration guidance.
+  const approvals = spec.approvals || {};
+  let hasLegacy = false;
+  for (const [stage, approval] of Object.entries(approvals)) {
     if (!approval || typeof approval !== 'object') {
       errors.push(`spec.json.approvals.${stage}: must be an object`);
       continue;
     }
-    if (approval.approved === true && approval.generated !== true) {
-      errors.push(`spec.json.approvals.${stage}: approved transition requires generated=true`);
+    if ('approved' in approval) {
+      errors.push(`spec.json.approvals.${stage}: ${LEGACY_APPROVAL_ERROR}`);
+      hasLegacy = true;
+    }
+    // Unsupported/ambiguous: if schema_version missing when approvals use v2 shape, warn but not fail? B2 says fail closed.
+    // We fail closed when version is unsupported or ambiguous and ready_for_implementation is true.
+  }
+
+  // Schema version validation
+  if (spec.schema_version !== undefined && spec.schema_version !== APPROVAL_SCHEMA_VERSION) {
+    errors.push(`spec.json.schema_version: unsupported "${spec.schema_version}", expected "${APPROVAL_SCHEMA_VERSION}" — migration required`);
+  }
+  if (spec.approval_schema_version !== undefined && spec.approval_schema_version !== APPROVAL_SCHEMA_VERSION) {
+    errors.push(`spec.json.approval_schema_version: unsupported "${spec.approval_schema_version}", expected "${APPROVAL_SCHEMA_VERSION}"`);
+  }
+  // If approvals use v2 fields but no schema_version, treat as ambiguous — fail closed when ready flag is set
+  const usesV2 = Object.values(approvals).some((a) => a && typeof a === 'object' && ('agent_validated' in a || 'user_approved' in a));
+  if (usesV2 && spec.schema_version === undefined && spec.approval_schema_version === undefined) {
+    // Only warn now; will be error if ready_for_implementation is true (checked below)
+    // Provide guidance
+    if (spec.ready_for_implementation === true) {
+      errors.push(`spec.json.schema_version: missing — spec uses v2 approvals (agent_validated/user_approved) but has no schema_version "${APPROVAL_SCHEMA_VERSION}"`);
     }
   }
 
@@ -281,10 +346,13 @@ function validateStateTransitions(spec, errors) {
   }
 
   if (spec.ready_for_implementation === true) {
+    if (hasLegacy) {
+      errors.push(`spec.json.ready_for_implementation: cannot be true with legacy approval fields — migrate to agent_validated/user_approved`);
+    }
     for (const stage of ['requirements', 'design', 'tasks']) {
       const approval = spec.approvals?.[stage];
-      if (approval?.generated !== true || approval?.approved !== true) {
-        errors.push(`spec.json.ready_for_implementation: requires generated and approved ${stage} evidence`);
+      if (!approval || approval?.generated !== true || approval?.agent_validated !== true || approval?.user_approved !== true) {
+        errors.push(`spec.json.ready_for_implementation: requires generated and agent_validated and user_approved ${stage} evidence (v2)`);
       }
     }
     if (spec.validation?.status === 'in_progress' || spec.validation?.status === 'not-run') {
@@ -349,18 +417,67 @@ function validateDependencyTopology(spec, taskFiles, registry, taskRecords, erro
       }
     }
   }
+  // Lifecycle ordering: Create must precede Modify/Delete/Read within task for same path
+  for (const [taskFile, record] of taskRecords) {
+    const createIndexByPath = new Map();
+    for (const [index, row] of record.rows.entries()) {
+      if (row.action === 'create' && !createIndexByPath.has(row.path)) {
+        createIndexByPath.set(row.path, index);
+      }
+    }
+    for (const [index, row] of record.rows.entries()) {
+      if (!['modify', 'delete', 'read'].includes(row.action)) continue;
+      if (!createIndexByPath.has(row.path)) continue;
+      const createIdx = createIndexByPath.get(row.path);
+      if (createIdx > index) {
+        errors.push(`${taskFile}: Create must precede ${row.action} for ${row.path} within Related Files order`);
+      }
+    }
+  }
+  // Cross-task lifecycle: Modify/Delete/Read of a path created by another task must depend on creator
+  for (const [taskFile, record] of taskRecords) {
+    for (const [index, row] of record.rows.entries()) {
+      if (!['modify', 'delete', 'read'].includes(row.action)) continue;
+      const producer = producers.get(row.path);
+      if (!producer) continue;
+      if (producer.taskFile === taskFile) continue;
+      if (!dependsOn(taskFile, producer.taskFile)) {
+        errors.push(`${taskFile}: ${row.action} of ${row.path} must depend on creator ${producer.taskFile}`);
+      }
+    }
+  }
+
+  // Existing implementation: Modify/Delete on non-produced paths must have a Read before them.
+  // This ensures lifecycle Read is not skipped for existing files.
   for (const [taskFile, record] of taskRecords) {
     for (const [index, row] of record.rows.entries()) {
       if (!['modify', 'delete'].includes(row.action)) continue;
-      const producer = producers.get(row.path);
-      if (!producer || producer.taskFile === taskFile) {
-        if (producer && producer.index > index) {
-          errors.push(`${taskFile}: Create must precede ${row.action} for ${row.path} within Related Files order`);
-        }
-        continue;
+      if (producers.has(row.path)) continue; // produced by spec, not existing
+      // Check if there's a Read for same path preceding this Modify/Delete
+      let hasPrecedingRead = false;
+      // Same task earlier row
+      for (let i = 0; i < index; i += 1) {
+        const r = record.rows[i];
+        if (r.action === 'read' && r.path === row.path) { hasPrecedingRead = true; break; }
       }
-      if (!dependsOn(taskFile, producer.taskFile)) {
-        errors.push(`${taskFile}: ${row.action} of ${row.path} must depend on creator ${producer.taskFile}`);
+      if (hasPrecedingRead) continue;
+      // In any dependency ancestor
+      const deps = dependencies.get(taskFile) || new Set();
+      // Walk transitive deps for Read
+      const stack = [...deps];
+      const seen = new Set();
+      while (stack.length > 0) {
+        const dep = stack.pop();
+        if (seen.has(dep)) continue;
+        seen.add(dep);
+        const depRecord = taskRecords.get(dep);
+        if (depRecord && depRecord.rows.some((r) => r.action === 'read' && r.path === row.path)) {
+          hasPrecedingRead = true; break;
+        }
+        for (const d of dependencies.get(dep) || []) stack.push(d);
+      }
+      if (!hasPrecedingRead) {
+        errors.push(`${taskFile}: ${row.action} of ${row.path} targets existing implementation but has no preceding Read — add a Read for ${row.path} before modifying it (lifecycle ordering)`);
       }
     }
   }
@@ -508,8 +625,8 @@ function validateSpec(specDir) {
     ? extractContractDefs(fs.readFileSync(designPath, 'utf8'))
     : new Map();
   if (taskFiles.length >= 5 && contractDefs.size === 0) {
-    warnings.push(
-      'design.md declares no contract blocks; specs spanning BE/FE must declare shared shapes (<!-- contract:NAME -->)',
+    errors.push(
+      'design.md: 5+ task spec requires contract blocks for BE/FE shared shapes (<!-- contract:NAME -->) — fail closed, not warning',
     );
   }
   for (const taskFile of taskFiles) {
@@ -520,9 +637,17 @@ function validateSpec(specDir) {
     validateRelatedFiles(taskFile, content, errors);
     taskRecords.set(taskFile, { rows: relatedFilesSection(content).rows });
 
+    // Requirement traceability: only structured _Requirements: ..._ mappings inside Steps/Requirements sections count.
+    // Incidental mentions elsewhere (prose Context, Constraints) must not be counted.
+    const stepsSection = extractSection(content, 'Steps') || extractSection(content, 'Implementation Steps') || '';
+    const reqSectionInTask = extractSection(content, 'Requirements') || '';
+    const mappingSource = `${stepsSection}\n${reqSectionInTask}`;
+    // Also consider inline _Requirements: inside Steps bullet lines that may be outside section extraction edge cases,
+    // so fallback to whole content scanning only if sections are null (e.g., malformed heading). But prefer scoped.
+    const effectiveMappingSource = mappingSource.trim() ? mappingSource : content;
     const numericMappingRe = /_Requirements:\s*([^_\n]+)_/gi;
     let match;
-    while ((match = numericMappingRe.exec(content)) !== null) {
+    while ((match = numericMappingRe.exec(effectiveMappingSource)) !== null) {
       for (const token of match[1].split(',')) {
         const trimmed = token.trim();
         const major = trimmed.match(/^(\d+)(?:\.\d+)?$/);

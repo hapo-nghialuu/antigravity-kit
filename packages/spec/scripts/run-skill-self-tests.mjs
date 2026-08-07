@@ -1006,7 +1006,8 @@ async function runStaticSemanticTests() {
 
 function runSkillCatalogTests() {
   const scriptPath = join(packageRoot, "src/claude/scripts/generate-skill-catalog.cjs");
-  const result = spawnSync(process.execPath, [scriptPath, "--skills"], {
+  const sourceRoot = join(packageRoot, "src/claude/skills");
+  const result = spawnSync(process.execPath, [scriptPath, "--skills", "--root", sourceRoot], {
     cwd: packageRoot,
     encoding: "utf8",
   });
@@ -1018,13 +1019,13 @@ function runSkillCatalogTests() {
   }
   for (const expected of [
     "CafeKit Skills Catalog",
-    "`hapo-specs`",
-    "`hapo-develop`",
-    "`hapo-docs`",
-    "`hapo-question`",
-    "`hapo-debug`",
-    "`hapo-hotfix`",
-    "`hapo-react-best-practices`",
+    "`hapo:specs`",
+    "`hapo:develop`",
+    "`hapo:docs`",
+    "`hapo:question`",
+    "`hapo:debug`",
+    "`hapo:hotfix`",
+    "`hapo:react-best-practices`",
   ]) {
     if (!result.stdout.includes(expected)) {
       console.error(result.stdout);
@@ -1033,7 +1034,7 @@ function runSkillCatalogTests() {
     }
   }
 
-  const json = spawnSync(process.execPath, [scriptPath, "--json"], {
+  const json = spawnSync(process.execPath, [scriptPath, "--json", "--root", sourceRoot], {
     cwd: packageRoot,
     encoding: "utf8",
   });
@@ -1047,6 +1048,16 @@ function runSkillCatalogTests() {
   if (!Array.isArray(parsed.skills) || parsed.skills.length < 20) {
     console.error(json.stdout);
     console.error("[FAIL] skill catalog JSON has too few skills");
+    process.exit(1);
+  }
+
+  // Determinism guard: running again must produce identical JSON (no cache/stale output)
+  const json2 = spawnSync(process.execPath, [scriptPath, "--json", "--root", sourceRoot], {
+    cwd: packageRoot,
+    encoding: "utf8",
+  });
+  if (json2.stdout !== json.stdout) {
+    console.error("[FAIL] skill catalog output not deterministic across runs");
     process.exit(1);
   }
 
@@ -1497,6 +1508,7 @@ async function createValidSpecFixture(root) {
     join(specDir, "spec.json"),
     JSON.stringify(
       {
+        schema_version: "2.0",
         feature_name: "valid-spec",
         status: "in_progress",
         current_phase: "tasks",
@@ -1507,9 +1519,9 @@ async function createValidSpecFixture(root) {
           expansion_policy: "requires-user-approval",
         },
         approvals: {
-          requirements: { generated: true, approved: true },
-          design: { generated: true, approved: true },
-          tasks: { generated: true, approved: true },
+          requirements: { generated: true, agent_validated: true, user_approved: true },
+          design: { generated: true, agent_validated: true, user_approved: true },
+          tasks: { generated: true, agent_validated: true, user_approved: true },
         },
         task_files: [taskPath],
         task_registry: {
@@ -1541,7 +1553,7 @@ async function createValidSpecFixture(root) {
   await writeText(join(specDir, "design.md"), "# Design\n\nUse existing admin route.\n");
   await writeText(
     join(specDir, taskPath),
-    `# Task R1-01: User permission control\n\n## Context\n- Why: Admins need to control workspace creation.\n- Current state: Existing admin route.\n- Target outcome: Permission can be toggled.\n\n## Constraints\n- MUST: Preserve existing admin auth checks.\n- SHOULD: Reuse existing route patterns.\n- MUST NOT: Add a new auth system.\n- SCOPE: Permission toggle only.\n\n## Steps\n- [ ] 1. Update admin route\n  - Business intent: allow admin permission control.\n  - Code detail: PATCH /admin/users/{id}/permissions.\n  - _Requirements: 1.1_\n\n## Requirements\n- 1.1 — Persist user permission state.\n\n## Related Files\n| Path | Action | Description |\n|---|---|---|\n| \`backend/app/api/v1/admin.py\` | Modify | Permission endpoint |\n\n## Completion Criteria\n- [ ] Admin can toggle permission.\n- [ ] Invalid user returns 404.\n\n## Evidence\n- [ ] Automated verification\n  - Command(s): \`pytest backend/tests/test_admin_permissions.py\`\n  - Expected proof: tests pass\n- [ ] Artifact / runtime verification\n  - Inspect: \`PATCH /admin/users/{id}/permissions\`\n  - Expect: response contains updated permission\n- [ ] Runtime reachability verification\n  - Entrypoint/caller: \`backend/app/api/v1/admin.py\`\n  - Expect: route is registered in admin router\n- [ ] Contract / negative-path verification\n  - Check: missing user id\n  - Expect: 404\n\n## Risk Assessment\n| Risk | Severity | Mitigation |\n|---|---|---|\n| None identified | - | - |\n`,
+    `# Task R1-01: User permission control\n\n## Context\n- Why: Admins need to control workspace creation.\n- Current state: Existing admin route.\n- Target outcome: Permission can be toggled.\n\n## Constraints\n- MUST: Preserve existing admin auth checks.\n- SHOULD: Reuse existing route patterns.\n- MUST NOT: Add a new auth system.\n- SCOPE: Permission toggle only.\n\n## Steps\n- [ ] 1. Update admin route\n  - Business intent: allow admin permission control.\n  - Code detail: PATCH /admin/users/{id}/permissions.\n  - _Requirements: 1.1_\n\n## Requirements\n- 1.1 — Persist user permission state.\n\n## Related Files\n| Path | Action | Description |\n|---|---|---|\n| \`backend/app/api/v1/admin.py\` | Read | Inspect existing permission endpoint |\n| \`backend/app/api/v1/admin.py\` | Modify | Permission endpoint |\n\n## Completion Criteria\n- [ ] Admin can toggle permission.\n- [ ] Invalid user returns 404.\n\n## Evidence\n- [ ] Automated verification\n  - Command(s): \`pytest backend/tests/test_admin_permissions.py\`\n  - Expected proof: tests pass\n- [ ] Artifact / runtime verification\n  - Inspect: \`PATCH /admin/users/{id}/permissions\`\n  - Expect: response contains updated permission\n- [ ] Runtime reachability verification\n  - Entrypoint/caller: \`backend/app/api/v1/admin.py\`\n  - Expect: route is registered in admin router\n- [ ] Contract / negative-path verification\n  - Check: missing user id\n  - Expect: 404\n\n## Risk Assessment\n| Risk | Severity | Mitigation |\n|---|---|---|\n| None identified | - | - |\n`,
   );
   return specDir;
 }

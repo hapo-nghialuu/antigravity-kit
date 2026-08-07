@@ -98,6 +98,12 @@ function makeFixture(opts = {}) {
       '## Evidence',
       '',
       'Verification: PASS',
+      'Command: npm test',
+      'Exit: 0',
+      'Result: PASS',
+      'Base: abc123',
+      'Head: def456',
+      'Artifact: dist/bundle.js (sha256:deadbeef)',
       '```',
       'npm test',
       'PASS: 10 tests',
@@ -105,7 +111,7 @@ function makeFixture(opts = {}) {
       '',
     ].join('\n');
   } else if (evidence === 'legacy-valid') {
-    evidenceBlock = '## Evidence\n\nnpm test — passed, exit code 0\n';
+    evidenceBlock = '## Evidence\n\nVerification: PASS\nCommand: npm test\nExit: 0\nBase: abc123\nHead: def456\nnpm test — passed, exit code 0\n';
   } else if (evidence === 'failed') {
     evidenceBlock = '## Evidence\n\nVerification: PASS\n\nFAIL: tests failed, exit code 1\n';
   } else if (evidence === 'fence-only') {
@@ -227,17 +233,21 @@ test('4. stop_hook_active: true → exit 0 silent even with violating task', () 
   }
 });
 
-test('5. first run (no cache) with done-without-receipt → exit 0, cache created', () => {
+test('5. first run (no cache) with done-without-receipt → block (cache is not truth)', () => {
   const dir = makeFixture({ evidence: 'missing-evidence' });
   try {
     clearCache();
     assert.ok(!fs.existsSync(CACHE), 'cache must be absent for first-run');
     const { code, stdout } = runHook({}, dir);
     assert.strictEqual(code, 0);
-    assert.strictEqual(stdout, '', 'first run must never block');
-    assert.ok(fs.existsSync(CACHE), 'cache file must be created');
+    const body = parseBlock(stdout);
+    assert.ok(body, 'first run must block done without receipt');
+    assert.strictEqual(body.decision, 'block');
+    assert.ok(body.reason.includes(TASK_REL));
+    assert.ok(fs.existsSync(CACHE), 'cache file must be created even when blocking');
     const cache = readCache();
-    assert.strictEqual(cache[FEATURE][TASK_REL], 'done');
+    // failing task must not be cached as done
+    assert.strictEqual(cache[FEATURE]?.[TASK_REL], undefined);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -338,6 +348,347 @@ test('12. legacy successful receipt remains read-compatible', () => {
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     assert.strictEqual(runHook({}, dir).stdout, '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('13. provenance requires both Base and Head - only Base fails', () => {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  const tasksDir = path.join(featureDir, 'tasks');
+  fs.mkdirSync(tasksDir, { recursive: true });
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+    status: 'in_progress',
+    current_phase: 'implementation',
+    task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+  }));
+  // Only Base, missing Head
+  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), [
+    '# Task',
+    '',
+    '**Status:** done',
+    '',
+    '## Evidence',
+    '',
+    'Verification: PASS',
+    'Command: npm test',
+    'Exit: 0',
+    'Base: abc123',
+    '```',
+    'npm test PASS',
+    '```',
+  ].join('\n'));
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'only Base should block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /\bg\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('14. provenance requires both Base and Head - only Head fails', () => {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  const tasksDir = path.join(featureDir, 'tasks');
+  fs.mkdirSync(tasksDir, { recursive: true });
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+    status: 'in_progress',
+    current_phase: 'implementation',
+    task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+  }));
+  // Only Head, missing Base
+  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), [
+    '# Task',
+    '',
+    '**Status:** done',
+    '',
+    '## Evidence',
+    '',
+    'Verification: PASS',
+    'Command: npm test',
+    'Exit: 0',
+    'Head: def456',
+    '```',
+    'npm test PASS',
+    '```',
+  ].join('\n'));
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'only Head should block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /\bg\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('15. provenance with both Base and Head passes', () => {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  const tasksDir = path.join(featureDir, 'tasks');
+  fs.mkdirSync(tasksDir, { recursive: true });
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+    status: 'in_progress',
+    current_phase: 'implementation',
+    task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+  }));
+  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), [
+    '# Task',
+    '',
+    '**Status:** done',
+    '',
+    '## Evidence',
+    '',
+    'Verification: PASS',
+    'Command: npm test',
+    'Exit: 0',
+    'Base: abc123',
+    'Head: def456',
+    '```',
+    'npm test PASS',
+    '```',
+  ].join('\n'));
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const { stdout } = runHook({}, dir);
+    assert.strictEqual(stdout, '', 'both Base and Head should not block');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('16. registry task path with ../ escape or sibling-prefix is rejected (check a)', () => {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  const evilFeature = path.join(dir, 'specs', `${FEATURE}-evil`);
+  const maliciousRel = `../${FEATURE}-evil/tasks/task.md`;
+  const maliciousAbs = path.join(evilFeature, 'tasks/task.md');
+  // Prepare evil file with valid receipt outside feature (should be ignored due to path traversal)
+  fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+  fs.mkdirSync(path.join(evilFeature, 'tasks'), { recursive: true });
+  fs.writeFileSync(maliciousAbs, [
+    '# Task',
+    '',
+    '**Status:** done',
+    '',
+    '## Evidence',
+    '',
+    'Verification: PASS',
+    'Command: npm test',
+    'Exit: 0',
+    'Base: abc123',
+    'Head: def456',
+    '```',
+    'pass',
+    '```',
+  ].join('\n'));
+  // Also create sibling-prefix style path: tasks/../../demo-evil/tasks/task.md
+  const siblingPrefixRel = `tasks/../../${FEATURE}-evil/tasks/task.md`;
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+    status: 'in_progress',
+    current_phase: 'implementation',
+    task_registry: {
+      [maliciousRel]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' },
+      [siblingPrefixRel]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' },
+      [path.resolve(featureDir, maliciousRel)]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' },
+    },
+  }));
+  try {
+    seedCache({ [FEATURE]: { [maliciousRel]: 'pending', [siblingPrefixRel]: 'pending', [path.resolve(featureDir, maliciousRel)]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'traversal path should block');
+    assert.strictEqual(body.decision, 'block');
+    // Must fail check a (file + Status)
+    assert.match(body.reason, /\ba\b/);
+    // Ensure malicious path is named in reason
+    assert.ok(body.reason.includes(maliciousRel) || body.reason.includes(siblingPrefixRel));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('17. empty or bare provenance fails — Base:/Head: require non-empty same-line values', () => {
+  const cases = [
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','Base:','Head: def456'].join('\n'), desc: 'empty Base:' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','Base:   ','Head: def456'].join('\n'), desc: 'Base: spaces only' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','Base: abc','Head:'].join('\n'), desc: 'empty Head:' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','base_sha','head_sha: def'].join('\n'), desc: 'bare base_sha without colon' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','base_sha:','head_sha: def'].join('\n'), desc: 'empty base_sha:' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','base_sha:   ','head_sha: def'].join('\n'), desc: 'base_sha spaces only' },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0','base_sha head_sha'].join('\n'), desc: 'bare base_sha head_sha without colon' },
+  ];
+  for (const { evidence, desc } of cases) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      current_phase: 'implementation',
+      task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+    }));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, `empty/bare provenance should block for ${desc}`);
+    assert.strictEqual(body.decision, 'block', `empty/bare should block: ${desc}`);
+    assert.match(body.reason, /\bg\b/, `should fail provenance g for ${desc}`);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('18. valid non-empty Base: value and base_sha: value pass', () => {
+  const validCases = [
+    ['Verification: PASS','Command: npm test','Exit: 0','Base: abc123','Head: def456'].join('\n'),
+    ['Verification: PASS','Command: npm test','Exit: 0','base_sha: abc123','head_sha: def456'].join('\n'),
+    ['Verification: PASS','Command: npm test','Exit: 0','Base: a1b2c3','Head: d4e5f6'].join('\n'),
+  ];
+  for (const evidence of validCases) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      current_phase: 'implementation',
+      task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+    }));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const { stdout } = runHook({}, dir);
+    assert.strictEqual(stdout, '', `valid provenance should not block: ${evidence.slice(0,40)}`);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// --- Cache-hardening regressions: cached PASS must not hide later mutations ---
+
+test('19. cache-hit: unchanged valid receipt stays PASS on second Stop (revalidation)', () => {
+  const dir = makeFixture({ evidence: 'valid' });
+  try {
+    clearCache();
+    // first Stop (no cache file) with valid receipt → no block, cache seeded as done
+    let res = runHook({}, dir);
+    assert.strictEqual(res.stdout, '', 'first run valid must not block');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
+    // second Stop with same valid receipt and cache-hit → must still not block
+    res = runHook({}, dir);
+    assert.strictEqual(res.stdout, '', 'cache-hit with unchanged valid receipt must not block');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('20. cache-hit: receipt mutation (removed Verification/Command) blocks even though status stays done', () => {
+  const dir = makeFixture({ evidence: 'valid' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    assert.strictEqual(runHook({}, dir).stdout, '', 'initial valid must pass');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
+    // mutate: strip Verification: PASS and Command — keep file as done
+    const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
+    fs.writeFileSync(taskFile, [
+      '# Task', '', '**Status:** done', '',
+      '## Evidence', '',
+      'Exit: 0', 'Base: abc123', 'Head: def456',
+      '```', 'pass', '```',
+    ].join('\n'));
+    const blocked = parseBlock(runHook({}, dir).stdout);
+    assert.ok(blocked, 'mutated receipt missing Verification/Command should block on cache-hit');
+    assert.strictEqual(blocked.decision, 'block');
+    assert.match(blocked.reason, /\bc\b|\be\b/);
+    // cache must not have been promoted to still-valid done; next run must still block
+    const secondBlocked = parseBlock(runHook({}, dir).stdout);
+    assert.ok(secondBlocked, 'second hit after mutation must still block');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('21. cache-hit: provenance mutation (removed Head / changed to stale) blocks', () => {
+  const dir = makeFixture({ evidence: 'valid' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    assert.strictEqual(runHook({}, dir).stdout, '');
+    // mutate: remove Head, leave only Base
+    const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
+    fs.writeFileSync(taskFile, [
+      '# Task', '', '**Status:** done', '',
+      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', 'Base: abc123',
+      '```', 'pass', '```',
+    ].join('\n'));
+    let body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'missing Head provenance should block on cache-hit');
+    assert.match(body.reason, /\bg\b/);
+    // mutate back to include both but with empty Head value (stale)
+    fs.writeFileSync(taskFile, [
+      '# Task', '', '**Status:** done', '',
+      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', 'Base: abc123', 'Head:',
+      '```', 'pass', '```',
+    ].join('\n'));
+    body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'empty Head should block as stale provenance');
+    assert.match(body.reason, /\bg\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('22. cache-hit: deleted task file blocks even though spec still says done', () => {
+  const dir = makeFixture({ evidence: 'valid' });
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    assert.strictEqual(runHook({}, dir).stdout, '');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
+    fs.unlinkSync(path.join(dir, 'specs', FEATURE, TASK_REL));
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'deleted receipt file should block on cache-hit');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /\ba\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('23. malformed cache JSON does not bypass validation', () => {
+  // valid receipt with malformed cache → must still PASS (fail-open on cache parse, not on receipt)
+  const dirValid = makeFixture({ evidence: 'valid' });
+  try {
+    clearCache();
+    fs.mkdirSync(path.dirname(CACHE), { recursive: true });
+    fs.writeFileSync(CACHE, '{ not json');
+    const res = runHook({}, dirValid);
+    assert.strictEqual(res.stdout, '', 'malformed cache with valid receipt must not block');
+    assert.ok(fs.existsSync(CACHE), 'hook must rewrite cache file');
+  } finally {
+    fs.rmSync(dirValid, { recursive: true, force: true });
+  }
+  // invalid receipt with malformed cache → must still BLOCK (cache not truth)
+  const dirInvalid = makeFixture({ evidence: 'missing-evidence' });
+  try {
+    fs.mkdirSync(path.dirname(CACHE), { recursive: true });
+    fs.writeFileSync(CACHE, '{ malformed: ');
+    const body = parseBlock(runHook({}, dirInvalid).stdout);
+    assert.ok(body, 'malformed cache with invalid receipt must block');
+    assert.strictEqual(body.decision, 'block');
+  } finally {
+    fs.rmSync(dirInvalid, { recursive: true, force: true });
+  }
+});
+
+test('24. first-run (no cache file) with valid receipt passes and seeds cache', () => {
+  const dir = makeFixture({ evidence: 'valid' });
+  try {
+    clearCache();
+    assert.ok(!fs.existsSync(CACHE));
+    const { stdout } = runHook({}, dir);
+    assert.strictEqual(stdout, '', 'first run valid receipt must not block');
+    assert.ok(fs.existsSync(CACHE), 'cache must be created on first valid run');
+    assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

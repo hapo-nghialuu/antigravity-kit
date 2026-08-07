@@ -39,9 +39,32 @@ function evidenceBody(text) {
 function safeTaskFile(featureDir, taskPath) {
   const target = path.resolve(featureDir, taskPath);
   const relative = path.relative(featureDir, target);
-  return !relative.startsWith('..') && !path.isAbsolute(relative)
-    ? target
-    : null;
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+  return target;
+}
+
+function validateCanonicalReceipt(body) {
+  const failures = [];
+  if (!/^\s*Verification:\s*PASS\s*$/m.test(body)) {
+    failures.push('verification_state');
+  }
+  if (!/^\s*Command(?:\(s\))?\s*:/m.test(body)) {
+    failures.push('command');
+  }
+  if (!/^\s*Exit\s*:|exit\s+code\s*[:=]|\bResult\s*:\s*PASS\b/im.test(body)) {
+    failures.push('exit_result');
+  }
+  const hasBase = /^\s*Base[ \t]*:[ \t]*\S/im.test(body);
+  const hasHead = /^\s*Head[ \t]*:[ \t]*\S/im.test(body);
+  const hasBaseSha = /\bbase_sha[ \t]*:[ \t]*\S/im.test(body);
+  const hasHeadSha = /\bhead_sha[ \t]*:[ \t]*\S/im.test(body);
+  if (!((hasBase && hasHead) || (hasBaseSha && hasHeadSha))) {
+    failures.push('provenance');
+  }
+  if (/\bartifact\b/i.test(body) && !/sha256:/i.test(body)) {
+    failures.push('artifact_hash');
+  }
+  return failures;
 }
 
 function checkReceipt(featureDir, taskPath, task) {
@@ -64,6 +87,36 @@ function checkReceipt(featureDir, taskPath, task) {
     || !(PASS_MARKER.test(body) || LEGACY_SUCCESS.test(body))
   ) {
     failures.push('c');
+  } else {
+    // Canonical receipt requirements: command, exit/result, provenance, unambiguous PASS
+    // For done tasks, require canonical fields. If missing, add e/f/g.
+    const canonical = validateCanonicalReceipt(body);
+    // Map canonical failures to letters e,f,g,h for backward compat checks
+    // Use detailed names but also add letters for gate reporting
+    const map = {
+      verification_state: 'c', // already covers but keep distinct
+      command: 'e',
+      exit_result: 'f',
+      provenance: 'g',
+      artifact_hash: 'h',
+    };
+    for (const fail of canonical) {
+      const letter = map[fail];
+      // Avoid duplicating c if already failed, but add specific
+      if (fail === 'verification_state' && failures.includes('c')) continue;
+      if (fail === 'verification_state') {
+        // This should have been caught by c, but if PASS present via legacy, still need strict PASS
+        if (!PASS_MARKER.test(body)) failures.push('c');
+        continue;
+      }
+      if (letter && !failures.includes(letter)) failures.push(letter);
+    }
+    // Additional strict check: legacy success alone is not sufficient for canonical
+    // If body contains only legacy PASS but not canonical Verification: PASS, c already would have caught if no PASS_MARKER?
+    // But we allow legacy for backward compat in c, but canonical requires PASS_MARKER, so we must enforce.
+    if (!PASS_MARKER.test(body)) {
+      if (!failures.includes('c')) failures.push('c');
+    }
   }
 
   const completedAt = task?.completed_at;
@@ -75,4 +128,4 @@ function checkReceipt(featureDir, taskPath, task) {
   return failures;
 }
 
-module.exports = { checkReceipt };
+module.exports = { checkReceipt, evidenceBody, safeTaskFile, validateCanonicalReceipt };

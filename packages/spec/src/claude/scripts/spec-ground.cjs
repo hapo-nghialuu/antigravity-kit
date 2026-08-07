@@ -4,7 +4,10 @@
  *
  * Verifies every task Related Files declaration against the real work tree.
  * Paths are relative, actions are explicit, and globs must match at least one
- * filesystem entry. Create paths may be resolved by another task in the spec.
+ * filesystem entry. Create on existing paths is an error. Lifecycle ordering
+ * (Create before Modify/Delete/Read) is enforced within task and via
+ * dependency DAG for cross-task references; cross-task producer/consumer
+ * requires a valid spec.json task_registry (fail-closed).
  */
 
 const fs = require('fs');
@@ -134,16 +137,86 @@ function main() {
 
   const taskFiles = listTaskFiles(specDir);
   const allRows = [];
+  const rowsByTask = new Map();
   const errors = [];
   const warnings = [];
   for (const taskFile of taskFiles) {
     const section = parseRelatedFiles(fs.readFileSync(taskFile, 'utf8'), taskFile);
-    if (!section.present) errors.push(`${path.basename(taskFile)}: missing Related Files section`);
-    else if (section.rows.length === 0) errors.push(`${path.basename(taskFile)}: Related Files section must not be empty`);
+    const basename = path.basename(taskFile);
+    if (!rowsByTask.has(basename)) rowsByTask.set(basename, []);
+    if (!section.present) errors.push(`${basename}: missing Related Files section`);
+    else if (section.rows.length === 0) errors.push(`${basename}: Related Files section must not be empty`);
     for (const row of section.rows) {
       if (!ACTIONS.has(row.action)) errors.push(`${row.taskFile}: unsupported Related Files action "${row.action}" for ${row.path}`);
       if (unsafePath(row.path)) errors.push(`${row.taskFile}: Related Files path must be relative and stay within work root: ${row.path}`);
       allRows.push(row);
+      rowsByTask.get(basename).push(row);
+    }
+  }
+
+  // Lifecycle ordering: Create must precede Modify/Delete/Read within same task
+  for (const [taskFile, rows] of rowsByTask.entries()) {
+    const createIndexByPath = new Map();
+    rows.forEach((row, idx) => {
+      if (row.action === 'create' && !createIndexByPath.has(row.path)) createIndexByPath.set(row.path, idx);
+    });
+    rows.forEach((row, idx) => {
+      if (!['modify', 'delete', 'read'].includes(row.action)) return;
+      if (!createIndexByPath.has(row.path)) return;
+      const createIdx = createIndexByPath.get(row.path);
+      if (createIdx > idx) {
+        errors.push(`${taskFile}: Create must precede ${row.action} for ${row.path} within Related Files order`);
+      }
+    });
+  }
+
+  // Cross-task lifecycle via spec.json dependency DAG (fail-closed when registry missing)
+  let taskRegistry = null;
+  try {
+    const specJson = JSON.parse(fs.readFileSync(path.join(specDir, 'spec.json'), 'utf8'));
+    if (specJson.task_registry && typeof specJson.task_registry === 'object' && !Array.isArray(specJson.task_registry)) taskRegistry = specJson.task_registry;
+  } catch {}
+  const producers = new Map();
+  for (const [taskFile, rows] of rowsByTask.entries()) {
+    for (const row of rows) {
+      if (row.action !== 'create') continue;
+      if (!producers.has(row.path)) producers.set(row.path, { taskFile });
+    }
+  }
+  const crossTaskConsumers = [];
+  for (const [taskFile, rows] of rowsByTask.entries()) {
+    for (const row of rows) {
+      if (!['modify', 'delete', 'read'].includes(row.action)) continue;
+      const producer = producers.get(row.path);
+      if (!producer) continue;
+      if (producer.taskFile === taskFile) continue;
+      crossTaskConsumers.push({ taskFile, row, producer });
+    }
+  }
+  if (crossTaskConsumers.length > 0 && !taskRegistry) {
+    for (const { taskFile, row, producer } of crossTaskConsumers) {
+      errors.push(`${taskFile}: ${row.action} of ${row.path} has producer ${producer.taskFile} but spec.json task_registry is missing or invalid — cannot verify cross-task dependency (fail-closed)`);
+    }
+  } else if (taskRegistry) {
+    // Build basename-indexed dependencies
+    const dependencies = new Map();
+    for (const [key, entry] of Object.entries(taskRegistry)) {
+      const base = path.basename(key);
+      const deps = new Set((entry.dependencies || []).map((d) => path.basename(d)));
+      dependencies.set(base, deps);
+    }
+    function dependsOn(taskBase, ancestorBase, seen = new Set()) {
+      if (taskBase === ancestorBase) return true;
+      if (seen.has(taskBase)) return false;
+      seen.add(taskBase);
+      const deps = dependencies.get(taskBase) || new Set();
+      for (const dep of deps) if (dependsOn(dep, ancestorBase, seen)) return true;
+      return false;
+    }
+    for (const { taskFile, row, producer } of crossTaskConsumers) {
+      if (!dependsOn(taskFile, producer.taskFile)) {
+        errors.push(`${taskFile}: ${row.action} of ${row.path} must depend on creator ${producer.taskFile}`);
+      }
     }
   }
 
@@ -157,7 +230,7 @@ function main() {
       continue;
     }
     if (row.action === 'create') {
-      if (matches.length > 0) warnings.push(`${row.taskFile}: Create path already exists (will overwrite): ${row.path}`);
+      if (matches.length > 0) errors.push(`${row.taskFile}: Create path already exists in work tree (would overwrite): ${row.path} — use Modify instead of Create for existing files`);
       continue;
     }
     checked += 1;

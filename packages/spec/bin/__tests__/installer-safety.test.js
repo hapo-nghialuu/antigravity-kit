@@ -241,6 +241,22 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.match(codex, /native project instruction surface is root `AGENTS\.md`/);
     assert.match(opencode, /native project instruction surface is root `AGENTS\.md`/);
     assert.match(agents, /shared-root trade-off is intentional/);
+    // H5 remediation: ownership/ignore contract must be explicit — not just marker presence
+    assert.match(core, /runtime-neutral/i);
+    assert.match(core, /fail-safe/i);
+    assert.match(core, /Ignore managed blocks not owned by your runtime/i);
+    assert.match(codex, /owned by Codex/i);
+    assert.match(codex, /ignore this entire Codex block/i);
+    assert.match(codex, /fail-safe/i);
+    assert.match(opencode, /owned by OpenCode/i);
+    assert.match(opencode, /ignore this entire OpenCode block/i);
+    assert.match(opencode, /fail-safe/i);
+    // CORE must not contain runtime-specific directives that would leak
+    assert.doesNotMatch(core, /\$hapo-|hapo:/i);
+    // No cross-runtime directive leakage: Claude block must not contain foreign runtime directives
+    assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT (CODEX|OPENCODE) /);
+    assert.doesNotMatch(codex, /<!-- CAFEKIT (CORE|OPENCODE) /);
+    assert.doesNotMatch(opencode, /<!-- CAFEKIT (CORE|CODEX) /);
 
     const userAgents = '\n## User-owned combined note\nKeep this exact.\n';
     const userClaude = '\n## User-owned Claude note\nKeep this exact.\n';
@@ -258,6 +274,13 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.equal((afterClaude.match(new RegExp(START, 'g')) || []).length, 1);
     assert.equal(afterAgents.slice(-userAgents.length), userAgents);
     assert.equal(afterClaude.slice(-userClaude.length), userClaude);
+    // Ownership contract must survive rerun
+    const afterCore = managedBody(afterAgents, CORE_START, CORE_END);
+    const afterCodex = managedBody(afterAgents, CODEX_START, CODEX_END);
+    const afterOpenCode = managedBody(afterAgents, OPENCODE_START, OPENCODE_END);
+    assert.match(afterCore, /runtime-neutral/i);
+    assert.match(afterCodex, /ignore this entire Codex block/i);
+    assert.match(afterOpenCode, /ignore this entire OpenCode block/i);
   });
 });
 
@@ -735,5 +758,53 @@ test('copyRecursive skips generated artifacts while copying normal files', () =>
     assert.equal(fs.existsSync('dest/__pycache__'), false);
     assert.equal(fs.existsSync('dest/module.pyc'), false);
     assert.equal(fs.existsSync('dest/extra/bundle.pyo'), false);
+  });
+});
+
+test('OpenCode parity: AGENTS marks advisory completion gate and plugin provides best-effort spec-gate', () => {
+  const opencodeAgents = fs.readFileSync(path.join(__dirname, '../../src/opencode/AGENTS.md'), 'utf8');
+  assert.match(opencodeAgents, /advisory/i);
+  assert.match(opencodeAgents, /tier-2/i);
+  assert.match(opencodeAgents, /completion gate/i);
+  assert.match(opencodeAgents, /Do not claim parity with Claude\/Codex on `completion_gate`/);
+  assert.match(opencodeAgents, /spec-gate/);
+  // docs must describe actual after-hook, not before, and warning/banner semantics (not advisory-pass)
+  assert.match(opencodeAgents, /tool\.execute\.after/);
+  assert.doesNotMatch(opencodeAgents, /tool\.execute\.before/);
+  assert.match(opencodeAgents, /emits an advisory warning\/banner but does not hard-block the turn/);
+  assert.doesNotMatch(opencodeAgents, /treat `done` without a receipt as advisory-pass/);
+  // plugin file must exist and be advisory (never hard-block)
+  const pluginPath = path.join(__dirname, '../../src/opencode/plugins/spec-gate.ts');
+  assert.equal(fs.existsSync(pluginPath), true, 'OpenCode spec-gate plugin must exist for parity contract');
+  const plugin = fs.readFileSync(pluginPath, 'utf8');
+  assert.match(plugin, /advisory/i);
+  assert.match(plugin, /completion_gate/);
+  assert.match(plugin, /fail-open/i);
+  assert.match(plugin, /session\.idle|tool\.execute\.after/);
+  // JSDoc-safe wording: must not contain block-comment-closing pattern specs/*/spec.json
+  assert.doesNotMatch(plugin, /specs\/\*\/spec\.json/);
+  assert.match(plugin, /specs\/<feature>\/spec\.json/);
+  // traversal check must be sibling-prefix safe (resolve + relative, not simple startsWith)
+  assert.match(plugin, /relative\s*\(\s*resolvedFeatureDir/);
+  assert.match(plugin, /isAbsolute/);
+  assert.doesNotMatch(plugin, /if \(!abs\.startsWith\(featureDir\)\)/);
+  // provenance must require both endpoints (Base+Head or base_sha+head_sha) matching Claude/Codex policy
+  assert.match(plugin, /hasBase\s*&&\s*hasHead/);
+  assert.match(plugin, /hasBaseSha\s*&&\s*hasHeadSha/);
+  assert.match(plugin, /hasBase.*hasHead.*hasBaseSha.*hasHeadSha/s);
+  // hardened: non-empty same-line values required, not just field names
+  assert.match(plugin, /Base\\s\*:\[ \\t\]\*\\S/);
+  assert.match(plugin, /base_sha\\s\*:\[ \\t\]\*\\S/);
+  assert.match(plugin, /head_sha\\s\*:\[ \\t\]\*\\S/);
+  // shipped docs must not claim OpenCode parity for hard completion gate
+  const installerDocs = fs.readFileSync(path.join(__dirname, '../../../../docs/installer-architecture.md'), 'utf8');
+  assert.doesNotMatch(installerDocs, /OpenCode.*hard.*completion gate/i);
+  // combined install must copy the plugin
+  inTempProject((root) => {
+    const result = spawnSync(process.execPath, [INSTALLER, '--platform', 'opencode', '--yes'], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } });
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.equal(fs.existsSync(path.join(root, '.opencode/plugins/spec-gate.ts')), true);
+    const installed = fs.readFileSync(path.join(root, '.opencode/plugins/spec-gate.ts'), 'utf8');
+    assert.match(installed, /advisory/i);
   });
 });

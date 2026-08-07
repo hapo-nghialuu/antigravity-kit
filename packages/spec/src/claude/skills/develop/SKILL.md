@@ -35,7 +35,7 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 |---|---|---|---|---|
 | default (specific-task / full-spec) | per tier | full (Step 4) | verified | |
 | `--flash` | per tier | Flash Gate (4F) | `FLASH_UNVERIFIED` | |
-| `--parallel` | inspector per task | full, inside each worktree | verified | implies Deep tier |
+| `--parallel` | inspector per task (Critical) | full, inside each worktree | verified | implies Critical lane (legacy Deep) |
 | `--flash --parallel` | **flash+parallel fail-fast — no execution** | | | reject before state/worktree changes |
 | `--no-notes` | — | — | — | composable with all modes |
 
@@ -60,17 +60,19 @@ Then STOP with no execution. Never silently drop `--flash`, prefer `--parallel`,
 
 ## Lane selection before spec gate
 
-Run lane classification before loading spec files or mutating state:
+Run lane classification at the runtime boundary before loading spec files or mutating state. Decisions are executable, not advisory prose:
 
 ```bash
 node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+# Downgrade requires explicit user authorization - model-supplied downgrade is blocked
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '{"riskSignals":{"auth":true},"override":"Direct","userAuthorized":true}' --json
 ```
 
-- **Direct** — clear, isolated, reversible, low-risk work. May skip spec/state/subagents; execute targeted test, diff self-check, and proportional evidence.
-- **Standard** — default. Use one bounded spec artifact (`requirements.md` + `design.md` in current layout), one canonical receipt, and exactly one combined `code-auditor` review at feature ship point.
-- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Use strict durable state and evidence with `inspector → implementer → test-runner → code-auditor`.
+- **Direct** — clear, isolated, reversible, low-risk work. May skip spec/state/subagents and full task/spec/registry ceremony; execute targeted test, diff self-check, and proportional evidence only.
+- **Standard** — default. Use one bounded spec artifact (`requirements.md` + `design.md` in current layout), one canonical receipt, and exactly one combined `code-auditor` review at feature ship point (not per-task).
+- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Use strict durable state and evidence with risk-driven delegation (inspector/test-runner/code-auditor enabled per risk lens), not a fixed four-agent chain.
 
-Explicit overrides must return automatic lane, selected lane, risk signals, and warning. Downgrading Critical does not silently remove the warning. Keep `generated`, `agent_validated`, and `user_approved` independent; never auto-approve user state.
+Explicit overrides are enforced at the runtime boundary. A model-supplied lane or downgrade must not bypass risk signals. Downgrading from Critical requires explicit user-originated authorization (`userAuthorized:true` or `origin:user`) and must surface the trade-off (reduced review/evidence coverage). Keep `generated`, `agent_validated`, and `user_approved` independent; agent validation or --auto never fabricates `user_approved`.
 
 Direct may bypass the approved-spec hard gate only for low-risk reversible work. Standard and Critical still require their lane-appropriate spec/state gate.
 
@@ -140,20 +142,20 @@ Implementation notes apply to Standard/Critical modes by default; Direct stays a
 Implement in the main session by default. Do not spawn a subagent because a step
 mentions an agent name — spawn only per this table:
 
-| Lane | Delegation | Quality gate |
+| Lane | Delegation (risk-driven) | Quality gate |
 |---|---|---|
 | Direct | None | Main-session targeted verification and diff self-check |
-| Standard | Exactly one combined `code-auditor` | Feature-level ship point |
-| Critical | `inspector → implementer → test-runner → code-auditor` | Strict evidence gate |
+| Standard | Exactly one combined `code-auditor` at feature ship point (not per-task) | Feature-level ship point |
+| Critical | Risk-driven: `inspector` when discovery needed, `test-runner` when code changes, `code-auditor` at feature closeout (not fixed four-agent per task) | Strict evidence gate |
 
-Legacy `execution_tier` (`Light | Standard | Deep`) remains accepted for compatibility. `Light` keeps zero delegation, `Standard` keeps one `code-auditor`, and `Deep` keeps its per-task `inspector → implementer → test-runner → code-auditor` sequence. When both exist, lane policy controls ceremony/delegation and tier remains metadata.
+Legacy `execution_tier` (`Light | Standard | Deep`) is retained only as backward-compatible metadata (tier = Light → Direct, Standard → Standard, Deep → Critical). When both exist, lane policy controls ceremony/delegation and tier is metadata only. Do not treat tier as authoritative.
 
 <LANE-GATE>
-Do not write implementation code until lane classification runs.
-- **Direct** may bypass spec/state/registry only when classifier confirms clear, isolated, reversible, low-risk work; targeted verification and evidence remain mandatory.
-- **Standard** requires one bounded approved spec artifact (`requirements.md` + `design.md` in current layout) and canonical receipt before implementation.
-- **Critical** requires approved lane-appropriate spec/state plus strict evidence before implementation.
-Never treat a Direct override as automatic low risk; preserve its warning and risk signals.
+Do not write implementation code until lane classification runs at the runtime boundary.
+- **Direct** may bypass spec/state/registry and full task ceremony only when classifier confirms clear, isolated, reversible, low-risk work; targeted verification and evidence remain mandatory.
+- **Standard** requires one bounded approved spec artifact (`requirements.md` + `design.md` in current layout) and canonical receipt before implementation; exactly one feature-level closeout review.
+- **Critical** requires approved lane-appropriate spec/state plus strict evidence before implementation; delegation is risk-driven, not a fixed chain.
+Never treat a Direct override as automatic low risk; preserve its warning, risk signals, and user authorization requirement. Model-supplied downgrades without user authorization are blocked.
 </LANE-GATE>
 
 <DEFINITION-OF-DONE>
@@ -210,7 +212,7 @@ flowchart TD
 - **Standard/Critical only**: set the active task to `in_progress` in markdown and `spec.json.task_registry` before coding. Direct has no registry mutation.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Scout per Delegation policy** — Deep tier delegates to `inspector`; Light/Standard scouts in the main session with the same required outputs:
+- **Scout per Delegation policy** — Critical may delegate to `inspector` when risk lens requires discovery; Direct/Standard scout in the main session with the same required outputs (legacy Light/Standard/Deep tier is metadata only):
 - The scout prompt MUST include:
   - Active task file path and extracted task packet
   - Requirement IDs and `scope_lock`

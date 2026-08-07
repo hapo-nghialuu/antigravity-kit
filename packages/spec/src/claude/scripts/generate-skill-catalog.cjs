@@ -38,10 +38,10 @@ function parseArgs(argv) {
 
 function defaultSkillsRoot() {
   const candidates = [
+    path.resolve(__dirname, '..', 'skills'),
     path.resolve(process.cwd(), '.claude', 'skills'),
     path.resolve(process.cwd(), '.agents', 'skills'),
     path.resolve(process.cwd(), '.opencode', 'skills'),
-    path.resolve(__dirname, '..', 'skills'),
     path.resolve(__dirname, '..', '..', '.agents', 'skills')
   ];
   return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];

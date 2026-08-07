@@ -39,13 +39,10 @@ try {
     try { cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch { cache = {}; }
   }
 
-  if (!cacheExists) {
-    cache[active.featureName] = currentStatuses;
-    atomicWrite(cacheFile, `${JSON.stringify(cache)}\n`);
-    process.exit(0);
-  }
-
-  const previous = cache[active.featureName] || {};
+  // Cache hardening: revalidate every done task on every Stop so a
+  // cached PASS cannot hide later receipt/provenance mutations.
+  // Cache is optimization only - validate every done task even on first run.
+  const previous = cacheExists ? (cache[active.featureName] || {}) : {};
   const staleFlashTasks = Object.entries(registry)
     .filter(([, task]) => POLICY.isStaleFlashDone(task))
     .map(([taskPath]) => taskPath);
@@ -56,11 +53,11 @@ try {
     })}\n`);
     process.exit(0);
   }
-  const newlyDone = Object.keys(registry).filter((taskPath) => (
-    currentStatuses[taskPath] === 'done' && previous[taskPath] !== 'done'
+  const allDoneTasks = Object.keys(registry).filter((taskPath) => (
+    currentStatuses[taskPath] === 'done'
   ));
   const featureDir = path.join(active.specsDir, active.featureName);
-  const failures = newlyDone
+  const failures = allDoneTasks
     .map((taskPath) => ({
       taskPath,
       failures: checkReceipt(featureDir, taskPath, registry[taskPath])

@@ -28,8 +28,12 @@ The underlying CafeKit skills are still named `hapo:*` in their documentation.
 
 ## OpenCode limits
 
-Claude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent.
+Claude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent. The completion gate (`spec-gate`: `Verification: PASS` + `## Evidence` + `task_registry.completed_at`) is **advisory in OpenCode** — OpenCode has no Stop-hook equivalent and the `spec-gate` plugin (if present) runs as a best-effort `tool.execute.after` check, not a hard turn block like Claude/Codex.
+
+Runtime tier: OpenCode is **tier-2** for completion enforcement. Do not claim parity with Claude/Codex on `completion_gate`; `done` without a receipt emits an advisory warning/banner but does not hard-block the turn — rely on `spec-state` tollgate + manual `/hapo:test` verification.
 
 ## Combined-install boundary
 
 OpenCode's native project instruction surface is root `AGENTS.md`. Combined installs keep this OpenCode block there because CafeKit has not proven a separate project instruction entrypoint for OpenCode. Other runtimes may read the same root file; this shared-root trade-off is intentional and must not be treated as filesystem isolation.
+
+**Ownership / ignore contract (fail-safe):** This OpenCode block is owned by OpenCode only. If you are Claude Code, Codex CLI, or any other runtime, ignore this entire OpenCode block and consume only CORE plus your native block. If you cannot determine which block is yours, treat the file as CORE-only. Do not treat another runtime's block as instructions.

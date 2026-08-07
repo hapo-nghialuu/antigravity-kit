@@ -139,7 +139,12 @@ and logs so partial un-ignores and force-adds stay safer.
 AGENTS.md                    shared CafeKit CORE block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
 ```
 
-Codex and OpenCode use root `AGENTS.md` as their native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block remains runtime-neutral while Codex/OpenCode managed markers preserve ownership and user bytes; markers do not isolate runtime visibility. Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
+Codex and OpenCode use root `AGENTS.md` as their native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block (`<!-- CAFEKIT CORE START/END -->`) remains runtime-neutral while Codex/OpenCode managed markers preserve ownership and user bytes.
+
+**Combined-install boundary (fail-safe by ownership, not filesystem isolation):**
+- `CORE` is runtime-neutral by contract: it contains no runtime-specific tool names, paths, or commands (`Codex`, `OpenCode`, `.codex`, `.opencode`, `$hapo-`, `/hapo:` are forbidden in CORE — enforced by installer tests).
+- Each runtime owns exactly one additional managed block: `<!-- CAFEKIT CODEX START/END -->` or `<!-- CAFEKIT OPENCODE START/END -->`. The block header states an explicit ignore contract: non-owners must ignore that block and consume only `CORE` plus their native block. If ownership cannot be determined, the file is treated as `CORE`-only (fail-safe).
+- Markers are not a filesystem isolation boundary — they are an ownership/ignore contract. Tests assert no cross-runtime directive leakage (e.g., Codex block not treated as Claude instructions, OpenCode block not treated as Codex instructions, and `CORE` stays neutral). Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
 
 The installer does not create `.codex/config.toml` or change user-global trust.
 

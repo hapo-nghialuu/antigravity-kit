@@ -20,6 +20,12 @@ Say when you are unsure and what would settle it. Label inferences instead of pr
 
 Do the work yourself when it takes a handful of tool calls. Delegate genuinely independent parallel tracks. Verification comes from the project's hooks and validators, not from spawning more agents.
 
+## Runtime ownership
+
+- This `CORE` block is runtime-neutral and safe for every runtime.
+- Runtime-specific instructions live in that runtime's own managed block, not in `CORE`.
+- In a combined install, consume `CORE` plus your native block only. Ignore managed blocks not owned by your runtime. If ownership is unclear, treat the file as `CORE`-only (fail-safe).
+
 ## Commands
 
 <!-- Add project-specific install, test, lint, and build commands here. Keep commands executable. -->
