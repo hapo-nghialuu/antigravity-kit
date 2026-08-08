@@ -45,6 +45,26 @@ Stage A applies same spec compliance review checklist for every tier: scope, req
 - Scope fidelity is mandatory: missing scoped behavior, extra unapproved behavior, or task output that exists only as orphaned/unreachable code is a review failure even when build/tests pass.
 - Runtime-facing artifacts must be reachable from the real entrypoint/caller named by the task or the task-aware scout report.
 
+### Critical security verification (apply only when the task touches these surfaces)
+
+No fixed ceremony for every task — apply the checklist below only when the
+touched files, risk signals, or task description include logging/redaction or
+filesystem write boundaries. Direct uses targeted unit test + diff self-check,
+Standard a bounded suite, Critical strict evidence (inspector/test-runner/
+code-auditor per lane policy).
+
+- **Logging / secret redaction:** assert broad matchers did not corrupt safe
+  identifiers or public URLs; quoted `Bearer`/`Basic` redaction keeps surrounding
+  quotes and leaves trailing `,`/`;`/whitespace outside the replacement; redaction
+  is idempotent (`redact(redact(x)) === redact(x)`); no secret appears in test
+  failures or the verification receipt.
+- **Filesystem write boundary:** assert lexical `path.resolve` **and** `realpath` of
+  the deepest existing parent both stay inside the canonical root; parent-symlink
+  and final-symlink targets are rejected without following/overwriting; no file
+  outside root is created or mutated on rejection; write goes via same-directory
+  temp file + atomic `rename` with cleanup on error; success returns canonical
+  `realpath` (platform aliases resolved).
+
 ## Flash Gate (`--flash`)
 
 Use this only when `/hapo:develop ... --flash` is present.

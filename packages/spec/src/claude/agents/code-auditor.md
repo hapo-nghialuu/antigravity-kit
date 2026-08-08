@@ -44,11 +44,16 @@ Before reading any specific logic, you MUST run a Dependency Scope Check (Blast 
 
 | # | Pillar | Example Issues |
 |---|--------|----------------|
-| 1 | **Security** | XSS, SQL injection, hardcoded secrets, missing auth checks |
+| 1 | **Security** | XSS, SQL injection, hardcoded secrets, missing auth checks, over-broad log redaction corrupting safe identifiers/public URLs, quote/delimiter-unsafe authorization redaction, non-idempotent redaction, filesystem write escaping via traversal/symlink/sibling-prefix, non-canonical return path, non-atomic write or leaked temp file |
 | 2 | **Logic Correctness** | Race conditions, null references, off-by-one, unawait-ed async |
 | 3 | **Architecture** | Cross-module coupling, layer separation violations, circular dependencies |
 | 4 | **Principles (YAGNI/KISS/DRY)** | Code duplication, over-engineering, features outside scope |
 | 5 | **Convention & Style** | Non-standard naming, missing type annotations, formatting issues |
+
+### Critical-only invariants (enforce only when the diff touches these surfaces)
+
+- **Logging redaction:** exact token-boundary matching (safe suffixes `_file`/`_path`/`_hint`/`_label` and `tokenizer` must not be redacted), public URLs unchanged unless they carry a credential, `Bearer`/`Basic` redaction preserves surrounding quotes and trailing `,`/`;`/whitespace outside the value, never drops the closing quote, and `redact(redact(x)) === redact(x)`.
+- **Filesystem write boundary:** existing real directory root, reject empty/whitespace-only/URI/absolute/traversal/sibling-prefix before mutation, dual containment (lexical `path.resolve` **and** `realpath` of deepest existing parent), never follow or overwrite final symlink, never create parents outside root, atomic same-directory temp + `rename` with cleanup, return canonical `realpath` on success.
 
 ## Review Process
 
@@ -144,6 +149,8 @@ When called from `develop` Step 4 (Quality Gate Auto-Fix):
 - Cross-service behavior "proven" only by process-local memory, fake adapters, or other non-shared placeholders
 - Files or features from later tasks delivered early without explicit scope-escape justification
 - Task marked complete while required commands/evidence are still FAIL / UNVERIFIED
+- Logging redaction that over-redacts safe identifiers/public URLs, drops closing quotes, consumes `,`/`;` delimiters, or is not idempotent when the diff touches redaction/sanitization
+- Filesystem write that returns a lexical path instead of canonical `realpath`, skips `realpath` parent containment, follows or overwrites a final symlink, creates or mutates anything outside the root on rejection, or leaks a temp file / misses atomic same-directory `rename`
 
 ## Operating Guidelines
 
