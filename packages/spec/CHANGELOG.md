@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **E2E test coverage**: new test installs Codex over existing Claude setup in temp directory, verifies `.claude/` remains intact, `.codex/` receives full payload, AGENTS.md preserves user content while receiving Codex block, and per-platform metadata stays independent.
 - **Unit tests**: two tests for the new prompt flow plus one consistency test verifying `addPlatformsPrompt` uses exactly `{names}` placeholder across all locales.
 
+## [0.16.0-rc.2] - 2026-08-08
+
+### Changed
+
+- **Lane-aware security guidance**: security verification is proportional to the Direct, Standard, or Critical lane and is required only when a task touches logging/redaction or filesystem write boundaries.
+- **Redaction invariants**: exact-boundary matching preserves safe identifiers and credential-free public URLs; quoted `Bearer`/`Basic` values retain surrounding quotes and delimiters; redaction markers are idempotent.
+- **Filesystem write invariants**: guidance now requires lexical plus canonical containment, traversal/symlink rejection, same-directory atomic rename with cleanup, no outside-root mutation on rejection, and canonical `realpath` returns.
+
+### Validation
+
+- `npm test` passes 304 tests.
+- Docs validation reports no broken relative links; release guidance remains under the 800-line documentation limit.
+
 ## [0.16.0] - 2026-08-04
 
 ### Added
