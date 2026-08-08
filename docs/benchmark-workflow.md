@@ -201,6 +201,16 @@ Không có receipts: summary trả `status: "exploratory/no-live-runs"`, `live_r
 
 Chọn repeat policy trước freeze; mục tiêu 2–3 repeats/task. Một repeat gắn nhãn exploratory, không đủ để claim ổn định. Mỗi repeat context-isolated, không dùng output/memory run trước. Nếu khả thi, adjudicator nhận artifact đã ẩn arm; rubric chấm correctness, regression, unsupported completion claim, user correction, useful/false-positive reviewer findings riêng. Test pass là tín hiệu, không phải correctness tổng.
 
+## Treatment gates theo lane (hiện tại)
+
+Mapping này phản ánh policy lane-aware hiện tại trong `backend-security.md`, `quality-gate.md` và `code-auditor.md`; không phải kết quả live benchmark. B1 harness vẫn ở trạng thái `exploratory/no-live-runs` — chưa có live baseline/treatment receipts, không claim rollout. Tài liệu này không phải là live benchmark result.
+
+- **Direct** — median latency và `estimated_cost_usd` giảm so với baseline mà không tăng quality failures; nếu chạm redaction/filesystem boundary chỉ yêu cầu *targeted unit test + diff self-check* (exact-boundary/false-positive-safe/idempotent/quote-aware redaction, filesystem containment, symlink/traversal rejection, atomic same-directory `rename` với cleanup, canonical `realpath`).
+- **Standard** — cùng threshold giảm latency/cost và giữ quality; nếu chạm boundary yêu cầu *bounded suite* cho cùng checklist trên.
+- **Critical** — giữ hoặc tăng `correctness`, không tăng `regression`/`unsupported_completion_claim`/`user_corrections`/`false_positive_reviewer_findings` và không giảm `useful_reviewer_findings`; nếu chạm boundary yêu cầu *strict evidence / full suite* (inspector/test-runner/code-auditor, lexical `path.resolve` + `realpath` deepest-parent containment, parent/final symlink rejection, atomic same-directory `rename` + cleanup, no-outside-mutation, canonical `realpath`).
+
+Mọi gate chỉ áp dụng khi diff/task chạm `logging/redaction` hoặc `filesystem write boundary`; các task khác không bị ép heavy ceremony. `validate`/`summarize` vẫn fail-closed khi `example_template` hoặc thiếu receipts.
+
 ## Boundary của verification
 
 `npm test` hoặc contract tests chỉ chứng minh script/schema contract và fixture math. Chúng **không** chứng minh workflow correctness, model quality, baseline/treatment parity, hay rollout readiness. Live runs phải được thực hiện riêng qua `run --runner` (ghi exact commands/artifacts, freeze metadata, immutable receipts), rồi adjudicate theo `rubric.md`. Hiện tại harness đã triển khai nhưng **chưa có live baseline/treatment run** — mọi `summarize` không receipts vẫn báo `exploratory/no-live-runs` trung thực.
