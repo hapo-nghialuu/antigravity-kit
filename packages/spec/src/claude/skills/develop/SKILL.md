@@ -16,6 +16,8 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 
 **Principles:** YAGNI, KISS, DRY | Continuous execution | Smart self-healing
 
+**Executable policy source:** `src/claude/scripts/workflow-policy.cjs` defines Direct/Standard/Critical lane classification, lane delegation, approval-state semantics, mode conflict fail-fast, legacy Light/Standard/Deep delegation, review verdict handling, and flash promotion. Installed Claude runtime uses `.claude/scripts/workflow-policy.cjs`; contracts below must match it.
+
 ## Usage
 
 ```bash
@@ -27,7 +29,52 @@ Reads the project specification (`hapo:specs`) and implements code through a dis
 /hapo:develop <feature name> --no-notes
 ```
 
-## Execution Modes
+## Mode Matrix
+
+| Mode | Scout | Quality gate | Receipt | Notes |
+|---|---|---|---|---|
+| default (specific-task / full-spec) | per tier | full (Step 4) | verified | |
+| `--flash` | per tier | Flash Gate (4F) | `FLASH_UNVERIFIED` | |
+| `--parallel` | inspector per task (Critical) | full, inside each worktree | verified | implies Critical lane (legacy Deep) |
+| `--flash --parallel` | **flash+parallel fail-fast — no execution** | | | reject before state/worktree changes |
+| `--no-notes` | — | — | — | composable with all modes |
+
+## Argument validation
+
+Run policy pre-state guard before loading spec files or mutating state. For the incompatible flag pair, the command must exit nonzero and write no state, receipt, worktree, subagent, or commit:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --flash --parallel --json
+```
+
+Expected JSON contract: `{"ok":false,"contract":"execution-policy","failFast":true,...}` with exit code `2`. If both `--flash` and `--parallel` are present, print:
+
+```text
+Unsupported flags: --flash and --parallel are incompatible.
+Remediation: run `/hapo:develop <feature> --flash` or `/hapo:develop <feature> --parallel [N]`.
+No spec state, task receipt, worktree, subagent, or commit was created.
+```
+
+Then STOP with no execution. Never silently drop `--flash`, prefer `--parallel`, or start a more expensive workflow.
+
+
+## Lane selection before spec gate
+
+Run lane classification at the runtime boundary before loading spec files or mutating state. Decisions are executable, not advisory prose:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+# Downgrade requires explicit user authorization - model-supplied downgrade is blocked
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '{"riskSignals":{"auth":true},"override":"Direct","userAuthorized":true}' --json
+```
+
+- **Direct** — clear, isolated, reversible, low-risk work. May skip spec/state/subagents and full task/spec/registry ceremony; execute targeted test, diff self-check, and proportional evidence only.
+- **Standard** — default. Use one bounded spec artifact (`requirements.md` + `design.md` in current layout), one canonical receipt, and exactly one combined `code-auditor` review at feature ship point (not per-task).
+- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Use strict durable state and evidence with risk-driven delegation (inspector/test-runner/code-auditor enabled per risk lens), not a fixed four-agent chain.
+
+Explicit overrides are enforced at the runtime boundary. A model-supplied lane or downgrade must not bypass risk signals. Downgrading from Critical requires explicit user-originated authorization (`userAuthorized:true` or `origin:user`) and must surface the trade-off (reduced review/evidence coverage). Keep `generated`, `agent_validated`, and `user_approved` independent; agent validation or --auto never fabricates `user_approved`.
+
+Direct may bypass the approved-spec hard gate only for low-risk reversible work. Standard and Critical still require their lane-appropriate spec/state gate.
 
 ### 1. Specific-Task Mode
 Triggered by `/hapo:develop <feature> <task-file>`.
@@ -46,7 +93,7 @@ Triggered by `/hapo:develop <feature>` or `/hapo:develop specs/<feature>`.
 - Sync state.
 - Recompute the queue and continue.
 - STOP the overall run on the first blocked task, unresolved gate failure, or missing proof.
-- In `--flash` mode, missing full test proof does not stop the loop; record `FLASH_UNVERIFIED` and continue to the next unblocked task.
+- In `--flash` mode, missing full test proof stores the task as `status: "in_progress"` with receipt `FLASH_UNVERIFIED` and blocker `awaiting /hapo:test <feature>`. It does not unblock dependencies or mark the task done.
 
 ### 2b. Parallel Wave Mode (opt-in)
 Triggered by adding `--parallel [N]` to Full-Spec mode. Load `references/parallel-waves.md` and follow it exactly — it is the operating procedure (wave planning, dispatch, merge, cleanup).
@@ -64,7 +111,7 @@ Contracts: WAVE_CONFIG
 
 - Preconditions first: if `runtime.json` sets `develop.parallel: false`, refuse `--parallel`, name the key, and run the sequential loop. If the work context is not a git repository or worktree isolation is unavailable, state the reason and fall back sequential (see parallel-waves.md §1).
 - Waves are computed from `task_registry.dependencies` with the single-writer-per-file rule; wave cap = N (1..5, default 3).
-- Dispatch one `god-developer` per wave task — worktree isolation, background, self-contained prompt per `rules/orchestrator.md`, plus the mandatory lines in parallel-waves.md §3 (commit mandate; never edit `spec.json`/`tasks/*.md`; never touch files outside the task's `Related Files`).
+- Dispatch one `implementer` per wave task — worktree isolation, background, self-contained prompt per `rules/orchestrator.md`, plus the mandatory lines in parallel-waves.md §3 (commit mandate; never edit `spec.json`/`tasks/*.md`; never touch files outside the task's `Related Files`).
 - Quality gate (Stage A+B, unchanged) runs inside each task's worktree BEFORE merge; merge = sequential `git cherry-pick` of agent commits with explicit worktree/branch cleanup (spike-verified — see parallel-waves.md §5); post-merge integration check gates the next wave.
 - The orchestrator is the single writer of spec state: registry/task-md/receipts update after each cherry-pick, exactly as in sequential mode.
 - Without `--parallel`, nothing in this section applies — the sequential Full-Spec loop below is unchanged.
@@ -77,23 +124,39 @@ Triggered by adding `--flash` to either specific-task or full-spec mode.
 - Skip dedicated test suites, E2E/browser/manual QA loops, full task evidence execution, and code-review retry loops.
 - Run only cheap preflight checks when available and fast: syntax, typecheck, or build commands that do not require installing dependencies or starting external services.
 - Never weaken, delete, or rewrite tests to avoid running them.
-- Sync completed implementation with an explicit `FLASH_UNVERIFIED` receipt; do not claim production-ready quality.
+- Sync the implementation as `status: "in_progress"` with receipt `FLASH_UNVERIFIED`, blocker `awaiting /hapo:test <feature>`, and no dependency unblocking. Do not claim task or feature completion.
 - Final output MUST recommend `/hapo:test <feature>` before merge, release, or publish.
 
 ### 4. Implementation Notes
-Enabled by default for all develop modes. Disable only with `--no-notes`.
+Implementation notes apply to Standard/Critical modes by default; Direct stays artifact-free unless user explicitly requests a receipt. Disable notes with `--no-notes`.
 
-- Maintain `specs/<feature-name>/implementation-notes.html`.
-- Use `references/implementation-notes-template.html` when the file does not exist.
+- **Standard/Critical**: maintain `specs/<feature-name>/implementation-notes.html`.
+- **Standard/Critical**: use `references/implementation-notes-template.html` when the file does not exist.
 - Keep the file self-contained: inline CSS, no JS, no external fonts, no network assets.
 - Style notes as readable Claude Code-like blocks: compact cards, left accent bars, category badges, monospace file paths, and a task timeline.
 - Record decisions and caveats while implementing, not only at the end.
 - Do not use notes to justify scope changes that alter the approved contract. If the contract changes, stop and route back to `/hapo:specs update`.
 
-<HARD-GATE>
-DO NOT write implementation code until an approved spec exists.
-- If the directory `specs/<feature-name>` DOES NOT EXIST or `spec.json` is not ready, automatically trigger `/hapo:specs <feature-name> --auto` first to create the specification end-to-end (non-interactive). Do not improvise.
-</HARD-GATE>
+## Delegation policy (single source for this skill)
+
+Implement in the main session by default. Do not spawn a subagent because a step
+mentions an agent name — spawn only per this table:
+
+| Lane | Delegation (risk-driven) | Quality gate |
+|---|---|---|
+| Direct | None | Main-session targeted verification and diff self-check |
+| Standard | Exactly one combined `code-auditor` at feature ship point (not per-task) | Feature-level ship point |
+| Critical | Risk-driven: `inspector` when discovery needed, `test-runner` when code changes, `code-auditor` at feature closeout (not fixed four-agent per task) | Strict evidence gate |
+
+Legacy `execution_tier` (`Light | Standard | Deep`) is retained only as backward-compatible metadata (tier = Light → Direct, Standard → Standard, Deep → Critical). When both exist, lane policy controls ceremony/delegation and tier is metadata only. Do not treat tier as authoritative.
+
+<LANE-GATE>
+Do not write implementation code until lane classification runs at the runtime boundary.
+- **Direct** may bypass spec/state/registry and full task ceremony only when classifier confirms clear, isolated, reversible, low-risk work; targeted verification and evidence remain mandatory.
+- **Standard** requires one bounded approved spec artifact (`requirements.md` + `design.md` in current layout) and canonical receipt before implementation; exactly one feature-level closeout review.
+- **Critical** requires approved lane-appropriate spec/state plus strict evidence before implementation; delegation is risk-driven, not a fixed chain.
+Never treat a Direct override as automatic low risk; preserve its warning, risk signals, and user authorization requirement. Model-supplied downgrades without user authorization are blocked.
+</LANE-GATE>
 
 <DEFINITION-OF-DONE>
 A task is NOT done because code compiles or a placeholder renders.
@@ -111,21 +174,16 @@ The approved `scope_lock`, requirements, design contracts, and active task packe
 You MUST implement all scoped behavior for the active task, MUST NOT add out-of-scope behavior, and MUST NOT mark work done while required surfaces exist only as orphaned files, unmounted UI, unregistered routes, uncalled loaders, or placeholder wiring.
 </SCOPE-FIDELITY>
 
-## Anti-Rationalization Protocol
-
-| Thought (Excuse) | Reality (Rule) |
-|-------------------|----------------|
-| "No need to scout first" | Coding without knowing the architecture is blind. ALWAYS call the `inspector` agent to scan files. |
-| "Review process is too tedious, let me just finish it myself" | The system needs an audit trail through agents. ALWAYS delegate via the `Agent` tool. |
-
 ## Absolute Workflow
 
 ```mermaid
 flowchart TD
-    A["/hapo:develop \u003cfeature\u003e"] --> B[Step 1: Load Spec]
-    B -->|Missing| Z[Stop: Run /hapo:specs]
-    B -->|Ready| C[Step 2: Task-Aware Scout (inspector)]
-    C --> D[Step 3: Implement Code (god-developer)]
+    A["/hapo:develop \u003cfeature\u003e"] --> L[Classify lane]
+    L -->|Direct| D[Step 3: Implement (targeted or lane-scoped)]
+    L -->|Standard/Critical| B[Step 1: Load lane spec/state]
+    B -->|Missing or not approved| Z[Stop: Run lane-appropriate /hapo:specs]
+    B -->|Ready| C[Step 2: Task-Aware Scout (per lane policy)]
+    C --> D
     D --> E{Flash Mode?}
     E -->|No| Q[Step 4: Quality Gate: Test + Spec Review + Code Review + Evidence]
     E -->|Yes| R[Step 4F: Flash Gate: Minimal Preflight + Scope Sanity]
@@ -139,37 +197,29 @@ flowchart TD
 ```
 
 ### Step 1: Initialize & Load Spec
-- Identify input: Open `specs/<feature-name>/spec.json`.
-- Check `ready_for_implementation` status. If not ready, notify user.
-- Load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
-- Unless `--no-notes` is present, initialize or update `specs/<feature-name>/implementation-notes.html`:
+- **Direct**: after classifier confirms low-risk reversible work, skip spec/state/registry initialization and continue with targeted implementation/evidence.
+- **Standard/Critical**: identify input and open the lane-appropriate `spec.json` plus bounded spec artifacts; require approved state before implementation.
+- Check `ready_for_implementation` only for Standard/Critical specs. If not ready, notify user.
+- **Standard/Critical only**: load `task_registry` and verify it matches the requested task file(s). If registry is missing or stale, route to `/hapo:sync audit <feature>` before coding.
+- **Standard/Critical only**: unless `--no-notes` is present, initialize or update `specs/<feature-name>/implementation-notes.html`:
   - If missing, create it from `references/implementation-notes-template.html`.
   - Replace template placeholders for feature name, spec path, creation timestamp, and current mode.
   - If present, preserve existing note cards and update the summary/timeline/status fields.
-- **Task Scoping (CRITICAL):**
-  - If the user specifies a particular task file (e.g., `task-R0-02...md`), load **ONLY** that specific file into working memory.
-  - If no specific task is mentioned, DO NOT load all tasks into working memory. Resolve the next single unblocked `pending` task from `task_registry` and load only that task packet.
-- **Task Packet Extraction (MANDATORY):** Before coding, extract from the active task file(s):
-  - Objective + Constraints
-  - Related Files
-  - Completion Criteria
-  - `## Evidence` (legacy heading aliases still parse)
-  - Exact executable verification commands named in the task
-  - Requirement IDs referenced by the task
-  - Named technologies, frameworks, protocols, and data stores that the task/spec explicitly requires
-  - Relevant `Canonical Contracts & Invariants` from `design.md`
-- If the task file is missing actionable completion or verification detail, STOP and route back to spec correction. Do not guess.
-- Before coding, set the active task(s) to `in_progress` in both markdown and `spec.json.task_registry`, or route through `/hapo:sync` if the runtime expects the sync protocol.
+- **Direct** does not create or update spec implementation notes unless user explicitly asks for a receipt.
+- **Standard/Critical only**: load exactly one task packet for specific-task mode, or resolve one unblocked task from `task_registry` for full-spec mode.
+- **Standard/Critical only**: extract Objective + Constraints, Related Files, Completion Criteria, Evidence commands, requirement IDs, named technologies, and canonical contracts before coding.
+- If a Standard/Critical task file lacks actionable completion or verification detail, stop and route back to spec correction. Direct does not use this packet gate.
+- **Standard/Critical only**: set the active task to `in_progress` in markdown and `spec.json.task_registry` before coding. Direct has no registry mutation.
 
 ### Step 2: Scout (Codebase Inspection)
-- **Mandatory per task:** Call agent `Agent(subagent_type="inspector", ...)` before implementing EVERY active task. This is task-aware scouting, not a one-time global scan.
-- The inspector prompt MUST include:
+- **Scout per Delegation policy** — Critical may delegate to `inspector` when risk lens requires discovery; Direct/Standard scout in the main session with the same required outputs (legacy Light/Standard/Deep tier is metadata only):
+- The scout prompt MUST include:
   - Active task file path and extracted task packet
   - Requirement IDs and `scope_lock`
   - Relevant `design.md` contracts/invariants
   - Prior completed task outputs from `spec.json.task_registry`
   - Related Files from the active task
-- Inspector MUST report:
+- The scout MUST report:
   - Real runtime entrypoints/callers affected by the task (`App.tsx`, routes, CLI command, worker registration, manifest, API consumer, etc.)
   - Existing integration points and adjacent code patterns to follow
   - Prior task outputs this task must consume or preserve
@@ -179,10 +229,10 @@ flowchart TD
 - If the inspector cannot identify the entrypoint/caller for a runtime-facing task, STOP and route back to spec correction or ask the user. Do not guess.
 
 ### Step 3: Implement Code
-- Act as `god-developer` OR directly write code, executing tasks specified in the loaded Markdown file(s) sequentially.
+- Act as the `implementer` per the Delegation policy (default: the main session), executing tasks specified in the loaded Markdown file(s) sequentially.
 - **Important:** You may create and modify files directly, but must faithfully follow the design from the Spec.
 - You MUST use the Step 2 scout report as implementation context. If code reality contradicts the task packet, stop and reconcile the spec before coding.
-- Unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
+- **Standard/Critical only**: unless `--no-notes` is present, append a note card to `implementation-notes.html` whenever any of these occurs:
   - `decision`: a necessary implementation choice not specified by the spec
   - `spec-gap`: missing or ambiguous spec detail discovered during implementation
   - `codebase-reality`: existing code requires a different integration path than the task implied
@@ -208,7 +258,7 @@ flowchart TD
 
 ### Step 4: Self-Healing (Quality Gate Auto-Fix)
 The moment you finish coding, DO NOT proceed further. Switch to `references/quality-gate.md` and run the automatic review loop.
-**Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: Score >= 9.5 & Zero Critical issues.
+**Mantra:** Scope/spec compliance first, code quality second. All feedback from code-auditor must be addressed thoroughly: PASS requires no Critical findings, no High findings, and at most one Medium.
 
 If `--flash` is active, use **Step 4F: Flash Gate** instead of the full automatic review loop.
 
@@ -217,11 +267,9 @@ If `--flash` is active, use **Step 4F: Flash Gate** instead of the full automati
   2. Spec compliance review passes: every scoped requirement and active task criterion is implemented, with no extras and no omissions
   3. Code quality review passes
   4. Task evidence passes (artifacts/runtime surfaces/reachability/negative-path checks from the task file are proven)
+- Violating any Step 3 rule = FAIL.
 - `PRECHECK_FAIL` outranks `NO_TESTS`. If compile/typecheck/build fails, the task is FAIL even when no test suite exists yet.
-- `NO_TESTS` is NOT equivalent to PASS. If the task explicitly requires a test command or automated test proof, `NO_TESTS` is a FAIL or BLOCKED outcome until the requirement is satisfied or the spec is corrected.
 - If build/test passes but task evidence is missing, the task is still FAIL.
-- If runtime-facing work is orphaned, unmounted, unregistered, uncalled, or unreachable from the declared entrypoint/caller, the task is still FAIL.
-- If the implementation silently replaced a named contract choice or relies on cross-service process-local stand-ins, the task is still FAIL.
 - Only escalate to the user after 3 consecutive failed review rounds.
 
 ### Step 4F: Flash Gate (`--flash` only)
@@ -245,7 +293,7 @@ Flash mode is an explicit speed trade-off requested by the user.
 
 ### Step 5: State Sync + Task-Level Docs Sync
 - Only after Step 4 passes may you mark task checkboxes completed and sync `spec.json` progress/timestamps/task_registry.
-- In `--flash` mode, Step 4F may sync the task only as a fast implementation closeout with an explicit `FLASH_UNVERIFIED` receipt.
+- In `--flash`, Step 4F may record implementation closeout only as `status: "in_progress"` with `FLASH_UNVERIFIED` and blocker `awaiting /hapo:test <feature>`; it never syncs `done` or unblocks dependencies.
 - If verification is partial or blocked by environment, keep the task in `pending` or `in_progress` and record the blocker instead of pretending completion.
 - A completed task MUST leave behind:
   - markdown `**Status:** done`
@@ -253,7 +301,7 @@ Flash mode is an explicit speed trade-off requested by the user.
   - `completed_at` + `last_updated_at`
   - synchronized top-level `updated_at`
   - a human-readable verification receipt inside the task's `Evidence` section showing which commands ran, their outcomes, and what proof was observed
-- In `--flash` mode, the receipt MUST include `Mode: --flash`, `Tests: skipped by user request`, `Evidence: FLASH_UNVERIFIED`, and `Next verification: /hapo:test <feature>`.
+- In `--flash`, the receipt MUST include `Mode: --flash`, `Tests: skipped by user request`, `Evidence: FLASH_UNVERIFIED`, `Status: in_progress`, `Blocker: awaiting /hapo:test <feature>`, and `Next verification: /hapo:test <feature>`.
 - Verification receipts with `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or an explicit note that the implementation intentionally simplified a named contract MUST NOT be synchronized as `done`.
 - Exception: `FLASH_UNVERIFIED` is allowed only when `--flash` is explicitly present. It records fast implementation completion, not full verification completion.
 - Unless `--no-notes` is present, update `implementation-notes.html` before reporting the task:
@@ -267,7 +315,7 @@ Flash mode is an explicit speed trade-off requested by the user.
   - If `none`: record that explicitly in the completion report and stop
   - If `minor` or `major`: trigger `docs-keeper` to surgically update affected existing docs under `./docs`
   - Default to **lightweight docs sync**: update only the docs touched by this task and its verified behavior; do NOT run `repomix` unless `docs-keeper` truly cannot verify the required architecture/context from the code, spec, and current docs
-- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, you MUST ensure the agent's Current Working Directory (CWD context) is explicitly set to the **Workspace Root**, NOT the inner package directory you were just coding in. Otherwise, `docs-keeper` will search for the root `docs/` folder in the wrong place and crash.
+- **CWD Protocol (CRITICAL):** When spawning `docs-keeper`, set its Current Working Directory (CWD context) to the **Workspace Root**, not the inner package directory.
 - Task-level docs sync happens after every verified completed task, but actual edits still depend on `Docs impact`.
 - In **Specific-Task Mode**, STOP after sync and report the result.
 - In **Full-Spec Mode**, only after sync may you re-read `task_registry`, pick the next unblocked pending task, and repeat from Step 1 for that task.

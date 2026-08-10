@@ -59,7 +59,7 @@ If any item is vague, ask one more grounded question. Do not proceed with phrase
 | "This is too simple to need a design" | Simple projects = most wasted work from unexamined assumptions. |
 | "I already know the solution" | Then writing it down takes 30 seconds. Do it. |
 | "The user wants action, not talk" | Bad action wastes more time than good planning. |
-| "Let me explore the code first" | Brainstorming tells you HOW to explore. Follow the process. |
+| "I'll skip the scout summary and go straight to questions" | Gate order is scout → summarize findings → ask. Questions come from evidence. |
 | "I'll just prototype quickly" | Prototypes become production code. Design first. |
 
 ## Collaboration Tools
@@ -70,8 +70,7 @@ Leverage these specific tools or sub-agents to execute the workflow effectively:
 - `hapo:ai-multimodal`: Use this when analyzing visual materials and mockups.
 - `repomix --remote`: Use this bash command to summarize external Github repositories if a URL is provided.
 - `psql`: Query database schemas to understand existing data structures.
-- `brainstormer`: Call only for medium/high-complexity architecture trade-offs.
-- **Ecosystem Swarm (`SendMessage`):** Call `researcher` (validation), `docs-keeper` (architecture boundaries), or `project-manager` (scope warnings) for deeply complex specs.
+Call brainstormer only when 2+ architectures have material trade-offs after discovery; call researcher only for external/current facts the repo cannot answer.
 
 ## Discovery Question Framework
 

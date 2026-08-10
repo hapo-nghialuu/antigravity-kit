@@ -3,9 +3,6 @@
   "inspect": {
     "enabled": true
   },
-  "gemini": {
-    "model": "gemma-4-31b-it"
-  },
   "statusline": "full",
   "statuslineColors": true,
   "docs": {

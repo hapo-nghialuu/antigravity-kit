@@ -16,6 +16,7 @@ const packageJson = require('../../package.json');
 const { getOpenCodeCopyOptions } = require('./opencode-install');
 const { isInteractive, createUI } = require('./ui');
 const { resolveLang, createTranslator } = require('./i18n');
+const { normalizeSourcePaths } = require('./copy-utils');
 
 const INSTALL_COMMAND = `npx ${packageJson.name}@${packageJson.version}`;
 
@@ -82,7 +83,7 @@ const PLATFORMS = {
     commandPrefix: '/',
     sourceDir: 'claude',       // Maps to src/claude/
     sourceSubdir: 'commands',  // Source subfolder within src/claude/
-    backupTargets: ['.claude', 'CLAUDE.md'],
+    backupTargets: ['.claude', 'CLAUDE.md', 'AGENTS.md'],
     capabilities: {
       skills: true,
       agents: true,
@@ -216,7 +217,16 @@ function getCopyOptions(platformKey, baseOptions = {}) {
     // during module initialization.
     return require('./codex-install').getCodexCopyOptions(baseOptions);
   }
-  return baseOptions;
+  if (platformKey !== 'claude') return baseOptions;
+  return {
+    ...baseOptions,
+    transform: (content, sourcePath) => normalizeSourcePaths(
+      typeof baseOptions.transform === 'function'
+        ? baseOptions.transform(content, sourcePath)
+        : content,
+      { runtimeRoot: '.claude', skillsRoot: '.claude/skills' }
+    )
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -305,11 +315,12 @@ function buildContext(argv, runId) {
   const options = parseInstallerArgs(argv);
   // Interactive only on a real TTY and not when --yes/CI forces non-interactive.
   const interactive = isInteractive() && !options.yes;
-  // Language: --lang wins; otherwise English (an interactive prompt may change it).
+  // Language: --lang wins; otherwise English for installer UI only (an interactive
+  // prompt or saved runtime locale may change both values).
   const lang = options.lang ? resolveLang(options.lang) : 'en';
-  // ctx.locale = the string that gets written to CLAUDE.md / runtime.json as the AI's response language.
-  // For known codes it mirrors lang; for "other", it's set later by setLang.
-  const locale = options.lang || 'en';
+  // A missing locale means "follow the user's language". Never persist the UI
+  // fallback as an AI response-language override on fresh installs/upgrades.
+  const locale = options.lang ? options.lang : null;
   return {
     argv,
     runId,

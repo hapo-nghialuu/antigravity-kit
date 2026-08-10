@@ -3,7 +3,31 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.16.0] - 2026-08-04
+
+### Changed
+- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
+- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
+- **Instruction hook safety**: rules hooks are silent when runtime configuration is missing, malformed, or unreadable; Claude subagent paths prefer payload `cwd` over stale `PROJECT_ROOT`.
+- **OpenCode instruction updates**: OpenCode language and addressing patches use its own managed block, and all runtimes ship project-local skill/venv gotchas with correct paths.
+- **Combined-install regression coverage**: real temp installs verify one shared core, runtime-specific blocks, localization, evidence contracts, and idempotent reruns.
+- **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
+- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
+- **Wave 4 skills editorial pass (Đợt 2)**: added Light/Standard/Deep delegation tiers and a mode matrix; replaced numeric quality scoring with severity verdicts (PASS = no Critical, no High, at most one Medium); renamed the implementation agent payload to `implementer` and aligned migration-manifest, Codex, and OpenCode mappings; made inspect internal-only with related ext/Gemini cleanup; removed unsourced domain percentage claims.
+
 ## [Unreleased]
+
+### Changed
+- **Shared CORE instruction block (Đợt 1)**: root `AGENTS.md` now stores one shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START -->` / `<!-- CAFEKIT CORE END -->`) installed once per run by `ensureSharedAgentsMdCore`, before the per-platform loop. Claude/Codex/OpenCode runtimes carry only their own runtime-specific wrapper content; language patching stays in the shared CORE while addressing remains per-platform.
+- **Combined-install boundary**: documented the tested shared-root trade-off (neutral CORE plus native Codex/OpenCode blocks in `AGENTS.md`, also imported by Claude) and added regression coverage for marker topology, ownership-preserving reruns, locale/addressing placement, and malformed-marker rollback.
+- **Reinstall preserves managed Addressing**: when a newer template drops its `## Addressing (Context Overflow Indicator)` section, the exact saved section is carried over from the existing managed block (Claude, Codex, and OpenCode) so the user's address survives for `setupAddressing`.
+- **OpenCode direct plugin copy hardening**: plugin copies skip generated artifacts (`.coverage`, `__pycache__`, `.pyc`/`.pyo`) and byte-normalize direct text plugin files via `normalizeOpenCodeBody`.
+- **Source-path tripwire self-test**: real install fixtures assert no installed payload under `.claude|.codex|.opencode` still references `packages/spec/src/`, covering all three runtimes including combined installs.
+- **Security invariants — logging redaction (lane-aware)**: exact-boundary token matching, false-positive-safe preservation of safe identifiers (`_file`/`_path`/`_hint`/`_label`, `tokenizer`) and credential-free public URLs, quote-aware `Bearer`/`Basic` redaction preserving surrounding quotes and trailing `,`/`;`/whitespace outside the value, and idempotent markers `[REDACTED]`/`[REDACTED-PEM]` (`redact(redact(x)) === redact(x)`).
+- **Security invariants — filesystem write boundary (lane-aware)**: filesystem containment via lexical `path.resolve` + `realpath` of deepest existing parent, symlink/traversal rejection (empty/whitespace/URI/absolute/`..`/sibling-prefix and parent/final symlink never followed or overwritten), atomic same-directory temp write + `rename` with cleanup on error and no outside-root mutation on rejection, and canonical `realpath` return (e.g. macOS `/var` → `/private/var`).
+- **Lane-aware evidence**: security verification applies only when the task touches redaction or filesystem boundary; Direct — targeted unit test + diff self-check, Standard — bounded suite, Critical — strict evidence / full suite (inspector/test-runner/code-auditor) per lane policy; no fixed heavy ceremony on every task.
+- **B1 benchmark harness**: added frozen corpus/config/receipt validation, per-lane baseline/treatment summaries, task/repeat completeness gates, and fixture-only contract tests; live baseline/treatment runs remain pending, with no rollout claim.
+- `npm test` in `packages/spec` passes `304` tests.
 
 ## [0.15.2] - 2026-07-29
 

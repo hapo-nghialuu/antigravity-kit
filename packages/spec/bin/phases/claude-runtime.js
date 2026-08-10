@@ -19,10 +19,18 @@ const { sha256 } = require('../lib/manifest');
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
 const { normalizeOpenCodeBody } = require('../lib/opencode-install');
+const {
+  upsertManagedCoreBlock,
+  managedRange,
+  migrateExactLegacyBlock,
+  preserveAddressingSection
+} = require('../lib/instruction-blocks');
 
 const SRC = path.join(__dirname, '../../src');
 const CLAUDE_START = '<!-- CAFEKIT CLAUDE START -->';
 const CLAUDE_END = '<!-- CAFEKIT CLAUDE END -->';
+const LEGACY_CORE_START = '<!-- CAFEKIT CLAUDE AGENTS START -->';
+const LEGACY_CORE_END = '<!-- CAFEKIT CLAUDE AGENTS END -->';
 
 function managedClaudeBlock(template) {
   return `${CLAUDE_START}\n${template.trimEnd()}\n${CLAUDE_END}`;
@@ -30,9 +38,11 @@ function managedClaudeBlock(template) {
 
 function managedClaudeRange(content) {
   const start = content.indexOf(CLAUDE_START);
-  if (start === -1) return null;
-  const endStart = content.indexOf(CLAUDE_END, start + CLAUDE_START.length);
-  if (endStart === -1) return null;
+  const endStart = content.indexOf(CLAUDE_END);
+  if (start === -1 && endStart === -1) return null;
+  const duplicateStart = content.indexOf(CLAUDE_START, start + CLAUDE_START.length);
+  const duplicateEnd = content.indexOf(CLAUDE_END, endStart + CLAUDE_END.length);
+  if (start === -1 || endStart <= start || duplicateStart >= 0 || duplicateEnd >= 0) return false;
   return { start, end: endStart + CLAUDE_END.length, bodyStart: start + CLAUDE_START.length, bodyEnd: endStart };
 }
 
@@ -45,7 +55,19 @@ function transformManagedClaudeContent(content, transform) {
 }
 
 function upsertManagedClaudeBlock(existing, template, legacyOwned) {
-  const block = managedClaudeBlock(template);
+  // When an existing managed block present, reinstall replaces it. If the new
+  // template dropped its Addressing section, carry the saved section over from
+  // the existing managed block so the user's address survives for setupAddressing.
+  const existingRange = managedClaudeRange(existing);
+  if (existingRange === false) return existing;
+  const existingManagedBody = existingRange
+    ? existing.slice(existingRange.bodyStart, existingRange.bodyEnd)
+    : '';
+  let body = template;
+  if (existingRange) {
+    body = preserveAddressingSection(template, existingManagedBody);
+  }
+  const block = managedClaudeBlock(body);
   const range = managedClaudeRange(existing);
   if (range) {
     return `${existing.slice(0, range.start)}${block}${existing.slice(range.end)}`;
@@ -58,6 +80,44 @@ function upsertManagedClaudeBlock(existing, template, legacyOwned) {
 
   const separator = existing.endsWith('\n') ? '\n' : '\n\n';
   return `${existing}${separator}${block}\n`;
+}
+
+function ensureSharedAgentsMdCore(ctx) {
+  const src = path.join(SRC, 'common/AGENTS.md');
+  const dest = 'AGENTS.md';
+  if (!fs.existsSync(src)) {
+    ctx.ui.warn('Shared AGENTS.md template not found');
+    ctx.results.missingDependencies++;
+    return;
+  }
+
+  const template = fs.readFileSync(src, 'utf8');
+  const exists = fs.existsSync(dest);
+  const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  if (managedRange(existing) === false) {
+    ctx.ui.warn(`AGENTS.md: malformed CafeKit CORE marker topology; preserved ${dest} without writing`);
+    ctx.results.errors++;
+    return;
+  }
+  const migrated = migrateExactLegacyBlock(
+    existing,
+    LEGACY_CORE_START,
+    LEGACY_CORE_END,
+    template
+  );
+  const next = upsertManagedCoreBlock(migrated, template);
+  const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';
+
+  if (!ctx.dryRun && action !== 'unchanged') {
+    fs.writeFileSync(dest, next, 'utf8');
+  }
+  report(ctx, action, 'AGENTS.md (shared CafeKit core)');
+}
+
+/** Install the shared AGENTS.md core used by Claude's @AGENTS.md import. */
+function copyClaudeAgentsMdFile(ctx, platformKey) {
+  if (platformKey !== 'claude') return;
+  ensureSharedAgentsMdCore(ctx);
 }
 
 /** Copy ROUTING.md (SKILLS_DIR substituted; OpenCode body normalized). */
@@ -132,6 +192,37 @@ function removeObsoleteClaudeRuntimeFiles(ctx, platformKey) {
   });
 }
 
+/** Remove renamed agents only when ownership manifest proves pristine bytes. */
+function removeObsoleteAgents(ctx, platformKey) {
+  const platform = PLATFORMS[platformKey];
+  const obsolete = ctx.manifest?.obsolete?.agents?.[platformKey] || [];
+  const tracker = ctx.trackers?.[platformKey];
+  if (!platform || !tracker || obsolete.length === 0) return;
+
+  const ownership = ctx.ownership?.[platform.folder] || { files: {} };
+  for (const relPath of obsolete) {
+    const targetPath = path.join(platform.folder, relPath);
+    if (!fs.existsSync(targetPath)) continue;
+
+    const key = tracker.keyFor(targetPath);
+    const recorded = ownership.files?.[key];
+    const currentHash = sha256(fs.readFileSync(targetPath));
+    if (recorded?.sha256 === currentHash) {
+      if (!ctx.dryRun) {
+        fs.rmSync(targetPath, { force: true });
+        tracker.prune(key);
+      }
+      ctx.ui.detail(`  ↻ ${ctx.dryRun ? '[dry-run] ' : ''}Removed obsolete agent: ${targetPath}`);
+      ctx.results.updated++;
+      continue;
+    }
+
+    ctx.ui.warn(`Preserved user-owned obsolete agent: ${targetPath}`);
+    ctx.results.preserved++;
+    ctx.results.preservedFiles.push(targetPath);
+  }
+}
+
 /** Install CLAUDE.md at the project root (ownership-aware). Claude only. */
 function copyClaudeMdFile(ctx, platformKey) {
   if (platformKey !== 'claude') return;
@@ -152,6 +243,11 @@ function copyClaudeMdFile(ctx, platformKey) {
   const template = fs.readFileSync(src, 'utf8');
   const exists = fs.existsSync(dest);
   const existing = exists ? fs.readFileSync(dest, 'utf8') : '';
+  if (managedClaudeRange(existing) === false) {
+    ctx.ui.warn(`CLAUDE.md: malformed CafeKit CLAUDE marker topology; preserved ${dest} without writing`);
+    ctx.results.errors++;
+    return;
+  }
   const legacyRecord = ctx.ownership?.[PLATFORMS.claude.folder]?.files?.['../CLAUDE.md'];
   const legacyOwned = Boolean(legacyRecord && legacyRecord.sha256 === sha256(existing));
   const next = upsertManagedClaudeBlock(existing, template, legacyOwned);
@@ -187,6 +283,9 @@ module.exports = {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
+  copyClaudeAgentsMdFile,
+  ensureSharedAgentsMdCore,
   copyRulesDirectory,
+  removeObsoleteAgents,
   transformManagedClaudeContent
 };

@@ -17,8 +17,8 @@ Comprehensive guide for audio analysis and speech generation using Gemini API.
 
 ### Specifications
 
-- **Maximum length**: 9.5 hours per request
-- **Multiple files**: Unlimited count, combined max 9.5 hours
+- **Maximum length**: 9 hours 30 minutes per request
+- **Multiple files**: Unlimited count, combined max 9 hours 30 minutes
 - **Token rate**: 32 tokens/second (1 minute = 1,920 tokens)
 - **Processing**: Auto-downsampled to 16 Kbps mono
 - **File size limits**:
@@ -241,10 +241,10 @@ response = client.models.generate_content(
 **Token calculation**:
 - 1 minute audio = 1,920 tokens
 - 1 hour audio = 115,200 tokens
-- 9.5 hours = 1,094,400 tokens
+- 9 hours 30 minutes = 1,094,400 tokens
 
 **Model selection**:
-- Use `gemma-4-31b-it` for transcription and analysis (read model from `.claude/runtime.json`: `gemini.model`)
+- Use `GEMINI_MODEL` for transcription and analysis when set; otherwise use `gemma-4-31b-it`.
 
 **Reduce costs**:
 - Process only relevant segments using timestamps
@@ -357,7 +357,7 @@ response = client.models.generate_content(
 - 1 minute = 1,920 tokens
 - 10 minutes = 19,200 tokens
 - 1 hour = 115,200 tokens
-- 9.5 hours = 1,094,400 tokens
+- 9 hours 30 minutes = 1,094,400 tokens
 
 **Example costs** (Gemini 2.5 Flash at $1/1M):
 - 1 hour audio: 115,200 tokens = $0.12
@@ -365,7 +365,7 @@ response = client.models.generate_content(
 
 ## Limitations
 
-- Maximum 9.5 hours per request
+- Maximum 9 hours 30 minutes per request
 - Auto-downsampled to 16 Kbps mono (quality loss)
 - Files expire after 48 hours
 - No real-time streaming support

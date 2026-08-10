@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+
 - **Platform selection after prior install**: `resolvePlatforms` now correctly prompts for additional platforms when user has existing CafeKit setup. Previously, merging `savedPlatforms` with `detectPlatforms()` silently skipped interactive selection because `detectPlatforms()` only scanned disk directories, preventing users from adding Codex CLI to an existing Claude Code project without `--platform` flag.
 
 ### Added
@@ -15,6 +16,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **I18n key `addPlatformsPrompt`**: added to English, Japanese, and Vietnamese locale files.
 - **E2E test coverage**: new test installs Codex over existing Claude setup in temp directory, verifies `.claude/` remains intact, `.codex/` receives full payload, AGENTS.md preserves user content while receiving Codex block, and per-platform metadata stays independent.
 - **Unit tests**: two tests for the new prompt flow plus one consistency test verifying `addPlatformsPrompt` uses exactly `{names}` placeholder across all locales.
+
+## [0.16.0-rc.2] - 2026-08-08
+
+### Changed
+
+- **Lane-aware security guidance**: security verification is proportional to the Direct, Standard, or Critical lane and is required only when a task touches logging/redaction or filesystem write boundaries.
+- **Redaction invariants**: exact-boundary matching preserves safe identifiers and credential-free public URLs; quoted `Bearer`/`Basic` values retain surrounding quotes and delimiters; redaction markers are idempotent.
+- **Filesystem write invariants**: guidance now requires lexical plus canonical containment, traversal/symlink rejection, same-directory atomic rename with cleanup, no outside-root mutation on rejection, and canonical `realpath` returns.
+
+### Validation
+
+- `npm test` passes 304 tests.
+- Docs validation reports no broken relative links; release guidance remains under the 800-line documentation limit.
+
+## [0.16.0] - 2026-08-04
+
+### Added
+
+- **Addressing opt-in and reinstall preservation**: addressing remains user-configurable and is preserved across reinstall when no new choice is made.
+- **Tier-aware `hapo:develop` gates**: Light, Standard, and Deep execution tiers now define who runs checks and the feature ship point.
+- **Unified review verdicts**: review payloads use `PASS | FAIL | BLOCKED`; BLOCKED stops without blind retries.
+- **Git staged-secret scanner**: added-lines-only parsing maps source lines and redacts secret values.
+
+### Changed
+
+- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
+- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
+- **Runtime agent rename**: `god-developer` → `implementer`; existing users with modified or untracked old files keep them and receive a warning, while pristine managed files are pruned.
+- **Flash state semantics**: `--flash` stores `implemented_unverified` as `status: "in_progress"` with `FLASH_UNVERIFIED`; `/hapo:test` must prove a task before it can become `done` or unblock dependents.
+- **Review and installer safety**: malformed managed markers roll back transactionally, and locale overrides are opt-in or restored from saved runtime state.
+- **Git skill guidance**: tracked secrets are stopped for rotation and user decision; untracked secrets receive `.gitignore` guidance instead of automatic index removal.
+- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
+
+### Fixed
+
+- **Instruction hook safety**: Claude, Codex, and OpenCode rules hooks now inject nothing and exit 0 when their runtime configuration is missing, malformed, or unreadable. Claude subagent paths now prefer payload `cwd` over stale `PROJECT_ROOT`.
+- **OpenCode instruction localization**: OpenCode managed instructions now receive `--lang` and addressing updates using OpenCode-specific markers.
+- **Runtime gotchas**: Claude, Codex, and OpenCode installed instructions now document project-local skill paths, macOS/Linux and Windows Python venv commands, and the rule to edit project-local skills instead of global `~/.claude/skills`.
+- **Combined instruction installs**: root `AGENTS.md` now stores shared core once with a dedicated marker; Codex and OpenCode blocks remain runtime-specific and idempotent across repeated installs.
+- **Shipped-output self-tests**: installer fixtures now verify all three runtimes, missing-runtime silence, language localization, managed markers, evidence contracts, and combined-install idempotence.
 
 ## [0.15.2] - 2026-07-29
 
@@ -48,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.14.2] - 2026-07-29
 
 ### Added
-- **Parallel Wave Mode for `hapo:develop`** (opt-in `--parallel [N]`): independent spec tasks run concurrently — waves computed from `task_registry.dependencies` with a single-writer-per-file rule (cap 3 default / 5 max), one `god-developer` per task in an isolated git worktree, the unchanged Stage A+B quality gate running inside each worktree before merge, spike-verified `git cherry-pick` merge-back with explicit worktree cleanup, a post-merge integration check gating each wave, and orchestrator-only spec-state writes. Sequential default untouched; sequential fallback when isolation is unavailable; escape hatch `"develop": { "parallel": false }` in `.claude/runtime.json`. New operating procedure: `skills/develop/references/parallel-waves.md`.
+- **Parallel Wave Mode for `hapo:develop`** (opt-in `--parallel [N]`): independent spec tasks run concurrently — waves computed from `task_registry.dependencies` with a single-writer-per-file rule (cap 3 default / 5 max), one implementation worker per task in an isolated git worktree, the unchanged Stage A+B quality gate running inside each worktree before merge, spike-verified `git cherry-pick` merge-back with explicit worktree cleanup, a post-merge integration check gating each wave, and orchestrator-only spec-state writes. Sequential default untouched; sequential fallback when isolation is unavailable; escape hatch `"develop": { "parallel": false }` in `.claude/runtime.json`. New operating procedure: `skills/develop/references/parallel-waves.md`.
 
 ### Fixed
 - **Claude installer safety**: project-root `CLAUDE.md` is now managed as an idempotent marked block instead of a whole owned file, preserving project instructions during install and upgrade. Transaction snapshots record absent targets too, so failed fresh installs remove partial artifacts and reported phase errors trigger rollback.
@@ -90,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OpenCode compaction banner / AGENTS.md**: no longer instruct the unavailable Claude `AskUserQuestion` tool; map to OpenCode built-in `question` (and `TodoWrite` → `todowrite`, `Task` → agent/subtask flow).
 - **specs SKILL**: `--validate` dispatch said "MUST NOT execute Steps 1-8" while jumping to Step 8 — corrected to 1-7.
 - **ui-ux-designer agent**: `search.py` invocations used the dev-monorepo path; now use the installed `.claude/skills/` path via the skills venv.
-- **Model IDs unified on the `gemma-4-31b-it` family** across ai-multimodal, frontend-design, and inspect (SKILL bodies, references, `.env.example`, script defaults). `runtime.json → gemini.model` is the single source of truth; previously three sources disagreed.
+- **Model IDs unified on the `gemma-4-31b-it` family** across ai-multimodal, frontend-design, and inspect (SKILL bodies, references, `.env.example`, script defaults). The release-era runtime configuration was the single source of truth; previously three sources disagreed.
 - **Installer i18n**: unsupported `--lang` codes now fall back to English (previously Japanese).
 - **Installer settings merge**: managed hooks merge per command keyed by matcher entry — a command added to an existing matcher is appended on upgrade (the old dedupe judged the whole entry duplicate by its first command). Malformed user `settings.json` no longer aborts the install; the merge is skipped with a warning.
 - **`validate-docs.cjs`** exits 1 on broken relative links (previously always exit 0).

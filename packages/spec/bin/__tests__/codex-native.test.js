@@ -74,13 +74,13 @@ function parseGeneratedTomlString(content, key) {
 
 test('Codex payload transform emits native skill and subagent syntax', () => {
   const transformed = normalizeCodexBody(
-    'Agent(subagent_type="god-developer", prompt="Implement it", description="Code Feature")\n' +
+    'Agent(subagent_type="implementer", prompt="Implement it", description="Code Feature")\n' +
     'Use `/specs auth`, `SendMessage`, `Bash`, `Read`, and `Edit`.'
   );
 
   assert.match(
     transformed,
-    /spawn_agent\(agent_type="god_developer", fork_turns="none", message="Implement it", task_name="code_feature"\)/
+    /spawn_agent\(agent_type="implementer", fork_turns="none", message="Implement it", task_name="code_feature"\)/
   );
   assert.match(transformed, /\$hapo-specs auth/);
   assert.match(transformed, /`send_message`/);

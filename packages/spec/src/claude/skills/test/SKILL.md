@@ -43,9 +43,17 @@ When a feature name or `specs/<feature>` path is supplied, testing is spec-aware
 Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and task `Evidence` / test-plan proof.
 The verdict MUST compare executed/reachable behavior against `scope_lock`, requirements, design contracts, task Completion Criteria, and runtime reachability obligations.
 Build/typecheck success without scoped runtime proof is not PASS.
-</SCOPE-GATE>
+## Flash promotion contract
 
-## 4-Phase Execution
+Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Its `consumeReviewVerdict` and `promoteFlashTask` functions are sole source for PASS/FAIL/BLOCKED handling and task-scoped promotion.
+
+When `/hapo:test <feature>` finds a task with `status: "in_progress"` and receipt `FLASH_UNVERIFIED`, evaluate that task's exact Evidence and runtime reachability only:
+
+- PASS → replace receipt with concrete proof while keeping `status: "in_progress"`, `dependencyBlocked: true`, `unblocks: false`, and `readyForSync: true`; only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock dependents.
+- FAIL, BLOCKED, or NO_TESTS → keep `status: "in_progress"`, keep or update blocker, and do not promote any other flash task.
+- Never blanket-promote every flash task in a feature because one task passed.
+
+
 
 ```mermaid
 flowchart TD
@@ -153,7 +161,7 @@ Return a **structured verdict** (required format — not free-form prose):
 
 ### Action
 - PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to god-developer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
+- FAIL → [list specific fixes needed] → Return to implementer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
 - PARTIAL → [list uncovered areas] → Consider adding tests.
 - NO_TESTS → No test runner detected. User must configure tests first.
 
@@ -176,7 +184,7 @@ It merges the JSON data into `.hapo/test-memory.json` per `references/test-memor
 | `hapo:code-review` | runs in parallel | Both run at Quality Gate Step 4 |
 | `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
 | `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
-| `god-developer` agent | hapo:test → | FAIL verdicts route back here for fixing |
+| `implementer` agent | hapo:test → | FAIL verdicts route back here for fixing |
 | `test-runner` agent | hapo:test → | Primary executor, spawned via the `Agent` tool |
 | chrome-devtools scripts | test-runner → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
 

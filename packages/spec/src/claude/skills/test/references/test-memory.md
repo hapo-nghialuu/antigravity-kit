@@ -19,7 +19,7 @@ If the file does not exist, the `hapo:test` skill (or the orchestrator) MUST cre
 The `test-runner` agent is Read-Only. At Phase 1, it must read `.hapo/test-memory.json` (if it exists) to factor into its testing process:
 - **`env_setup_commands`**: Commands that must be run before tests (e.g. `docker compose up -d redis`). If listed, flag missing dependencies instead of immediate failure.
 - **`flaky_tests`**: Array of test file paths. If a failure occurs in one of these files, the verdict should explicitly note `(Known Flaky Test)`.
-- **`known_issues`**: Issues that god-developer or user marked as ignored.
+- **`known_issues`**: Issues that implementer or user marked as ignored.
 
 ## Writing to Memory
 
@@ -28,7 +28,7 @@ Because `test-runner` is restricted from editing files, it cannot update the mem
 Example:
 ```markdown
 ### Action
-→ [FAIL] Return to god-developer: Fix CSS layout offset.
+→ [FAIL] Return to implementer: Fix CSS layout offset.
 
 <lessons_learned>
 {

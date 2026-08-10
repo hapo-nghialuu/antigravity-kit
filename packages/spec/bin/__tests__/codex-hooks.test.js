@@ -27,6 +27,10 @@ function inHookFixture(run) {
   try {
     fs.cpSync(CODEX_HOOKS, hooks, { recursive: true });
     fs.mkdirSync(path.join(root, '.codex', 'scripts'), { recursive: true });
+    fs.copyFileSync(
+      path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs'),
+      path.join(root, '.codex', 'scripts', 'workflow-policy.cjs'),
+    );
     fs.writeFileSync(path.join(root, '.codex', 'scripts', 'spec-scaffold.cjs'), '');
     return run(root, hooks);
   } finally {
@@ -327,5 +331,141 @@ test('Codex state hook persists direct native event fields at project root', () 
     });
     assert.equal(missingSession.status, 0);
     assert.equal(codexStateDir(root, ''), null);
+  });
+});
+
+test('Codex canonical receipt provenance requires both Base and Head', () => {
+  const receipt = require(path.join(CODEX_HOOKS, 'lib', 'spec-receipt.cjs'));
+  const onlyBase = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\n');
+  assert.ok(onlyBase.includes('provenance'), 'only Base should fail');
+  const onlyHead = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nHead: def\n');
+  assert.ok(onlyHead.includes('provenance'), 'only Head should fail');
+  const both = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead: def\n');
+  assert.deepEqual(both, [], 'both Base and Head should pass');
+  const onlyBaseSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc\n');
+  assert.ok(onlyBaseSha.includes('provenance'));
+  const bothSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc\nhead_sha: def\n');
+  assert.deepEqual(bothSha, [], 'both base_sha and head_sha should pass');
+  // Empty / bare provenance must fail — non-empty same-line value required
+  const emptyBase = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def\n');
+  assert.ok(emptyBase.includes('provenance'), 'empty Base: should fail');
+  const spacesBase = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:   \nHead: def\n');
+  assert.ok(spacesBase.includes('provenance'), 'Base: spaces only should fail');
+  const emptyHead = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead:\n');
+  assert.ok(emptyHead.includes('provenance'), 'empty Head: should fail');
+  const bareBaseSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha\nhead_sha: def\n');
+  assert.ok(bareBaseSha.includes('provenance'), 'bare base_sha without colon/value should fail');
+  const emptyBaseSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha:\nhead_sha: def\n');
+  assert.ok(emptyBaseSha.includes('provenance'), 'empty base_sha: should fail');
+  const spacesBaseSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha:   \nhead_sha: def\n');
+  assert.ok(spacesBaseSha.includes('provenance'), 'base_sha spaces only should fail');
+  const bareBoth = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha head_sha\n');
+  assert.ok(bareBoth.includes('provenance'), 'bare base_sha head_sha without colon should fail');
+  const validBaseHead = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n');
+  assert.deepEqual(validBaseHead, [], 'valid Base+Head with values should pass');
+  const validSha = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc123\nhead_sha: def456\n');
+  assert.deepEqual(validSha, [], 'valid base_sha+head_sha with values should pass');
+
+  // Integration via spec-gate hook: only Base blocks, both passes
+  inHookFixture((root, hooks) => {
+    const feature = path.join(root, 'specs', 'auth');
+    const taskPath = 'tasks/task-R0-01-auth.md';
+    fs.mkdirSync(path.join(feature, 'tasks'), { recursive: true });
+    const gate = path.join(hooks, 'spec-gate.cjs');
+    const payload = { cwd: path.join(root, 'packages', 'app'), session_id: 'session-a', hook_event_name: 'Stop', stop_hook_active: false };
+
+    // only Base -> block
+    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\n');
+    fs.mkdirSync(payload.cwd, { recursive: true });
+    const blocked = runHook(gate, payload.cwd, payload);
+    assert.equal(JSON.parse(blocked.stdout).decision, 'block');
+    assert.match(JSON.parse(blocked.stdout).reason, /\bg\b|\bprovenance\b/);
+
+    // both -> no block
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead: def\n');
+    const passed = runHook(gate, payload.cwd, payload);
+    assert.equal(passed.stdout, '');
+
+    // empty Base: should block provenance — reset gate cache so re-checked as newly-done
+    try { fs.rmSync(path.join(root, '.codex', 'hooks', '.logs', 'spec-gate-last.json'), { force: true }); } catch {}
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def\n');
+    const blockedEmpty = runHook(gate, payload.cwd, payload);
+    assert.equal(JSON.parse(blockedEmpty.stdout).decision, 'block');
+    assert.match(JSON.parse(blockedEmpty.stdout).reason, /\bg\b/);
+
+    // bare base_sha without colon should block — reset cache again
+    try { fs.rmSync(path.join(root, '.codex', 'hooks', '.logs', 'spec-gate-last.json'), { force: true }); } catch {}
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha head_sha\n');
+    const blockedBare = runHook(gate, payload.cwd, payload);
+    assert.equal(JSON.parse(blockedBare.stdout).decision, 'block');
+    assert.match(JSON.parse(blockedBare.stdout).reason, /\bg\b/);
+  });
+});
+
+test('Codex cache hardening: every done re-validated — mutation, deletion, malformed cache, unchanged valid', () => {
+  inHookFixture((root, hooks) => {
+    const feature = path.join(root, 'specs', 'auth');
+    const taskPath = 'tasks/task-R0-01-auth.md';
+    fs.mkdirSync(path.join(feature, 'tasks'), { recursive: true });
+    const gate = path.join(hooks, 'spec-gate.cjs');
+    const appCwd = path.join(root, 'packages', 'app');
+    fs.mkdirSync(appCwd, { recursive: true });
+    const payload = { cwd: appCwd, session_id: 'session-a', hook_event_name: 'Stop', stop_hook_active: false };
+    const cacheFile = path.join(root, '.codex', 'hooks', '.logs', 'spec-gate-last.json');
+    const validBody = 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n```\npass\n```\n';
+
+    // first-run (no cache) with valid receipt → no block, cache seeded
+    try { fs.rmSync(cacheFile, { force: true }); } catch {}
+    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
+    fs.writeFileSync(path.join(feature, taskPath), validBody);
+    let res = runHook(gate, appCwd, payload);
+    assert.equal(res.stdout, '', 'first-run valid should not block');
+    assert.ok(fs.existsSync(cacheFile), 'cache file must be created on first valid run');
+    assert.equal(JSON.parse(fs.readFileSync(cacheFile, 'utf8')).auth[taskPath], 'done');
+
+    // cache-hit unchanged valid → still no block (revalidation passes)
+    res = runHook(gate, appCwd, payload);
+    assert.equal(res.stdout, '', 'cache-hit unchanged valid must not block');
+
+    // mutation: remove Command/Verification → must block even though cache says done
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nExit: 0\nBase: abc123\nHead: def456\n```\npass\n```\n');
+    res = runHook(gate, appCwd, payload);
+    assert.equal(JSON.parse(res.stdout).decision, 'block', 'mutated receipt missing Verification/Command should block on cache-hit');
+    assert.match(JSON.parse(res.stdout).reason, /\bc\b|\be\b/);
+    // second hit still blocks
+    res = runHook(gate, appCwd, payload);
+    assert.equal(JSON.parse(res.stdout).decision, 'block', 'second hit after mutation still blocks');
+
+    // restore valid, then mutate provenance (remove Head) → block
+    fs.writeFileSync(path.join(feature, taskPath), validBody);
+    assert.equal(runHook(gate, appCwd, payload).stdout, '', 'restored valid should pass again');
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\n```\npass\n```\n');
+    res = runHook(gate, appCwd, payload);
+    assert.equal(JSON.parse(res.stdout).decision, 'block');
+    assert.match(JSON.parse(res.stdout).reason, /\bg\b/);
+
+    // deletion → block with check a
+    fs.writeFileSync(path.join(feature, taskPath), validBody);
+    assert.equal(runHook(gate, appCwd, payload).stdout, '');
+    fs.unlinkSync(path.join(feature, taskPath));
+    res = runHook(gate, appCwd, payload);
+    assert.equal(JSON.parse(res.stdout).decision, 'block');
+    assert.match(JSON.parse(res.stdout).reason, /\ba\b/);
+    // restore for next sub-test
+    fs.writeFileSync(path.join(feature, taskPath), validBody);
+    try { fs.rmSync(cacheFile, { force: true }); } catch {}
+    assert.equal(runHook(gate, appCwd, payload).stdout, '');
+
+    // malformed cache with valid receipt → must still pass (cache parse fail-open)
+    fs.writeFileSync(cacheFile, '{ malformed');
+    fs.writeFileSync(path.join(feature, taskPath), validBody);
+    res = runHook(gate, appCwd, payload);
+    assert.equal(res.stdout, '', 'malformed cache with valid receipt must not block');
+    // malformed cache with invalid receipt → must still block
+    fs.writeFileSync(cacheFile, '{ malformed again');
+    fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n');
+    res = runHook(gate, appCwd, payload);
+    assert.equal(JSON.parse(res.stdout).decision, 'block', 'malformed cache with invalid receipt must block');
   });
 });

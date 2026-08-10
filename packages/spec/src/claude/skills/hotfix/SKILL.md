@@ -17,7 +17,7 @@ Kill bugs systematically. No guessing. Evidence first, fix second.
 ## Arguments
 
 - `--quick` - Reduced-depth path for trivial issues (lint, type errors, syntax); still scout-first
-- `--parallel` - Spawn multiple `god-developer` agents for independent issues
+- `--parallel` - Spawn multiple `implementer` agents for independent issues
 - `--from-debug` - Start from an existing `hapo:debug` report and validate its root-cause contract
 
 Default: deterministic scout-first hotfix. There is no initial mode selection step.
@@ -26,6 +26,8 @@ Default: deterministic scout-first hotfix. There is no initial mode selection st
 Do NOT propose or implement fixes before completing Steps 1-2 (Scout + `hapo:debug` diagnosis).
 Symptom fixes are FAILURE. Find the root cause first.
 The exact root-cause contract is mandatory: symptom, reproduction, expected/actual, root cause file:line or config/env source, why now, evidence chain, blast radius.
+Answer each item in one concrete sentence.
+If any answer contains 'probably', 'I think', 'something with', or 'maybe' — it is not an answer; gather evidence instead.
 The side-effect gate is mandatory before completion.
 If 3+ fix attempts fail → STOP. Question the architecture. Discuss with user.
 Exception: `--quick` mode only abbreviates depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.
@@ -51,10 +53,10 @@ The fix is not done until Step 5 proves:
 5. Public contracts are unchanged unless intentionally called out: function signatures, exported types, response shapes, DB schemas, env vars.
 
 If verification reveals a side effect or regression, STOP and present 2-4 concrete options to the user:
-- Revert this fix and try a different root-cause angle.
-- Narrow the fix scope to remove the regression.
-- Keep the fix and update named dependent files/contracts.
-- Accept the behavior change intentionally.
+- Revert this fix and try a different root-cause angle
+- Keep the fix and update <dependent files> to match the new contract
+- Narrow the fix to <subset> so the regression disappears
+- Accept the change — the old behavior was itself a bug
 Do not silently patch around the regression.
 </HARD-GATE-NO-SIDE-EFFECTS>
 
@@ -166,7 +168,7 @@ If any field is vague (`probably`, `maybe`, `I think`, or missing file:line/conf
 | **Trivial** | Single file, clear error, type/lint/syntax | Quick: straight to fix |
 | **Standard** | Multi-file, root cause identified via diagnosis | Standard: fix + regression test |
 | **Complex** | System-wide, architecture impact, unclear boundaries | Deep: research + plan + fix |
-| **Parallel** | 2+ independent issues OR `--parallel` flag | Spawn `god-developer` agents per issue |
+| **Parallel** | 2+ independent issues OR `--parallel` flag | Spawn `implementer` agents per issue |
 
 **Task Orchestration (Standard+ only):**
 - Use `TaskCreate` with dependencies to track fix phases
@@ -203,7 +205,7 @@ If any field is vague (`probably`, `maybe`, `I think`, or missing file:line/conf
 
 ### Parallel Workflow
 1. Create separate `TaskCreate` per independent issue
-2. Spawn `god-developer` subagents — one per issue
+2. Spawn `implementer` subagents — one per issue
 3. Each agent follows Steps 1-5 independently
 4. Aggregate results upon completion
 
@@ -274,7 +276,7 @@ Unified step markers (emit after each step):
 | `hapo:code-review` | After fix, quality check (Step 5) |
 | `git-ops` | Commit changes (Step 6) |
 | `docs-keeper` | Update docs if behavior changed (Step 6) |
-| `god-developer` | Parallel independent issues (each gets own agent) |
+| `implementer` | Parallel independent issues (each gets own agent) |
 
 ## Specialized Paths
 

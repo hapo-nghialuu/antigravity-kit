@@ -6,7 +6,7 @@
  * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks
  *
  * Fires when a subagent (Task tool) is spawned.
- * Injects lightweight context: language, rules, paths (~100 tokens).
+ * Injects lightweight context: language, paths, and skill venv guidance.
  *
  * Exit: 0 always (fail-open)
  */
@@ -19,8 +19,8 @@ try {
   function readRuntime(cwd) {
     try {
       const p = path.join(cwd, '.claude', 'runtime.json');
-      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
-    } catch { return {}; }
+      return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+    } catch { return null; }
   }
 
   /** Resolve Python venv executable path if it exists */
@@ -38,11 +38,11 @@ try {
   if (!stdin) process.exit(0);
 
   const payload    = JSON.parse(stdin);
-  const agentType  = payload.agent_type || 'unknown';
-  const agentId    = payload.agent_id   || 'unknown';
   // Use payload.cwd for monorepo support — subagent may run in a different dir
-  const agentCwd   = payload.cwd?.trim() || process.cwd();
+  const payloadCwd = typeof payload.cwd === 'string' ? payload.cwd.trim() : '';
+  const agentCwd   = payloadCwd || process.env.PROJECT_ROOT || process.cwd();
   const runtime    = readRuntime(agentCwd);
+  if (runtime === null) process.exit(0);
 
   // Language config from runtime.json
   const thinkLang    = runtime.locale?.thinkingLanguage || '';
@@ -51,16 +51,12 @@ try {
   const effectThink  = thinkLang || (respondLang ? 'en' : '');
 
   // Resolve paths from env (set by session.cjs) or runtime defaults
-  const baseDir    = process.env.PROJECT_ROOT || agentCwd;
+  const baseDir    = agentCwd;
   const plansPath  = path.join(baseDir, runtime.paths?.plans || 'plans');
   const docsPath   = path.join(baseDir, runtime.paths?.docs  || 'docs');
 
   // Build context block
   const lines = [];
-
-  lines.push(`## Subagent: ${agentType}`);
-  lines.push(`ID: ${agentId} | CWD: ${agentCwd}`);
-  lines.push('');
 
   // Language section (only if configured)
   const hasThink = effectThink && effectThink !== respondLang;
@@ -74,11 +70,8 @@ try {
   // Python venv (optional — if .claude/skills/.venv exists)
   const venv = resolveVenv(agentCwd);
 
-  // Rules
   lines.push('## Rules');
   lines.push(`- Plans → ${plansPath}/ | Docs → ${docsPath}/`);
-  lines.push('- YAGNI · KISS · DRY');
-  lines.push('- Be concise. List unresolved questions at end.');
   if (venv) {
     lines.push(`- Python in .claude/skills/: use \`${venv}\``);
     lines.push('- Never use global pip install');

@@ -28,7 +28,9 @@ const {
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
-  copyRulesDirectory
+  ensureSharedAgentsMdCore,
+  copyRulesDirectory,
+  removeObsoleteAgents
 } = require('./phases/claude-runtime');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
@@ -57,6 +59,7 @@ function installPlatform(ctx, platformKey) {
   ctx.ui.startSpinner(ctx.t('installingPlatform', { name: platform.name }));
 
   copyPlatformFiles(ctx, platformKey);
+  removeObsoleteAgents(ctx, platformKey);
 
   if (platformKey === 'claude') {
     copyRoutingFile(ctx, platformKey);
@@ -174,6 +177,7 @@ async function main() {
       ctx.backupDir = backup.snapshot([...targets, '.gitignore'], ctx.runId);
     }
 
+    ensureSharedAgentsMdCore(ctx);
     for (const platformKey of ctx.platforms) {
       installPlatform(ctx, platformKey);
     }

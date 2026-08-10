@@ -8,59 +8,53 @@ keywords: [git, commits, pr, worktree]
 argument-hint: "commit | push | pr | finish | worktree <feature-desc>"
 metadata:
   author: haposoft
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 # Git Operations & Worktree
 
-This skill merges Version Control Systems (VSC) capabilities and parallel Worktree management into a single, clean-room execution engine utilizing pure Bash commands rather than proprietary Node scripts.
+Git operations and worktree management using plain `git` commands.
 
-**Mantra:** Secure, Conventional, and Isolated.
+## Default (no arguments)
+Present options via AskUserQuestion — header "Git Operation": commit / push / pr / finish / worktree.
 
 ## Commands
+- `commit`: run installed secret scanner → analyze diff → split into conventional commits.
+- `push`: push current branch.
+- `pr`: push + open PR. Target = repo's integration branch — detect via
+  `gh repo view --json defaultBranchRef` or `origin/HEAD`; never assume `main`/`develop`.
+- `finish`: fresh `git status` + verification, then present exactly 4 options:
+  merge locally / push + PR / keep branch-worktree / discard (typed confirmation).
+- `worktree <desc>`: sibling dir `../<project>-<branch>` for isolated setup.
 
-### 1. Version Control Engine
-- **`commit`**: Scan secrets, analyze diff, auto-split chunks into conventional commits.
-- **`push`**: Securely push to the current branch.
-- **`pr`**: Propose merging current feature into `develop` or `main`.
-- **`finish`**: Verify current branch/worktree, then present explicit finish options.
+## Secret scan (before every commit)
+```bash
+node .claude/scripts/scan-staged-secrets.cjs
+```
+The helper parses `git diff --cached --unified=0 --no-color --diff-filter=ACMR`, checks added lines only, maps hunks to source lines, and prints only file, line, and identifier. It never prints secret values or context.
 
-### 2. Worktree Engine (Safe Parallel Development)
-- **`worktree <feature-description>`**: Creates a sibling directory alongside the current repo to isolate dependencies and database contexts without dirtying the main worktree.
+Match → STOP. For an untracked secret, add an appropriate `.gitignore` rule. For a tracked secret, stop, rotate it, and ask the user before changing history or index state.
 
-## Core Directives 
+## Split rules
+Split when: mixed types (feat+fix), mixed scopes, config/deps mixed with code, >10 unrelated files.
+Single commit when: same type+scope, ≤3 files, ≤50 lines.
 
-### 1. Native Bash Execution Only
-- DO NOT rely on external JS/CJS scripts to evaluate git. Use pure system `git` CLI logic in bash.
-- Always check the status first: `git status && git diff --cached --stat`
+## Output
+```
+✓ staged: N files (+X/-Y)
+✓ secrets: none
+✓ commit: <hash> type(scope): description
+✓ pushed: yes|no
+```
 
-### 2. Pre-Commit Security Audit
-- Always run secret detection before creating a commit:
-  ```bash
-  git diff --cached | grep -iE "(api[_-]?key|token|password|secret|credential)"
-  ```
-- If a secret is matched: **HALT!** Refuse to commit. Demand the user add the file to `.gitignore` and run `git rm --cached <file>`.
+## Errors
+| Error | Action |
+|---|---|
+| Secrets matched | Block; report only file/source line/identifier. Never show secret value, diff line, or surrounding context. |
+| Nothing staged | Exit cleanly |
+| Push rejected | Suggest `git pull --rebase` |
+| Conflicts | List files; never auto-resolve |
 
-### 3. Smart Worktree Strategy
-- Never run branching logic within the same root if the task requires heavy, isolated setup.
-- Worktrees MUST be created as *sibling directories*: `../<project-name>-<feature-branch>`.
+Never force-push or delete a worktree without explicit confirmation.
 
-### 4. Finish Branch Protocol
-- Before merge, push, PR, or discard, run a fresh status and verification check:
-  ```bash
-  git status --short
-  git branch --show-current
-  ```
-- If uncommitted changes exist, route through `commit` or ask whether to keep them unstaged.
-- Present explicit finish options:
-  1. Merge locally into the target branch.
-  2. Push current branch and open/update a PR.
-  3. Keep the branch/worktree for later.
-  4. Discard branch/worktree only after typed confirmation.
-- Never force-push or delete worktrees without explicit user confirmation.
-- If running inside a git worktree, detect it with `git worktree list` and clean up only the worktree created for this task.
-
-## References & Protocols
-
-- `references/commit-protocols.md`: Strict rules for analyzing Git Diffs and determining commit splitting behavior.
-- `references/finish-branch.md`: Finish branch / PR / worktree closeout protocol.
-- `references/worktree-blueprint.md`: The 4-step Bash process to accurately construct an out-of-bounds Git Worktree Environment.
+## References
+- `references/commit-protocols.md` · `references/finish-branch.md` · `references/worktree-blueprint.md`

@@ -24,6 +24,9 @@ Before executing any review, firmly grasp these two pillars:
 - `references/adversarial-review.md` (Stage 3 rules)
 
 ## Core Principles
+
+Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Review outputs and consumers must use its exact `PASS | FAIL | BLOCKED` verdict enum.
+
 1. **YAGNI**, **KISS**, **DRY** always prevail. 
 2. Technical correctness over social comfort. Be honest and straight to the point.
 3. If Specs are provided as PDF or Design Images, do not guess — use `hapo:ai-multimodal` to verify.
@@ -41,7 +44,7 @@ If invoked without explicit arguments, default to reviewing recent changes (pend
 
 ## 3-Stage Adversarial Protocol
 
-Ensure verification walks through these three stages before delivering a final score.
+Ensure verification walks through these three stages before delivering a final verdict.
 
 ### Stage 1 — Spec Compliance (with `ai-multimodal` injection)
 Does the code match what was requested?
@@ -61,18 +64,18 @@ Actively try to break the code.
 - Find false assumptions, resource exhaustion loops, and race conditions.
 - Find unhandled edge cases (e.g. empty strings, null pointers, negative integers). 
 
-## Output Scoring
+## Output
 
-Your report MUST return a score out of 10.
-- **PASS:** Score >= 9.5 and **0 Critical findings**.
-- **FAIL:** Score < 9.5 or > 0 Critical findings.
+Your report MUST classify every finding by severity and return exactly one verdict from `PASS | FAIL | BLOCKED`. Every review verdict/output consumer MUST accept only `PASS | FAIL | BLOCKED` and reject any other value.
+- **PASS:** no Critical findings, no High findings, at most one Medium.
+- **FAIL:** one or more Critical or High findings, or two or more Medium findings.
+- **BLOCKED:** missing execution proof, permission, environment, or user-owned decision prevents review completion. Stop without blind retry; report blocker and required input.
 
 Format:
 ```markdown
 # Code Review Results [hapo:code-review]
 
-**Score:** X.X / 10
-**Status:** PASS | FAIL
+**Verdict:** PASS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
 
 ## Stage 1: Spec Compliance
@@ -83,7 +86,8 @@ Format:
 
 ## Stage 3: Adversarial Findings
 - [🔴 Critical] ...
-- [🟡 Warning] ...
+- [🟠 High] ...
+- [🟡 Medium] ...
 - [🔵 Suggestion] ...
 
 ## Fix Commands (Terminal ready)

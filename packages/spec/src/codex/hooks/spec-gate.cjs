@@ -11,6 +11,10 @@ const {
 } = require('./lib/hook-context.cjs');
 const { checkReceipt } = require('./lib/spec-receipt.cjs');
 const { findActiveSpec, taskStatusMap } = require('./lib/spec-utils.cjs');
+const policyPath = path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs');
+const POLICY = require(fs.existsSync(policyPath)
+  ? policyPath
+  : path.join(__dirname, '../../claude/scripts/workflow-policy.cjs'));
 
 try {
   const payload = readPayload();
@@ -35,18 +39,25 @@ try {
     try { cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch { cache = {}; }
   }
 
-  if (!cacheExists) {
-    cache[active.featureName] = currentStatuses;
-    atomicWrite(cacheFile, `${JSON.stringify(cache)}\n`);
+  // Cache hardening: revalidate every done task on every Stop so a
+  // cached PASS cannot hide later receipt/provenance mutations.
+  // Cache is optimization only - validate every done task even on first run.
+  const previous = cacheExists ? (cache[active.featureName] || {}) : {};
+  const staleFlashTasks = Object.entries(registry)
+    .filter(([, task]) => POLICY.isStaleFlashDone(task))
+    .map(([taskPath]) => taskPath);
+  if (staleFlashTasks.length > 0) {
+    process.stdout.write(`${JSON.stringify({
+      decision: 'block',
+      reason: `Completion gate: ${staleFlashTasks.length} task(s) marked done with FLASH_UNVERIFIED (${staleFlashTasks.join(', ')}). Run /hapo:test, then use explicit sync-finalize.`
+    })}\n`);
     process.exit(0);
   }
-
-  const previous = cache[active.featureName] || {};
-  const newlyDone = Object.keys(registry).filter((taskPath) => (
-    currentStatuses[taskPath] === 'done' && previous[taskPath] !== 'done'
+  const allDoneTasks = Object.keys(registry).filter((taskPath) => (
+    currentStatuses[taskPath] === 'done'
   ));
   const featureDir = path.join(active.specsDir, active.featureName);
-  const failures = newlyDone
+  const failures = allDoneTasks
     .map((taskPath) => ({
       taskPath,
       failures: checkReceipt(featureDir, taskPath, registry[taskPath])

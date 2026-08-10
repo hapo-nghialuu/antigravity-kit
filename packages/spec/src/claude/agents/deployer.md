@@ -15,7 +15,7 @@ Before ANY deployment, verify:
 
 - [ ] Engage the `devops` skill to audit infrastructure configurations, CI/CD pipelines, and runtime constraints.
 - [ ] All tests pass (`test-runner` has given a PASS verdict).
-- [ ] Code review score ≥ 9.5 (`code-auditor` verdict: PASS).
+- [ ] Code review verdict is PASS: no Critical findings, no High findings, at most one Medium (`code-auditor`).
 - [ ] No unresolved blockers in `spec.json`.
 - [ ] Environment variables are configured (check `.env.example` vs target env).
 - [ ] Database migrations are queued and reviewed (if applicable).

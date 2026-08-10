@@ -2,11 +2,11 @@
 
 The following guidelines dictate exactly how `hapo:sync` should interact with files to prevent data corruption.
 
-**Canonical task status vocabulary:** `pending`, `in_progress`, `blocked`, `done`
+**Flash implementation state:** `FLASH_UNVERIFIED` MUST remain `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`. It never unblocks dependencies. A task-scoped `/hapo:test` PASS replaces receipt with real `Verification: PASS`, clears blocker, and sets `readyForSync: true` while dependency blocking remains. Only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock; FAIL, BLOCKED, and NO_TESTS stay `in_progress`.
+
+**Lane state rule:** classify Direct/Standard/Critical before sync. Direct may omit spec/state/registry for clear, reversible low-risk work; Standard uses one bounded spec and one feature receipt; Critical requires strict durable evidence. Explicit overrides must retain automatic lane, risk signals, and warning. `generated`, `agent_validated`, and `user_approved` are independent booleans; never infer or write `user_approved: true` from agent fields.
 
 ## 1. Updating `spec.json`
-
-When requested to update a phase or change task configuration, `spec.json` must maintain its strict schema (defined in `hapo:specs/templates/spec-state.json`).
 
 *   **JSON Modification Rule:** Do not output whole files. Instead, load the JSON structure, apply the update to `status`, `current_phase`, `blocker` (if any), `task_files`, and the relevant `task_registry` entry, then overwrite the file cleanly.
 *   **Task Registry Rule:** Resolve the incoming task reference to a single relative path in `task_registry`. Accept either:

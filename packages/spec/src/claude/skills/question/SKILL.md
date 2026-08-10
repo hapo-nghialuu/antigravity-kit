@@ -30,14 +30,14 @@ The output is an answer, evidence, confidence, and a follow-up only when needed.
 ## When To Use
 
 Use `hapo:question` when the user asks:
-- "Trong hệ thống này X làm gì?"
-- "Luồng này đang xử lý ở đâu?"
-- "Config/version/package hiện tại là gì?"
-- "Có dùng thư viện/công nghệ/cách làm nào không?"
-- "Requirement/spec này có khớp code không?"
-- "Tool/library/framework này nên dùng thế nào?"
-- "Theo best practice/current docs thì sao?"
-- "Tôi nên hiểu phần này như thế nào?"
+- "What does X do in this system?"
+- "Where is this flow handled?"
+- "What is the current config/version/package?"
+- "Does it use a particular library/technology/approach?"
+- "Does this requirement/spec match the code?"
+- "How should I use this tool/library/framework?"
+- "What does best practice or the current docs say?"
+- "How should I understand this part?"
 
 Do not use it when:
 - The user asks to implement, fix, debug, test, commit, or publish.
@@ -131,14 +131,14 @@ Use `templates/question.md` when the user asks to save or document the answer.
 - Separate "confirmed by source" from "inferred".
 - Keep the answer proportional: concise for simple questions, structured for complex ones.
 - If external sources were used, include source links or names.
-- If no evidence exists, say "không thấy bằng chứng trong source hiện tại" and explain what was checked.
+- If no evidence exists, say "no evidence found in the current source" and explain what was checked.
 
 ## Examples
 
 ### Source Question
 
 ```text
-/hapo:question "Trong hệ thống này cafekit dùng file nào để bật/tắt skill routing?"
+/hapo:question "In this system, which file does cafekit use to toggle skill routing?"
 ```
 
 Expected behavior:
@@ -149,7 +149,7 @@ Expected behavior:
 ### Mixed Source + Web Question
 
 ```text
-/hapo:question "Dự án này đang dùng React version nào, và version đó có còn phù hợp theo best practice hiện tại không?" --both
+/hapo:question "Which React version does this project use, and does that version still match current best practice?" --both
 ```
 
 Expected behavior:
@@ -160,8 +160,8 @@ Expected behavior:
 ### Ask Back
 
 ```text
-/hapo:question "Hệ thống này có ổn không?"
+/hapo:question "Is this system stable?"
 ```
 
 Expected behavior:
-- ask one narrowing question because "ổn" could mean architecture, security, performance, UX, tests, or deploy readiness.
+- ask one narrowing question because "stable" could mean architecture, security, performance, UX, tests, or deploy readiness.

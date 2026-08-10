@@ -49,6 +49,8 @@ Do NOT recommend a fix until the root-cause contract is complete.
 Do NOT stop at the first plausible explanation. Test hypotheses against evidence.
 If 2+ hypotheses are refuted, change strategy before continuing.
 If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `hapo:hotfix` as ready.
+Answer each item in one concrete sentence.
+If any answer contains 'probably', 'I think', 'something with', or 'maybe' — it is not an answer; gather evidence instead.
 </ROOT-CAUSE-GATE>
 
 If the user asks to fix while still inside `hapo:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `hapo:hotfix`.

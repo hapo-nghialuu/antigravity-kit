@@ -88,6 +88,22 @@ Forbidden generated artifacts:
 - Concise, prefer bullet lists; no fluff
 - Unresolved questions → list at the end of each document
 
+## Lane selection before spec gate
+
+Classify task risk at the runtime boundary before starting spec state or approval flow. Use the executable policy, not keyword count or prose alone:
+
+```bash
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
+# Downgrade from Critical requires explicit user authorization — model-supplied lane cannot bypass risk signals
+node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '{"riskSignals":{"auth":true},"override":"Direct","userAuthorized":true}' --json
+```
+
+- **Direct** — clear, isolated, reversible, low-risk work. May skip spec files, registry/state, and subagents. Still run targeted verification, diff self-check, and evidence proportional to blast radius. No spec/state/registry ceremony required.
+- **Standard** — default lane. Create one bounded spec artifact (`requirements.md` + `design.md` in the current layout), keep one canonical receipt, and run exactly one combined `code-auditor` review at feature ship point (not per-task).
+- **Critical** — destructive/irreversible, auth/payment/privacy/data, schema/migration, public contract, cross-runtime coupling, outcome-changing ambiguity, or difficult rollback. Require strict spec/state/evidence; delegation is risk-driven (inspector/test-runner/code-auditor enabled only when risk lens requires), not a fixed four-agent chain.
+
+Explicit `override` is allowed in either direction but is enforced at the runtime boundary. A model-supplied lane or downgrade must not bypass risk signals. Downgrading from Critical requires explicit user-originated authorization (`userAuthorized:true` or `origin:user`) and must surface the trade-off (reduced review/evidence coverage). Agent validation or --auto never fabricates `user_approved`; `generated`, `agent_validated`, and `user_approved` are independent booleans per `schema_version: "2.0"`.
+
 ## Default Behavior
 
 > **This section is the entry/dispatch layer ONLY.** It decides *which part of the pipeline to run and where to stop*. It does NOT change any pipeline step, the validator, templates, or rules.
@@ -112,15 +128,15 @@ Forbidden generated artifacts:
 
 ### Creation Mode Gate
 
-Shown once on the no-flag create path. Selects the **stop point only**.
+Shown once on the no-flag create path. Selects the **stop point only**. Approval schema is versioned (`schema_version: "2.0"`): each phase has `generated`, `agent_validated`, `user_approved` as independent booleans. `ready` requires all three true. Legacy `approved` field is rejected — `--auto` or agent validation never fabricates `user_approved`.
 
-| Option | Runs | Stops after | Approvals |
+| Option | Runs | Stops after | Approvals (v2) |
 |---|---|---|---|
-| **Auto (→ Tasks)** | Step 1→10 end-to-end | full (ready gate) | each phase `generated=true` + `approved=true` |
-| **Stop after Design** | Step 1→6 | `design` (before Step 7) | requirements + design `approved=true`; `ready_for_implementation=false` |
-| **Step by step** | one phase at a time | after each phase | per phase `generated=true`, `approved=false` until user approves |
+| **Auto (→ Tasks)** | Step 1→10 end-to-end | full (ready gate) | each phase `generated=true` + `agent_validated=true`; `user_approved` stays false until explicit user approval (`--auto` does NOT auto-set `user_approved`). Ready requires `generated && agent_validated && user_approved`. |
+| **Stop after Design** | Step 1→6 | `design` (before Step 7) | requirements + design `generated=true` + `agent_validated=true`; `user_approved=true` only after explicit user approval; later phases ungenerated; `ready_for_implementation=false` |
+| **Step by step** | one phase at a time | after each phase | per phase `generated=true`, `agent_validated` per agent check, `user_approved=false` until user explicitly approves |
 
-`--auto` = Auto without the gate. Early stops leave `ready_for_implementation=false` and emit Step 9b. Resume via `/hapo:specs` Interactive State Discovery.
+`--auto` = Auto without the gate. Early stops leave `ready_for_implementation=false` and emit Step 9b. Resume via `/hapo:specs` Interactive State Discovery. If legacy `approved` field is present, fail closed with migration guidance: replace `approved` with `agent_validated` + `user_approved` per `spec-state.json` template.
 
 ### Translation Mirror (optional reference copy)
 
@@ -210,16 +226,16 @@ Load: `references/scope-inquiry.md` (+ `references/ask-user-question-gates.md` f
 - Smell: >8 files / >2 new classes / >12 tasks → challenge; **>15 tasks → sibling specs**
 - User: Expand / Hold / Reduce. Skip if trivial (< 20 words, 1 file, "just do it")
 
-#### Execution Tier (auto-scale — after 5-Dimension assessment)
-Record in `spec.json.design_context.execution_tier`.
+#### Execution Tier (auto-scale — after 5-Dimension assessment) — legacy metadata
+Record in `spec.json.design_context.execution_tier` for backward compatibility. Tier is metadata only; **lane controls ceremony and delegation** (Direct/Standard/Critical). Light/Standard/Deep mappings are preserved for compatibility but lane policy is authoritative.
 
-| Tier | Trigger | Research | Discovery | Red-Team | Always runs |
+| Tier (legacy) | Trigger | Research | Discovery | Red-Team | Always runs |
 |---|---|---|---|---|---|
 | **Light** | Clear + Isolated + ≤2 tasks | skip (rationale) | minimal | Validate-only | scope_lock, EARS, **Layer 1+2** |
 | **Standard** | default / 3-4 tasks | targeted | light | per Step 8 | all of the above |
 | **Deep** | Complex/Critical / security-migration / 5+ tasks | full | full | Red-Team → Validate | all of the above |
 
-Grounding + validator + scope_lock never skip. Auth/payment/migration/schema/privacy force Deep. Tier never changes Hard Output Contract or DoCT.
+Grounding + validator + scope_lock never skip. Auth/payment/migration/schema/privacy force Deep (legacy) and Critical (lane). Tier remains backward-compatible execution metadata; lane controls ceremony and delegation.
 
 ### Step 4: Init
 - Check duplicate slugs; create `specs/<feature-name>/`
@@ -355,17 +371,18 @@ Early stop (**Stop after Design** / **Step by step**): no completion block, no v
 
 | Field | Rule |
 |---|---|
+| `schema_version` | Must be `"2.0"`; approvals use `generated` + `agent_validated` + `user_approved` per phase. Legacy `approved` field is rejected — fail closed with migration guidance. |
 | Status | `in_progress` / `blocked` / `done` / `archived` only (never emit `in-progress`) |
 | Timestamps | Each `timestamps.*_done` = actual ISO 8601 time at that phase; never reuse init |
-| Approvals (Auto / full pipeline) | `generated=true` + `approved=true` per completed phase |
-| Approvals (Stop after Design) | phases that ran: both true; later phases ungenerated; `ready_for_implementation=false` |
-| Approvals (Step by step) | `generated=true`, `approved=false` until user approves |
+| Approvals (Auto / full pipeline) | `generated=true` + `agent_validated=true`; `user_approved` stays false until explicit user approval (`--auto` never fabricates `user_approved`). Ready requires all three true per phase. |
+| Approvals (Stop after Design) | phases that ran: `generated=true` + `agent_validated=true`; `user_approved=true` only after explicit user approval; later phases ungenerated; `ready_for_implementation=false` |
+| Approvals (Step by step) | `generated=true`, `agent_validated` per agent check, `user_approved=false` until user explicitly approves |
 | `task_files` / `task_registry` | Exact match to disk after Step 7; registry keys = relative paths with full registry fields |
 | `validation_recommended` | `true` for auth/privacy/delete/migration/schema/extension/provider or 5+ tasks |
 | `translation` | optional mirror metadata; never affects ready gate |
-| `ready_for_implementation` | `true` only when requirements+design+tasks approved, `progress.tasks=done`, inventories match disk, and validation completed when recommended |
+| `ready_for_implementation` | `true` only when requirements+design+tasks each have `generated && agent_validated && user_approved`, `progress.tasks=done`, inventories match disk, and validation completed when recommended |
 
-If any approval is `false`, keep `ready_for_implementation = false`. Specs with 5+ tasks stay not-ready until `--validate` writes `validation.status = "completed"`.
+If any approval (`generated`, `agent_validated`, or `user_approved`) is `false`, keep `ready_for_implementation = false`. Specs with 5+ tasks stay not-ready until `--validate` writes `validation.status = "completed"`. Legacy `approved` fails closed — do not infer `user_approved` from `generated` or `agent_validated`.
 
 ## Subcommands
 

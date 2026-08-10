@@ -11,6 +11,10 @@ const {
   readPayload
 } = require('./lib/hook-context.cjs');
 const { findActiveSpec } = require('./lib/spec-utils.cjs');
+const policyPath = path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs');
+const POLICY = require(fs.existsSync(policyPath)
+  ? policyPath
+  : path.join(__dirname, '../../claude/scripts/workflow-policy.cjs'));
 
 function cacheFile(projectRoot, sessionId) {
   const key = crypto.createHash('sha256')
@@ -29,7 +33,9 @@ try {
   if (!active) process.exit(0);
 
   const phase = active.spec.current_phase || active.spec.phase || 'unknown';
-  const tasks = Object.entries(active.spec.task_registry || {});
+  const taskRegistry = active.spec.task_registry || {};
+  const flashTasks = POLICY.flashState(taskRegistry);
+  const tasks = Object.entries(taskRegistry);
   const counts = tasks.reduce((result, [, task]) => {
     const status = task?.status || 'pending';
     result[status] = (result[status] || 0) + 1;
@@ -62,6 +68,9 @@ try {
     `- Phase: \`${phase}\` | Tasks: ${counts.done || 0} done / ${tasks.length} total`
   ];
   if (next) lines.push(`- Next unblocked: \`${next[0]}\``);
+  if (flashTasks.length > 0) {
+    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. PASS promotion keeps task in_progress until explicit sync-finalize.`);
+  }
   lines.push(
     '- Sync `spec.json` and the task file only after verified work.',
     `- Validate with \`node .codex/scripts/validate-spec-output.cjs specs/${active.featureName}\`.`,

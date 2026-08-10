@@ -3,7 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { copyRecursive, isTextAsset } = require('./copy-utils');
+const { copyRecursive, isTextAsset, isGeneratedArtifact, normalizeSourcePaths } = require('./copy-utils');
+const { preserveAddressingSection } = require('./instruction-blocks');
 
 const SPEC_ROOT = path.resolve(__dirname, '..', '..');
 const OPENCODE_FOLDER = '.opencode';
@@ -48,7 +49,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'develop.md',
     skillName: 'develop',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement approved CafeKit spec tasks with scope fidelity.'
   },
@@ -76,7 +77,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'hotfix.md',
     skillName: 'hotfix',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Apply a scout-first, narrow production hotfix.'
   },
@@ -113,7 +114,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'backend-development.md',
     skillName: 'backend-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement backend services, APIs, data layers, and integrations.'
   },
@@ -148,7 +149,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'frontend-development.md',
     skillName: 'frontend-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Build React/TypeScript UI components and frontend features.'
   },
@@ -162,7 +163,7 @@ const OPENCODE_COMMAND_TEMPLATES = [
   {
     fileName: 'mobile-development.md',
     skillName: 'mobile-development',
-    agent: 'god-developer',
+    agent: 'implementer',
     subtask: true,
     description: 'Implement iOS, Android, React Native, or Flutter mobile features.'
   },
@@ -268,9 +269,12 @@ function formatOpenCodeValue(value) {
 // Applied to every text asset copied into .opencode/ so the installed
 // content points at the self-contained OpenCode runtime layout.
 function normalizeOpenCodeBody(content) {
-  return content
-    .replace(/\.claude\/(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode/$1')
-    .replace(/\.claude\\(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode\\$1')
+  return normalizeSourcePaths(content, {
+    runtimeRoot: '.opencode',
+    skillsRoot: '.opencode/skills'
+  })
+    .replace(/(?<!~\/)\.claude\/(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode/$1')
+    .replace(/(?<!~\\)\.claude\\(agents|commands|skills|rules|scripts|references|hooks)\b/g, '.opencode\\$1')
     .replace(/\.claude\/runtime\.json/g, '.opencode/runtime.json')
     .replace(/\.claude\/ROUTING\.md/g, '.opencode/ROUTING.md')
     .replace(/\.claude\/\.env/g, '.opencode/.env')
@@ -409,16 +413,44 @@ function createOpenCodeAgentsContent(sourceContent) {
   return adaptedContent.replace('## Core Objective', `${openCodeRuntimeBlock}\n## Core Objective`);
 }
 
+function managedOpenCodeRange(content) {
+  const existing = String(content || '');
+  const startMarker = '<!-- CAFEKIT OPENCODE START -->';
+  const endMarker = '<!-- CAFEKIT OPENCODE END -->';
+  const start = existing.indexOf(startMarker);
+  const end = existing.indexOf(endMarker);
+  if (start < 0 && end < 0) return null;
+  const duplicateStart = existing.indexOf(startMarker, start + startMarker.length);
+  const duplicateEnd = existing.indexOf(endMarker, end + endMarker.length);
+  if (start < 0 || end <= start || duplicateStart >= 0 || duplicateEnd >= 0) return false;
+  return {
+    start,
+    end: end + endMarker.length,
+    bodyStart: start + startMarker.length,
+    bodyEnd: end
+  };
+}
+
+
 function upsertCafeKitAgentsBlock(existingContent, blockContent) {
   const start = '<!-- CAFEKIT OPENCODE START -->';
   const end = '<!-- CAFEKIT OPENCODE END -->';
-  const managedBlock = `${start}\n${blockContent.trim()}\n${end}`;
-  const blockPattern = new RegExp(`${start}[\\s\\S]*?${end}`);
-
-  if (blockPattern.test(existingContent)) {
-    return existingContent.replace(blockPattern, managedBlock);
+  let body = String(blockContent).trim();
+  // Reinstall replaces the managed block in place. If the new template dropped
+  // its Addressing section, carry the exact section over from the existing
+  // managed block so the saved address survives for setupAddressing. Only reads
+  // the managed body — never user-owned sections outside the block.
+  const range = managedOpenCodeRange(existingContent);
+  if (range) {
+    const existingBody = existingContent.slice(range.bodyStart, range.bodyEnd);
+    body = preserveAddressingSection(body, existingBody);
   }
-
+  const managedBlock = `${start}\n${body}\n${end}`;
+  if (range === false) return existingContent;
+  if (range) {
+    return `${existingContent.slice(0, range.start)}${managedBlock}${existingContent.slice(range.end)}`;
+  }
+  if (!existingContent) return `${managedBlock}\n`;
   // Pre-managed-block releases wrote the shipped template as the whole file.
   // Wrap only an exact shipped prefix and preserve any user/Codex suffix.
   if (existingContent.startsWith(blockContent)) {
@@ -431,25 +463,23 @@ function upsertCafeKitAgentsBlock(existingContent, blockContent) {
   ) {
     return `${managedBlock}${existingContent.slice(trimmedLegacy.length)}`;
   }
-  if (!existingContent) return `${managedBlock}\n`;
-
   const separator = existingContent.endsWith('\n') ? '\n' : '\n\n';
   return `${existingContent}${separator}${managedBlock}\n`;
 }
 
+/** Transform only the CafeKit-owned OpenCode body, preserving surrounding bytes. */
+function transformManagedOpenCodeContent(content, transform) {
+  const existing = String(content || '');
+  const range = managedOpenCodeRange(existing);
+  if (!range || typeof transform !== 'function') return existing;
+  const body = existing.slice(range.bodyStart, range.bodyEnd);
+  return `${existing.slice(0, range.bodyStart)}${transform(body)}${existing.slice(range.bodyEnd)}`;
+}
+
 function getOpenCodeAgentsTemplateContent() {
   const openCodeTemplate = path.join(SPEC_ROOT, 'src/opencode/AGENTS.md');
-
-  if (fs.existsSync(openCodeTemplate)) {
-    return normalizeOpenCodeBody(fs.readFileSync(openCodeTemplate, 'utf8'));
-  }
-
-  const claudeTemplate = path.join(SPEC_ROOT, 'src/claude/CLAUDE.md');
-  if (!fs.existsSync(claudeTemplate)) {
-    return null;
-  }
-
-  return createOpenCodeAgentsContent(fs.readFileSync(claudeTemplate, 'utf8'));
+  if (!fs.existsSync(openCodeTemplate)) return null;
+  return normalizeOpenCodeBody(fs.readFileSync(openCodeTemplate, 'utf8'));
 }
 
 // Copy OpenCode project instructions to AGENTS.md at the project root.
@@ -462,6 +492,11 @@ function copyOpenCodeAgentsMdFile(platformKey, results, options = {}) {
   if (content) {
     const destinationExists = fs.existsSync(dest);
     const existingContent = destinationExists ? fs.readFileSync(dest, 'utf8') : '';
+    if (managedOpenCodeRange(existingContent) === false) {
+      console.log(`  ⚠ AGENTS.md: malformed CafeKit OPENCODE marker topology; preserved ${dest} without writing`);
+      results.errors++;
+      return;
+    }
     const nextContent = upsertCafeKitAgentsBlock(existingContent, content);
 
     if (nextContent === existingContent) {
@@ -537,6 +572,10 @@ function copyOpenCodePlugins(platformKey, results, options = {}) {
 
   const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
   entries.forEach(entry => {
+    // Skip generated artifacts before any directory/file handling, matching
+    // the filter copyRecursive applies to directory children.
+    if (isGeneratedArtifact(entry.name)) return;
+
     const sourcePath = path.join(sourceDir, entry.name);
     const destPath = path.join(targetDir, entry.name);
 
@@ -555,8 +594,12 @@ function copyOpenCodePlugins(platformKey, results, options = {}) {
       return;
     }
 
-    const sourceContent = fs.readFileSync(sourcePath, 'utf8');
-    fs.writeFileSync(destPath, sourceContent, 'utf8');
+    if (isTextAsset(sourcePath)) {
+      const sourceContent = fs.readFileSync(sourcePath, 'utf8');
+      fs.writeFileSync(destPath, normalizeOpenCodeBody(sourceContent), 'utf8');
+    } else {
+      fs.copyFileSync(sourcePath, destPath);
+    }
 
     if (destExists) {
       console.log(`  ↻ Plugin updated: ${entry.name}`);
@@ -846,6 +889,8 @@ module.exports = {
   convertOpenCodeAgentContent,
   convertOpenCodeCommandContent,
   copyOpenCodeAgentsMdFile,
+  managedOpenCodeRange,
+  transformManagedOpenCodeContent,
   copyOpenCodeSharedRuntimeFiles,
   copyOpenCodePlugins,
   copyOpenCodeCommandTemplates,

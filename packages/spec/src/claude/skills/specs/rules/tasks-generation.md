@@ -32,7 +32,7 @@ Detail bullets must include:
    - API payloads, routes, and JSON contracts.
    - Edge cases, error handling, and exact validation thresholds (e.g., `Return 403 if invalid`).
 
-**Rationale**: Humans review tasks to verify business requirements are met; AI Coders (like god-developer or ck) read tasks to write explicit code. If you only write business jargon, the AI hallucinates. If you only write code names, the human reviewer cannot verify the business value. You MUST provide both.
+**Rationale**: Humans review tasks to verify business requirements are met; AI Coders (like implementer or ck) read tasks to write explicit code. If you only write business jargon, the AI hallucinates. If you only write code names, the human reviewer cannot verify the business value. You MUST provide both.
 
 ### 2. Task Integration & Progression
 

@@ -15,9 +15,10 @@ const fs = require('fs');
 const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { LANGUAGE_LABELS } = require('../lib/i18n');
-const { setupOpenCodeModel } = require('../lib/opencode-install');
+const { setupOpenCodeModel, transformManagedOpenCodeContent } = require('../lib/opencode-install');
 const { transformManagedCodexContent } = require('../lib/codex-install');
 const { transformManagedClaudeContent } = require('./claude-runtime');
+const { transformManagedCoreContent } = require('../lib/instruction-blocks');
 const ASSISTANT_NAMES = {
   claude: 'Claude Code',
   codex: 'Codex CLI',
@@ -48,6 +49,10 @@ function instructionTargets(ctx) {
     codex: {
       file: path.join(process.cwd(), 'AGENTS.md'),
       transform: transformManagedCodexContent
+    },
+    opencode: {
+      file: path.join(process.cwd(), 'AGENTS.md'),
+      transform: transformManagedOpenCodeContent
     }
   };
   return Object.keys(targets)
@@ -84,44 +89,44 @@ function patchSettingsLanguage(ctx) {
   }
 
   // Use locale (freeform label) so "Korean" shows correctly, not just "en".
-  const label = ctx.locale || LANGUAGE_LABELS[ctx.lang] || ctx.lang;
-  if (settings.language === label) return;
+  const label = ctx.locale;
+  if (!label) return;
   settings.language = label;
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
 }
 
 /**
- * Patch the "## Language Consistency" section in CLAUDE.md with the chosen
- * language so every AI session knows which language to respond in — without
- * relying on hooks reading runtime.json.
- *
- * The section is identified by a stable marker comment so subsequent installs
- * can update it idempotently.
+ * Patch the "## Language Consistency" section in the shared AGENTS.md core
+ * block so every installed platform uses the chosen response language.
  */
 function patchLanguageSection(ctx) {
-  // Skip when locale is English (default — no override needed in CLAUDE.md).
-  const locale = ctx.locale || ctx.lang;
+  // No explicit/saved locale means follow the user's language; do not inject an
+  // English override into the shared core block.
+  const locale = ctx.locale;
   if (!locale || locale === 'en' || locale === 'English') return;
 
   // Use locale directly when set (e.g. "Korean"), or map from lang code.
   const label = locale in LANGUAGE_LABEL_BY_CODE ? LANGUAGE_LABEL_BY_CODE[locale] : locale;
-
   const newSection = `## Language Consistency <!-- cafekit:lang -->
 
-Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but all explanations, comments directed at the user, and structured output (specs, docs, reports) must be in ${label}.
+Always respond in **${label}**. Technical terms, code identifiers, and file paths may remain in English, but explanations, comments directed at the user, and structured output must be in ${label}.
 
 `;
-
-  // Replace only inside the installer-owned block.
   const markerRe = /## Language Consistency <!-- cafekit:lang -->[\s\S]*?(?=\n##|\n*$)/;
   const genericRe = /## Language Consistency\n[\s\S]*?(?=\n##|\n*$)/;
-  for (const target of instructionTargets(ctx)) {
-    updateInstructionTarget(target, (managed) => {
+  const target = path.join(process.cwd(), 'AGENTS.md');
+
+  updateInstructionTarget(
+    {
+      file: target,
+      transform: transformManagedCoreContent
+    },
+    (managed) => {
       if (markerRe.test(managed)) return managed.replace(markerRe, newSection);
       if (genericRe.test(managed)) return managed.replace(genericRe, newSection);
       return `${managed.trimEnd()}\n\n${newSection}\n`;
-    });
-  }
+    }
+  );
 }
 
 function patchRuntimeLocale(ctx) {
@@ -136,7 +141,9 @@ function patchRuntimeLocale(ctx) {
     }
     data.locale = data.locale || {};
     // Use locale (freeform label) so custom languages propagate to the AI hook.
-    const locale = ctx.locale || ctx.lang;
+    // A null locale intentionally leaves the runtime's current value untouched.
+    const locale = ctx.locale;
+    if (!locale) continue;
     if (data.locale.responseLanguage === locale) continue;
     // Hardening: never downgrade an existing configured label to a bare default
     // code when this run never made an explicit language choice (ctx.locale
@@ -181,7 +188,7 @@ ${name} always addresses the user as "${userAddress}" throughout the conversatio
 }
 
 async function setupAddressing(ctx) {
-  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex')) return;
+  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex' || key === 'opencode')) return;
 
   let existingName = null;
   for (const target of instructionTargets(ctx)) {
@@ -243,7 +250,7 @@ async function runPostInstall(ctx) {
 
   await setupAddressing(ctx);
 
-  // Patch Language Consistency section in CLAUDE.md so AI responds in the chosen language.
+  // Patch Language Consistency section in the shared AGENTS.md core block.
   patchLanguageSection(ctx);
 
   // Persist chosen language into each platform's runtime.json (records in tracker).

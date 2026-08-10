@@ -41,7 +41,7 @@
     "required": [
       "test-runner.md",
       "code-auditor.md",
-      "god-developer.md",
+      "implementer.md",
       "debugger.md",
       "docs-keeper.md",
       "git-ops.md",
@@ -59,7 +59,9 @@
       "validate-docs.cjs",
       "validate-docs-reconstruct.cjs",
       "generate-skill-catalog.cjs",
-      "validate-spec-output.cjs"
+      "validate-spec-output.cjs",
+      "scan-staged-secrets.cjs",
+      "workflow-policy.cjs"
     ]
   },
   "agentReferences": {
@@ -69,6 +71,11 @@
     "assumed": []
   },
   "obsolete": {
+    "agents": {
+      "claude": ["agents/god-developer.md"],
+      "codex": ["agents/god_developer.toml"],
+      "opencode": ["agents/god-developer.md"]
+    },
     "runtimeFiles": [
       "hooks/skill-router.cjs",
       "hooks/lib/skill-router-routes.cjs",
