@@ -9,7 +9,12 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 function readPayload() {
   const raw = fs.readFileSync(0, 'utf8').trim();
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) throw new Error('hook payload is empty');
+  const payload = JSON.parse(raw);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('hook payload must be a JSON object');
+  }
+  return payload;
 }
 
 function resolveSessionCwd(payload) {
@@ -35,11 +40,45 @@ function readRuntime(projectRoot = PROJECT_ROOT) {
   }
 }
 
+function assertConfiguredSpecsPath(projectRoot, runtime) {
+  const configured = runtime?.paths?.specs;
+  if (configured !== undefined && (typeof configured !== 'string' || configured.trim() === '')) {
+    throw new Error('runtime.paths.specs must be a non-empty path');
+  }
+  const requested = configured || 'specs';
+  const root = path.resolve(projectRoot);
+  const resolved = path.resolve(root, requested);
+  const relative = path.relative(root, resolved);
+  if (relative !== '' && (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))) {
+    throw new Error('configured specs root escapes project root');
+  }
+  let probe = resolved;
+  try {
+    while (!fs.existsSync(probe)) {
+      const parent = path.dirname(probe);
+      if (parent === probe) break;
+      probe = parent;
+    }
+    const rootReal = fs.realpathSync(root);
+    const probeReal = fs.realpathSync(probe);
+    const canonicalRelative = path.relative(rootReal, probeReal);
+    if (canonicalRelative !== '' && (canonicalRelative === '..' || canonicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(canonicalRelative))) {
+      throw new Error('configured specs root traverses outside project root');
+    }
+  } catch (error) {
+    if (/configured specs root/.test(error.message)) throw error;
+    throw new Error(`configured specs root cannot be validated (${error.message})`);
+  }
+  return resolved;
+}
+
 function getHookContext(payload) {
+  const runtime = readRuntime(PROJECT_ROOT);
+  assertConfiguredSpecsPath(PROJECT_ROOT, runtime);
   return {
     projectRoot: PROJECT_ROOT,
     sessionCwd: resolveSessionCwd(payload),
-    runtime: readRuntime(PROJECT_ROOT)
+    runtime
   };
 }
 
@@ -88,6 +127,7 @@ module.exports = {
   logCrash,
   readPayload,
   readRuntime,
+  assertConfiguredSpecsPath,
   resolveProjectPath,
   resolveSessionCwd
 };

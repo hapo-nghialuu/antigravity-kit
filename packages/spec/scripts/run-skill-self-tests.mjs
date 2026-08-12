@@ -5,8 +5,11 @@ import { spawn, spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
+const workflowPolicy = require(join(packageRoot, "src/claude/scripts/workflow-policy.cjs"));
 
 async function listFiles(directory, predicate) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -327,7 +330,7 @@ async function runStaticSemanticTests() {
       // Specs-v2 reworded this invariant; assert the current phrasing that
       // still guarantees Init is not a stop point.
       assert: (content) =>
-        content.includes("Init is never a stop point"),
+        /Init is\s+never a stop point/.test(content),
     },
     {
       label: "parallel-waves reference keeps single-writer, fallback, cap, and cherry-pick recipe",
@@ -389,8 +392,9 @@ async function runStaticSemanticTests() {
         content.includes("references/ask-user-question-gates.md") &&
         content.includes("rules/phase-decision-matrix.md") &&
         content.includes("rules/task-scoring-rubric.md") &&
-        content.includes("implementation slices") &&
-        content.includes("priority, split/merge, spike needs"),
+        content.includes("Load `rules/task-scoring-rubric.md` only if") &&
+        content.includes("Task scoring is optional advisory") &&
+        content.includes("Cynefin"),
     },
     {
       label: "hapo:specs ask-user gate matrix protects user-owned decisions",
@@ -411,13 +415,10 @@ async function runStaticSemanticTests() {
         "src/claude/skills/specs/rules/tasks-generation.md",
       ],
       assert: (content) =>
-        content.includes("R0 Foundation") &&
-        content.includes("Risk Spike") &&
-        content.includes("Integration Gate") &&
-        content.includes("Task Scoring Rubric") &&
-        content.includes("Mandatory Overrides") &&
-        content.includes("Pre-Generation Decision Gates") &&
-        content.includes("Use the Phase Decision Matrix"),
+        content.includes("Task Scoring Rubric (optional advisory)") &&
+        content.includes("Conditional generation gates") &&
+        content.includes("Scoring is optional") &&
+        content.includes("Cynefin is advisory"),
     },
     {
       label: "hapo:specs compact task template keeps evidence gate",
@@ -436,12 +437,12 @@ async function runStaticSemanticTests() {
         content.includes("Layout/theme/responsive task"),
     },
     {
-      label: "hapo:specs forbids reduced task template shape",
+      label: "hapo:specs lazy-loads task template fidelity rules",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        content.includes("Template fidelity is mandatory") &&
-        content.includes("Do NOT rename `## Context` to `## Objective`") &&
-        content.includes("missing sections are invalid"),
+        content.includes("task template") &&
+        content.includes("lazy inputs") &&
+        content.includes("Every generated task still needs"),
     },
     {
       label: "spec validator rejects reduced task template sections",
@@ -465,21 +466,24 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
         content.includes("validate-spec-output.cjs") &&
-        content.includes("Any validator failure blocks `ready_for_implementation = true`"),
+        content.includes("ready_for_implementation = false") &&
+        content.includes("MUST run deterministic validator"),
     },
     {
       label: "spec-maker runs deterministic validator before ready state",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) =>
         content.includes("validate-spec-output.cjs") &&
-        content.includes("fix every failure"),
+        content.toLowerCase().includes("fix every failure") &&
+        /no canonical execution receipt[\s\S]*independent closeout audit is required[\s\S]*yet/i.test(content) &&
+        content.includes("passing deterministic spec validation"),
     },
     {
       label: "hapo:develop scouts every task and enforces scope fidelity",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("<SCOPE-FIDELITY>") &&
-        content.includes("Scout per Delegation policy") &&
+        content.includes("Scout depth follows the persisted lane") &&
         content.includes("Final Integration Scout"),
     },
     {
@@ -488,22 +492,21 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("[--flash]") &&
         content.includes("### 3. Flash Mode") &&
-        content.includes("Skip dedicated test suites") &&
+        content.toLowerCase().includes("skip dedicated test suites") &&
         content.includes("FLASH_UNVERIFIED") &&
-        content.includes("Next verification: /hapo:test <feature>") &&
-        content.includes("Flash output MUST NOT say `Test PASS`"),
+        content.includes("awaiting /hapo:test <feature>") &&
+        content.includes("never claim `Test PASS`"),
     },
     {
-      label: "hapo:develop maintains visual implementation notes",
+      label: "hapo:develop makes implementation notes opt-in",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("implementation-notes.html") &&
-        content.includes("[--no-notes]") &&
+        content.includes("--notes` is opt-in") &&
+        !content.includes("--no-notes") &&
         content.includes("references/implementation-notes-template.html") &&
-        content.includes("Claude Code-like blocks") &&
         content.includes("scope-escape") &&
-        content.includes("codebase-reality") &&
-        content.includes("No spec gaps, tradeoffs, scope escapes, or deferred risks recorded for this task"),
+        content.includes("loaded only with `--notes`"),
     },
     {
       label: "hapo:develop implementation notes template is self-contained and block-based",
@@ -525,7 +528,7 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
         content.includes("Spec compliance review") &&
-        content.includes("CODE QUALITY REVIEW (only after spec compliance passes)") &&
+        content.includes("Correctness and security review") &&
         content.includes("Reachability Failure"),
     },
     {
@@ -537,6 +540,27 @@ async function runStaticSemanticTests() {
         content.includes("Evidence: FLASH_UNVERIFIED") &&
         content.includes("Do not report `Test PASS`") &&
         content.includes("preflight=<pass|skipped>"),
+    },
+    {
+      label: "P2 lane, lifecycle, and proof ownership contracts stay explicit",
+      files: [
+        "src/claude/skills/specs/SKILL.md",
+        "src/claude/skills/develop/SKILL.md",
+        "src/claude/skills/test/SKILL.md",
+        "src/claude/skills/code-review/SKILL.md",
+        "src/claude/skills/develop/references/quality-gate.md",
+      ],
+      assert: (content) =>
+        content.includes("Direct") &&
+        content.includes("Standard") &&
+        content.includes("Critical") &&
+        content.includes("execution_tier") &&
+        content.includes("read-only") &&
+        content.includes("PASS_WITH_WARNINGS") &&
+        content.includes("canonical execution receipt") &&
+        content.includes("PENDING") &&
+        content.includes("Audit: PASS") &&
+        /(?:does not create or claim|never creates or claims)\s+execution proof/.test(content),
     },
     {
       label: "inspect uses only internal Explore discovery",
@@ -551,7 +575,9 @@ async function runStaticSemanticTests() {
       label: "quality gate uses severity verdict instead of numeric score",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
-        content.includes("no Critical, no High, at most one Medium") &&
+        /no\s+blocking Medium finding/i.test(content) &&
+        content.includes("Finding count never selects review depth") &&
+        !content.includes("at most one Medium") &&
         !content.includes("9.5"),
     },
     {
@@ -956,7 +982,12 @@ async function runStaticSemanticTests() {
     {
       label: "hapo:specs SKILL stays lean after slim-flow diet",
       file: "src/claude/skills/specs/SKILL.md",
-      assert: (content) => content.split("\n").length <= 470,
+      assert: (content) => content.trimEnd().split("\n").length >= 150 && content.trimEnd().split("\n").length <= 220,
+    },
+    {
+      label: "hapo:develop SKILL stays within directional context budget",
+      file: "src/claude/skills/develop/SKILL.md",
+      assert: (content) => content.trimEnd().split("\n").length >= 140 && content.trimEnd().split("\n").length <= 200,
     },
     {
       label: "docs-sync.cjs has no shouting banners",
@@ -1174,6 +1205,12 @@ async function runSettingsManifestConsistencyCheck() {
   const shipped = new Set(
     (manifest.runtime?.files || []).filter((f) => /^hooks\/[a-z-]+\.cjs$/.test(f)),
   );
+  // Helpers imported by completion-authority.cjs, not executable hook entrypoints
+  // (see src/claude/hooks/completion-authority.cjs:64-65 requiring ./completion-authority-state.cjs and ./completion-authority-check.cjs)
+  const helperAllowlist = new Set([
+    "hooks/completion-authority-check.cjs",
+    "hooks/completion-authority-state.cjs",
+  ]);
 
   const failures = [];
   for (const hook of registered) {
@@ -1183,7 +1220,7 @@ async function runSettingsManifestConsistencyCheck() {
     }
   }
   for (const hook of shipped) {
-    if (!registered.has(hook)) failures.push(`shipped in manifest but registered in no settings event: ${hook}`);
+    if (!registered.has(hook) && !helperAllowlist.has(hook)) failures.push(`shipped in manifest but registered in no settings event: ${hook}`);
   }
 
   if (failures.length > 0) {
@@ -1512,6 +1549,7 @@ async function createValidSpecFixture(root) {
         feature_name: "valid-spec",
         status: "in_progress",
         current_phase: "tasks",
+        workflow_policy: workflowPolicy.workflowPolicySnapshot({ riskSignals: {} }),
         scope_lock: {
           source: "Add user permission control",
           in_scope: ["1"],
@@ -1551,6 +1589,10 @@ async function createValidSpecFixture(root) {
     `# Research\n\n## Evidence Summary\n- Codebase scout result: backend user model and admin route identified.\n- External research result or skip rationale: skipped, internal CRUD change.\n- Selected decision: extend existing admin route.\n- Rejected alternatives: new service boundary.\n- Remaining gaps: none.\n- Downstream task/test implications: unit test permission toggle.\n`,
   );
   await writeText(join(specDir, "design.md"), "# Design\n\nUse existing admin route.\n");
+  await writeText(
+    join(specDir, "feature-receipt.md"),
+    "# Feature Receipt\n\nVerification: PENDING\n",
+  );
   await writeText(
     join(specDir, taskPath),
     `# Task R1-01: User permission control\n\n## Context\n- Why: Admins need to control workspace creation.\n- Current state: Existing admin route.\n- Target outcome: Permission can be toggled.\n\n## Constraints\n- MUST: Preserve existing admin auth checks.\n- SHOULD: Reuse existing route patterns.\n- MUST NOT: Add a new auth system.\n- SCOPE: Permission toggle only.\n\n## Steps\n- [ ] 1. Update admin route\n  - Business intent: allow admin permission control.\n  - Code detail: PATCH /admin/users/{id}/permissions.\n  - _Requirements: 1.1_\n\n## Requirements\n- 1.1 — Persist user permission state.\n\n## Related Files\n| Path | Action | Description |\n|---|---|---|\n| \`backend/app/api/v1/admin.py\` | Read | Inspect existing permission endpoint |\n| \`backend/app/api/v1/admin.py\` | Modify | Permission endpoint |\n\n## Completion Criteria\n- [ ] Admin can toggle permission.\n- [ ] Invalid user returns 404.\n\n## Evidence\n- [ ] Automated verification\n  - Command(s): \`pytest backend/tests/test_admin_permissions.py\`\n  - Expected proof: tests pass\n- [ ] Artifact / runtime verification\n  - Inspect: \`PATCH /admin/users/{id}/permissions\`\n  - Expect: response contains updated permission\n- [ ] Runtime reachability verification\n  - Entrypoint/caller: \`backend/app/api/v1/admin.py\`\n  - Expect: route is registered in admin router\n- [ ] Contract / negative-path verification\n  - Check: missing user id\n  - Expect: 404\n\n## Risk Assessment\n| Risk | Severity | Mitigation |\n|---|---|---|\n| None identified | - | - |\n`,
@@ -1622,7 +1664,6 @@ async function runSpecValidatorFixtureTests() {
       "task_registry",
       "design_context.validation_recommended",
       "validation.status is not completed",
-      "research.md",
       "entirely R0",
       "missing Requirements mapping",
       "missing Evidence",

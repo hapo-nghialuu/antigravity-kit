@@ -10,11 +10,11 @@ const {
   logCrash,
   readPayload
 } = require('./lib/hook-context.cjs');
-const { findActiveSpec } = require('./lib/spec-utils.cjs');
-const policyPath = path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs');
-const POLICY = require(fs.existsSync(policyPath)
-  ? policyPath
-  : path.join(__dirname, '../../claude/scripts/workflow-policy.cjs'));
+const { loadSharedPolicy } = require('./lib/spec-receipt.cjs');
+
+function emitControlledFailure(reason) {
+  process.stdout.write(`> ⚠️ Spec tollgate unavailable: ${reason}. Repair the installed workflow policy before continuing.\n`);
+}
 
 function cacheFile(projectRoot, sessionId) {
   const key = crypto.createHash('sha256')
@@ -27,10 +27,42 @@ function cacheFile(projectRoot, sessionId) {
 try {
   const payload = readPayload();
   if (!payload) process.exit(0);
+  const loaded = loadSharedPolicy();
+  if (!loaded.policy) {
+    logCrash('spec-state', loaded.error);
+    emitControlledFailure(loaded.error.message);
+    process.exit(0);
+  }
+  const POLICY = loaded.policy;
   const { projectRoot, runtime } = getHookContext(payload);
   if (runtime.spec?.tollgate === false) process.exit(0);
-  const active = findActiveSpec(projectRoot, runtime);
-  if (!active) process.exit(0);
+  const { resolveActiveSpec } = require('./lib/spec-utils.cjs');
+  const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
+  const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
+  const resolved = resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath);
+  if (!resolved) process.exit(0);
+  if (resolved.error === 'multiple_active') {
+    process.stdout.write(`> ⚠️ Multiple active specs detected: ${resolved.candidates.join(', ')}. Provide explicit feature target or resolve ambiguity. Tollgate paused.\n`);
+    process.exit(0);
+  }
+  if (resolved.error === 'invalid_specs') {
+    process.stdout.write(`> ⚠️ Invalid spec JSON detected: ${resolved.candidates.join(', ')}. ${resolved.reason}. Fix or remove malformed spec.json. Tollgate paused.\n`);
+    process.exit(0);
+  }
+  if (resolved.error === 'explicit_not_found' || resolved.error === 'explicit_malformed') {
+    const detail = resolved.reason || resolved.explicitFeature || resolved.explicitPath || 'unknown';
+    process.stdout.write(`> ⚠️ Explicit spec target invalid (${resolved.error}): ${detail}. Provide a valid feature target inside configured specs root. Tollgate paused.\n`);
+    process.exit(0);
+  }
+  if (resolved.error) process.exit(0);
+  const active = resolved;
+  const runtimeContext = POLICY.deriveRuntimeContext({
+    projectRoot,
+    specsRoot: active.specsDir,
+    specFile: active.specFile || path.join(active.specsDir, active.featureName, 'spec.json'),
+    featureName: active.featureName,
+    runtimeSession: payload.session_id || payload.sessionId || payload.sessionID || payload.session?.id,
+  });
 
   const phase = active.spec.current_phase || active.spec.phase || 'unknown';
   const taskRegistry = active.spec.task_registry || {};
@@ -49,8 +81,21 @@ try {
     (task?.status || 'pending') === 'pending'
     && (task?.dependencies || []).every((dependency) => statuses.get(dependency) === 'done')
   ));
-  const stateKey = `${active.featureName}|${phase}|${counts.done || 0}/${tasks.length}`;
-  const cache = cacheFile(projectRoot, payload.session_id);
+  const stateKey = JSON.stringify({
+    project_root: runtimeContext.project_root,
+    specs_root: runtimeContext.specs_root,
+    spec_file: runtimeContext.spec_file,
+    feature_name: runtimeContext.feature_name,
+    runtime_session: runtimeContext.runtime_session,
+    provenance_mode: runtimeContext.provenance_mode,
+    Base: runtimeContext.base,
+    Head: runtimeContext.head,
+    context_id: runtimeContext.context_id,
+    phase,
+    done: counts.done || 0,
+    total: tasks.length,
+  });
+  const cache = cacheFile(projectRoot, runtimeContext.runtime_session);
   let previous = '';
   try { previous = fs.readFileSync(cache, 'utf8').trim(); } catch { /* first run */ }
 
@@ -69,7 +114,7 @@ try {
   ];
   if (next) lines.push(`- Next unblocked: \`${next[0]}\``);
   if (flashTasks.length > 0) {
-    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. PASS promotion keeps task in_progress until explicit sync-finalize.`);
+    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
   lines.push(
     '- Sync `spec.json` and the task file only after verified work.',
@@ -79,4 +124,5 @@ try {
   process.stdout.write(`${lines.join('\n')}\n`);
 } catch (error) {
   logCrash('spec-state', error);
+  emitControlledFailure(error.message);
 }

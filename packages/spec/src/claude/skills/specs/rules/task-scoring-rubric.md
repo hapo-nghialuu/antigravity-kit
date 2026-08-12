@@ -1,52 +1,51 @@
-# Task Scoring Rubric
+# Task Scoring Rubric (optional advisory)
 
-Use this rubric after applying the Phase Decision Matrix and before writing each task file. The score determines priority, split/merge, spike needs, dependency shape, and evidence depth.
+Load this rubric only when the persisted policy requires a task bundle and the
+decomposition has a real split/merge or dependency question. It is not a lane
+classifier, readiness gate, approval gate, or reason to create a task bundle.
 
-## Score Each Candidate Task
+## Candidate dimensions
 
-Score each dimension 0-3.
+Score each candidate from 0–3 only when the score will change a task decision:
 
 | Dimension | 0 | 1 | 2 | 3 |
 |---|---|---|---|---|
-| Dependency criticality | Standalone | Depends on one task | Blocks one feature slice | Blocks many tasks or core runtime |
-| Implementation risk | Routine | Known pattern, minor edge cases | Complex logic or integration | Unproven behavior, migration, security, provider/platform uncertainty |
-| Blast radius | Isolated file | Feature-local files | Shared component/API/config | Auth, data layer, routing, permissions, package export, or critical path |
-| User value | Internal cleanup | Enables later work | User-visible improvement | Core acceptance criterion or launch blocker |
-| Evidence confidence | Proven by code/tests/docs | Mostly proven | Partial evidence | Low/no evidence |
-| Testability burden | Simple unit/smoke | Component/integration | Multi-step workflow | E2E/security/performance/rollback proof required |
-| File conflict risk | No overlap | Minor shared utility | Shared module with consumers | Same files as another task or cross-agent conflict likely |
-| Scope creep risk | Fully in scope | Small interpretation | Adds adjacent behavior | Adds unapproved feature/contract |
+| Dependency criticality | standalone | one predecessor | one slice blocked | core path blocked |
+| Implementation risk | routine | known pattern | complex integration | unproven/security |
+| Blast radius | isolated | feature-local | shared contract | critical boundary |
+| User value | internal | enables work | visible improvement | acceptance/launch |
+| Evidence confidence | proven | mostly proven | partial | low/no evidence |
+| Test burden | unit/smoke | component/integration | workflow | security/rollback |
+| File conflict | none | minor | shared module | overlapping ownership |
+| Scope creep | none | interpretation | adjacent behavior | unapproved contract |
 
-## Interpret Score
+## Use of the result
 
-| Total | Priority | Action |
-|---:|---|---|
-| 0-6 | P3 | Keep compact. Merge if no independent proof exists. |
-| 7-12 | P2 | Normal task. Include explicit dependencies and evidence. |
-| 13-18 | P1 | High attention. Consider split, stronger evidence, and validation note. |
-| 19+ | P1 critical | Split or add spike. Do not mark parallel unless file ownership is isolated. |
+Use the result only to explain priority, split/merge, dependency order,
+parallel ownership, or proof depth. Prefer one task when one boundary and one
+proof path are enough. Split only for a real dependency, ownership boundary, or
+independent proof path.
 
-## Mandatory Overrides
+- Scope-creep score 3: stop and ask for scope approval.
+- Low evidence plus risk ≥2: consider a time-boxed spike, but do not create one
+  solely because a Cynefin label says `Complex`.
+- Blast radius 3: include rollback/negative-path proof.
+- File conflict ≥2: remove `(P)` unless ownership is isolated.
+- High value plus dependency ≥2: schedule early only after real prerequisites.
 
-- If Scope creep risk = 3, stop and use `AskUserQuestion` before generating the task.
-- If Evidence confidence = 3 and Implementation risk >= 2, create a spike task first.
-- If Blast radius = 3, include rollback/negative-path proof in `Evidence`.
-- If File conflict risk >= 2, remove `(P)` unless ownership is explicitly separated.
-- If User value = 3 and Dependency criticality >= 2, schedule early unless blocked by foundation work.
+Cynefin is advisory discovery language. It may suggest a spike or research
+question; it never changes Direct/Standard/Critical, adds registry/DAG
+ceremony, or decides readiness.
 
-## Task Metadata Decisions
+## Compact task metadata
 
-- `priority`: from total score plus overrides.
-- `dependencies`: list every required predecessor task file.
-- `(P)` marker: allowed only when dependency and file conflict scores are <= 1 and design boundaries do not overlap.
-- `Evidence`: choose proof type from `tasks-generation.md` Test Type Selection table; increase proof depth for high scores.
-- `Risk Assessment`: include all dimensions scored 2-3 as risks or constraints.
+Do not copy the raw table into task files. Record only decisions that affect
+execution:
 
-## Compact Output
+- why the task is split or merged;
+- why it is early or deferred;
+- why it is or is not parallel;
+- why a spike or deeper proof is useful;
+- exact dependencies and evidence.
 
-Do not write the raw score table into every task file. Use the rubric to shape task content. Surface only decisions that affect implementation:
-
-- why task is P1/P2/P3
-- why it is split/merged
-- why it is or is not parallel
-- why a spike or extra proof is required
+If no decision changes, omit scoring entirely and keep the task packet compact.

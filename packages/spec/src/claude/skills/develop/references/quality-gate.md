@@ -1,88 +1,112 @@
-# Quality Gate — Task Evidence + Two-Stage Review Loop
+# Quality Gate — one closeout, separate proof and review
 
-This is the critical checkpoint protecting codebase quality at Step 4 of `hapo:develop`.
-Runs AUTOMATICALLY. Only escalates to user after 3 consecutive failures or a critical block.
-Green tests are NOT enough. The gate requires four proofs:
-1. Automated verification (typecheck/test/build)
-2. Spec compliance review (scope/task/design adherence)
-3. Code quality review
-4. Task evidence (completion criteria + runtime/artifact/reachability proof from the task file)
+This reference is loaded at develop closeout. It is an executable contract, not
+a fixed actor checklist. The lane snapshot is authoritative; `execution_tier`
+is only a legacy read adapter.
 
-`--flash` is the explicit fast path. It bypasses this full gate and uses the Flash Gate defined below.
+## Inputs and ownership
 
-Executable policy source: `src/claude/scripts/workflow-policy.cjs` (installed as `.claude/scripts/workflow-policy.cjs`). Use its tier delegation, verdict consumer, flash conflict, and promotion semantics; do not duplicate policy in prose or tests.
+The single closeout owner receives the current scope, lane, risk signals, blast
+radius, exact evidence commands, and the current diff. It calls the test owner
+once, then the review owner once when required. No parallel path, review path,
+or sync hook runs a duplicate hidden gate.
 
-## Tier input (from develop Delegation policy)
+- **Test owner:** executes commands and creates the canonical execution receipt.
+- **Review owner:** evaluates correctness, security, scope, and spec compliance;
+  consumes the receipt but never creates or claims execution proof.
+- **Closeout owner:** combines both results and performs one state/docs sync.
 
-Quality-gate input MUST include `execution_tier` and `ship_point`:
+Review depth follows lane, risk, and blast radius, not the number of files or
+tasks. There is no fixed Light/Standard/Deep agent sequence. The shared verdict
+surface is `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`; all adapters must use
+the same normalizer.
 
-- **Light:** main session runs verification commands and the same spec-compliance checklist. Spawn zero `test-runner` or `code-auditor` subagents.
-- **Standard:** main session runs tests and spec checks. At the ship point, run exactly one combined `code-auditor` review for spec compliance plus code quality.
-- **Deep / `--parallel`:** retain the documented per-worktree Stage A+B chain in Track A. Do not treat that chain as a permanent product contract.
+## Working directory (parallel mode)
 
-Checklist and FAIL conditions stay identical for every tier; tier changes only who executes each check and when.
+When an opt-in wave is active, each command runs in its task worktree. A
+collapse of one task does not cancel other in-flight tasks; merge and state
+synchronization remain single-writer operations.
+
+## Required evidence
+
+Before completion, verify:
+
+1. compile/typecheck precheck and every exact command named by the active
+   Evidence section;
+2. real runtime reachability and declared artifact inspection;
+3. canonical receipt with non-empty command, successful exit result, both
+   provenance anchors bound to the runtime's expected Base/Head pair, and
+   required SHA-256 declarations;
+4. correctness/security/spec review at the selected depth;
+5. a real independent audit when `needsIndependentAudit` is persisted. The
+   audit must use schema version `1`, distinct reviewer and implementation
+   session IDs, matching expected Base/Head binding, concrete evidence, and
+   literal `verdict: "PASS"`.
+
+`PRECHECK_FAIL` outranks no-tests. Missing, pending, marker-only, contradictory,
+or placeholder proof is unfinished. `Audit: PASS` is not an independent audit.
+`NO_TESTS` may be retained as a legacy diagnostic input, but it can never become
+the shared completion verdict `PASS`.
 
 ## Spec compliance review
 
-Stage A applies same spec compliance review checklist for every tier: scope, requirements, completion criteria, evidence, and runtime reachability. A missing or unreachable deliverable is a FAIL.
+Check scope lock, requirements, design contracts, completion criteria, evidence,
+runtime reachability, and artifact/provenance boundaries. A missing or orphaned
+runtime deliverable is a failure even when compilation succeeds.
 
+**Specific-task mode:** review exactly the requested task and its diff, then
+stop. Do not select a next task.
 
-- **Specific-task mode:** requested task is ship point. Review that task packet and its diff exactly once.
-- **Full-spec Standard:** intermediate tasks receive only the main-session gate. After the final task and Final Integration Scout, run one combined auditor over the cumulative feature diff, all acceptance criteria, and runtime reachability.
-- Do not set feature-level `code_done` or completion before combined auditor returns `PASS`.
-- Auditor `FAIL` maps each finding to its owning task/surface. Fix only affected evidence, then rerun affected checks and the combined review; do not replay unrelated gates already passed.
+**Full-feature mode:** use the cumulative feature scope only at its closeout;
+intermediate synchronization does not claim feature completion. Run the Final
+Integration Scout when runtime-facing surfaces exist.
 
-## Automation Semantics
+## Correctness and security review
 
-- If the task names exact commands in `## Evidence` (legacy heading aliases still parse), those exact commands are mandatory and must run before any fallback repo defaults.
-- Preflight compile/typecheck/build health is mandatory. If compile/typecheck/build fails before tests are meaningful, the gate result is `PRECHECK_FAIL`, not `NO_TESTS`.
-- `NO_TESTS` is never an automatic PASS.
-- `NO_TESTS` is acceptable only when the task does **not** require a dedicated test suite command and every other required automated command/evidence item passes.
-- If the task explicitly requires tests and the repo has no such test command or suite, the task is FAIL or BLOCKED, not done.
-- If the task kind implies a concrete test type, the gate must enforce it: unit tests for logic/regression, component or integration tests for stateful UI or cross-module wiring, E2E/UI-flow checks for complete user workflows, visual/responsive checks for layout/theme work, accessibility checks for interactive UI, and smoke checks for scaffold/config. Performance/security checks are mandatory only when specified by requirement/risk/boundary.
-- Named frameworks, auth systems, transports, datastores, and runtime boundaries in the task/spec are contractual. Silent substitutions are review failures, not acceptable implementation trade-offs.
-- Multi-process or multi-runtime flows must prove shared real state or a real boundary contract. Matching in-memory placeholders on both sides do not count as working integration.
-- Scope fidelity is mandatory: missing scoped behavior, extra unapproved behavior, or task output that exists only as orphaned/unreachable code is a review failure even when build/tests pass.
-- Runtime-facing artifacts must be reachable from the real entrypoint/caller named by the task or the task-aware scout report.
+Apply only the checks relevant to the touched boundary. For logging/redaction,
+check safe identifiers, quoted schemes, idempotence, and receipt secrecy. For
+filesystem writes, check lexical and canonical containment, symlink rejection,
+atomic same-directory replacement, cleanup, and canonical return paths. Add
+auth, persistence, provider, or concurrency checks only when lane/risk requires.
 
-### Critical security verification (apply only when the task touches these surfaces)
+## Quality cycle
 
-No fixed ceremony for every task — apply the checklist below only when the
-touched files, risk signals, or task description include logging/redaction or
-filesystem write boundaries. Direct uses targeted unit test + diff self-check,
-Standard a bounded suite, Critical strict evidence (inspector/test-runner/
-code-auditor per lane policy).
+```text
+retry_count = 0
+while closeout is not PASS:
+  test owner executes required proof once
+  if proof is BLOCKED: stop without blind retry
+  review owner evaluates correctness/security/spec once
+  if FAIL: fix only the affected scope and rerun affected proof/review
+if retry_count reaches 3: stop and request user intervention
+```
 
-- **Logging / secret redaction:** assert broad matchers did not corrupt safe
-  identifiers or public URLs; quoted `Bearer`/`Basic` redaction keeps surrounding
-  quotes and leaves trailing `,`/`;`/whitespace outside the replacement; redaction
-  is idempotent (`redact(redact(x)) === redact(x)`); no secret appears in test
-  failures or the verification receipt.
-- **Filesystem write boundary:** assert lexical `path.resolve` **and** `realpath` of
-  the deepest existing parent both stay inside the canonical root; parent-symlink
-  and final-symlink targets are rejected without following/overwriting; no file
-  outside root is created or mutated on rejection; write goes via same-directory
-  temp file + atomic `rename` with cleanup on error; success returns canonical
-  `realpath` (platform aliases resolved).
+Only `FAIL` enters remediation. `BLOCKED` is terminal until its prerequisite
+changes. `PASS_WITH_WARNINGS` is a review result only and remains unfinished;
+only literal `PASS` may close when all execution and lane obligations are
+complete.
 
 ## Flash Gate (`--flash`)
 
-Use this only when `/hapo:develop ... --flash` is present.
+Use only when the flag is explicit. Skip dedicated tests, full evidence
+execution, extended UI/manual checks, and review retry loops. Still perform a
+cheap preflight and scope/reachability sanity check.
 
-- Skip dedicated test commands, E2E/browser/manual QA, full task evidence execution, test-runner delegation, and code-auditor retry loops.
-- Do not report `Test PASS`, `Evidence PASS`, `Auto-Approved`, or `production-ready`.
-- Still perform a scope sanity check against active task Completion Criteria.
-- Still perform a reachability sanity check for runtime-facing files: imported, mounted, registered, routed, or invoked where applicable.
-- Run a cheap compile/syntax/typecheck/build command only when available and expected to complete quickly without dependency install or external services.
-- If the cheap preflight fails, return to implementation; do not sync.
-- If the cheap preflight is unavailable or too slow, record `Preflight: skipped in --flash mode`.
-- Sync only with receipt fields:
-  - `Mode: --flash`
-  - `Tests: skipped by user request`
-  - `Evidence: FLASH_UNVERIFIED`
-  - `Status: in_progress`
-  - `Blocker: awaiting /hapo:test <feature>`
-  - `Next verification: /hapo:test <feature>`
+The flash record must contain exactly the unfinished semantics:
+
+```text
+Mode: --flash
+Tests: skipped by user request
+Evidence: FLASH_UNVERIFIED
+Status: in_progress
+Blocker: awaiting /hapo:test <feature>
+Next verification: /hapo:test <feature>
+```
+
+The persisted flash input must also contain `dependencyBlocked: true`,
+`unblocks: false`, and a non-placeholder blocker, and must omit
+`readyForSync`, `flashTransition`, and `promotionReceipt`. Sync-finalize
+rejects minimal or caller-pre-promoted states.
 
 Terminal log:
 
@@ -90,90 +114,34 @@ Terminal log:
 ⚡ Step 4 Flash Gate: tests skipped by --flash; preflight=<pass|skipped>; evidence=FLASH_UNVERIFIED
 ```
 
-## Quality Cycle
+Do not report `Test PASS`, `Evidence PASS`, `Auto-Approved`, or
+`production-ready`. Flash never sets `done`, unblocks dependents, or promotes
+from a marker. Trusted sync-finalize alone may consume a fresh canonical PASS
+receipt and derive promotion.
 
-Maximum retry counter: **3 attempts**. Exceeding 3 triggers a collapse warning.
+## Closeout and docs impact
 
-```text
-Variable: retry_count = 0
+After the test receipt and review verdict are both available, the closeout owner
+uses the policy adapter and synchronizes state. A review-only pass cannot close
+missing execution proof. Evaluate docs impact from the actual behavior change:
 
-Before START_LOOP:
-  - Read the active task file(s)
-  - Extract Related Files, Completion Criteria, `## Evidence` (legacy heading aliases still parse)
-  - Extract the exact executable verification commands in declaration order
-  - Extract relevant design contracts/invariants for the touched area
-  - Extract scope_lock, requirement IDs, runtime entrypoints/callers, and reachability proof obligations
-  - If any of these are missing or too vague to verify, FAIL immediately and route back to spec correction
+- `none`: record no docs edit and stop;
+- `minor` or `major`: update only affected existing docs through the normal docs
+  workflow.
 
-START_LOOP:
-  ---------------------------------------------------------------
-  STAGE A: Test + SPEC COMPLIANCE review
-  ---------------------------------------------------------------
-  → Light: main session executes exact Evidence commands, spec checklist,
-    artifact checks, and reachability checks; spawn 0 subagents.
-  → Standard: main session executes exact Evidence commands and spec checklist;
-    defer one combined auditor to the ship point.
-  → Deep / --parallel: run the documented per-task sequence `inspector → implementer → test-runner → code-auditor` in the
-    task worktree, then preserve its documented merge/integration gates.
+Do not run a docs checkpoint merely because a task completed. Do not refresh the
+whole repository for a local change.
 
-  Test result and review result use the review enum only: PASS | FAIL | BLOCKED.
-  PASS proceeds. FAIL returns actionable findings to implementer. BLOCKED means
-  execution proof, permissions, environment, or a user-owned decision is missing:
-  stop immediately and do not blind-retry.
+## Review threshold
 
-  Standard specific-task ship point:
-    → run exactly one combined code-auditor review after Stage A PASS.
-  Standard full-spec ship point:
-    → run exactly one combined code-auditor review after the final task and
-      Final Integration Scout over the cumulative feature diff.
+`PASS` requires no Critical or High correctness/security/spec finding and no
+blocking Medium finding. `PASS_WITH_WARNINGS` may carry documented non-blocking
+findings. Finding count never selects review depth or overrides missing proof.
+Any missing proof, unresolved obligation, scope drift, contract substitution, or
+reachability failure remains unfinished regardless of review severity.
 
-  CASE 1 — PRECHECK_FAIL OR Automated FAIL OR required command missing OR Evidence FAIL / UNVERIFIED OR Reachability FAIL:
-    - For FAIL: increment retry_count; return to implementation while retry_count < 3.
-    - For BLOCKED: stop without retry; record blocker and await resolution.
-    - If retry_count >= 3: COLLAPSE and ask for user intervention.
+### Reachability Failure
 
-  CASE 2 — Test PASS + Evidence PASS + spec checklist PASS:
-    → Proceed to the ship-point review for Standard, or the Deep Stage B review.
-
-STAGE B:
-  ---------------------------------------------------------------
-  CODE QUALITY REVIEW (only after spec compliance passes)
-  ---------------------------------------------------------------
-  Standard uses the combined auditor described above; Deep retains the existing
-  Stage B quality review chain inside each worktree.
-  → PASS = no Critical, no High, at most one Medium; proceed to sync.
-  → FAIL = findings mapped to task/surface; fix affected scope and rerun only
-    affected evidence plus this combined review.
-  → BLOCKED = missing proof/permission/environment/user decision; stop, no blind retry.
-```
-
-## Critical Issue Definitions
-
-- **Security:** XSS vulnerabilities, SQL injection, leaked env tokens/secrets.
-- **Performance:** Bottlenecks, O(n^3) algorithms, unbounded loops over DB calls.
-- **Architecture:** Breaking MVC boundaries, cross-module coupling, convention violations.
-- **Principles:** YAGNI violations, KISS violations, DRY violations (excessive code duplication).
-- **Evidence / Done-Criteria Drift:** Missing required artifacts, placeholder-only wiring, missing entrypoints, unproven completion criteria, or runtime contract mismatches.
-- **Reachability Failure:** Orphan components/services/hooks/routes/workers/commands/providers/reducers, unmounted UI, unregistered routes, uncalled data loaders, unused providers, disconnected actions, or any runtime-facing artifact that cannot be reached from the declared entrypoint/caller.
-- **Scope Drift:** Scoped acceptance criteria omitted, behavior added outside `scope_lock`, or a task marked complete while part of its approved requirement remains unwired.
-- **Overscope Delivery Drift:** Implementing later-task deliverables or editing out-of-scope files without direct justification for the active task packet.
-- **Contract Substitution Drift:** Replacing a named framework/auth/transport/datastore/runtime boundary with a custom simplification without a spec amendment.
-- **Cross-Service Reality Failure:** Claiming end-to-end behavior across web/api/worker/extension boundaries while state only exists in local process memory or placeholder adapters.
-
-## Terminal Log Format
-
-Must log the Quality Gate result to the terminal for user visibility:
-
-- **Quick Pass:** `✓ Step 4 Quality Gate: Test PASS + Evidence PASS + Spec PASS + Review PASS (no Critical, no High, at most one Medium) - Auto-Approved`
-- **Hard-Won Pass:** `✓ Step 4 Quality Gate: Failed 2 rounds → Test PASS + Evidence PASS + Spec PASS + Review PASS (no Critical, no High, at most one Medium)`
-- **Preflight Fail:** `[x] Step 4 Quality Gate: PRECHECK_FAIL → compile/typecheck/build failed before tests mattered`
-- **Fix Needed:** `[~] Step 4 Quality Gate: Tests/spec/evidence failed → returned to implementer`
-- **Awaiting Rescue:** `[!] Step 4 Quality Gate: Failed 3 rounds! Awaiting user intervention...`
-
-## Working directory (parallel mode)
-
-When `hapo:develop` runs in Parallel Wave Mode (`references/parallel-waves.md`), every Stage A and Stage B command for a task executes **with that task's worktree as the working directory**. Gate evidence recorded from the worktree run feeds the task's verification receipt. Thresholds, retry counter, and the COLLAPSE protocol are identical to sequential mode. A COLLAPSE of one task does not cancel other in-flight tasks of the wave.
-
-## Post-merge integration check (per wave)
-
-After the orchestrator cherry-picks the last gate-passed task of a wave: run the project build **or** the affected test subset (never the full suite mid-flight — it runs once at develop completion). While this check fails, the next wave MUST NOT start.
+An unmounted UI, unregistered route, uncalled service/loader, disconnected
+worker/command/provider/reducer, missing artifact consumer, or other orphaned
+runtime-facing output is a review failure.

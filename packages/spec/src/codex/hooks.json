@@ -45,6 +45,11 @@
           },
           {
             "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/completion-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/completion-authority.cjs\""
+          },
+          {
+            "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\"",
             "commandWindows": "node \".codex/hooks/rules.cjs\""
           },
@@ -97,6 +102,11 @@
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/spec-gate.cjs\"",
             "commandWindows": "node \".codex/hooks/spec-gate.cjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/completion-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/completion-authority.cjs\""
           },
           {
             "type": "command",

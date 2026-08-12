@@ -18,10 +18,10 @@ try {
   const { execSync } = require('child_process');
 
   // ── Utilities ─────────────────────────────────────────────────────────────
-  function run(cmd, fallback = '') {
+  function run(cmd, fallback = '', cwd = process.cwd()) {
     try {
       return execSync(cmd, {
-        encoding: 'utf8', timeout: 3000,
+        cwd, encoding: 'utf8', timeout: 3000,
         stdio: ['pipe', 'pipe', 'pipe']
       }).trim();
     } catch { return fallback; }
@@ -40,6 +40,21 @@ try {
     } catch { /* fail-open */ }
   }
 
+  function projectRoot() {
+    const configured = typeof process.env.CLAUDE_PROJECT_DIR === 'string'
+      ? process.env.CLAUDE_PROJECT_DIR.trim()
+      : '';
+    if (configured) {
+      try { return fs.realpathSync(path.resolve(configured)); } catch { /* continue */ }
+    }
+
+    const installedRoot = path.resolve(__dirname, '..', '..');
+    const installedHook = path.join(installedRoot, '.claude', 'hooks', path.basename(__filename));
+    if (fs.existsSync(installedHook)) return installedRoot;
+
+    try { return fs.realpathSync(process.cwd()); } catch { return path.resolve(process.cwd()); }
+  }
+
   /** Read .claude/runtime.json config */
   function readRuntime(cwd) {
     try {
@@ -50,8 +65,7 @@ try {
 
   // ── Project Detection ──────────────────────────────────────────────────────
 
-  function detectProjectType() {
-    const cwd = process.cwd();
+  function detectProjectType(cwd) {
     if (fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml')) ||
         fs.existsSync(path.join(cwd, 'lerna.json'))) return 'monorepo';
     try {
@@ -62,8 +76,7 @@ try {
     return 'app';
   }
 
-  function detectPackageManager() {
-    const cwd = process.cwd();
+  function detectPackageManager(cwd) {
     if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml')))  return 'pnpm';
     if (fs.existsSync(path.join(cwd, 'yarn.lock')))        return 'yarn';
     if (fs.existsSync(path.join(cwd, 'bun.lockb')))        return 'bun';
@@ -71,10 +84,10 @@ try {
     return '';
   }
 
-  function detectFramework() {
+  function detectFramework(cwd) {
     try {
       const pkg = JSON.parse(
-        fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')
+        fs.readFileSync(path.join(cwd, 'package.json'), 'utf8')
       );
       const deps = { ...pkg.dependencies, ...pkg.devDependencies };
       if (deps['next'])        return 'next';
@@ -185,31 +198,32 @@ try {
   const payload = stdin ? JSON.parse(stdin) : {};
   const source  = payload.source || 'unknown';
   const envFile = process.env.CLAUDE_ENV_FILE;
-  const cwd     = process.cwd();
+  const cwd     = projectRoot();
   const runtime = readRuntime(cwd);
+  try { require('./completion-authority-state.cjs').clearState(cwd, payload.session_id); } catch { /* old installs remain fail-open */ }
 
   // Check CafeKit update in parallel with project detection (async, fail-open).
   const updateCheckPromise = checkCafeKitUpdate(cwd);
 
   // Project detection
   const projectType = runtime.project?.type !== 'auto'
-    ? (runtime.project?.type || detectProjectType())
-    : detectProjectType();
+    ? (runtime.project?.type || detectProjectType(cwd))
+    : detectProjectType(cwd);
 
   const packageManager = runtime.project?.packageManager !== 'auto'
-    ? (runtime.project?.packageManager || detectPackageManager())
-    : detectPackageManager();
+    ? (runtime.project?.packageManager || detectPackageManager(cwd))
+    : detectPackageManager(cwd);
 
   const framework = runtime.project?.framework !== 'auto'
-    ? (runtime.project?.framework || detectFramework())
-    : detectFramework();
+    ? (runtime.project?.framework || detectFramework(cwd))
+    : detectFramework(cwd);
 
   // Static environment
-  const gitBranch  = run('git branch --show-current');
-  const gitUrl     = run('git remote get-url origin');
-  const gitRoot    = run('git rev-parse --show-toplevel');
+  const gitBranch  = run('git branch --show-current', '', cwd);
+  const gitUrl     = run('git remote get-url origin', '', cwd);
+  const gitRoot    = run('git rev-parse --show-toplevel', '', cwd);
   const nodeVer    = process.version;
-  const pythonVer  = run('python3 --version') || run('python --version');
+  const pythonVer  = run('python3 --version', '', cwd) || run('python --version', '', cwd);
   const user       = process.env.USERNAME || process.env.USER
                      || process.env.LOGNAME || os.userInfo().username;
   const timezone   = Intl.DateTimeFormat().resolvedOptions().timeZone;

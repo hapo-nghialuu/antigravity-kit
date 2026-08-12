@@ -442,7 +442,7 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
       fs.readFileSync(path.join(projectRoot, '.codex', 'hooks.json'), 'utf8')
     );
     const handlers = allHookHandlers(config);
-    assert.equal(handlers.length, 14);
+    assert.equal(handlers.length, 16);
     for (const handler of handlers) {
       assert.doesNotMatch(handler.commandWindows, /\$\(/);
       assert.doesNotMatch(handler.commandWindows, /\bgit\b/i);

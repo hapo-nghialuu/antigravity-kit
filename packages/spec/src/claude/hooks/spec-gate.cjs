@@ -8,25 +8,95 @@
  * Blocks turn end when *newly-done* tasks lack a verification receipt.
  * Block contract (exit 0 + stdout): {"decision":"block","reason":"..."}.
  *
- * Safety: stop_hook_active loop guard; runtime.spec.completion_gate=false
- * escape hatch (missing key → ON); cache is optimization only - every
- * done transition is validated even on first run / empty cache; crash → fail-open + hooks/.logs/hook-log.jsonl. Exit: 0 always.
+ * Safety: stop_hook_active loop guard; no worker-writable completion-gate
+ * bypass exists; cache is optimization only - every
+ * done transition is validated even on first run / empty cache; crash → controlled block + hooks/.logs/hook-log.jsonl. Exit: 0 always.
  */
 
+const fs = require('fs');
+const path = require('path');
+
+function projectRoot(payload = {}) {
+  const configured = typeof process.env.CLAUDE_PROJECT_DIR === 'string'
+    ? process.env.CLAUDE_PROJECT_DIR.trim()
+    : '';
+  if (configured) {
+    try { return fs.realpathSync(path.resolve(configured)); } catch { /* continue */ }
+  }
+
+  const installedRoot = path.resolve(__dirname, '..', '..');
+  const installedHook = path.join(installedRoot, '.claude', 'hooks', path.basename(__filename));
+  if (fs.existsSync(installedHook)) return installedRoot;
+
+  const sourceFixture = typeof process.env.PROJECT_ROOT === 'string'
+    ? process.env.PROJECT_ROOT.trim()
+    : '';
+  if (sourceFixture) {
+    try { return fs.realpathSync(path.resolve(sourceFixture)); } catch { /* continue */ }
+  }
+
+  const legacy = typeof payload.cwd === 'string' ? payload.cwd.trim() : '';
+  if (legacy) {
+    try { return fs.realpathSync(path.resolve(legacy)); } catch { /* continue */ }
+  }
+  try { return fs.realpathSync(process.cwd()); } catch { return path.resolve(process.cwd()); }
+}
+
+function logCrash(error) {
+  try {
+    const d = path.join(__dirname, '.logs');
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+    fs.appendFileSync(
+      path.join(d, 'hook-log.jsonl'),
+      JSON.stringify({ ts: new Date().toISOString(), hook: 'spec-gate', status: 'crash', error: error.message }) + '\n'
+    );
+  } catch (_) {}
+}
+
+function emitBlock(reason) {
+  process.stdout.write(JSON.stringify({ decision: 'block', reason }) + '\n');
+}
+
+function sessionIdentity(payload) {
+  const candidates = [
+    payload && payload.session_id,
+    payload && payload.sessionId,
+    payload && payload.sessionID,
+    payload && payload.session && payload.session.id,
+  ];
+  return candidates.find((value) => typeof value === 'string' && value.trim() !== '') || null;
+}
+
 try {
-  const fs   = require('fs');
-  const path = require('path');
   const policyPath = path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs');
-  const POLICY = require(policyPath);
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
-  if (!stdin) process.exit(0);
+  if (!stdin) throw new Error('hook payload is empty');
 
   const payload = JSON.parse(stdin);
-  const cwd     = payload.cwd || process.cwd();
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('hook payload must be a JSON object');
+  }
 
   // Never re-block a continuation caused by our own block (infinite-loop guard).
   if (payload.stop_hook_active === true) process.exit(0);
+
+  let POLICY;
+  let RESOLVER;
+  try {
+    POLICY = require(policyPath);
+    RESOLVER = require(path.join(__dirname, '..', 'scripts', 'spec-resolver.cjs'));
+    if (typeof POLICY.validateCanonicalReceipt !== 'function'
+      || typeof POLICY.completionDecisionForSpec !== 'function') {
+      throw new Error('shared workflow policy lacks completion authority functions');
+    }
+  } catch (error) {
+    logCrash(error);
+    emitBlock(`Completion gate unavailable: shared workflow policy could not be loaded (${error.message}). Repair ${policyPath} before completing tasks.`);
+    process.exit(0);
+  }
+
+  const cwd     = projectRoot(payload);
 
   // Missing/malformed runtime.json keeps the gate ON (fail-closed, valve 3 style).
   let runtime = {};
@@ -34,30 +104,51 @@ try {
     const rp = path.join(cwd, '.claude', 'runtime.json');
     if (fs.existsSync(rp)) runtime = JSON.parse(fs.readFileSync(rp, 'utf8'));
   } catch { /* gate stays on */ }
-  if (runtime.spec && runtime.spec.completion_gate === false) process.exit(0);
-
-  // Active-spec discovery — same rules as spec-state.cjs.
-  const baseDir   = process.env.PROJECT_ROOT || cwd;
-  const specsPath = path.join(baseDir, runtime.paths?.specs || 'specs');
-  if (!fs.existsSync(specsPath)) process.exit(0);
-
-  let activeSpec = null;
-  let featureName = null;
-  for (const entry of fs.readdirSync(specsPath, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const specFile = path.join(specsPath, entry.name, 'spec.json');
-    if (!fs.existsSync(specFile)) continue;
-    try {
-      const specData = JSON.parse(fs.readFileSync(specFile, 'utf8'));
-      if (specData.status === 'in_progress' || specData.status === 'in-progress') {
-        activeSpec = specData;
-        featureName = entry.name;
-        break;
-      }
-    } catch { /* skip bad JSON */ }
+  // Active-spec discovery via shared resolver — explicit target if present, else fail on ambiguity.
+  const baseDir   = cwd;
+  const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
+  const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
+  const resolved = RESOLVER.resolveActiveSpec({ projectRoot: baseDir, runtime, explicitFeature, explicitPath });
+  if (!resolved) process.exit(0);
+  if (resolved.error === 'multiple_active') {
+    process.stdout.write(JSON.stringify({
+      decision: 'block',
+      reason: `Completion gate: multiple active specs detected (${resolved.candidates.join(', ')}). Provide explicit feature target or resolve ambiguity before completing tasks. Candidates: ${resolved.candidates.join(', ')}`
+    }) + '\n');
+    process.exit(0);
   }
-  if (!activeSpec) process.exit(0);
+  if (resolved.error === 'invalid_specs') {
+    process.stdout.write(JSON.stringify({
+      decision: 'block',
+      reason: `Completion gate: invalid spec JSON detected (${resolved.candidates.join(', ')}): ${resolved.reason}. Fix or remove malformed spec.json before completing tasks.`
+    }) + '\n');
+    process.exit(0);
+  }
+  if (resolved.error === 'explicit_not_found' || resolved.error === 'explicit_malformed') {
+    process.stdout.write(JSON.stringify({
+      decision: 'block',
+      reason: `Completion gate: explicit spec target invalid (${resolved.error}): ${resolved.reason || resolved.explicitFeature || resolved.explicitPath || 'unknown'}. Provide a valid feature target inside configured specs root.`
+    }) + '\n');
+    process.exit(0);
+  }
+  if (resolved.error) process.exit(0);
 
+  const activeSpec = resolved.spec;
+  const featureName = resolved.featureName;
+  const specsPath = resolved.specsDir;
+  const runtimeContext = POLICY.deriveRuntimeContext({
+    projectRoot: baseDir,
+    specsRoot: specsPath,
+    specFile: resolved.specFile || path.join(specsPath, featureName, 'spec.json'),
+    featureName,
+    runtimeSession: sessionIdentity(payload),
+  });
+
+  const configuredGate = runtime.spec?.completion_gate;
+  if (configuredGate !== undefined && configuredGate !== true) {
+    emitBlock('Completion gate: runtime.spec.completion_gate is a worker-writable flag, not an authorization; no completion-gate bypass is supported. Remove the flag and satisfy the gate.');
+    process.exit(0);
+  }
   const taskRegistry = activeSpec.task_registry || {};
   const cacheFile = path.join(__dirname, '.logs', 'spec-gate-last.json');
   const cacheExists = fs.existsSync(cacheFile);
@@ -90,12 +181,12 @@ try {
   const allDoneTasks = Object.keys(taskRegistry).filter((tp) =>
     (taskRegistry[tp]?.status || 'pending') === 'done'
   );
+  const receiptBodies = new Map();
   // /m so ^ matches line starts (Evidence is never at byte 0 of the file).
   // legacy heading aliases: read-compat only, no longer advertised
   const EVID_RE = /^#{2,3}\s+(Evidence|Task Test Plan & Verification Evidence|Verification & Evidence)\b/m;
   const PASS_MARKER_RE = /^\s*Verification:\s*PASS\s*$/m;
   const LEGACY_SUCCESS_RE = /^\s*(?:PASS(?:ED)?|✓)(?:\s*:|$)|exit\s+code\s*[:=]?\s*0\b/im;
-  const EXPLICIT_FAILURE_RE = /\bFAIL(?:ED|URE|URES|ING)?\b|tests?\s+failed|exit\s+code\s*[:=]?\s*[1-9]\d*|\b0\s+tests?\b/i;
 
   /** Body of first Evidence heading until next same-or-higher heading. */
   function evidenceBody(text) {
@@ -109,32 +200,33 @@ try {
     let end = lines.length;
     for (let i = start; i < lines.length; i++) {
       const hm = lines[i].match(/^(#{1,6})\s+/);
-      if (hm && hm[1].length <= level) { end = i; break; }
+      const isTapMetadata = typeof POLICY.isTapMetadataHeading === 'function'
+        && POLICY.isTapMetadataHeading(lines[i]);
+      if (hm && hm[1].length <= level && !isTapMetadata) { end = i; break; }
     }
     return lines.slice(start, end).join('\n');
   }
 
-  function validateCanonicalReceipt(body) {
-    const fails = [];
-    if (!/^\s*Verification:\s*PASS\s*$/m.test(body)) fails.push('verification_state');
-    if (!/^\s*Command(?:\(s\))?\s*:/m.test(body)) fails.push('command');
-    if (!/^\s*Exit\s*:|exit\s+code\s*[:=]|\bResult\s*:\s*PASS\b/im.test(body)) fails.push('exit_result');
-    const hasBase = /^\s*Base[ \t]*:[ \t]*\S/im.test(body);
-    const hasHead = /^\s*Head[ \t]*:[ \t]*\S/im.test(body);
-    const hasBaseSha = /\bbase_sha[ \t]*:[ \t]*\S/im.test(body);
-    const hasHeadSha = /\bhead_sha[ \t]*:[ \t]*\S/im.test(body);
-    if (!((hasBase && hasHead) || (hasBaseSha && hasHeadSha))) fails.push('provenance');
-    if (/\bartifact\b/i.test(body) && !/sha256:/i.test(body)) fails.push('artifact_hash');
-    return fails;
+  function validateCanonicalReceipt(body, options) {
+    return POLICY.validateCanonicalReceipt(body, options);
   }
 
   // Receipt checks a–h → failed letter list.
   // a: file + Status header has "done"; b: Evidence heading; c: no {{...}} + unambiguous PASS; d: completed_at; e: command; f: exit/result; g: provenance; h: artifact hash
   function safeTaskFile(featureDir, taskPath) {
+    const resolvedFeature = path.resolve(featureDir);
     const target = path.resolve(featureDir, taskPath);
-    const relative = path.relative(featureDir, target);
-    // sibling-prefix safe: must not be .., ../..., or absolute (cross-platform)
+    const relative = path.relative(resolvedFeature, target);
     if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+    if (!fs.existsSync(target)) return null;
+    try {
+      const canonicalFeature = fs.realpathSync(resolvedFeature);
+      const canonicalTarget = fs.realpathSync(target);
+      const rel = path.relative(canonicalFeature, canonicalTarget);
+      if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return null;
+    } catch {
+      return null;
+    }
     return target;
   }
 
@@ -150,21 +242,28 @@ try {
     if (!statusLine || !/\bdone\b/i.test(statusLine)) fails.push('a');
 
     const body = evidenceBody(text);
+    if (body !== null) receiptBodies.set(taskPath, body);
     if (body === null || !EVID_RE.test(text)) {
       fails.push('b');
     } else if (
       /\{\{[^}]+\}\}/.test(body) ||
-      EXPLICIT_FAILURE_RE.test(body) ||
       !(PASS_MARKER_RE.test(body) || LEGACY_SUCCESS_RE.test(body))
     ) {
       fails.push('c');
     } else {
-      // Canonical receipt checks for done tasks
-      const canonicalFails = validateCanonicalReceipt(body);
-      const map = { verification_state: 'c', command: 'e', exit_result: 'f', provenance: 'g', artifact_hash: 'h' };
+      // Canonical receipt checks for done tasks — delegated to shared validator (single authority)
+      const canonicalFails = validateCanonicalReceipt(body, POLICY.receiptValidatorOptions(taskRegistry[taskPath], {
+        runtimeContext,
+        requireProvenanceBinding: true,
+      }));
+      const map = { verification_state: 'c', command: 'e', exit_result: 'f', provenance: 'g', artifact_hash: 'h', artifact_declaration: 'h', placeholder: 'c', shared_validator: 'c', validator_unavailable: 'c' };
       for (const cf of canonicalFails) {
-        if (cf === 'verification_state') {
-          if (!PASS_MARKER_RE.test(body) && !fails.includes('c')) fails.push('c');
+        if (cf === 'verification_state' || cf === 'shared_validator' || cf === 'validator_unavailable') {
+          if (!fails.includes('c')) fails.push('c');
+          continue;
+        }
+        if (cf === 'placeholder') {
+          if (!fails.includes('c')) fails.push('c');
           continue;
         }
         const letter = map[cf];
@@ -187,6 +286,15 @@ try {
     .map((tp) => ({ taskPath: tp, fails: checkReceipt(tp) }))
     .filter((f) => f.fails.length > 0);
 
+  const firstReceiptTask = allDoneTasks.find((taskPath) => receiptBodies.has(taskPath));
+  const completion = allDoneTasks.length > 0 && Object.prototype.hasOwnProperty.call(activeSpec, 'workflow_policy')
+    ? POLICY.completionDecisionForSpec(activeSpec, {
+      runtimeContext,
+      executionReceipt: firstReceiptTask ? receiptBodies.get(firstReceiptTask) : null,
+      taskContext: firstReceiptTask ? taskRegistry[firstReceiptTask] : null,
+    })
+    : null;
+
   // Always persist status transitions, including done → pending. Keep
   // failing done tasks at their previous cached status so a stale valid
   // entry cannot mask a mutated receipt on the next Stop; with
@@ -203,10 +311,13 @@ try {
   } catch { /* fail-open */ }
 
   if (allDoneTasks.length === 0) process.exit(0);
-  if (failures.length === 0) process.exit(0);
+  const completionBlocked = completion && completion.completion !== 'complete' && completion.completion !== 'not_applicable';
+  if (failures.length === 0 && !completionBlocked) process.exit(0);
 
   const lines = [
-    `⚠️ Completion gate: ${failures.length} newly-done task(s) lack a verification receipt.`,
+    failures.length > 0
+      ? `⚠️ Completion gate: ${failures.length} newly-done task(s) lack a verification receipt.`
+      : '⚠️ Completion gate: workflow completion proof is incomplete.',
   ];
   for (const { taskPath, fails } of failures) {
     lines.push(`- \`${taskPath}\`: failed check(s) ${fails.join(', ')}`);
@@ -214,16 +325,17 @@ try {
       `  Fix: add \`Verification: PASS\` plus commands and successful outcomes to \`## Evidence\` in \`specs/${featureName}/${taskPath}\`, then re-sync spec.json`
     );
   }
+  if (completionBlocked) {
+    lines.push(`- Completion decision unfinished: ${completion.blocker || 'required workflow proof is missing.'}`);
+    if (Array.isArray(completion.missingProof) && completion.missingProof.length > 0) {
+      lines.push(`  Missing proof: ${completion.missingProof.join(', ')}`);
+    }
+  }
   process.stdout.write(JSON.stringify({ decision: 'block', reason: lines.slice(0, 8).join('\n') }) + '\n');
   process.exit(0);
 
 } catch (e) {
-  try {
-    const fs = require('fs'), p = require('path');
-    const d = p.join(__dirname, '.logs');
-    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-    fs.appendFileSync(p.join(d, 'hook-log.jsonl'),
-      JSON.stringify({ ts: new Date().toISOString(), hook: 'spec-gate', status: 'crash', error: e.message }) + '\n');
-  } catch (_) {}
+  logCrash(e);
+  emitBlock(`Completion gate controlled failure: ${e.message}. Completion is blocked until the hook is repaired.`);
   process.exit(0);
 }
