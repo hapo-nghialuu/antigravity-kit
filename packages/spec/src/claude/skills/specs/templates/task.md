@@ -7,6 +7,13 @@
 **Dependencies:** {{DEPENDENCIES}}
 **Spec:** specs/{{FEATURE_NAME}}/
 
+The owning `spec.json.workflow_policy` snapshot is authoritative for this task.
+`needsInspection` and `needsExecutionProof` are separate capabilities; Standard
+requires both, while Direct requires execution proof. Do not encode an agent
+chain in this task. The canonical verdicts are `PASS`, `PASS_WITH_WARNINGS`,
+`FAIL`, and `BLOCKED`. Legacy diagnostic inputs `PARTIAL` and `NO_TESTS` are
+normalized to unfinished `BLOCKED`; they are not canonical verdicts.
+
 ## Context
 
 - **Why**: {{Business/user reason this task exists}}
@@ -48,12 +55,22 @@
 | `{{FILE_PATH_1}}` | Create / Modify / Delete | {{DESCRIPTION_1}} |
 | `{{FILE_PATH_2}}` | Create / Modify / Delete | {{DESCRIPTION_2}} |
 
+### Optional artifact declaration
+
+If this task produces a hashable compiled or generated output, the producer MUST add
+`task_registry[path].artifacts` as a non-empty JSON array of safe relative path
+strings. Omit the field when the task has no such artifact. A `Related Files`
+row (`Create`, `Modify`, `Delete`, or `Read`) is not an artifact declaration by
+itself. The receipt must declare each artifact path with its own `SHA-256:` value
+containing exactly 64 hexadecimal characters.
+
 ## Completion Criteria
 
 - [ ] {{Criteria 1 — observable output or artifact, maps to acceptance criteria R{{REQ_NUMBER}}}}
 - [ ] {{Criteria 2 — measurable behavior or negative-path outcome}}
 - [ ] {{Criteria 3 — maps directly to acceptance criteria from requirements.md and can be proven below}}
 - [ ] {{Criteria 4 — no orphaned component/service/route/command; created runtime-facing work is reachable from the declared entrypoint or explicitly deferred to a named integration task}}
+- [ ] Completion decision is canonical: only literal `PASS` may complete after a canonical execution receipt bound to the runtime's expected Base/Head pair and every `workflow_policy.proof_obligations` proof; `PASS_WITH_WARNINGS` stays unfinished, `FAIL` needs fix-and-rerun, and `BLOCKED` plus legacy diagnostics record the blocker or missing proof.
 
 ## Evidence
 
@@ -61,6 +78,8 @@ This section is both the task-level test plan and the proof checklist. Keep it s
 Select the proof by task risk; do not run every test type for every task.
 
 Verification: PENDING
+Canonical verdict: PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
+Legacy diagnostic input: PARTIAL | NO_TESTS -> unfinished BLOCKED
 
 - Logic/data/validator task: include unit tests.
 - Stateful UI/component task: include component or integration tests.
@@ -74,6 +93,7 @@ Verification: PENDING
 - [ ] Automated verification (unit/component/integration/E2E as applicable)
   - Command(s): `{{TYPECHECK / TEST / BUILD COMMANDS OR N/A}}`
   - Expected proof: {{What output, exit code, or report proves success}}
+  - Runtime binding: `policy.createReceiptBinding({ base, head })` must be supplied to completion/flash adapters; a valid-length receipt pair without expected binding is not proof of identity.
 - [ ] Artifact / runtime verification
   - Inspect: `{{artifact path | route | UI state | DB object | manifest entry}}`
   - Expect: {{Observable result that proves the task is really wired}}

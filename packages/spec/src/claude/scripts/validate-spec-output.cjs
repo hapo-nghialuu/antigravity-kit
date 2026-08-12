@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const POLICY = require('./workflow-policy.cjs');
 
 const TASK_PATH_RE = /^tasks\/task-R\d+-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const REQUIRED_REGISTRY_KEYS = [
@@ -23,6 +24,7 @@ const REQUIRED_REGISTRY_KEYS = [
 const APPROVAL_SCHEMA_VERSION = '2.0';
 const LEGACY_APPROVAL_ERROR =
   `Legacy approval field "approved" detected. Migration required: replace "approved" with "agent_validated" and "user_approved" per schema v${APPROVAL_SCHEMA_VERSION} (schema_version: "${APPROVAL_SCHEMA_VERSION}"). See spec-state.json template. Refusing to infer user approval.`;
+const FEATURE_RECEIPT_FILE = 'feature-receipt.md';
 
 function usage() {
   console.error('Usage: node .claude/scripts/validate-spec-output.cjs specs/<feature>');
@@ -50,15 +52,121 @@ function readJson(filePath, errors) {
   }
 }
 
-function listTaskFiles(specDir) {
-  const tasksDir = path.join(specDir, 'tasks');
-  if (!fs.existsSync(tasksDir)) return [];
+function isPathInside(parent, child) {
+  const relative = path.relative(path.resolve(parent), path.resolve(child));
+  return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
 
-  return fs
-    .readdirSync(tasksDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => `tasks/${entry.name}`)
-    .sort();
+function isMissingError(error) {
+  return error && (error.code === 'ENOENT' || error.code === 'ENOTDIR');
+}
+
+function validateSpecRoot(specDir, errors) {
+  let rootStat;
+  try {
+    rootStat = fs.lstatSync(specDir);
+  } catch (error) {
+    errors.push(`${specDir}: spec directory does not exist (${error.message})`);
+    return null;
+  }
+  if (rootStat.isSymbolicLink()) {
+    errors.push(`${specDir}: spec directory cannot be a symlink`);
+    return null;
+  }
+  if (!rootStat.isDirectory()) {
+    errors.push(`${specDir}: spec path must be a directory`);
+    return null;
+  }
+  try {
+    return fs.realpathSync(specDir);
+  } catch (error) {
+    errors.push(`${specDir}: spec directory canonicalization failed (${error.message})`);
+    return null;
+  }
+}
+
+function inspectSpecArtifact(specDir, canonicalSpecDir, relativePath, label, errors, { required = false, type = 'file' } = {}) {
+  const target = path.resolve(specDir, relativePath);
+  if (!isPathInside(specDir, target)) {
+    errors.push(`${label}: path must stay inside the spec directory`);
+    return null;
+  }
+
+  const relative = path.relative(path.resolve(specDir), target);
+  let current = path.resolve(specDir);
+  for (const segment of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch (error) {
+      if (isMissingError(error)) {
+        if (required) errors.push(`${label}: missing`);
+        return null;
+      }
+      errors.push(`${label}: cannot be inspected (${error.message})`);
+      return null;
+    }
+    if (stat.isSymbolicLink()) {
+      errors.push(`${label}: symlink is not allowed (${current})`);
+      return null;
+    }
+  }
+
+  let stat;
+  try {
+    stat = fs.lstatSync(target);
+  } catch (error) {
+    if (isMissingError(error)) {
+      if (required) errors.push(`${label}: missing`);
+      return null;
+    }
+    errors.push(`${label}: cannot be inspected (${error.message})`);
+    return null;
+  }
+  const typeMatches = type === 'directory' ? stat.isDirectory() : stat.isFile();
+  if (!typeMatches) {
+    errors.push(`${label}: must be a regular ${type}`);
+    return null;
+  }
+
+  let canonicalTarget;
+  try {
+    canonicalTarget = fs.realpathSync(target);
+  } catch (error) {
+    errors.push(`${label}: canonicalization failed (${error.message})`);
+    return null;
+  }
+  if (!isPathInside(canonicalSpecDir, canonicalTarget)) {
+    errors.push(`${label}: canonical path escapes the spec directory`);
+    return null;
+  }
+  return { path: target, canonicalPath: canonicalTarget, stat };
+}
+
+function listTaskFiles(specDir, canonicalSpecDir, errors) {
+  const tasks = inspectSpecArtifact(specDir, canonicalSpecDir, 'tasks', 'tasks directory', errors, {
+    type: 'directory',
+  });
+  if (!tasks) return [];
+
+  let entries;
+  try {
+    entries = fs.readdirSync(tasks.path, { withFileTypes: true });
+  } catch (error) {
+    errors.push(`tasks directory: cannot be read (${error.message})`);
+    return [];
+  }
+  const files = [];
+  for (const entry of entries) {
+    const relative = path.join('tasks', entry.name).split(path.sep).join('/');
+    const artifact = inspectSpecArtifact(specDir, canonicalSpecDir, relative, relative, errors);
+    if (artifact && !entry.name.endsWith('.md')) {
+      errors.push(`${relative}: unexpected task artifact; only .md task files are allowed`);
+    }
+    if (artifact && entry.name.endsWith('.md')) files.push(relative);
+  }
+  return files.sort();
 }
 
 function hasHeading(content, heading) {
@@ -306,7 +414,150 @@ function validateRelatedFiles(taskPath, content, errors) {
   }
 }
 
-function validateStateTransitions(spec, errors) {
+function validateArtifactDeclaration(taskPath, entry, errors) {
+  if (!Object.prototype.hasOwnProperty.call(entry || {}, 'artifacts')) return;
+  const artifacts = entry.artifacts;
+  if (!Array.isArray(artifacts) || artifacts.length === 0) {
+    errors.push(`spec.json.task_registry.${taskPath}.artifacts: must be a non-empty array of safe relative paths`);
+    return;
+  }
+
+  const seen = new Set();
+  for (const artifact of artifacts) {
+    const invalid = typeof artifact !== 'string'
+      || artifact.trim() === ''
+      || artifact !== artifact.trim()
+      || /^\{\{[^}]+\}\}$/.test(artifact)
+      || /^(?:TBD|TODO|N\/A|NA|NONE|UNKNOWN|PENDING|PLACEHOLDER|REPLACE_ME)$/i.test(artifact)
+      || /^(?:[A-Za-z]:[\\/]|[\\/]|https?:\/\/)/.test(artifact)
+      || artifact.split(/[\\/]+/).includes('..')
+      || seen.has(artifact);
+    if (invalid) {
+      errors.push(`spec.json.task_registry.${taskPath}.artifacts: each entry must be a unique safe relative path (${String(artifact)})`);
+      continue;
+    }
+    seen.add(artifact);
+  }
+}
+
+function workflowPolicyContext(spec, errors) {
+  if (Object.prototype.hasOwnProperty.call(spec, 'workflow_policy')) {
+    const result = POLICY.validateWorkflowPolicySnapshot(spec.workflow_policy);
+    if (!result.valid) {
+      for (const error of result.errors) errors.push(error);
+      return { explicit: true, policy: null, bounded: false, strict: false };
+    }
+    return {
+      explicit: true,
+      policy: spec.workflow_policy,
+      bounded: spec.workflow_policy.artifact_profile === 'bounded',
+      strict: spec.workflow_policy.artifact_profile === 'strict',
+    };
+  }
+
+  const legacyTier = spec.design_context?.execution_tier;
+  errors.push(
+    legacyTier
+      ? 'spec.json.workflow_policy: missing persisted snapshot; design_context.execution_tier is a read-only legacy adapter and cannot establish workflow authority or readiness'
+      : 'spec.json.workflow_policy: missing persisted snapshot; the current spec boundary requires an explicit workflow_policy',
+  );
+  return { explicit: false, policy: null, bounded: false, strict: false };
+}
+
+function validateFeatureReceipt(spec, context, errors, receiptArtifact) {
+  if (!context.explicit || !context.bounded) return;
+  if (!receiptArtifact) {
+    errors.push(`${FEATURE_RECEIPT_FILE}: required by bounded Standard workflow policy`);
+    return;
+  }
+  let body;
+  try {
+    body = fs.readFileSync(receiptArtifact.path, 'utf8');
+  } catch (error) {
+    errors.push(`${FEATURE_RECEIPT_FILE}: cannot be read (${error.message})`);
+    return;
+  }
+  // A spec-ready artifact is a design boundary, not execution closeout. Keep a
+  // pending receipt explicit. Feature receipts are informational and never own
+  // completion authority; task Evidence receipts are the only closeout source.
+  if (/^\s*Verification:\s*PENDING\s*$/im.test(body)) return;
+  errors.push(`${FEATURE_RECEIPT_FILE}: informational only; keep Verification: PENDING and use task Evidence for completion authority`);
+}
+
+const SPEC_PLACEHOLDER_RE = /\{\{[^}\n]+\}\}|<[^>\n]+>|\b(?:TBD|TODO|N\/A|NA|NONE|UNKNOWN|PENDING|PLACEHOLDER|REPLACE_ME)\b|\.{3,}/i;
+const SPEC_TEMPLATE_GUIDANCE_RE = /\b(?:to be filled|filled by (?:the )?(?:feature owner|user)|fill (?:this|in)|replace (?:this|with)|add (?:the )?real)\b/i;
+
+function hasSpecPlaceholders(content) {
+  return SPEC_PLACEHOLDER_RE.test(content) || SPEC_TEMPLATE_GUIDANCE_RE.test(content);
+}
+
+function validateBoundedReadiness(spec, requirementsText, designText, errors) {
+  if (spec.ready_for_implementation !== true) return;
+
+  const source = spec.scope_lock?.source;
+  if (typeof source !== 'string' || source.trim() === '' || hasSpecPlaceholders(source)) {
+    errors.push('spec.json.scope_lock.source: Standard bounded readiness requires a concrete scope source');
+  }
+  if (hasSpecPlaceholders(requirementsText)) {
+    errors.push('requirements.md: Standard bounded readiness rejects placeholders');
+  }
+  if (hasSpecPlaceholders(designText)) {
+    errors.push('design.md: Standard bounded readiness rejects placeholders');
+  }
+}
+
+function validateResearchPointer(specDir, canonicalSpecDir, spec, errors) {
+  if (!Object.prototype.hasOwnProperty.call(spec, 'research') || spec.research === null) return;
+  const pointer = spec.research && typeof spec.research === 'object' && !Array.isArray(spec.research)
+    ? spec.research.path
+    : spec.research;
+  if (
+    typeof pointer !== 'string'
+    || pointer.trim() === ''
+    || pointer !== pointer.trim()
+    || path.isAbsolute(pointer)
+    || /^[A-Za-z]:[\\/]/.test(pointer)
+    || pointer.split(/[\\/]+/).includes('..')
+  ) {
+    errors.push('spec.research: must be a safe relative path inside the spec directory');
+    return;
+  }
+  inspectSpecArtifact(specDir, canonicalSpecDir, pointer, 'spec.research path', errors);
+}
+
+function hasConcreteResearchEvidence(section) {
+  const placeholder = /\{\{[^}]+\}\}|<[^>]+>|\[[^\]]+\]|\b(?:TBD|TODO|N\/A|NA|NONE|UNKNOWN|PENDING|PLACEHOLDER|REPLACE_ME)\b/i;
+  const boilerplate = /^(?:this section is mandatory\b.*|(?:result or skip rationale|relevant files\/modules|existing patterns\/contracts|tests or checks affected|decision|why it fits the current codebase|why it fits current external constraints|task implication|test\/verification implication)\s*:?)$/i;
+  const generic = /^(?:finding|gap|alternative)\s+\d+\b|^(?:codebase scout|external \/ current research)\s*:\s*required\s*\/\s*skipped/i;
+
+  return section.split('\n').some((rawLine) => {
+    const line = rawLine
+      .trim()
+      .replace(/^[-*+]\s*/, '')
+      .replace(/^\||\|$/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/`/g, '')
+      .trim();
+    if (!line || line.endsWith(':') || placeholder.test(line) || boilerplate.test(line) || generic.test(line)) return false;
+    return line.length >= 8;
+  });
+}
+
+function validateResearchArtifact(researchArtifact, errors, requireConcrete = true) {
+  if (!researchArtifact) {
+    errors.push('research.md: missing Evidence Summary for non-trivial spec');
+    return;
+  }
+  const research = fs.readFileSync(researchArtifact.path, 'utf8');
+  const evidence = extractSection(research, 'Evidence Summary');
+  if (evidence === null) {
+    errors.push('research.md: missing ## Evidence Summary');
+  } else if (requireConcrete && !hasConcreteResearchEvidence(evidence)) {
+    errors.push('research.md: Evidence Summary must contain concrete evidence; empty or placeholder content is not sufficient');
+  }
+}
+
+function validateStateTransitions(spec, errors, context = {}) {
   // Approval schema v2: generated, agent_validated, user_approved independent.
   // Legacy "approved" field is rejected fail-closed with migration guidance.
   const approvals = spec.approvals || {};
@@ -349,7 +600,10 @@ function validateStateTransitions(spec, errors) {
     if (hasLegacy) {
       errors.push(`spec.json.ready_for_implementation: cannot be true with legacy approval fields — migrate to agent_validated/user_approved`);
     }
-    for (const stage of ['requirements', 'design', 'tasks']) {
+    const stages = context.bounded && !(Array.isArray(spec.task_files) && spec.task_files.length > 0)
+      ? ['requirements', 'design']
+      : ['requirements', 'design', 'tasks'];
+    for (const stage of stages) {
       const approval = spec.approvals?.[stage];
       if (!approval || approval?.generated !== true || approval?.agent_validated !== true || approval?.user_approved !== true) {
         errors.push(`spec.json.ready_for_implementation: requires generated and agent_validated and user_approved ${stage} evidence (v2)`);
@@ -486,39 +740,47 @@ function validateDependencyTopology(spec, taskFiles, registry, taskRecords, erro
 function validateSpec(specDir) {
   const errors = [];
   const warnings = [];
-  const specJsonPath = path.join(specDir, 'spec.json');
-
-  if (!fs.existsSync(specDir)) {
-    errors.push(`${specDir}: spec directory does not exist`);
-    return { errors, warnings };
-  }
+  const canonicalSpecDir = validateSpecRoot(specDir, errors);
+  if (!canonicalSpecDir) return { errors, warnings };
 
   for (const forbidden of ['init.json', 'spec-state.json', 'hydration.md']) {
-    if (fs.existsSync(path.join(specDir, forbidden))) {
+    const artifact = inspectSpecArtifact(specDir, canonicalSpecDir, forbidden, forbidden, errors);
+    if (artifact) {
       errors.push(`${forbidden}: forbidden generated artifact`);
     }
   }
 
-  if (!fs.existsSync(specJsonPath)) {
-    errors.push('spec.json: missing');
+  const specJsonArtifact = inspectSpecArtifact(specDir, canonicalSpecDir, 'spec.json', 'spec.json', errors, { required: true });
+  if (!specJsonArtifact) return { errors, warnings };
+
+  const spec = readJson(specJsonArtifact.path, errors);
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    if (errors.length === 0) errors.push('spec.json: must contain a JSON object');
     return { errors, warnings };
   }
 
-  const spec = readJson(specJsonPath, errors);
-  if (!spec) return { errors, warnings };
+  const policyContext = workflowPolicyContext(spec, errors);
+  if (policyContext.explicit && Object.prototype.hasOwnProperty.call(spec, 'override_receipt')) {
+    errors.push('spec.json.override_receipt: duplicate legacy field; persist only workflow_policy.override_receipt');
+  }
 
   if (!spec.scope_lock || typeof spec.scope_lock !== 'object' || Array.isArray(spec.scope_lock)) {
     errors.push('spec.json.scope_lock: must be an object, not a boolean or array');
   }
 
   validateTimestamps(spec, errors);
-  validateStateTransitions(spec, errors);
+  validateStateTransitions(spec, errors, policyContext);
 
-  const taskFiles = listTaskFiles(specDir);
+  const taskFiles = listTaskFiles(specDir, canonicalSpecDir, errors);
   const taskFileSet = new Set(taskFiles);
+  const declaredTaskBundle = Array.isArray(spec.task_files) && spec.task_files.length > 0;
+  const requiresTaskBundle = taskFiles.length > 0 || declaredTaskBundle || policyContext.strict;
+  if (policyContext.strict && taskFiles.length === 0) {
+    errors.push('strict workflow policy requires at least one task file and task registry entry');
+  }
 
   if (!Array.isArray(spec.task_files)) {
-    errors.push('spec.json.task_files: missing array');
+    if (requiresTaskBundle) errors.push('spec.json.task_files: missing array');
     if (Array.isArray(spec.tasks)) {
       errors.push('spec.json.tasks: legacy field detected; use task_files');
     }
@@ -531,7 +793,7 @@ function validateSpec(specDir) {
   }
 
   if (!spec.task_registry || typeof spec.task_registry !== 'object' || Array.isArray(spec.task_registry)) {
-    errors.push('spec.json.task_registry: missing object keyed by task file path');
+    if (requiresTaskBundle) errors.push('spec.json.task_registry: missing object keyed by task file path');
   } else {
     const registryKeys = Object.keys(spec.task_registry).sort();
     if (JSON.stringify(registryKeys) !== JSON.stringify(taskFiles)) {
@@ -547,6 +809,7 @@ function validateSpec(specDir) {
           errors.push(`spec.json.task_registry.${registryPath}: missing ${key}`);
         }
       }
+      validateArtifactDeclaration(registryPath, entry, errors);
       if (entry && !Array.isArray(entry.dependencies)) {
         errors.push(`spec.json.task_registry.${registryPath}.dependencies: must be an array`);
       }
@@ -590,48 +853,62 @@ function validateSpec(specDir) {
     }
   }
 
-  const requirementsPath = path.join(specDir, 'requirements.md');
-  const designPath = path.join(specDir, 'design.md');
-  const researchPath = path.join(specDir, 'research.md');
+  const requirementsArtifact = inspectSpecArtifact(
+    specDir,
+    canonicalSpecDir,
+    'requirements.md',
+    'requirements.md',
+    errors,
+    { required: true },
+  );
+  const designArtifact = inspectSpecArtifact(
+    specDir,
+    canonicalSpecDir,
+    'design.md',
+    'design.md',
+    errors,
+    { required: true },
+  );
+  const researchArtifact = inspectSpecArtifact(specDir, canonicalSpecDir, 'research.md', 'research.md', errors);
+  const receiptArtifact = inspectSpecArtifact(specDir, canonicalSpecDir, FEATURE_RECEIPT_FILE, FEATURE_RECEIPT_FILE, errors);
+  validateResearchPointer(specDir, canonicalSpecDir, spec, errors);
 
-  if (!fs.existsSync(requirementsPath)) errors.push('requirements.md: missing');
-  if (!fs.existsSync(designPath)) errors.push('design.md: missing');
-
-  if (taskFiles.length > 0) {
-    if (!fs.existsSync(researchPath)) {
-      errors.push('research.md: missing Evidence Summary for non-trivial spec');
-    } else {
-      const research = fs.readFileSync(researchPath, 'utf8');
-      if (!/^##\s+Evidence Summary\s*$/m.test(research)) {
-        errors.push('research.md: missing ## Evidence Summary');
-      }
-    }
+  const requiresResearchArtifact = policyContext.explicit
+    && Boolean(policyContext.policy?.proof_obligations?.includes('needsResearchGrounding'));
+  if (requiresResearchArtifact) {
+    validateResearchArtifact(researchArtifact, errors, policyContext.explicit);
   }
+
+  validateFeatureReceipt(spec, policyContext, errors, receiptArtifact);
 
   let requirementIds = [];
   let subCriteriaIds = [];
-  if (fs.existsSync(requirementsPath)) {
-    const requirementsText = fs.readFileSync(requirementsPath, 'utf8');
+  let requirementsText = '';
+  let designText = '';
+  if (requirementsArtifact) {
+    requirementsText = fs.readFileSync(requirementsArtifact.path, 'utf8');
     requirementIds = extractRequirementIds(requirementsText);
     subCriteriaIds = extractSubCriteriaIds(requirementsText);
   }
+  if (designArtifact) designText = fs.readFileSync(designArtifact.path, 'utf8');
+  validateBoundedReadiness(spec, requirementsText, designText, errors);
 
   const coveredRequirementIds = new Set();
   const coveredSubCriteriaIds = new Set();
+  const mappedRequirementReferences = [];
   const taskRecords = new Map();
   // Cross-layer contract defs (opt-in): empty unless design.md uses
   // <!-- contract:NAME --> markers, so legacy specs are unaffected.
-  const contractDefs = fs.existsSync(designPath)
-    ? extractContractDefs(fs.readFileSync(designPath, 'utf8'))
-    : new Map();
+  const contractDefs = designArtifact ? extractContractDefs(designText) : new Map();
   if (taskFiles.length >= 5 && contractDefs.size === 0) {
     errors.push(
       'design.md: 5+ task spec requires contract blocks for BE/FE shared shapes (<!-- contract:NAME -->) — fail closed, not warning',
     );
   }
   for (const taskFile of taskFiles) {
-    const fullPath = path.join(specDir, taskFile);
-    const content = fs.readFileSync(fullPath, 'utf8');
+    const taskArtifact = inspectSpecArtifact(specDir, canonicalSpecDir, taskFile, taskFile, errors);
+    if (!taskArtifact) continue;
+    const content = fs.readFileSync(taskArtifact.path, 'utf8');
     validateTaskSections(taskFile, content, errors);
     validateTaskPlaceholders(taskFile, content, errors, warnings);
     validateRelatedFiles(taskFile, content, errors);
@@ -651,7 +928,15 @@ function validateSpec(specDir) {
       for (const token of match[1].split(',')) {
         const trimmed = token.trim();
         const major = trimmed.match(/^(\d+)(?:\.\d+)?$/);
-        if (major) coveredRequirementIds.add(`R${major[1]}`);
+        if (major) {
+          const requirementId = `R${major[1]}`;
+          const sub = trimmed.match(/^(\d+\.\d+)$/);
+          const subId = sub ? `R${sub[1]}` : null;
+          coveredRequirementIds.add(requirementId);
+          if (policyContext.strict) mappedRequirementReferences.push({ taskFile, token: trimmed, requirementId, subId });
+        } else if (policyContext.strict && trimmed !== '') {
+          errors.push(`${taskFile}: requirement mapping "${trimmed}" must use numeric IDs such as 1 or 1.1`);
+        }
         // Record the full sub-criterion (e.g. 3.4 -> R3.4) for per-criterion coverage.
         const sub = trimmed.match(/^(\d+\.\d+)$/);
         if (sub) coveredSubCriteriaIds.add(`R${sub[1]}`);
@@ -698,15 +983,32 @@ function validateSpec(specDir) {
 
   validateDependencyTopology(spec, taskFiles, spec.task_registry, taskRecords, errors);
 
-  for (const requirementId of requirementIds) {
-    if (!coveredRequirementIds.has(requirementId)) {
-      errors.push(`requirements.md:${requirementId}: not covered by any task`);
+  if (policyContext.strict) {
+    if (requirementIds.length === 0) {
+      errors.push('requirements.md: strict workflow requires numeric requirement IDs (for example Requirement 1 or R1)');
+    }
+    const knownRequirements = new Set(requirementIds);
+    const knownSubCriteria = new Set(subCriteriaIds);
+    for (const reference of mappedRequirementReferences) {
+      if (!knownRequirements.has(reference.requirementId)) {
+        errors.push(`${reference.taskFile}: requirement mapping "${reference.token}" references unknown requirement ${reference.requirementId}`);
+      } else if (reference.subId && !knownSubCriteria.has(reference.subId)) {
+        errors.push(`${reference.taskFile}: requirement mapping "${reference.token}" references unknown acceptance criterion ${reference.subId}`);
+      }
+    }
+  }
+
+  if (requiresTaskBundle) {
+    for (const requirementId of requirementIds) {
+      if (!coveredRequirementIds.has(requirementId)) {
+        errors.push(`requirements.md:${requirementId}: not covered by any task`);
+      }
     }
   }
 
   // Per-criterion coverage: every explicit R{N}.{M} literal in requirements.md
   // must appear in a numeric `_Requirements: x.y_` task mapping.
-  if (subCriteriaIds.length > 0) {
+  if (requiresTaskBundle && subCriteriaIds.length > 0) {
     for (const subId of subCriteriaIds) {
       if (!coveredSubCriteriaIds.has(subId)) {
         errors.push(`requirements.md:${subId}: acceptance criterion not covered by any task`);

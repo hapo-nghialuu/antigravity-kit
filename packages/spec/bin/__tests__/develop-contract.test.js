@@ -6,11 +6,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 
 const PACKAGE_ROOT = path.join(__dirname, '../..');
 const POLICY_PATH = path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs');
 const POLICY = require(POLICY_PATH);
+const PROVENANCE_HELPER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'));
 const DEVELOP = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/SKILL.md');
 const GATE = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/quality-gate.md');
 const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
@@ -18,6 +19,65 @@ const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
 const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
 const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/parallel-waves.md');
 const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
+const RUNTIME_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-policy-runtime-'));
+const RUNTIME_SPEC = path.join(RUNTIME_ROOT, 'specs', 'demo', 'spec.json');
+fs.mkdirSync(path.dirname(RUNTIME_SPEC), { recursive: true });
+fs.mkdirSync(path.join(RUNTIME_ROOT, 'src'), { recursive: true });
+fs.writeFileSync(path.join(RUNTIME_ROOT, 'src', 'app.js'), 'runtime fixture\n');
+fs.writeFileSync(RUNTIME_SPEC, JSON.stringify({ status: 'in_progress', feature_name: 'demo', task_registry: {} }));
+for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test'], ['add', '-A'], ['commit', '-qm', 'fixture']]) {
+  const result = spawnSync('git', ['-C', RUNTIME_ROOT, ...args], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+}
+const RUNTIME_CONTEXT = PROVENANCE_HELPER.deriveRuntimeContext({
+  projectRoot: RUNTIME_ROOT,
+  specsRoot: path.join(RUNTIME_ROOT, 'specs'),
+  specFile: RUNTIME_SPEC,
+  featureName: 'demo',
+  runtimeSession: 'implementation-session-1',
+});
+after(() => fs.rmSync(RUNTIME_ROOT, { recursive: true, force: true }));
+const EXPECTED_BASE = RUNTIME_CONTEXT.base;
+const EXPECTED_HEAD = RUNTIME_CONTEXT.head;
+const EXPECTED_PROVENANCE = { base: EXPECTED_BASE, head: EXPECTED_HEAD };
+const RECEIPT_BINDING = POLICY.createReceiptBinding(RUNTIME_CONTEXT);
+
+function initFixtureGit(root) {
+  for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test'], ['add', '-A'], ['commit', '-qm', 'fixture']]) {
+    const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  }
+}
+
+function bindFixtureReceipt(root, value, feature = 'demo', session = 'test') {
+  const context = PROVENANCE_HELPER.deriveRuntimeContext({
+    projectRoot: root,
+    specsRoot: path.join(root, 'specs'),
+    specFile: path.join(root, 'specs', feature, 'spec.json'),
+    featureName: feature,
+    runtimeSession: session,
+  });
+  return value.replaceAll('0123456789abcdef0123456789abcdef01234567', context.base)
+    .replaceAll('89abcdef0123456789abcdef0123456789abcdef', context.head);
+}
+
+function canonicalReceipt(command = 'pnpm test', extra = '') {
+  return `Verification: PASS\nCommand: ${command}\nExit: 0\nBase: ${EXPECTED_BASE}\nHead: ${EXPECTED_HEAD}\n${extra}`;
+}
+
+function canonicalFlashTask(overrides = {}) {
+  return {
+    status: 'in_progress',
+    receipt: 'FLASH_UNVERIFIED',
+    blocker: 'awaiting /hapo:test <feature>',
+    dependencyBlocked: true,
+    unblocks: false,
+    feature_name: 'demo',
+    runtime_context: RUNTIME_CONTEXT,
+    expected_provenance: { ...EXPECTED_PROVENANCE },
+    ...overrides,
+  };
+}
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -56,16 +116,17 @@ test('develop pre-state guard names executable policy contract', () => {
   assert.match(develop, /flash\+parallel fail-fast/i);
 });
 
-test('delegation plan uses only shipped agents and exact Deep sequence', () => {
-  const shipped = new Set(manifestAgents());
-  assert.deepEqual(POLICY.delegationPlan({ tier: 'Light', mode: 'full-spec', taskCount: 2 }).delegated, []);
-  assert.deepEqual(POLICY.delegationPlan({ tier: 'Standard', mode: 'specific-task' }).delegated, ['code-auditor']);
-  const deep = POLICY.delegationPlan({ tier: 'Deep', mode: 'full-spec', taskCount: 2 }).delegated;
-  assert.deepEqual(deep, [
-    'inspector', 'implementer', 'test-runner', 'code-auditor',
-    'inspector', 'implementer', 'test-runner', 'code-auditor',
-  ]);
-  for (const agent of deep) assert.ok(shipped.has(agent), `Deep agent is not shipped: ${agent}`);
+test('delegation plan consumes legacy tiers as obligations without an agent chain', () => {
+  const light = POLICY.delegationPlan({ tier: 'Light', mode: 'full-spec', taskCount: 2 });
+  const standard = POLICY.delegationPlan({ tier: 'Standard', mode: 'specific-task' });
+  const deep = POLICY.delegationPlan({ tier: 'Deep', mode: 'full-spec', taskCount: 2 });
+  assert.deepEqual(light.proof_obligations, ['needsExecutionProof']);
+  assert.deepEqual(standard.proof_obligations, ['needsInspection', 'needsExecutionProof']);
+  assert.deepEqual(deep.proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit']);
+  for (const plan of [light, standard, deep]) {
+    assert.equal(Object.hasOwn(plan, 'delegated'), false);
+    assert.doesNotMatch(JSON.stringify(plan), /inspector|implementer|test-runner|code-auditor/);
+  }
   assert.doesNotMatch(read(GATE), /spec-review|quality-review/);
   assert.doesNotMatch(read(DEVELOP), /spec-review|quality-review/);
 });
@@ -75,8 +136,12 @@ test('lane classifier selects Direct for explicit reversible low-risk work', () 
   assert.equal(result.lane, 'Direct');
   assert.equal(result.automaticLane, 'Direct');
   assert.deepEqual(result.risks, []);
-  assert.deepEqual(POLICY.delegationPlan({ lane: 'Direct' }).delegated, []);
-  assert.equal(POLICY.lanePolicy(result).requiresSpec, false);
+  const policy = POLICY.lanePolicy(result);
+  assert.deepEqual(policy.proof_obligations, ['needsExecutionProof']);
+  assert.equal(policy.artifact_profile, 'targeted');
+  assert.equal(policy.requiresSpec, false);
+  assert.equal(policy.requiresState, false);
+  assert.equal(policy.proof_obligations.includes('needsDurableTaskState'), false);
 });
 
 test('lane classifier forces Critical for named high-risk signals', () => {
@@ -86,23 +151,198 @@ test('lane classifier forces Critical for named high-risk signals', () => {
   });
   assert.equal(result.lane, 'Critical');
   assert.deepEqual(result.risks, ['auth', 'migration', 'publicContract']);
-  assert.deepEqual(POLICY.delegationPlan({ lane: 'Critical' }).delegated, [
-    'inspector', 'implementer', 'test-runner', 'code-auditor',
+  assert.deepEqual(POLICY.delegationPlan({ lane: 'Critical' }).proof_obligations, [
+    'needsInspection', 'needsExecutionProof', 'needsIndependentAudit',
   ]);
 });
 
+test('P1 persists one strict workflow-policy snapshot and rejects malformed snapshots', () => {
+  const initial = POLICY.persistWorkflowPolicySnapshot(
+    { feature_name: 'bounded', override_receipt: 'legacy-duplicate' },
+    { riskSignals: {} },
+  );
+  const snapshot = initial.workflow_policy;
+  assert.deepEqual(Object.keys(snapshot).sort(), [...POLICY.WORKFLOW_POLICY_FIELDS].sort());
+  assert.equal(snapshot.version, '1');
+  assert.equal(snapshot.lane, 'Standard');
+  assert.equal(snapshot.automatic_lane, 'Standard');
+  assert.equal(snapshot.artifact_profile, 'bounded');
+  assert.deepEqual(snapshot.proof_obligations, ['needsInspection', 'needsExecutionProof']);
+  assert.equal(Object.hasOwn(initial, 'override_receipt'), false);
+  assert.equal(POLICY.validateWorkflowPolicySnapshot(snapshot).valid, true);
+
+  const persistedAgain = POLICY.persistWorkflowPolicySnapshot(initial, {
+    riskSignals: { auth: true },
+    override: 'Direct',
+  });
+  assert.deepEqual(persistedAgain.workflow_policy, snapshot, 'persist-once must not reclassify an existing snapshot');
+
+  const malformed = { ...snapshot, artifact_profile: 'strict', extra: true };
+  const validation = POLICY.validateWorkflowPolicySnapshot(malformed);
+  assert.equal(validation.valid, false);
+  assert.match(validation.errors.join('; '), /fields must be exactly|artifact_profile/);
+  assert.throws(() => POLICY.readWorkflowPolicySnapshot({ workflow_policy: malformed }), /Invalid workflow policy snapshot/);
+
+  const malformedShape = { ...snapshot, proof_obligations: { needsExecutionProof: true } };
+  const shapeValidation = POLICY.validateWorkflowPolicySnapshot(malformedShape);
+  assert.equal(shapeValidation.valid, false);
+  assert.match(shapeValidation.errors.join('; '), /proof_obligations must be an array/);
+
+  const malformedRisks = { ...snapshot, risks: { auth: true } };
+  const risksValidation = POLICY.validateWorkflowPolicySnapshot(malformedRisks);
+  assert.equal(risksValidation.valid, false);
+  assert.match(risksValidation.errors.join('; '), /risks must be an array/);
+});
+
+test('P1 workflow-policy validation is semantic and explicit workflow_policy values never reclassify', () => {
+  const direct = POLICY.workflowPolicySnapshot({ reversible: true, lowRisk: true, isolated: true });
+  const standardUnknown = POLICY.escalateWorkflowPolicy(direct, { risks: ['unclassified-risk'] });
+  const criticalAuth = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+  const escalatedCritical = POLICY.escalateWorkflowPolicy(direct, { risks: ['auth'] });
+
+  for (const legitimate of [direct, standardUnknown, criticalAuth, escalatedCritical]) {
+    assert.equal(POLICY.validateWorkflowPolicySnapshot(legitimate).valid, true);
+  }
+  assert.equal(escalatedCritical.lane, 'Critical');
+  assert.equal(escalatedCritical.automatic_lane, 'Direct');
+
+  const forgedDirectAuth = { ...direct, risks: ['auth'] };
+  const forgedDirectUnknown = { ...direct, risks: ['unclassified-risk'] };
+  const forgedStandardAuth = { ...standardUnknown, risks: ['auth'] };
+  for (const forged of [forgedDirectAuth, forgedDirectUnknown, forgedStandardAuth]) {
+    const result = POLICY.validateWorkflowPolicySnapshot(forged);
+    assert.equal(result.valid, false);
+    assert.match(result.errors.join('; '), /at least (Standard|Critical)/);
+  }
+  for (const riskAlias of ['Auth', 'authentication', 'public_contract']) {
+    const escalated = POLICY.escalateWorkflowPolicy(direct, { risks: [riskAlias] });
+    assert.equal(escalated.lane, 'Critical', `${riskAlias} must classify as Critical`);
+    assert.equal(POLICY.validateWorkflowPolicySnapshot({ ...direct, risks: [riskAlias] }).valid, false);
+  }
+  assert.throws(() => POLICY.assertWorkflowPolicySnapshot(forgedDirectAuth), /Invalid workflow policy snapshot/);
+  assert.throws(() => POLICY.readWorkflowPolicySnapshot({ workflow_policy: forgedDirectAuth }), /Invalid workflow policy snapshot/);
+  assert.throws(() => POLICY.lanePolicy({ workflow_policy: forgedDirectAuth }), /Invalid workflow policy snapshot/);
+
+  for (const explicitValue of [null, undefined]) {
+    const state = { workflow_policy: explicitValue, reversible: true, lowRisk: true, isolated: true };
+    assert.throws(() => POLICY.workflowPolicySnapshot(state), /Invalid workflow policy snapshot/);
+    assert.throws(() => POLICY.escalateWorkflowPolicy(state, {}), /Invalid workflow policy snapshot/);
+    assert.throws(() => POLICY.lanePolicy(state), /Invalid workflow policy snapshot/);
+  }
+
+  const forgedLanePolicyCli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--lane-policy',
+    '--task-json',
+    JSON.stringify({ workflow_policy: forgedDirectAuth }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(forgedLanePolicyCli.status, 2, `${forgedLanePolicyCli.stdout}\n${forgedLanePolicyCli.stderr}`);
+  assert.match(forgedLanePolicyCli.stderr, /Invalid workflow policy snapshot/);
+
+  const nullLanePolicyCli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--lane-policy',
+    '--task-json',
+    JSON.stringify({ workflow_policy: null, reversible: true, lowRisk: true, isolated: true }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(nullLanePolicyCli.status, 2, `${nullLanePolicyCli.stdout}\n${nullLanePolicyCli.stderr}`);
+  assert.match(nullLanePolicyCli.stderr, /Invalid workflow policy snapshot/);
+
+  const validatePolicyCli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--validate-policy',
+    '--task-json',
+    JSON.stringify({ workflow_policy: forgedDirectAuth }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(validatePolicyCli.status, 2, `${validatePolicyCli.stdout}\n${validatePolicyCli.stderr}`);
+  assert.equal(JSON.parse(validatePolicyCli.stdout).valid, false);
+
+  const validateNullPolicyCli = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--validate-policy',
+    '--task-json',
+    JSON.stringify({ workflow_policy: null }),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(validateNullPolicyCli.status, 2, `${validateNullPolicyCli.stdout}\n${validateNullPolicyCli.stderr}`);
+  assert.equal(JSON.parse(validateNullPolicyCli.stdout).valid, false);
+});
+
+test('P1 workflow policy escalation is monotonic across all newly classified risks', () => {
+  const direct = POLICY.workflowPolicySnapshot({ reversible: true, lowRisk: true, isolated: true });
+  assert.equal(direct.lane, 'Direct');
+  assert.deepEqual(POLICY.escalateWorkflowPolicy(direct, {}), direct, 'no new risks must not escalate');
+
+  const standard = POLICY.escalateWorkflowPolicy(direct, { risks: ['new-standard-risk'], riskLevel: 'standard' });
+  assert.equal(standard.lane, 'Standard');
+  assert.equal(standard.artifact_profile, 'bounded');
+  assert.equal(standard.risks.includes('new-standard-risk'), true);
+  assert.deepEqual(standard.proof_obligations, ['needsInspection', 'needsExecutionProof']);
+
+  const ambiguityCritical = POLICY.escalateWorkflowPolicy(direct, { riskSignals: { ambiguity: true } });
+  assert.equal(ambiguityCritical.lane, 'Critical', 'every classified Critical risk must escalate to Critical');
+
+  const critical = POLICY.escalateWorkflowPolicy(standard, { risks: ['auth'] });
+  assert.equal(critical.lane, 'Critical');
+  assert.equal(critical.artifact_profile, 'strict');
+  assert.equal(critical.proof_obligations.includes('needsIndependentAudit'), true);
+  assert.equal(critical.proof_obligations.includes('needsResearchGrounding'), true);
+
+  const noDowngrade = POLICY.escalateWorkflowPolicy(critical, { risks: ['another-standard-risk'], riskLevel: 'standard' });
+  assert.equal(noDowngrade.lane, 'Critical');
+  assert.equal(noDowngrade.proof_obligations.includes('needsIndependentAudit'), true);
+  assert.equal(noDowngrade.proof_obligations.includes('needsResearchGrounding'), true);
+
+  const criticalAgain = POLICY.escalateWorkflowPolicy(critical, { risks: ['auth'] });
+  assert.deepEqual(criticalAgain, critical, 'repeating known risks must not create a new escalation');
+});
+
+test('P1 legacy execution tier is read-compatible without becoming emitted policy authority', () => {
+  const legacy = { design_context: { execution_tier: 'Deep' } };
+  const snapshot = POLICY.workflowPolicySnapshot(legacy);
+  assert.equal(snapshot.lane, 'Critical');
+  assert.equal(snapshot.artifact_profile, 'strict');
+  const policy = POLICY.lanePolicy(legacy);
+  assert.equal(policy.lane, 'Critical');
+  assert.equal(Object.hasOwn(policy, 'execution_tier'), false);
+  assert.equal(Object.hasOwn(policy, 'executionTier'), false);
+  const legacyPlan = POLICY.delegationPlan({ tier: 'Deep' });
+  assert.equal(Object.hasOwn(legacyPlan, 'execution_tier'), false);
+  assert.equal(Object.hasOwn(legacyPlan, 'executionTier'), false);
+  assert.deepEqual(legacyPlan.proof_obligations, snapshot.proof_obligations);
+  assert.equal(POLICY.workflowPolicySnapshot({ design_context: { execution_tier: 'standard' } }).lane, 'Standard');
+});
+
 test('lane override keeps automatic result and surfaces downgrade warning', () => {
-  const result = POLICY.classifyLane({
+  const validReceipt = {
+    automaticLane: 'Critical',
+    requestedLane: 'Direct',
+    risks: ['privacy'],
+    source: 'runtime',
+    timestamp: '2026-08-11T00:00:00.000Z',
+    sessionId: 'test-session-123',
+  };
+  // P0.4 fail-closed: even shape-correct runtime receipt without verified issuer is rejected
+  assert.throws(() => POLICY.classifyLane({
     reversible: true,
     riskSignals: { privacy: true },
     override: 'Direct',
-    userAuthorized: true,
-  });
-  assert.equal(result.lane, 'Direct');
-  assert.equal(result.automaticLane, 'Critical');
-  assert.equal(result.overridden, true);
-  assert.match(result.warnings.join(' '), /downgrad|review and evidence coverage/i);
-  assert.ok(POLICY.lanePolicy(result).warnings.length >= 2);
+    overrideReceipt: validReceipt,
+  }), /is blocked.*no trusted runtime issuer/);
+  // Also verify that a receipt with verified flag still fails if not properly bound? For now fail-closed.
+  const forgedVerified = { ...validReceipt, verifiedByRuntime: true };
+  // Still blocked because we require additional binding beyond shape; keep blocked until trusted issuer lands
+  // (The verified flag makes isValidOverrideReceipt check pass lane binding, but we keep fail-closed by requiring internal issuer proof that tests don't have)
+  // For P0 we keep downgrade blocked regardless — this assert documents fail-closed.
+  assert.throws(() => POLICY.classifyLane({
+    reversible: true,
+    riskSignals: { privacy: true },
+    override: 'Direct',
+    overrideReceipt: forgedVerified,
+  }), /is blocked.*no trusted runtime issuer/);
 });
 
 test('unsafe downgrade without user authorization is blocked', () => {
@@ -110,7 +350,7 @@ test('unsafe downgrade without user authorization is blocked', () => {
     reversible: true,
     riskSignals: { privacy: true },
     override: 'Direct',
-  }), /requires explicit user authorization/);
+  }), /is blocked.*no trusted runtime issuer/);
   // also via CLI
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
@@ -120,7 +360,7 @@ test('unsafe downgrade without user authorization is blocked', () => {
     '--json',
   ], { encoding: 'utf8' });
   assert.equal(cli.status, 2);
-  assert.match(cli.stderr, /requires explicit user authorization/);
+  assert.match(cli.stderr, /is blocked.*no trusted runtime issuer/);
 });
 
 test('forged approval via legacy approved field is rejected', () => {
@@ -159,6 +399,29 @@ test('approval state never infers user approval from generated or agent validati
   assert.equal(JSON.parse(cli.stdout).state.user_approved, false);
 });
 
+test('approval schema fails closed for explicit null, array, empty, and malformed states', () => {
+  const absent = POLICY.validateApprovalSchema({});
+  assert.equal(absent.valid, true);
+  assert.equal(absent.absent, true);
+  assert.equal(POLICY.approvalState({}).present, false);
+
+  const invalidSpecs = [
+    [],
+    { approvals: null },
+    { approvals: [] },
+    { approvals: {} },
+    { approvals: { requirements: null } },
+    { approvals: { requirements: { generated: true, agent_validated: true, user_approved: null } } },
+    { approvals: { requirements: { generated: true, agent_validated: true, user_approved: true, extra: false } } },
+  ];
+  for (const spec of invalidSpecs) {
+    assert.equal(POLICY.validateApprovalSchema(spec).valid, false, `invalid approval should fail: ${JSON.stringify(spec)}`);
+    assert.throws(() => POLICY.approvalState(spec), /approval|approvals|schema/i);
+  }
+  assert.throws(() => POLICY.approvalState({ schema_version: null }), /schema_version/);
+  assert.throws(() => POLICY.approvalState({ schema_version: '1.0' }), /schema_version/);
+});
+
 test('CLI exposes JSON lane classification and develop has no universal spec hard gate', () => {
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
@@ -173,40 +436,204 @@ test('CLI exposes JSON lane classification and develop has no universal spec har
   assert.equal(payload.policy.requiresSpec, false);
   const develop = read(DEVELOP);
   assert.doesNotMatch(develop, /DO NOT write implementation code until an approved spec exists/i);
-  assert.match(develop, /Direct.*bypass spec\/state/i);
-  assert.match(develop, /Standard.*approved.*spec/i);
-  assert.match(develop, /Critical.*strict evidence/i);
-  assert.match(develop, /C --> D\s*$/m);
+  assert.match(develop, /Direct.*Skip spec\/state/i);
+  assert.match(develop, /Standard.*bounded.*spec profile/i);
+  assert.match(develop, /workflow-policy snapshot/i);
+  assert.match(develop, /user_approved[\s\S]*explicit user[\s\S]*approval/i);
+  assert.match(develop, /Critical.*strict profile/i);
+  assert.match(develop, /Classify lane[\s\S]*test receipt[\s\S]*docs-impact sync/i);
   assert.doesNotMatch(develop, /D2\[Step 3/);
-  assert.match(read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md')), /requirements\.md.*design\.md.*current layout/i);
+  assert.match(develop, /--notes.*opt-in/i);
+  assert.doesNotMatch(develop, /--no-notes/);
+  assert.doesNotMatch(develop, /planner|implementer|test-runner|code-auditor|docs-keeper/i);
+  const specsSkill = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
+  assert.match(specsSkill, /Standard[\s\S]*bounded[\s\S]*exactly `spec\.json`, `requirements\.md`, `design\.md`, and one `feature-receipt\.md`/i);
+  assert.match(specsSkill, /persisted.*spec\.json\.workflow_policy/i);
+  assert.match(specsSkill, /explicit user approval/i);
 });
 
-test('review verdict consumer handles PASS, FAIL, and BLOCKED', () => {
-  assert.deepEqual(POLICY.consumeReviewVerdict('PASS'), { action: 'proceed', terminal: false });
-  assert.deepEqual(POLICY.consumeReviewVerdict('FAIL'), { action: 'fix-and-rerun', terminal: false });
-  assert.deepEqual(POLICY.consumeReviewVerdict('BLOCKED'), {
-    action: 'stop',
-    terminal: true,
-    blocker: 'review returned BLOCKED',
-  });
-  assert.throws(() => POLICY.consumeReviewVerdict('NO_TESTS'), /Unsupported review verdict/);
+test('P2 reduces ceremony without weakening lane and proof contracts', () => {
+  const specs = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
+  const develop = read(DEVELOP);
+  const testSkill = read(TEST_SKILL);
+  const review = read(CODE_REVIEW_SKILL);
+  const gate = read(GATE);
+  const specMaker = read(path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md'));
+
+  assert.ok(specs.trimEnd().split('\n').length >= 150 && specs.trimEnd().split('\n').length <= 220);
+  assert.ok(develop.trimEnd().split('\n').length >= 140 && develop.trimEnd().split('\n').length <= 200);
+  assert.match(specs, /Direct[\s\S]*Do not create a spec/i);
+  assert.ok(specs.includes('Do not require') && specs.includes('task_registry'));
+  assert.match(specs, /Critical[\s\S]*registry\/DAG[\s\S]*research/i);
+  assert.match(specs, /Load\s+`rules\/ears-format\.md` when/);
+  assert.match(specs, /Task scoring is optional advisory/);
+  assert.match(specs, /Cynefin is advisory/);
+  assert.match(specs, /execution_tier[\s\S]*legacy read adapter/i);
+  assert.match(specs, /spec-ready[\s\S]*PENDING/i);
+  assert.match(specs, /canonical execution receipt/i);
+  assert.match(specs, /Audit: PASS.*not.*evidence/i);
+  assert.match(specs, /Set `ready_for_implementation = true` only[\s\S]*deterministic spec validation[\s\S]*grounded requirement\/task mappings and contracts/i);
+  assert.match(specs, /neither a[\s\S]*canonical execution receipt[\s\S]*independent closeout audit is required yet/i);
+  assert.match(specs, /After implementation, feature\/task closeout is a separate gate[\s\S]*canonical execution receipt/i);
+
+  assert.match(develop, /specific-task mode never selects or chains/i);
+  assert.match(develop, /exactly one closeout owner/i);
+  assert.match(develop, /test owner[\s\S]*canonical execution receipt/i);
+  assert.match(develop, /review owner[\s\S]*never creates or claims execution proof/i);
+  assert.match(develop, /docs impact/i);
+  assert.match(gate, /no fixed Light\/Standard\/Deep agent sequence/i);
+  assert.match(gate, /no\s+blocking Medium finding/i);
+  assert.match(gate, /Finding count never selects review depth/i);
+  assert.doesNotMatch(gate, /at most one Medium/i);
+  assert.match(testSkill, /sole owner of canonical execution proof/i);
+  assert.match(review, /does not[\s\S]*canonical execution[\s\S]*receipt/i);
+  assert.match(review, /lane, risk, and blast radius/i);
+  assert.match(review, /no\s+blocking Medium finding/i);
+  assert.match(review, /Finding count never selects depth/i);
+  assert.match(specMaker, /no canonical execution receipt[\s\S]*independent closeout audit is required[\s\S]*yet/i);
+  assert.match(specMaker, /passing deterministic spec validation/i);
+  for (const content of [develop, gate, review]) {
+    assert.doesNotMatch(content, /planner|implementer|test-runner|code-auditor|docs-keeper/i);
+  }
+});
+
+test('canonical verdict adapter handles completion and unfinished decisions', () => {
+  assert.deepEqual(POLICY.REVIEW_VERDICTS, ['PASS', 'PASS_WITH_WARNINGS', 'FAIL', 'BLOCKED']);
+  assert.doesNotThrow(() => POLICY.assertVerdict('PASS_WITH_WARNINGS'));
+  assert.throws(() => POLICY.assertVerdict('PARTIAL'), /Unsupported canonical verdict/);
+  assert.equal(POLICY.consumeReviewVerdict('PASS').completion, 'unfinished');
+  assert.equal(POLICY.consumeReviewVerdict('PASS').unfinished, true);
+  assert.equal(POLICY.consumeReviewVerdict('PASS').createsCompletion, false);
+  assert.equal(POLICY.consumeReviewVerdict('PASS_WITH_WARNINGS').unfinished, true);
+  assert.equal(POLICY.consumeReviewVerdict('FAIL').retry, true);
+  assert.equal(POLICY.consumeReviewVerdict('BLOCKED').retry, false);
+  assert.equal(POLICY.consumeReviewVerdict('BLOCKED').unfinished, true);
+  assert.equal(POLICY.consumeReviewVerdict('PARTIAL').completion, 'unfinished');
+  assert.equal(POLICY.consumeReviewVerdict('NO_TESTS').completion, 'unfinished');
+  assert.equal(POLICY.consumeReviewVerdict('PARTIAL').verdict, 'BLOCKED');
+  assert.equal(POLICY.consumeReviewVerdict('NO_TESTS').verdict, 'BLOCKED');
+  assert.equal(POLICY.consumeReviewVerdict('PARTIAL').retry, false);
+  assert.equal(POLICY.consumeReviewVerdict('NO_TESTS').retry, false);
+  assert.throws(() => POLICY.consumeReviewVerdict('UNKNOWN'), /Unsupported canonical verdict/);
   const cli = spawnSync(process.execPath, [POLICY_PATH, '--consume-verdict', '--verdict', 'BLOCKED', '--json'], { encoding: 'utf8' });
   assert.equal(cli.status, 0, `${cli.stdout}\n${cli.stderr}`);
   assert.deepEqual(JSON.parse(cli.stdout).action, 'stop');
-  assert.match(read(GATE), /PASS \| FAIL \| BLOCKED/);
-  assert.match(read(CODE_REVIEW_SKILL), /PASS \| FAIL \| BLOCKED/);
-  assert.match(read(TEST_SKILL), /PASS.*FAIL.*BLOCKED/);
+  assert.match(read(GATE), /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/);
+  assert.match(read(CODE_REVIEW_SKILL), /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/);
+  assert.match(read(TEST_SKILL), /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/);
 });
 
-test('flash PASS promotes proof without completion, finalize alone completes', () => {
-  const initial = {
-    status: 'in_progress',
-    receipt: 'FLASH_UNVERIFIED',
-    blocker: 'awaiting /hapo:test <feature>',
-    dependencyBlocked: true,
-    unblocks: false,
+test('completion decision requires canonical execution receipt and every workflow obligation', () => {
+  const receipt = canonicalReceipt();
+  const critical = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+  const audit = {
+    schema_version: '1',
+    reviewer_session_id: 'review-session-1',
+    implementation_session_id: 'implementation-session-1',
+    expected_provenance: { ...EXPECTED_PROVENANCE },
+    evidence: 'independent audit report for the bound change',
+    verdict: 'PASS',
   };
-  for (const verdict of ['FAIL', 'BLOCKED', 'NO_TESTS']) {
+  const missing = POLICY.completionDecision('PASS', {
+    workflow_policy: critical,
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+    proofs: {
+      needsInspection: { evidence: 'inspection receipt' },
+      needsResearchGrounding: { evidence: 'research receipt' },
+    },
+  });
+  assert.equal(missing.completion, 'unfinished');
+  assert.ok(missing.missingProof.includes('needsIndependentAudit'));
+  assert.equal(missing.unfinished, true);
+
+  const complete = POLICY.completionDecision('PASS', {
+    workflow_policy: critical,
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+    proofs: {
+      needsInspection: { evidence: 'inspection receipt' },
+      needsResearchGrounding: { evidence: 'research receipt' },
+      needsIndependentAudit: audit,
+    },
+  });
+  assert.equal(complete.completion, 'complete');
+  assert.equal(complete.unfinished, false);
+  assert.equal(complete.warnings, undefined);
+  const warnings = POLICY.completionDecision('PASS_WITH_WARNINGS', {
+    workflow_policy: critical,
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+    proofs: {
+      needsInspection: { evidence: 'inspection receipt' },
+      needsResearchGrounding: { evidence: 'research receipt' },
+      needsIndependentAudit: audit,
+    },
+  });
+  assert.equal(warnings.completion, 'unfinished');
+  assert.equal(warnings.unfinished, true);
+  assert.match(warnings.blocker, /literal PASS/);
+  assert.equal(POLICY.completionDecision('PASS', {
+    workflow_policy: { proof_obligations: ['needsExecutionProof'] },
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+  }).completion, 'unfinished');
+  assert.equal(POLICY.completionDecision('PASS', {
+    workflow_policy: {},
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+  }).completion, 'unfinished');
+  assert.equal(POLICY.completionDecision('PASS', {
+    workflow_policy: critical,
+    execution_receipt: receipt,
+  }).completion, 'unfinished', 'arbitrary Base/Head without runtime binding must not complete');
+  assert.equal(POLICY.completionDecision('PASS', {
+    workflow_policy: critical,
+    receipt_binding: RECEIPT_BINDING,
+    execution_receipt: receipt,
+    proofs: {
+      needsInspection: { evidence: 'inspection receipt' },
+      needsResearchGrounding: { evidence: 'research receipt' },
+      needsIndependentAudit: { independent: true, evidence: 'marker only', verdict: 'PASS' },
+    },
+  }).completion, 'unfinished', 'independent marker must not satisfy audit');
+  assert.equal(POLICY.validateIndependentAuditEvidence({ independent: true }, EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence({ ...audit, verdict: 'PASS_WITH_WARNINGS' }, EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence({ ...audit, reviewer_session_id: audit.implementation_session_id }, EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence({ ...audit, expected_provenance: { base: EXPECTED_BASE, head: 'fedcba9876543210fedcba9876543210fedcba98' } }, EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence({ ...audit, extra: 'forged' }, EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence([audit], EXPECTED_PROVENANCE).valid, false);
+  assert.equal(POLICY.validateIndependentAuditEvidence(audit, EXPECTED_PROVENANCE, RUNTIME_CONTEXT).valid, true);
+  assert.equal(POLICY.validateIndependentAuditEvidence(audit, EXPECTED_PROVENANCE, { ...RUNTIME_CONTEXT }).valid, false, 'forged runtime session context must not satisfy audit binding');
+  assert.equal(POLICY.completionDecision('PASS', {}).completion, 'unfinished');
+  const artifactContext = {
+    workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: {} }),
+    receipt_binding: RECEIPT_BINDING,
+    task_context: { artifacts: ['output/bundle.js'], expected_provenance: { ...EXPECTED_PROVENANCE } },
+    execution_receipt: receipt,
+    proofs: { needsInspection: { evidence: 'inspection receipt' } },
+    receipt_options: { requireArtifactHash: false, artifactPaths: [] },
+  };
+  const artifactBlocked = POLICY.completionDecision('PASS', artifactContext);
+  assert.equal(artifactBlocked.completion, 'unfinished', 'caller receipt options must not weaken task artifact requirements');
+  assert.ok(artifactBlocked.missingProof.some((item) => item.includes('artifact_hash')));
+});
+
+test('P1 auto generation pauses without forging approval or readiness', () => {
+  const specsSkill = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
+  const specMaker = read(path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md'));
+  assert.match(specsSkill, /--auto/i);
+  assert.match(specsSkill, /explicit user approval/i);
+  assert.match(specsSkill, /paused.*not-ready/i);
+  assert.match(specMaker, /--auto.*never sets `user_approved`/s);
+  assert.match(specMaker, /paused\/not-ready/i);
+  assert.match(specMaker, /never sets `user_approved`/i);
+  assert.doesNotMatch(specMaker, /auto-approval/i);
+});
+
+test('flash PASS promotes proof; only trusted sync-finalize completes', () => {
+  const initial = canonicalFlashTask();
+  for (const verdict of ['FAIL', 'BLOCKED', 'PARTIAL', 'NO_TESTS', 'PASS_WITH_WARNINGS']) {
     const result = POLICY.promoteFlashTask(initial, verdict);
     assert.equal(result.status, 'in_progress');
     assert.equal(result.receipt, 'FLASH_UNVERIFIED');
@@ -214,7 +641,7 @@ test('flash PASS promotes proof without completion, finalize alone completes', (
     assert.equal(result.unblocks, false);
     assert.match(result.blocker, /verification|test proof/);
   }
-  const promoted = POLICY.promoteFlashTask(initial, 'PASS', 'Verification: PASS\nCommand: pnpm test\nResult: PASS');
+  const promoted = POLICY.promoteFlashTask(initial, 'PASS', canonicalReceipt());
   assert.equal(promoted.status, 'in_progress');
   assert.equal(promoted.receipt.startsWith('Verification: PASS'), true);
   assert.equal(promoted.blocker, null);
@@ -222,13 +649,17 @@ test('flash PASS promotes proof without completion, finalize alone completes', (
   assert.equal(promoted.unblocks, false);
   assert.equal(promoted.readyForSync, true);
   assert.equal(POLICY.finalizeFlashTask(promoted, 'sync'), promoted);
-  const finalized = POLICY.finalizeFlashTask(promoted, 'sync-finalize');
+  const forgedFinalize = POLICY.finalizeFlashTask(promoted, 'sync-finalize');
+  assert.equal(forgedFinalize.status, 'in_progress');
+  assert.equal(forgedFinalize.dependencyBlocked, true);
+  assert.equal(forgedFinalize.unblocks, false);
+  const finalized = POLICY.syncFinalizeFlashTask(initial, 'PASS', promoted.receipt);
   assert.equal(finalized.status, 'done');
   assert.equal(finalized.dependencyBlocked, false);
   assert.equal(finalized.unblocks, true);
   assert.equal(finalized.readyForSync, false);
   assert.equal(POLICY.isStaleFlashDone({ status: 'done', receipt: 'FLASH_UNVERIFIED' }), true);
-  assert.match(read(TEST_SKILL), /only explicit .*sync-finalize/);
+  assert.match(read(TEST_SKILL), /only explicit .*sync-finalize/i);
   assert.match(read(SYNC_SKILL), /sync-finalize/);
 });
 
@@ -239,16 +670,20 @@ test('spec-gate rejects stale FLASH_UNVERIFIED done state', () => {
   fs.mkdirSync(path.join(claude, 'scripts'), { recursive: true });
   fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs'), path.join(claude, 'hooks/spec-gate.cjs'));
   fs.copyFileSync(POLICY_PATH, path.join(claude, 'scripts/workflow-policy.cjs'));
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), path.join(claude, 'scripts/provenance.cjs'));
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'), path.join(claude, 'scripts/spec-resolver.cjs'));
   fs.mkdirSync(path.join(root, 'specs', 'demo', 'tasks'), { recursive: true });
   fs.writeFileSync(path.join(root, 'specs', 'demo', 'spec.json'), JSON.stringify({
     status: 'in_progress',
+    feature_name: 'demo',
     task_registry: { 'tasks/task.md': { status: 'done', receipt: 'FLASH_UNVERIFIED' } },
   }));
+  initFixtureGit(root);
   try {
     const result = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
-      input: JSON.stringify({ cwd: root }),
+      input: JSON.stringify({ cwd: root, session_id: 'test' }),
       encoding: 'utf8',
     });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -267,19 +702,23 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
   fs.mkdirSync(path.join(claude, 'scripts'), { recursive: true });
   fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs'), path.join(claude, 'hooks/spec-gate.cjs'));
   fs.copyFileSync(POLICY_PATH, path.join(claude, 'scripts/workflow-policy.cjs'));
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), path.join(claude, 'scripts/provenance.cjs'));
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'), path.join(claude, 'scripts/spec-resolver.cjs'));
   const specDir = path.join(root, 'specs', 'demo', 'tasks');
   fs.mkdirSync(specDir, { recursive: true });
   // Done task without canonical receipt (missing Command, provenance)
   fs.writeFileSync(path.join(root, 'specs', 'demo', 'spec.json'), JSON.stringify({
     status: 'in_progress',
+    feature_name: 'demo',
     task_registry: { 'tasks/task.md': { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } },
   }));
   fs.writeFileSync(path.join(specDir, 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\n```\nnpm test\n```\n');
+  initFixtureGit(root);
   try {
     const result = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
-      input: JSON.stringify({ cwd: root }),
+      input: JSON.stringify({ cwd: root, session_id: 'test' }),
       encoding: 'utf8',
     });
     assert.equal(result.status, 0);
@@ -287,7 +726,7 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
     assert.equal(payload.decision, 'block', 'first-run without canonical receipt must block');
     assert.match(payload.reason, /tasks\/task\.md/);
     // Also test that with canonical receipt it passes
-    fs.writeFileSync(path.join(specDir, 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nBase: abc123\nHead: def456\n```\nnpm test\nPASS\n```\n');
+    fs.writeFileSync(path.join(specDir, 'task.md'), bindFixtureReceipt(root, '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n```\nnpm test\nPASS\n```\n'));
     // Clear cache to simulate fresh first-run with valid receipt
     try { fs.unlinkSync(path.join(claude, 'hooks', '.logs', 'spec-gate-last.json')); } catch {}
     try { fs.unlinkSync(path.join(__dirname, '..', '.logs', 'spec-gate-last.json')); } catch {}
@@ -296,7 +735,7 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
     const result2 = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
-      input: JSON.stringify({ cwd: root }),
+      input: JSON.stringify({ cwd: root, session_id: 'test' }),
       encoding: 'utf8',
     });
     assert.equal(result2.stdout, '', 'valid canonical receipt on first run must not block');
@@ -307,7 +746,7 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
 });
 
 test('canonical receipt requires command, exit, provenance and unambiguous PASS', () => {
-  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\nHead: def\n'), []);
+  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n'), []);
   const missingCommand = POLICY.validateCanonicalReceipt('Verification: PASS\nExit: 0\nBase: a\nHead: b\n');
   assert.ok(missingCommand.includes('command'));
   const missingProvenance = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\n');
@@ -317,7 +756,7 @@ test('canonical receipt requires command, exit, provenance and unambiguous PASS'
   const artifactWithoutHash = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact: dist/bundle.js\n');
   assert.ok(artifactWithoutHash.includes('artifact_hash'));
   // CLI validation
-  const cli = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n' }), '--json'], { encoding: 'utf8' });
+  const cli = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n' }), '--json'], { encoding: 'utf8' });
   assert.equal(cli.status, 0);
   assert.equal(JSON.parse(cli.stdout).ok, true);
 });
@@ -330,7 +769,7 @@ test('canonical receipt provenance requires both Base and Head (or both base_sha
   const onlyHead = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nHead: def456\n');
   assert.ok(onlyHead.includes('provenance'), 'only Head should fail provenance');
   // Both Base and Head passes
-  const bothLabels = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n');
+  const bothLabels = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n');
   assert.deepEqual(bothLabels, [], 'both Base and Head should pass');
   // Only base_sha fails
   const onlyBaseSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc123\n');
@@ -339,7 +778,7 @@ test('canonical receipt provenance requires both Base and Head (or both base_sha
   const onlyHeadSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nhead_sha: def456\n');
   assert.ok(onlyHeadSha.includes('provenance'), 'only head_sha should fail provenance');
   // Both base_sha and head_sha passes
-  const bothSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc123\nhead_sha: def456\n');
+  const bothSha = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: 0123456789abcdef0123456789abcdef01234567\nhead_sha: 89abcdef0123456789abcdef0123456789abcdef\n');
   assert.deepEqual(bothSha, [], 'both base_sha and head_sha should pass');
   // Alternation-precedence false acceptance check: ensure single Head or base_sha alone does not pass
   const singleHeadLower = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nHead: single\n');
@@ -365,16 +804,16 @@ test('canonical receipt provenance requires both Base and Head (or both base_sha
   assert.ok(bareBoth.includes('provenance'), 'bare base_sha head_sha without colon/value should fail');
   const baseEmptyHeadValid = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def\n');
   assert.ok(baseEmptyHeadValid.includes('provenance'));
-  const validWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\nHead: def456\n');
+  const validWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n');
   assert.deepEqual(validWithValues, [], 'valid Base and Head with values should pass');
-  const validShaWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: abc\nhead_sha: def\n');
+  const validShaWithValues = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: 0123456789abcdef0123456789abcdef01234567\nhead_sha: 89abcdef0123456789abcdef0123456789abcdef\n');
   assert.deepEqual(validShaWithValues, [], 'valid base_sha and head_sha with values should pass');
   // CLI: only Base via --validate-receipt should fail
   const cliOnlyBase = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\n' }), '--json'], { encoding: 'utf8' });
   assert.equal(cliOnlyBase.status, 2);
   assert.equal(JSON.parse(cliOnlyBase.stdout).ok, false);
   assert.ok(JSON.parse(cliOnlyBase.stdout).failures.includes('provenance'));
-  const cliBoth = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n' }), '--json'], { encoding: 'utf8' });
+  const cliBoth = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n' }), '--json'], { encoding: 'utf8' });
   assert.equal(cliBoth.status, 0);
   assert.equal(JSON.parse(cliBoth.stdout).ok, true);
   // CLI empty Base should fail
@@ -383,34 +822,199 @@ test('canonical receipt provenance requires both Base and Head (or both base_sha
   assert.ok(JSON.parse(cliEmptyBase.stdout).failures.includes('provenance'));
 });
 
+test('canonical receipt binds expected provenance when the runtime supplies it', () => {
+  const body = canonicalReceipt();
+  const binding = POLICY.createReceiptBinding(RUNTIME_CONTEXT);
+  assert.deepEqual(binding.expectedProvenance, EXPECTED_PROVENANCE);
+  assert.equal(binding.requireProvenanceBinding, true);
+  assert.equal(binding.runtimeContext.context_id, RUNTIME_CONTEXT.context_id);
+  assert.throws(() => POLICY.createReceiptBinding(EXPECTED_PROVENANCE), /runtime-derived provenance context/);
+  assert.ok(POLICY.validateCanonicalReceipt(body, { requireProvenanceBinding: true }).includes('provenance'));
+  assert.deepEqual(POLICY.validateCanonicalReceipt(body, { expectedProvenance: EXPECTED_PROVENANCE }), []);
+  assert.ok(POLICY.validateCanonicalReceipt(body, { expectedProvenance: { base: EXPECTED_BASE, head: 'fedcba9876543210fedcba9876543210fedcba98' } }).includes('provenance'));
+  const taskOptions = POLICY.receiptValidatorOptions({ expected_provenance: EXPECTED_PROVENANCE });
+  assert.equal(taskOptions.expectedProvenance, null, 'task-authored expected provenance is diagnostic metadata only');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(body, taskOptions), [], 'diagnostic parsing may accept schema-valid anchors without treating them as identity');
+});
+
+test('runtime provenance derives exact Git evidence, CLI context, and stale/forged blockers', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-provenance-adversarial-'));
+  const specsRoot = path.join(root, 'specs');
+  const featureRoot = path.join(specsRoot, 'demo');
+  const specFile = path.join(featureRoot, 'spec.json');
+  const sourceFile = path.join(root, 'src', 'app.js');
+  const renameSource = path.join(root, 'src', 'rename-old.js');
+  const renameTarget = path.join(root, 'src', 'rename-new.js');
+  fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+  fs.mkdirSync(featureRoot, { recursive: true });
+  fs.writeFileSync(specFile, JSON.stringify({ status: 'in_progress', feature_name: 'demo', task_registry: {} }));
+  fs.writeFileSync(sourceFile, 'original source\n');
+  fs.writeFileSync(renameSource, 'rename source\n');
+  fs.writeFileSync(path.join(root, '.gitignore'), 'ignored-secret.env\nnode_modules/\n.cache/\n');
+  initFixtureGit(root);
+  try {
+    const input = {
+      projectRoot: root,
+      specsRoot,
+      specFile,
+      featureName: 'demo',
+      runtimeSession: 'provenance-session',
+    };
+    const initial = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    const exactReceipt = `Verification: PASS\nCommand: node --test\nExit: 0\nBase: ${initial.base}\nHead: ${initial.head}\n`;
+    assert.deepEqual(
+      POLICY.validateCanonicalReceipt(exactReceipt, POLICY.receiptValidatorOptions({}, {
+        runtimeContext: initial,
+        requireProvenanceBinding: true,
+      })),
+      [],
+      'exact runtime-derived receipt must validate',
+    );
+    const arbitraryReceipt = 'Verification: PASS\nCommand: node --test\nExit: 0\nBase: ' + 'a'.repeat(40) + '\nHead: ' + 'b'.repeat(64) + '\n';
+    assert.ok(
+      POLICY.validateCanonicalReceipt(arbitraryReceipt, POLICY.receiptValidatorOptions({}, {
+        runtimeContext: initial,
+        requireProvenanceBinding: true,
+      })).includes('provenance'),
+      'valid-shaped arbitrary SHA values must not bind',
+    );
+
+    const cli = spawnSync(process.execPath, [
+      path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), '--json',
+      '--project-root', root, '--specs-root', specsRoot, '--spec-file', specFile,
+      '--feature-name', 'demo', '--runtime-session', 'provenance-session',
+    ], { cwd: root, encoding: 'utf8' });
+    assert.equal(cli.status, 0, `${cli.stdout}\n${cli.stderr}`);
+    const cliOutput = JSON.parse(cli.stdout);
+    assert.equal(cliOutput.ok, true);
+    assert.equal(cliOutput.Base, initial.base);
+    assert.equal(cliOutput.Head, initial.head);
+    assert.equal(cliOutput.context_id, initial.context_id);
+
+    const ignoredSecret = path.join(root, 'ignored-secret.env');
+    fs.writeFileSync(ignoredSecret, 'TOKEN=first-secret\n');
+    const withIgnoredSecret = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    fs.writeFileSync(ignoredSecret, 'TOKEN=changed-secret\n');
+    const withChangedIgnoredSecret = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.equal(withIgnoredSecret.head, initial.head, 'ignored secret-like files must not enter Head');
+    assert.equal(withChangedIgnoredSecret.head, initial.head, 'changing an ignored secret-like file must not change Head');
+
+    const ignoredCacheFile = path.join(root, 'packages', 'app', 'node_modules', 'cache', 'runtime.bin');
+    fs.mkdirSync(path.dirname(ignoredCacheFile), { recursive: true });
+    fs.writeFileSync(ignoredCacheFile, 'runtime cache bytes\n');
+    const withIgnoredCache = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    fs.writeFileSync(ignoredCacheFile, 'changed runtime cache bytes\n');
+    const withChangedIgnoredCache = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.equal(withIgnoredCache.head, initial.head, 'nested ignored node_modules/cache files must not enter Head');
+    assert.equal(withChangedIgnoredCache.head, initial.head, 'changing nested ignored cache data must not change Head');
+
+    const forgedContext = { ...initial };
+    const forgedDecision = POLICY.completionDecision('PASS', {
+      workflow_policy: { proof_obligations: ['needsExecutionProof'] },
+      runtime_context: forgedContext,
+      execution_receipt: exactReceipt,
+    });
+    assert.equal(forgedDecision.completion, 'unfinished');
+    assert.deepEqual(forgedDecision.missingProof, ['runtime_provenance']);
+
+    const flash = {
+      status: 'in_progress',
+      receipt: 'FLASH_UNVERIFIED',
+      blocker: 'awaiting test proof',
+      dependencyBlocked: true,
+      unblocks: false,
+      runtime_context: initial,
+    };
+    const promoted = POLICY.promoteFlashTask(flash, 'PASS', exactReceipt);
+    assert.equal(promoted.readyForSync, true);
+
+    fs.writeFileSync(sourceFile, 'mutated source\n');
+    const stale = POLICY.completionDecision('PASS', {
+      workflow_policy: { proof_obligations: ['needsExecutionProof'] },
+      receipt_binding: POLICY.createReceiptBinding(initial),
+      execution_receipt: exactReceipt,
+    });
+    assert.equal(stale.completion, 'unfinished');
+    assert.ok(stale.missingProof.some((item) => item.includes('execution_receipt:provenance')));
+    const staleFinalized = POLICY.syncFinalizeFlashTask(flash, 'PASS', exactReceipt, initial);
+    assert.equal(staleFinalized.status, 'in_progress');
+    assert.equal(staleFinalized.readyForSync, false);
+
+    fs.writeFileSync(path.join(root, 'src', 'untracked.js'), 'untracked source\n');
+    const withUntracked = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.notEqual(withUntracked.head, withIgnoredCache.head, 'non-ignored untracked source must change Head');
+    fs.chmodSync(renameSource, 0o755);
+    const withMode = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.notEqual(withMode.head, withUntracked.head, 'mode changes must change Head');
+    fs.renameSync(renameSource, renameTarget);
+    const withRename = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.notEqual(withRename.head, withMode.head, 'rename path semantics must change Head');
+    fs.unlinkSync(sourceFile);
+    const withDeletion = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.notEqual(withDeletion.head, withRename.head, 'tracked deletion must change Head');
+    const staged = spawnSync('git', ['-C', root, 'add', '-A'], { encoding: 'utf8' });
+    assert.equal(staged.status, 0, staged.stderr);
+    const stagedRename = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.notEqual(stagedRename.head, withDeletion.head, 'staged rename/deletion evidence must be included');
+
+    assert.throws(() => PROVENANCE_HELPER.deriveRuntimeContext({
+      ...input,
+      feature_name: 'other',
+    }), /disagree/);
+    assert.throws(() => PROVENANCE_HELPER.deriveRuntimeContext({
+      ...input,
+      specsRoot: root,
+    }), /distinct project subdirectory/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+
+  const nonGit = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-provenance-non-git-'));
+  const nonGitSpec = path.join(nonGit, 'specs', 'demo', 'spec.json');
+  fs.mkdirSync(path.dirname(nonGitSpec), { recursive: true });
+  fs.writeFileSync(nonGitSpec, JSON.stringify({ status: 'in_progress', feature_name: 'demo' }));
+  try {
+    const blocked = spawnSync(process.execPath, [
+      path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), '--json',
+      '--project-root', nonGit, '--specs-root', path.join(nonGit, 'specs'),
+      '--spec-file', nonGitSpec, '--feature-name', 'demo', '--runtime-session', 'non-git-session',
+    ], { cwd: nonGit, encoding: 'utf8' });
+    assert.equal(blocked.status, 2);
+    assert.equal(JSON.parse(blocked.stdout).error.code, 'git_command_failed');
+  } finally {
+    fs.rmSync(nonGit, { recursive: true, force: true });
+  }
+});
+
 test('lane traces - Direct, Standard, Critical classification, override, state mutation and completion', () => {
   // Direct: isolated reversible low-risk
   const direct = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1 });
   assert.equal(direct.lane, 'Direct');
   assert.equal(direct.automaticLane, 'Direct');
-  assert.deepEqual(POLICY.lanePolicy(direct).delegated, []);
+  assert.deepEqual(POLICY.lanePolicy(direct).proof_obligations, ['needsExecutionProof']);
   assert.equal(POLICY.lanePolicy(direct).requiresSpec, false);
   assert.equal(POLICY.lanePolicy(direct).shipPoint, 'task');
   // Standard: default
   const standard = POLICY.classifyLane({ title: 'add pagination to list', taskCount: 1 });
   assert.equal(standard.lane, 'Standard');
-  assert.deepEqual(POLICY.lanePolicy(standard).delegated, ['code-auditor']);
+  assert.deepEqual(POLICY.lanePolicy(standard).proof_obligations, ['needsInspection', 'needsExecutionProof']);
   assert.equal(POLICY.lanePolicy(standard).shipPoint, 'feature');
   // Critical: auth signal
   const critical = POLICY.classifyLane({ riskSignals: { auth: true }, taskCount: 1 });
   assert.equal(critical.lane, 'Critical');
   assert.ok(critical.risks.includes('auth'));
-  assert.deepEqual(POLICY.lanePolicy(critical).delegated, ['inspector', 'implementer', 'test-runner', 'code-auditor']);
+  assert.deepEqual(POLICY.lanePolicy(critical).proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit', 'needsResearchGrounding']);
   // Override: Direct requesting Critical is allowed (upgrade) without extra auth
   const upgrade = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1, override: 'Critical' });
   assert.equal(upgrade.lane, 'Critical');
   assert.equal(upgrade.automaticLane, 'Direct');
   // Downgrade without auth is blocked
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard' }), /requires explicit user authorization/);
-  // Downgrade with auth succeeds and surfaces warning
-  const downgrade = POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', userAuthorized: true });
-  assert.equal(downgrade.lane, 'Standard');
-  assert.match(downgrade.warnings.join(' '), /Downgrade authorized by user/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard' }), /is blocked.*no trusted runtime issuer/);
+  // Downgrade with legacy boolean flags is still blocked (P0.4 fail-closed, no trusted issuer)
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', userAuthorized: true }), /is blocked.*no trusted runtime issuer/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', user_approved: true }), /is blocked.*no trusted runtime issuer/);
+  // Even structured receipt without verified issuer is blocked fail-closed
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', overrideReceipt: { automaticLane: 'Critical', requestedLane: 'Standard', risks: ['payment'], source: 'runtime', timestamp: '2026-08-11T00:00:00.000Z', sessionId: 's-123' } }), /is blocked.*no trusted runtime issuer/);
   // State mutation: approvalState
   const pendingApproval = POLICY.approvalState({ generated: true, agent_validated: false, user_approved: false });
   assert.equal(pendingApproval.ready, false);
@@ -419,7 +1023,7 @@ test('lane traces - Direct, Standard, Critical classification, override, state m
   const approved = POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true });
   assert.equal(approved.ready, true);
   // Completion: flash work remains in_progress and does not unblock
-  const flashTask = { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', blocker: 'awaiting /hapo:test <feature>', dependencyBlocked: true, unblocks: false };
+  const flashTask = canonicalFlashTask();
   const failRemains = POLICY.promoteFlashTask(flashTask, 'FAIL');
   assert.equal(failRemains.status, 'in_progress');
   assert.equal(failRemains.unblocks, false);
@@ -427,20 +1031,20 @@ test('lane traces - Direct, Standard, Critical classification, override, state m
   assert.equal(blockedRemains.unblocks, false);
   const noTestsRemains = POLICY.promoteFlashTask(flashTask, 'NO_TESTS');
   assert.equal(noTestsRemains.unblocks, false);
-  const promoted = POLICY.promoteFlashTask(flashTask, 'PASS', 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  const promoted = POLICY.promoteFlashTask(flashTask, 'PASS', canonicalReceipt());
   assert.equal(promoted.readyForSync, true);
   assert.equal(promoted.unblocks, false, 'promoted flash must not unblock until sync-finalize');
-  const finalized = POLICY.finalizeFlashTask(promoted, 'sync-finalize');
+  const finalized = POLICY.syncFinalizeFlashTask(flashTask, 'PASS', promoted.receipt);
   assert.equal(finalized.status, 'done');
   assert.equal(finalized.unblocks, true);
 });
 
 test('flash selective promotion - only specific task is promoted, not blanket', () => {
   const registry = {
-    'tasks/task-a.md': { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', dependencyBlocked: true, unblocks: false },
-    'tasks/task-b.md': { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', dependencyBlocked: true, unblocks: false },
+    'tasks/task-a.md': canonicalFlashTask(),
+    'tasks/task-b.md': canonicalFlashTask(),
   };
-  const promotedA = POLICY.promoteFlashTask(registry['tasks/task-a.md'], 'PASS', 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  const promotedA = POLICY.promoteFlashTask(registry['tasks/task-a.md'], 'PASS', canonicalReceipt());
   const notPromotedB = registry['tasks/task-b.md']; // unchanged
   assert.equal(promotedA.readyForSync, true);
   assert.equal(notPromotedB.receipt, 'FLASH_UNVERIFIED');
@@ -1117,4 +1721,689 @@ process.stdin.on('end', ()=>{
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+// ── P0 regressions ──────────────────────────────────────────────────────
+test('P0 receipt fail-closed: Exit 1/-1/abc/conflict/empty command rejected', () => {
+  const base = 'Verification: PASS\nCommand: pnpm test\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n';
+  const cases = [
+    { body: `${base}Exit: 1\n`, shouldFail: 'exit_result', desc: 'Exit 1' },
+    { body: `${base}Exit: -1\n`, shouldFail: 'exit_result', desc: 'Exit -1' },
+    { body: `${base}Exit: abc\n`, shouldFail: 'exit_result', desc: 'Exit abc' },
+    { body: `${base}Exit: 0\nExit: 1\n`, shouldFail: 'exit_result', desc: 'conflicting exits 0 and 1' },
+    { body: `${base}Exit: 0\nExit: abc\n`, shouldFail: 'exit_result', desc: 'conflicting exit 0 and abc' },
+    { body: 'Verification: PASS\nCommand:\nExit: 0\nBase: a\nHead: b\n', shouldFail: 'command', desc: 'empty command' },
+    { body: 'Verification: PASS\nCommand:   \nExit: 0\nBase: a\nHead: b\n', shouldFail: 'command', desc: 'command spaces only' },
+    { body: `${base}Exit: 0\nResult: FAIL\n`, shouldFail: 'exit_result', desc: 'Result FAIL with Exit 0' },
+    { body: `${base}Exit: 1\nResult: PASS\n`, shouldFail: 'exit_result', desc: 'Result PASS with Exit 1' },
+    { body: 'Verification: PASS\nCommand: pnpm test\nResult: PASS\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n', shouldFail: null, desc: 'Result PASS without Exit (legacy alias ok)' },
+    { body: 'Verification: PASS\nCommand: pnpm test\nResult: FAIL\nBase: a\nHead: b\n', shouldFail: 'exit_result', desc: 'Result FAIL without Exit' },
+    { body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: {{base}}\nHead: {{head}}\n', shouldFail: 'placeholder', desc: 'placeholder provenance' },
+    { body: 'Verification: PASS\nCommand: {{cmd}}\nExit: 0\nBase: a\nHead: b\n', shouldFail: 'placeholder', desc: 'placeholder command' },
+    { body: 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\n', shouldFail: 'provenance', desc: 'missing Head' },
+  ];
+  for (const { body, shouldFail, desc } of cases) {
+    const fails = POLICY.validateCanonicalReceipt(body);
+    if (shouldFail) {
+      assert.ok(fails.includes(shouldFail) || fails.includes('placeholder') || fails.includes('exit_result') || fails.includes('command') || fails.includes('provenance'), `case ${desc} should fail with ${shouldFail}, got ${fails}`);
+    } else {
+      assert.deepEqual(fails, [], `case ${desc} should pass, got ${fails}`);
+    }
+  }
+  // CLI parity: Exit 1 must be rejected via CLI
+  const cli = spawnSync(process.execPath, [POLICY_PATH, '--validate-receipt', '--task-json', JSON.stringify({ body: `${base}Exit: 1\n` }), '--json'], { encoding: 'utf8' });
+  assert.equal(cli.status, 2);
+  assert.equal(JSON.parse(cli.stdout).ok, false);
+});
+
+test('P0 flash marker-only must not promote or finalize', () => {
+  const flash = canonicalFlashTask({ blocker: 'awaiting /hapo:test' });
+  const markerOnly = 'Verification: PASS';
+  const promoted = POLICY.promoteFlashTask(flash, 'PASS', markerOnly);
+  assert.equal(promoted.status, 'in_progress');
+  assert.equal(promoted.receipt, 'FLASH_UNVERIFIED');
+  assert.equal(promoted.readyForSync, false);
+  assert.equal(promoted.dependencyBlocked, true);
+  assert.equal(promoted.unblocks, false);
+  assert.match(promoted.blocker, /canonical receipt/);
+  // Even with PASS marker but missing command/exit/provenance, finalize must not complete
+  const fakePromoted = { status: 'in_progress', receipt: markerOnly, readyForSync: true, dependencyBlocked: true, unblocks: false };
+  const notFinalized = POLICY.finalizeFlashTask(fakePromoted, 'sync-finalize');
+  assert.equal(notFinalized.status, 'in_progress', 'marker-only receipt must not finalize');
+  // Valid receipt promotes correctly
+  const valid = canonicalReceipt();
+  const good = POLICY.promoteFlashTask(flash, 'PASS', valid);
+  assert.equal(good.readyForSync, true);
+  assert.equal(good.receipt, valid.trim());
+  const forgedFinalize = POLICY.finalizeFlashTask(good, 'sync-finalize');
+  assert.equal(forgedFinalize.status, 'in_progress');
+  assert.equal(forgedFinalize.unblocks, false);
+  const finalized = POLICY.syncFinalizeFlashTask(flash, 'PASS', valid);
+  assert.equal(finalized.status, 'done');
+});
+
+test('P0 canonical artifacts declaration requires SHA-256 and keeps no-artifact receipts compatible', () => {
+  const receipt = 'Verification: PASS\nCommand: node --test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n';
+  const invalid = `${receipt}sha256: abc123\n`;
+  const digest = 'd'.repeat(64);
+  const valid = `${receipt}Artifact: output/bundle.js\nSHA-256: ${digest}\n`;
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt), []);
+  const options = POLICY.receiptValidatorOptions({ artifacts: ['output/bundle.js'] });
+  assert.equal(options.requireArtifactHash, true);
+  assert.equal(options.artifactDeclarationValid, true);
+  assert.ok(POLICY.validateCanonicalReceipt(receipt, options).includes('artifact_hash'));
+  assert.ok(POLICY.validateCanonicalReceipt(invalid, options).includes('artifact_hash'));
+  assert.deepEqual(POLICY.validateCanonicalReceipt(valid, options), []);
+  assert.equal(POLICY.receiptValidatorOptions({}).requireArtifactHash, false);
+  assert.equal(POLICY.receiptValidatorOptions({ artifact_ref: 'output/bundle.js' }).requireArtifactHash, true, 'legacy alias remains read-compatible');
+  for (const declaration of [null, [], ['../outside'], [{ path: 'output/bundle.js' }]]) {
+    const malformed = POLICY.receiptValidatorOptions({ artifacts: declaration });
+    assert.equal(malformed.artifactDeclarationValid, false, `malformed declaration must be rejected: ${JSON.stringify(declaration)}`);
+    assert.ok(POLICY.validateCanonicalReceipt(receipt, malformed).includes('artifact_declaration'));
+  }
+});
+
+test('P0 sync-finalize derives promotion from current FLASH_UNVERIFIED plus explicit PASS proof', () => {
+  const receipt = canonicalReceipt('node --test');
+  const forged = {
+    status: 'in_progress',
+    receipt,
+    readyForSync: true,
+    dependencyBlocked: true,
+    unblocks: false,
+    flashTransition: 'promoted',
+    promotionReceipt: receipt,
+  };
+  const direct = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--sync-finalize',
+    '--task-json',
+    JSON.stringify(forged),
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(direct.status, 2, `${direct.stdout}\n${direct.stderr}`);
+  const directPayload = JSON.parse(direct.stdout);
+  assert.equal(directPayload.ok, false);
+  assert.equal(directPayload.task.status, 'in_progress');
+  assert.equal(directPayload.task.receipt, 'FLASH_UNVERIFIED');
+  assert.equal(directPayload.task.readyForSync, false);
+  assert.equal(directPayload.task.dependencyBlocked, true);
+  assert.equal(directPayload.task.unblocks, false);
+  assert.match(directPayload.message, /current task must be FLASH_UNVERIFIED.*canonical/i);
+
+  const minimal = { status: 'in_progress', receipt: 'FLASH_UNVERIFIED' };
+  const minimalResult = POLICY.syncFinalizeFlashTask(minimal, 'PASS', receipt);
+  assert.equal(minimalResult.status, 'in_progress');
+  assert.match(minimalResult.blocker, /exact canonical stored state/);
+  const forgedOpen = { ...canonicalFlashTask(), readyForSync: true };
+  const forgedOpenResult = POLICY.syncFinalizeFlashTask(forgedOpen, 'PASS', receipt);
+  assert.equal(forgedOpenResult.status, 'in_progress');
+  assert.equal(forgedOpenResult.unblocks, false);
+
+  const current = canonicalFlashTask({ blocker: 'awaiting /hapo:test' });
+  const supported = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--sync-finalize',
+    '--task-json',
+    JSON.stringify(current),
+    '--verdict',
+    'PASS',
+    '--proof',
+    receipt,
+    '--project-root',
+    RUNTIME_ROOT,
+    '--specs-root',
+    path.join(RUNTIME_ROOT, 'specs'),
+    '--spec-file',
+    RUNTIME_SPEC,
+    '--feature-name',
+    'demo',
+    '--runtime-session',
+    'implementation-session-1',
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(supported.status, 0, `${supported.stdout}\n${supported.stderr}`);
+  assert.equal(JSON.parse(supported.stdout).task.status, 'done');
+  const warningFinalize = POLICY.syncFinalizeFlashTask(current, 'PASS_WITH_WARNINGS', receipt);
+  assert.equal(warningFinalize.status, 'in_progress');
+  assert.equal(warningFinalize.unblocks, false);
+
+  const initial = canonicalFlashTask();
+  const promoted = POLICY.promoteFlashTask(initial, 'PASS', receipt);
+  const persisted = JSON.parse(JSON.stringify(promoted));
+  assert.equal(persisted.flashTransition, 'promoted');
+  assert.equal(persisted.promotionReceipt, receipt.trim());
+  const forgedPersistedFinalize = POLICY.finalizeFlashTask(persisted, 'sync-finalize');
+  assert.equal(forgedPersistedFinalize.status, 'in_progress');
+  assert.equal(forgedPersistedFinalize.unblocks, false);
+  const finalized = POLICY.syncFinalizeFlashTask(initial, 'PASS', receipt);
+  assert.equal(finalized.status, 'done');
+  assert.equal(finalized.flashTransition, 'finalized');
+
+  const artifactInitial = { ...initial, artifacts: ['output/bundle.js'] };
+  const artifactPromotion = POLICY.promoteFlashTask(artifactInitial, 'PASS', receipt);
+  assert.equal(artifactPromotion.readyForSync, false, 'flash promotion must apply task artifact requirements');
+
+  const badProof = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--sync-finalize',
+    '--task-json',
+    JSON.stringify(current),
+    '--verdict',
+    'PASS',
+    '--proof',
+    'Verification: PASS',
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(badProof.status, 2);
+  assert.equal(JSON.parse(badProof.stdout).task.status, 'in_progress');
+
+  const badArtifact = spawnSync(process.execPath, [
+    POLICY_PATH,
+    '--sync-finalize',
+    '--task-json',
+    JSON.stringify({ ...current, artifacts: ['output/bundle.js'] }),
+    '--verdict',
+    'PASS',
+    '--proof',
+    receipt,
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(badArtifact.status, 2);
+  assert.equal(JSON.parse(badArtifact.stdout).task.status, 'in_progress');
+
+  const markerOnly = {
+    ...forged,
+    flashTransition: 'promoted',
+    promotionReceipt: 'Verification: PASS',
+    receipt: 'Verification: PASS',
+  };
+  assert.equal(POLICY.finalizeFlashTask(markerOnly, 'sync-finalize').status, 'in_progress');
+});
+
+test('P0 Claude and Codex reject configured specs roots outside the project', () => {
+  const claudeResolver = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'));
+  const codexUtils = require(path.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-utils.cjs'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-external-specs-'));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-configured-specs-'));
+  try {
+    const local = path.join(tmp, 'specs', 'local');
+    const external = path.join(externalRoot, 'remote');
+    fs.mkdirSync(local, { recursive: true });
+    fs.mkdirSync(external, { recursive: true });
+    fs.writeFileSync(path.join(local, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'local' }));
+    fs.writeFileSync(path.join(external, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'remote' }));
+    const runtime = { paths: { specs: externalRoot } };
+    const claude = claudeResolver.resolveActiveSpec({ projectRoot: tmp, runtime });
+    const codex = codexUtils.resolveActiveSpec(tmp, runtime, null, null);
+    assert.equal(claude.error, 'invalid_specs');
+    assert.equal(codex.error, 'invalid_specs');
+    assert.match(claude.reason, /escapes project root/);
+    assert.match(codex.reason, /escapes project root/);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
+test('P0 forged approvals: user_approved and boolean userAuthorized do not downgrade', () => {
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', user_approved: true }), /is blocked.*no trusted runtime issuer/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', userApproved: true }), /is blocked.*no trusted runtime issuer/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', userAuthorized: true }), /is blocked.*no trusted runtime issuer/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { auth: true }, override: 'Standard', confirmDowngrade: true }), /is blocked.*no trusted runtime issuer/);
+  // Direct check of isUserAuthorizedForDowngrade returns false for booleans
+  assert.equal(POLICY.isUserAuthorizedForDowngrade({ user_approved: true }), false);
+  assert.equal(POLICY.isUserAuthorizedForDowngrade({ userAuthorized: true }), false);
+  assert.equal(POLICY.isUserAuthorizedForDowngrade({ userAuthorized: true }, 'Critical', 'Direct', ['privacy']), false);
+});
+
+test('P0 downgrade fail-closed when no verified issuer', () => {
+  const receipt = { automaticLane: 'Critical', requestedLane: 'Direct', risks: ['privacy'], source: 'runtime', timestamp: '2026-08-11T00:00:00.000Z', sessionId: 'sess-1' };
+  assert.equal(POLICY.isValidOverrideReceipt(receipt, 'Critical', 'Direct', ['privacy']), false, 'shape-correct runtime receipt must still be invalid without verified issuer');
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', overrideReceipt: receipt }), /is blocked.*no trusted runtime issuer/);
+  const withVerified = { ...receipt, verifiedByRuntime: true };
+  // Even with verified flag, P0 stays fail-closed (always false) — documents future issuer need
+  assert.equal(POLICY.isValidOverrideReceipt(withVerified, 'Critical', 'Direct', ['privacy']), false);
+});
+
+test('P0 active spec deterministic: multiple active ambiguity and explicit target/path containment', () => {
+  const RESOLVER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-resolver-'));
+  try {
+    const specsDir = path.join(tmp, 'specs');
+    fs.mkdirSync(specsDir, { recursive: true });
+    // Create two active specs
+    for (const name of ['alpha', 'beta']) {
+      fs.mkdirSync(path.join(specsDir, name), { recursive: true });
+      fs.writeFileSync(path.join(specsDir, name, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: name, current_phase: 'design' }));
+    }
+    const amb = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+    assert.equal(amb.error, 'multiple_active');
+    assert.deepEqual(amb.candidates.sort(), ['alpha', 'beta']);
+    // Explicit feature resolves deterministically
+    const alpha = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitFeature: 'alpha' });
+    assert.equal(alpha.featureName, 'alpha');
+    // Explicit not-found fail-closed
+    const notFound = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitFeature: 'gamma' });
+    assert.equal(notFound.error, 'explicit_not_found');
+    // Explicit path containment: try to escape via ../
+    const escape = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitPath: path.join(tmp, 'specs', '..', 'etc', 'passwd') });
+    assert.equal(escape.error, 'explicit_malformed');
+    // Malformed feature name with slash must be rejected
+    const malformed = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitFeature: '../alpha' });
+    assert.equal(malformed.error, 'explicit_malformed');
+    // Valid explicit path inside root
+    const validPath = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitPath: path.join(specsDir, 'beta', 'spec.json') });
+    assert.equal(validPath.featureName, 'beta');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('P0 parity Claude/Codex: canonical receipt and multi-active', () => {
+  // Codex receipt validator must match Claude policy
+  const codexReceipt = require(path.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'));
+  const claudeFails = POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 1\nBase: a\nHead: b\n');
+  const codexFails = codexReceipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 1\nBase: a\nHead: b\n');
+  assert.deepEqual(claudeFails.sort(), codexFails.sort(), 'Claude and Codex validators must agree on Exit 1');
+  const codexEmptyCmd = codexReceipt.validateCanonicalReceipt('Verification: PASS\nCommand:\nExit: 0\nBase: a\nHead: b\n');
+  assert.ok(codexEmptyCmd.includes('command'), 'Codex must reject empty Command');
+  // Codex resolver parity: same containment behaviour
+  const codexUtils = require(path.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-utils.cjs'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-codex-resolver-'));
+  try {
+    const specsDir = path.join(tmp, 'specs');
+    fs.mkdirSync(specsDir, { recursive: true });
+    for (const name of ['x', 'y']) {
+      fs.mkdirSync(path.join(specsDir, name), { recursive: true });
+      fs.writeFileSync(path.join(specsDir, name, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: name }));
+    }
+    const amb = codexUtils.resolveActiveSpec(tmp, {}, null, null);
+    assert.equal(amb.error, 'multiple_active');
+    const esc = codexUtils.resolveActiveSpec(tmp, {}, null, path.join(tmp, 'specs', '..', 'outside', 'spec.json'));
+    assert.equal(esc.error, 'explicit_malformed');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('P0 regression: placeholder, explicit failure, artifact and lanePolicy forged are blocked', () => {
+  // Probe A: explicit failure outcomes must fail canonical validator and not promote flash
+  const bodyTestsFailed = 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nTests failed: 1\n';
+  assert.ok(POLICY.validateCanonicalReceipt(bodyTestsFailed).length > 0, 'Tests failed: 1 must be rejected');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nResult: FAIL\nResult: PASS\n').includes('exit_result'), 'Result FAIL then PASS must be rejected');
+  const flashTask = { status: 'in_progress', receipt: 'FLASH_UNVERIFIED', blocker: 'awaiting', dependencyBlocked: true, unblocks: false };
+  const notPromoted = POLICY.promoteFlashTask(flashTask, 'PASS', bodyTestsFailed);
+  assert.equal(notPromoted.readyForSync, false, 'flash with Tests failed should not promote');
+  assert.equal(notPromoted.receipt, 'FLASH_UNVERIFIED');
+
+  // Probe B: placeholder tokens must be rejected, but substring todo must pass
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: TODO\nExit: 0\nBase: a\nHead: b\n').includes('command'), 'Command TODO must be rejected');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: TBD\nHead: b\n').includes('provenance'), 'Base TBD must be rejected');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: N/A\n').includes('provenance'), 'Head N/A must be rejected');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha: pending\nhead_sha: unknown\n').includes('provenance'), 'base_sha pending must be rejected');
+  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: npm run todo:test --fix\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n'), [], 'command containing todo substring should pass');
+
+  // Probe C: artifact with empty or placeholder sha must fail, concrete passes, inline passes
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact: x\nsha256: \n').includes('artifact_hash'), 'artifact empty sha must fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact: x\nsha256: TBD\n').includes('artifact_hash'), 'artifact TBD sha must fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact: bundle\nsha256: abc123\n').includes('artifact_hash'), 'short artifact sha must fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nArtifact produced sha256:deadbeef\n').includes('artifact_hash'), 'short inline sha256 must fail');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(`Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\nArtifact: bundle\nsha256: ${'c'.repeat(64)}\n`), [], '64-hex artifact sha should pass');
+
+  // Probe F: lanePolicy forged plain object must not bypass classification
+  const { spawnSync } = require('node:child_process');
+  const POLICY_PATH = path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs');
+  const forged = spawnSync(process.execPath, [POLICY_PATH, '--lane-policy', '--task-json', JSON.stringify({ lane: 'Direct', automaticLane: 'Direct', riskSignals: { auth: true } }), '--json'], { encoding: 'utf8' });
+  assert.equal(forged.status, 2, 'forged Direct with auth should be blocked via lanePolicy');
+  assert.match(forged.stderr, /is blocked.*no trusted runtime issuer/);
+  const forged2 = spawnSync(process.execPath, [POLICY_PATH, '--lane-policy', '--task-json', JSON.stringify({ lane: 'Direct', automaticLane: 'Direct' }), '--json'], { encoding: 'utf8' });
+  assert.equal(forged2.status, 2, 'plain Direct without justification should be blocked');
+
+  const trusted = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true });
+  assert.equal(trusted.lane, 'Direct');
+  const viaPolicy = POLICY.lanePolicy(trusted);
+  assert.equal(viaPolicy.lane, 'Direct', 'trusted Direct should be respected');
+  assert.throws(() => { 'use strict'; trusted.lane = 'Direct'; }, /read only|Cannot assign|TypeError/);
+  const paymentTrusted = POLICY.classifyLane({ riskSignals: { payment: true } });
+  const forgedCopy = { ...paymentTrusted, lane: 'Direct' };
+  assert.throws(() => POLICY.lanePolicy(forgedCopy), /is blocked/);
+});
+
+test('P0 regression: symlink spec/task containment and malformed spec handling', () => {
+  const RESOLVER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-regression-symlink-'));
+  try {
+    const specsDir = path.join(tmp, 'specs');
+    fs.mkdirSync(specsDir, { recursive: true });
+    fs.mkdirSync(path.join(specsDir, 'valid'), { recursive: true });
+    fs.writeFileSync(path.join(specsDir, 'valid', 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'valid' }));
+    const outside = path.join(tmp, 'outside');
+    fs.mkdirSync(outside, { recursive: true });
+    fs.writeFileSync(path.join(outside, 'spec.json'), JSON.stringify({ status: 'in_progress' }));
+    const link = path.join(specsDir, 'linked');
+    fs.symlinkSync(outside, link);
+    const e1 = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitFeature: 'linked' });
+    assert.equal(e1.error, 'explicit_malformed');
+    const e2 = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitPath: path.join(specsDir, 'linked', 'spec.json') });
+    assert.equal(e2.error, 'explicit_malformed');
+    const nonExplicit = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+    assert.equal(nonExplicit.error, 'invalid_specs');
+    assert.ok(nonExplicit.candidates.includes('linked'));
+    const featDir = path.join(specsDir, 'valid');
+    fs.mkdirSync(path.join(featDir, 'tasks'), { recursive: true });
+    const taskOutside = path.join(tmp, 'outside-task.md');
+    fs.writeFileSync(taskOutside, '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+    const taskLink = path.join(featDir, 'tasks', 'task.md');
+    fs.symlinkSync(taskOutside, taskLink);
+    const codexReceipt = require(path.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'));
+    const fails = codexReceipt.checkReceipt(featDir, 'tasks/task.md', { status: 'done', completed_at: '2026-08-11T00:00:00.000Z' });
+    assert.ok(fails.includes('a'), 'task symlink outside should be rejected as check a');
+    fs.mkdirSync(path.join(specsDir, 'bad'), { recursive: true });
+    fs.writeFileSync(path.join(specsDir, 'bad', 'spec.json'), '{ malformed');
+    const mal = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+    assert.equal(mal.error, 'invalid_specs');
+    assert.ok(mal.candidates.includes('bad'));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('P0 regression: artifact hash scoped to structured Artifact declaration and explicit failure structured only', () => {
+  // Artifact hash only required when structured Artifact declaration exists
+  const prefix = 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n';
+  const receipt = (suffix = '') => `${prefix}${suffix}`;
+  const digestA = 'a'.repeat(64);
+  const digestB = 'b'.repeat(64);
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('Command: npm run artifact:test\n')), [], 'Command containing artifact without hash should pass');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('Notes: artifact behavior without declaration\n')), [], 'Notes containing artifact without structured declaration should pass');
+  assert.ok(POLICY.validateCanonicalReceipt(receipt('Artifact: bundle\n')).includes('artifact_hash'), 'Artifact: without hash should fail');
+  assert.ok(POLICY.validateCanonicalReceipt(receipt('Artifacts: bundle\nsha256: TBD\n')).includes('artifact_hash'), 'Artifacts: with TBD should fail');
+  assert.ok(POLICY.validateCanonicalReceipt(receipt('Artifact produced sha256:deadbeef\n')).includes('artifact_hash'), 'short artifact hash must fail');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt(`Artifact produced sha256:${digestA}\n`)), [], '64-hex artifact hash should pass');
+
+  const artifactOptions = POLICY.receiptValidatorOptions({ artifacts: ['artifacts/a.js', 'artifacts/b.js'] });
+  assert.ok(POLICY.validateCanonicalReceipt(receipt(`Artifact: artifacts/a.js\nSHA-256: ${digestA}\n`), artifactOptions).includes('artifact_hash'), 'missing second artifact binding must fail');
+  assert.ok(POLICY.validateCanonicalReceipt(receipt(`Artifact: artifacts/a.js + artifacts/b.js\nSHA-256: ${digestA}\n`), artifactOptions).includes('artifact_hash'), 'one hash must not bind a combined multi-artifact declaration');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt(`Artifact: artifacts/a.js\nSHA-256: ${digestA}\nArtifact: artifacts/b.js\nSHA-256: ${digestB}\n`), artifactOptions), [], 'each declared artifact must bind to its hash');
+  assert.ok(POLICY.validateCanonicalReceipt(receipt('Artifact: artifacts/a.js\nSHA-256: deadbeef\nArtifact: artifacts/b.js\nSHA-256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n'), artifactOptions).includes('artifact_hash'), 'short per-artifact hash must fail');
+
+  const falseGreen = receipt([
+    'Tests run: 0',
+    '0 passing',
+    'Failures: 1',
+    'failure summary',
+    'Result: PASS',
+    'Artifact produced sha256:deadbeef',
+    'Artifact: bundle + sha256:abc123',
+  ].join('\n') + '\n');
+  assert.ok(POLICY.validateCanonicalReceipt(falseGreen).length > 0, 'false-green independent-review vector must fail');
+
+  // Explicit failure structured only: prose containing failure should not block, Tests failed: 0 should pass
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('Notes: verifies failure handling\n')), [], 'Notes with failure handling should not block');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('Description: failure recovery\n')), [], 'Description with failure should not block');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('Tests failed: 0\n')), [], 'Tests failed: 0 should pass');
+  assert.deepEqual(POLICY.validateCanonicalReceipt(receipt('fail 0\n')), [], 'fail 0 should pass');
+  // Structured failures still blocked
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nStatus: FAILED\n').length > 0, 'Status: FAILED should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nOutcome: FAILURE\n').length > 0, 'Outcome: FAILURE should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nResult: FAILED\n').length > 0, 'Result: FAILED should fail');
+  // TAP and Jest runner summaries (structured, anchored)
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n# fail 1\n').length > 0, 'TAP # fail 1 should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nℹ fail 2\n').length > 0, 'TAP ℹ fail 2 should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nnot ok 1 - test\n').length > 0, 'TAP not ok 1 should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\nTests: 1 failed, 2 passed\n').length > 0, 'Jest Tests: 1 failed should fail');
+  assert.ok(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n1 failed, 2 passed\n').length > 0, '1 failed summary should fail');
+  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n# fail 0\n'), [], 'TAP # fail 0 should pass');
+  assert.deepEqual(POLICY.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\nTests: 0 failed\n'), [], 'Tests: 0 failed should pass');
+});
+
+test('P0 regression: safeTaskFile fail-closed on realpath error and single authority', () => {
+  const fs2 = require('node:fs');
+  const path2 = require('node:path');
+  const os2 = require('node:os');
+  const specGatePath = path2.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs');
+  const specGateSrc = fs2.readFileSync(specGatePath, 'utf8');
+  // Single authority: Claude hook should delegate to POLICY, not duplicate parser
+  assert.match(specGateSrc, /POLICY\.validateCanonicalReceipt/);
+  assert.doesNotMatch(specGateSrc, /const EXPLICIT_FAILURE/);
+  const codexSrc = fs2.readFileSync(path2.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'), 'utf8');
+  assert.match(codexSrc, /getSharedValidate/);
+  assert.match(codexSrc, /workflow-policy\.cjs/);
+  assert.doesNotMatch(codexSrc, /const PLACEHOLDER_TOKENS/);
+  // safeTaskFile fail-closed: simulate realpathSync throwing
+  const tmp = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'cafekit-realpath-'));
+  try {
+    const featDir = path2.join(tmp, 'feat');
+    fs2.mkdirSync(path2.join(featDir, 'tasks'), { recursive: true });
+    fs2.writeFileSync(path2.join(featDir, 'tasks', 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+    const orig = fs2.realpathSync;
+    fs2.realpathSync = () => { throw new Error('simulated realpath failure'); };
+    try {
+      const codexReceipt = require(path2.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'));
+      const fails = codexReceipt.checkReceipt(featDir, 'tasks/task.md', { status: 'done', completed_at: '2026-08-11T00:00:00.000Z' });
+      assert.ok(fails.includes('a'), 'realpath failure should be fail-closed with check a');
+    } finally {
+      fs2.realpathSync = orig;
+    }
+  } finally {
+    fs2.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('P0 regression: resolver fail-closed on canonicalization and lstat errors', () => {
+  const fs2 = require('node:fs');
+  const path2 = require('node:path');
+  const os2 = require('node:os');
+  const RESOLVER = require(path2.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'));
+  const tmp = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'cafekit-resolver-fail-'));
+  try {
+    const specsDir = path2.join(tmp, 'specs');
+    fs2.mkdirSync(path2.join(specsDir, 'demo'), { recursive: true });
+    fs2.writeFileSync(path2.join(specsDir, 'demo', 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'demo' }));
+    // Monkey patch realpathSync to always throw for explicitFeature
+    const origRealpath = fs2.realpathSync;
+    fs2.realpathSync = () => { throw Object.assign(new Error('simulated EACCES'), { code: 'EACCES' }); };
+    try {
+      const res = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {}, explicitFeature: 'demo' });
+      assert.equal(res.error, 'explicit_malformed', 'explicitFeature realpath failure should be explicit_malformed');
+      assert.match(res.reason, /canonicalization error/);
+    } finally {
+      fs2.realpathSync = origRealpath;
+    }
+    // Non-explicit with specs root realpath failure should be invalid_specs <specs>
+    const origRealpath2 = fs2.realpathSync;
+    fs2.realpathSync = (p) => {
+      if (p === specsDir || p === path2.resolve(specsDir)) throw Object.assign(new Error('simulated ELOOP'), { code: 'ELOOP' });
+      return origRealpath2(p);
+    };
+    try {
+      const res2 = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+      assert.equal(res2.error, 'invalid_specs');
+      assert.ok(res2.candidates.includes('<specs>'));
+    } finally {
+      fs2.realpathSync = origRealpath2;
+    }
+    // lstat error for entry (simulate EACCES on lstat)
+    const origLstat = fs2.lstatSync;
+    fs2.lstatSync = (p) => {
+      if (p.includes('demo')) throw Object.assign(new Error('simulated EACCES'), { code: 'EACCES' });
+      return origLstat(p);
+    };
+    try {
+      const res3 = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+      assert.equal(res3.error, 'invalid_specs');
+      assert.ok(res3.candidates.includes('demo'));
+    } finally {
+      fs2.lstatSync = origLstat;
+    }
+    // Dangling spec.json symlink should be invalid_specs
+    const outside = path2.join(tmp, 'outside-spec2');
+    fs2.mkdirSync(outside, { recursive: true });
+    fs2.writeFileSync(path2.join(outside, 'spec.json'), JSON.stringify({ status: 'in_progress' }));
+    const featDir = path2.join(specsDir, 'dangle');
+    fs2.mkdirSync(featDir, { recursive: true });
+    const specLink = path2.join(featDir, 'spec.json');
+    fs2.symlinkSync(path2.join(tmp, 'nonexistent-target'), specLink);
+    const res4 = RESOLVER.resolveActiveSpec({ projectRoot: tmp, runtime: {} });
+    assert.equal(res4.error, 'invalid_specs');
+    assert.ok(res4.candidates.includes('dangle'));
+  } finally {
+    fs2.rmSync(tmp, { recursive: true, force: true });
+  }
+  // Codex parity: same monkey patch should give explicit_malformed
+  const codexUtils = require(path2.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-utils.cjs'));
+  const tmp2 = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'cafekit-codex-fail-'));
+  try {
+    const specsDir2 = path2.join(tmp2, 'specs');
+    fs2.mkdirSync(path2.join(specsDir2, 'demo2'), { recursive: true });
+    fs2.writeFileSync(path2.join(specsDir2, 'demo2', 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'demo2' }));
+    const orig = fs2.realpathSync;
+    fs2.realpathSync = () => { throw Object.assign(new Error('simulated EACCES'), { code: 'EACCES' }); };
+    try {
+      const r = codexUtils.resolveActiveSpec(tmp2, {}, 'demo2', null);
+      assert.equal(r.error, 'explicit_malformed');
+    } finally {
+      fs2.realpathSync = orig;
+    }
+  } finally {
+    fs2.rmSync(tmp2, { recursive: true, force: true });
+  }
+});
+
+test('P0 canonical phantom vectors - zero, cancellation, suite, FAIL, error, collected (r3)', () => {
+  const base = 'Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n';
+  // 1. Zero execution
+  const zeroFail = [
+    'ℹ tests 0',
+    'Tests: 0 total',
+    '0 tests',
+    'Tests: 0 passed',
+    'Tests: 0 passing',
+    'Test Suites: 0 failed, 0 passed',
+    'Tests passed: 0',
+    'Passed: 0',
+    'one failing',
+    'failureCount: 1',
+    'collected 0 items',
+    'No tests found.',
+    'No tests found',
+  ];
+  for (const v of zeroFail) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `zero execution should fail: ${v}`);
+  }
+  // 2. Cancellation N>0
+  const cancelFail = [
+    'ℹ cancelled 1',
+    'cancelled 1',
+    '1 cancelled',
+    'canceled 1',
+    '1 canceled',
+  ];
+  for (const v of cancelFail) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `cancel should fail: ${v}`);
+  }
+  // 3. Suite / Files
+  const suiteFail = [
+    'Test Suites: 1 failed, 1 total',
+    'Test Suites: 2 failed',
+    'Test Files: 1 failed',
+    'Test Files 1 failed',
+  ];
+  for (const v of suiteFail) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `suite should fail: ${v}`);
+  }
+  // 4. Runner FAIL
+  const runnerFail = [
+    'FAIL ./foo.test.js',
+    'FAIL\tpackage',
+    'FAIL\texample.test/probe\t0.431s',
+    '--- FAIL: TestName (0.00s)',
+    'FAIL',
+    'FAIL: something',
+    'FAILED tests/test_demo.py::test_foo - assert 1 == 2',
+    'FAILED tests/test_demo.py',
+    '# fail 1',
+    'ℹ fail 1',
+    'not ok 1 - test',
+  ];
+  for (const v of runnerFail) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `runner FAIL should fail: ${v}`);
+  }
+  // also standalone FAILED/FAILURE bare/colon
+  for (const v of ['FAILED', 'FAILURE', 'FAILED:', 'FAILURE:']) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `standalone ${v} should fail`);
+  }
+  // 5. Error summaries N>0
+  const errorFail = [
+    '1 error in 0.12s',
+    '2 errors',
+    'ERROR collecting tests/test_demo.py',
+    'ERROR',
+    'Found 2 errors',
+    'Tests run: 5, Failures: 1, Errors: 0',
+    '[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0',
+    '[ERROR] Tests run: 5, Failures: 0, Errors: 1, Skipped: 0',
+    '[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test',
+    '5 tests completed, 1 failed',
+  ];
+  for (const v of errorFail) {
+    assert.ok(POLICY.validateCanonicalReceipt(base + v + '\n').length > 0, `error should fail: ${v}`);
+  }
+  // Positive controls must pass
+  const pass = [
+    'Tests failed: 0',
+    'fail 0',
+    'Tests: 0 failed',
+    'cancelled 0',
+    'canceled 0',
+    'Test Suites: 0 failed',
+    'Test Files: 0 failed',
+    '5 tests completed, 0 failed',
+    'Tests run: 5, Failures: 0, Errors: 0',
+    '# tests 1',
+    '# suites 0',
+    '# pass 1',
+    '# fail 0',
+    '# cancelled 0',
+    '# skipped 0',
+    '# todo 0',
+    '# duration_ms 114.203625',
+    '[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0',
+    '[ERROR] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0',
+    '[ERROR] Error handling is documented',
+    'errors 0',
+    'Found 0 errors',
+    'tests 5',
+    'collected 1 item',
+    'collected 5 items',
+    'Notes: handles error/failure',
+    'Notes: verifies failure handling',
+    'Notes: Tests: 0 passed',
+    'Description: Tests passed: 0',
+    'Notes: one failing test is documented',
+    'Description: failureCount: 1 is documented',
+    'one failing test: 1 is documented',
+    'failureCount: 1 is documented',
+    'Tests failed previously but now fixed',
+    'Failure handling is documented',
+    'failure summary follows in the notes',
+    'ERROR handling is documented',
+    'Summary: failureCount: 1 is documented',
+    'Error handling is documented',
+    'FAILURE mode analysis',
+    'Notes: tests failed previously but now fixed',
+    'Notes: supports zero-test parsing',
+    'Command: npm run test --errorFlag',
+    'Command: npm run artifact:test',
+  ];
+  for (const v of pass) {
+    // Command lines are skipped; others should not trigger hasExplicitFailure
+    const body = v.startsWith('Command:') ? `Verification: PASS\n${v}\nExit: 0\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n` : base + v + '\n';
+    assert.deepEqual(POLICY.validateCanonicalReceipt(body), [], `should pass: ${v}`);
+  }
+  assert.equal(POLICY.isTapMetadataHeading('# fail 1'), true);
+  assert.equal(POLICY.isTapMetadataHeading('# duration_ms 114.203625'), true);
+  assert.equal(POLICY.isTapMetadataHeading('# Notes'), false);
+  assert.equal(POLICY.isTapMetadataHeading('# pass 1 explanation'), false);
 });

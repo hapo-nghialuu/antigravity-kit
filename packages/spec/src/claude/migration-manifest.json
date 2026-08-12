@@ -61,7 +61,9 @@
       "generate-skill-catalog.cjs",
       "validate-spec-output.cjs",
       "scan-staged-secrets.cjs",
-      "workflow-policy.cjs"
+      "workflow-policy.cjs",
+      "spec-resolver.cjs",
+      "provenance.cjs"
     ]
   },
   "agentReferences": {
@@ -102,6 +104,9 @@
       "hooks/rules.cjs",
       "hooks/spec-state.cjs",
       "hooks/spec-gate.cjs",
+      "hooks/completion-authority.cjs",
+      "hooks/completion-authority-check.cjs",
+      "hooks/completion-authority-state.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",

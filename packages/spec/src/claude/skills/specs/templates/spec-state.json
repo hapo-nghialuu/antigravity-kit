@@ -64,7 +64,6 @@
   "design_context": {
     "discovery_mode": null,
     "discovery_reason": null,
-    "execution_tier": "standard",
     "validation_recommended": false
   },
   "validation": {
@@ -81,5 +80,27 @@
     "sync": "always",
     "last_synced_at": null
   },
-  "ready_for_implementation": false
+  "ready_for_implementation": false,
+  "workflow_policy": {
+    "version": "1",
+    "lane": "Standard",
+    "automatic_lane": "Standard",
+    "risks": [],
+    "artifact_profile": "bounded",
+    "proof_obligations": [
+      "needsInspection",
+      "needsExecutionProof"
+    ],
+    "actor_needs": [
+      {
+        "capability": "inspection",
+        "independence": "same-session"
+      },
+      {
+        "capability": "execution-proof",
+        "independence": "same-session"
+      }
+    ],
+    "override_receipt": null
+  }
 }

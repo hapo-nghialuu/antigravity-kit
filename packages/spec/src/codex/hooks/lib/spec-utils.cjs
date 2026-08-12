@@ -2,49 +2,75 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resolveProjectPath } = require('./hook-context.cjs');
+
+// Installed Codex hooks use .codex/scripts; source tests use the Claude-side
+// source path. If an installed resolver exists but is malformed, do not fall
+// back to another copy: the shared authority is unavailable.
+const RESOLVER_CANDIDATES = [
+  path.join(__dirname, '../../scripts/spec-resolver.cjs'),
+  path.join(__dirname, '../../../claude/scripts/spec-resolver.cjs'),
+];
+
+function sharedResolver() {
+  const candidate = RESOLVER_CANDIDATES.find((file) => fs.existsSync(file)) || RESOLVER_CANDIDATES[0];
+  try {
+    const resolver = require(candidate);
+    if (typeof resolver?.resolveActiveSpec !== 'function') {
+      throw new Error('shared spec resolver has no resolveActiveSpec function');
+    }
+    return resolver;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message} (${candidate})`);
+  }
+}
 
 function specsDirectory(projectRoot, runtime) {
-  return resolveProjectPath(
+  return sharedResolver().specsDirectory(projectRoot, runtime);
+}
+
+function findAllActiveSpecs(projectRoot, runtime) {
+  return sharedResolver().findAllActiveSpecs(projectRoot, runtime);
+}
+
+function findAllSpecCandidates(projectRoot, runtime) {
+  return sharedResolver().findAllSpecCandidates(projectRoot, runtime);
+}
+
+function resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath) {
+  if (projectRoot && typeof projectRoot === 'object') {
+    return sharedResolver().resolveActiveSpec(projectRoot);
+  }
+  return sharedResolver().resolveActiveSpec({
     projectRoot,
-    runtime.paths?.specs,
-    'specs'
-  );
+    runtime,
+    explicitFeature,
+    explicitPath,
+  });
 }
 
 function findActiveSpec(projectRoot, runtime) {
-  const specsDir = specsDirectory(projectRoot, runtime);
-  if (!fs.existsSync(specsDir)) return null;
-  const entries = fs.readdirSync(specsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .sort((left, right) => left.name.localeCompare(right.name));
-
-  for (const entry of entries) {
-    const file = path.join(specsDir, entry.name, 'spec.json');
-    if (!fs.existsSync(file)) continue;
-    try {
-      const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (spec.status === 'in_progress' || spec.status === 'in-progress') {
-        return { featureName: entry.name, spec, specsDir };
-      }
-    } catch {
-      // Ignore an unrelated malformed spec and continue discovery.
-    }
-  }
-  return null;
+  const resolved = resolveActiveSpec(projectRoot, runtime);
+  if (!resolved) return null;
+  if (resolved.error === 'multiple_active' || resolved.error === 'invalid_specs') return resolved;
+  if (resolved.error) return null;
+  return resolved;
 }
 
 function taskStatusMap(spec) {
   return Object.fromEntries(
     Object.entries(spec.task_registry || {}).map(([taskPath, task]) => [
       taskPath,
-      task?.status || 'pending'
-    ])
+      task?.status || 'pending',
+    ]),
   );
 }
 
 module.exports = {
   findActiveSpec,
+  findAllActiveSpecs,
+  findAllSpecCandidates,
+  resolveActiveSpec,
   specsDirectory,
-  taskStatusMap
+  taskStatusMap,
 };

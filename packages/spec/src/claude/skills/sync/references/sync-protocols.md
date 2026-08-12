@@ -2,7 +2,7 @@
 
 The following guidelines dictate exactly how `hapo:sync` should interact with files to prevent data corruption.
 
-**Flash implementation state:** `FLASH_UNVERIFIED` MUST remain `status: "in_progress"` with blocker `awaiting /hapo:test <feature>`. It never unblocks dependencies. A task-scoped `/hapo:test` PASS replaces receipt with real `Verification: PASS`, clears blocker, and sets `readyForSync: true` while dependency blocking remains. Only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock; FAIL, BLOCKED, and NO_TESTS stay `in_progress`.
+**Flash implementation state:** `FLASH_UNVERIFIED` MUST remain the exact stored form: `status: "in_progress"`, `dependencyBlocked: true`, `unblocks: false`, a concrete blocker, and no `readyForSync`, `flashTransition`, or `promotionReceipt` fields. It never unblocks dependencies. The supported sync-finalize adapter must pass the current task, `--verdict PASS`, and canonical `--proof` to `workflow-policy.cjs`; the policy derives promotion, requires a runtime `createReceiptBinding({ base, head })` match for both receipt anchors, revalidates receipt/artifact requirements, and rejects caller-supplied promotion fields before setting `done`. FAIL, BLOCKED, NO_TESTS, marker-only proof, minimal state, and pre-promoted caller JSON stay `in_progress`.
 
 **Lane state rule:** classify Direct/Standard/Critical before sync. Direct may omit spec/state/registry for clear, reversible low-risk work; Standard uses one bounded spec and one feature receipt; Critical requires strict durable evidence. Explicit overrides must retain automatic lane, risk signals, and warning. `generated`, `agent_validated`, and `user_approved` are independent booleans; never infer or write `user_approved: true` from agent fields.
 
@@ -18,7 +18,7 @@ The following guidelines dictate exactly how `hapo:sync` should interact with fi
 *   **Done-State Rule:** Never set `task_registry[path].status = "done"` unless the matching markdown task file already contains a verification receipt in `## Evidence` (legacy heading aliases still parse), or the caller explicitly provides proof that can be written there first.
 *   **Receipt Integrity Rule:** A valid verification receipt must include the exact commands run, their outcomes, and artifact/runtime proof. Receipts containing `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or explicit "placeholder / simplified for MVP / production later" contract deviations are not eligible for `done`.
 *   **Contract Fidelity Rule:** If the task file notes or evidence show that a named framework/auth/runtime choice from the spec was silently replaced, sync MUST refuse `done` until the spec is amended or the implementation is corrected.
-*   **Task Docs Rule:** After a task is moved to `done`, emit a short alert that a task-level docs checkpoint is due for this verified task.
+*   **Task Docs Rule:** After a task is moved to `done`, assess actual documentation impact and report `Docs impact: major|minor|none`. Only affected docs receive a follow-up checkpoint.
 
 ## 2. Updating `tasks/task-**.md`
 
@@ -33,7 +33,7 @@ When `/hapo:sync <feature> <task-id> done`:
 5. Locate block: `## Steps` or `## Implementation Steps`.
 6. Convert `- [ ]` into `- [x]` strictly within that section.
 7. Update relevant checkboxes in `## Completion Criteria` and `## Evidence` (legacy heading aliases still parse) only when the caller provides or the file already contains real proof.
-8. Surface a note such as: `Docs checkpoint due: task Rn-mm just completed`.
+8. Surface `Docs impact: major|minor|none`; if impact is not `none`, name the affected docs and the follow-up checkpoint.
 
 ### B. Blocking a Task
 When `/hapo:sync <feature> <task-id> blocked "API error"`:
@@ -62,4 +62,4 @@ When `/hapo:sync audit <feature>` is activated:
    - Either side says `done` but `## Evidence` (legacy heading aliases still parse) has no concrete proof → downgrade to `in_progress` or flag conflict instead of preserving fake completion
    - Either side says `done` but the receipt contains `PRECHECK_FAIL`, `FAIL`, `UNVERIFIED`, or explicit contract-substitution notes → downgrade to `in_progress` or flag conflict
 5. **Correction Alert:** Output a brief markdown alert detailing mismatches fixed and any unresolved conflicts requiring manual review.
-6. **Task Docs Alert:** If audit reveals tasks newly marked `done`, include whether task-level docs sync appears still due or already accounted for in the current run summary.
+6. **Task Docs Alert:** If audit reveals tasks newly marked `done`, include the actual docs impact; do not emit a generic docs-sync request when no docs are affected.

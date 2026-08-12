@@ -13,6 +13,7 @@ const REQUIRED_PAYLOAD = [
   'src/claude/migration-manifest.json',
   'src/claude/scripts/scan-staged-secrets.cjs',
   'src/claude/scripts/workflow-policy.cjs',
+  'src/claude/scripts/provenance.cjs',
 ];
 const FORBIDDEN_PAYLOAD = [
   /(^|\/)\.logs(\/|$)/,
@@ -82,6 +83,136 @@ function runInstaller(installer, root, platforms, lang) {
     env: { ...process.env, HOME: path.join(root, 'home'), PATH: '/usr/bin:/bin' },
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+}
+
+function createProvenanceFixture(root) {
+  const feature = 'installer-provenance';
+  const specFile = path.join('specs', feature, 'spec.json');
+  fs.mkdirSync(path.join(root, path.dirname(specFile)), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, specFile),
+    JSON.stringify({ feature_name: feature, status: 'in_progress' }) + '\n'
+  );
+  fs.writeFileSync(path.join(root, 'tracked-fixture.txt'), 'tracked fixture\n');
+
+  for (const args of [
+    ['init', '-q'],
+    ['add', '--', 'tracked-fixture.txt', specFile],
+    ['-c', 'user.name=CafeKit Fixture', '-c', 'user.email=cafekit-fixture@example.invalid', 'commit', '--no-gpg-sign', '-qm', 'provenance fixture'],
+  ]) {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, `${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
+  }
+
+  return {
+    specsRoot: 'specs',
+    specFile,
+    feature,
+    session: `package-${path.basename(root)}`,
+  };
+}
+
+function provenanceCliArgs(helper, root, fixture) {
+  return [
+    helper,
+    '--json',
+    '--project-root', root,
+    '--specs-root', fixture.specsRoot,
+    '--spec-file', fixture.specFile,
+    '--feature-name', fixture.feature,
+    '--session', fixture.session,
+  ];
+}
+
+function assertInstalledProvenance(root, platform, fixture) {
+  const scripts = path.join(root, RUNTIMES[platform].root, 'scripts');
+  const helper = path.join(scripts, 'provenance.cjs');
+  const policy = path.join(scripts, 'workflow-policy.cjs');
+  const resolver = path.join(scripts, 'spec-resolver.cjs');
+  const gate = path.join(
+    root,
+    platform === 'claude' ? '.claude/hooks/spec-gate.cjs' : '.codex/hooks/spec-gate.cjs'
+  );
+  const authorityDir = path.join(root, platform === 'claude' ? '.claude/hooks' : '.codex/hooks');
+  const authority = path.join(authorityDir, 'completion-authority.cjs');
+  const authorityCheck = path.join(authorityDir, 'completion-authority-check.cjs');
+  const authorityState = path.join(authorityDir, 'completion-authority-state.cjs');
+  for (const file of [helper, policy, resolver]) {
+    assert.equal(fs.existsSync(file), true, `${platform} installed file missing: ${file}`);
+  }
+  assert.equal(fs.existsSync(gate), true, `${platform} installed gate missing: ${gate}`);
+
+  for (const file of [authority, authorityCheck, authorityState]) {
+    assert.equal(fs.existsSync(file), true, `${platform} installed completion authority missing: ${file}`);
+  }
+  const authorityCheckBytes = fs.readFileSync(authorityCheck);
+  fs.writeFileSync(authorityCheck, 'module.exports = {};\n');
+  const malformedAuthority = spawnSync(process.execPath, [authority, '--stop'], {
+    cwd: root,
+    env: { ...process.env, PROJECT_ROOT: root },
+    input: JSON.stringify({ cwd: root, session_id: fixture.session, hook_event_name: 'Stop' }),
+    encoding: 'utf8',
+  });
+  assert.equal(malformedAuthority.status, 0, `${platform} malformed authority must fail closed`);
+  assert.equal(JSON.parse(malformedAuthority.stdout).decision, 'block');
+  fs.writeFileSync(authorityCheck, authorityCheckBytes);
+  fs.rmSync(authorityCheck);
+  const missingAuthority = spawnSync(process.execPath, [authority, '--stop'], {
+    cwd: root,
+    env: { ...process.env, PROJECT_ROOT: root },
+    input: JSON.stringify({ cwd: root, session_id: fixture.session, hook_event_name: 'Stop' }),
+    encoding: 'utf8',
+  });
+  assert.equal(missingAuthority.status, 0, `${platform} missing authority dependency must fail closed`);
+  assert.equal(JSON.parse(missingAuthority.stdout).decision, 'block');
+  fs.writeFileSync(authorityCheck, authorityCheckBytes);
+
+  const helperRun = spawnSync(process.execPath, provenanceCliArgs(helper, root, fixture), {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  assert.equal(helperRun.status, 0, `${helperRun.stdout}\n${helperRun.stderr}`);
+  const output = JSON.parse(helperRun.stdout);
+  assert.equal(output.ok, true);
+  assert.match(output.Base, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+  assert.match(output.Head, /^[a-f0-9]{64}$/);
+  assert.match(output.context_id, /^[a-f0-9]{64}$/);
+  assert.equal(output.context.runtime_session, fixture.session);
+
+  const policyLoad = spawnSync(process.execPath, [policy, '--json'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  assert.equal(policyLoad.status, 0, `${policyLoad.stdout}\n${policyLoad.stderr}`);
+  assert.equal(JSON.parse(policyLoad.stdout).ok, true);
+
+  const gateInput = JSON.stringify({
+    cwd: root,
+    session_id: fixture.session,
+    featureName: fixture.feature,
+  });
+  const assertControlledBlock = (label) => {
+    const gateRun = spawnSync(process.execPath, [gate], {
+      cwd: root,
+      input: `${gateInput}\n`,
+      encoding: 'utf8',
+    });
+    assert.equal(gateRun.status, 0, `${label}: ${gateRun.stdout}\n${gateRun.stderr}`);
+    const decision = JSON.parse(gateRun.stdout);
+    assert.equal(decision.decision, 'block', `${label}: ${gateRun.stdout}`);
+    assert.equal(decision.ok, undefined, `${label}: ${gateRun.stdout}`);
+    assert.match(decision.reason, /unavailable|shared workflow policy|provenance|helper/i);
+    assert.doesNotMatch(gateRun.stdout, /"decision"\s*:\s*"allow"|"ok"\s*:\s*true/);
+  };
+
+  const helperBytes = fs.readFileSync(helper);
+  fs.rmSync(helper);
+  assertControlledBlock('missing provenance helper');
+
+  fs.writeFileSync(helper, 'module.exports = {;\n');
+  assertControlledBlock('malformed provenance helper');
+
+  fs.writeFileSync(helper, helperBytes);
 }
 
 function managedBlock(content, start, end) {
@@ -251,6 +382,32 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
           assert.match(fs.readFileSync(path.join(project, 'CLAUDE.md'), 'utf8'), /User Claude matrix note\nKeep this exact\./);
         }
       }
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packed Claude and Codex installs self-contain runtime provenance and fail closed without it', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-provenance-package-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    assertCleanInventory(packedInventory(tarball));
+
+    for (const platform of ['claude', 'codex']) {
+      const project = path.join(root, platform);
+      const installer = installPacked(tarball, project);
+      runInstaller(installer, project, [platform], null);
+
+      const packedSource = path.resolve(path.dirname(installer), '..', 'src');
+      fs.rmSync(packedSource, { recursive: true, force: true });
+      assert.equal(fs.existsSync(packedSource), false, 'installed gate must not need package source fallback');
+
+      const fixture = createProvenanceFixture(project);
+      assertInstalledProvenance(project, platform, fixture);
     }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

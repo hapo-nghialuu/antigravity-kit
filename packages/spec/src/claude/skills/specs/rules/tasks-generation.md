@@ -2,16 +2,25 @@
 
 ## Core Principles
 
-### 0. Pre-Generation Decision Gates
+### 0. Conditional generation gates
+
+This file is loaded only after the persisted lane obligations say that a task
+bundle is needed. A bounded Standard scope may finish with its feature receipt
+and no `tasks/` or registry.
 
 Before writing any `tasks/task-R*.md` file:
 
-1. Load `phase-decision-matrix.md` and identify implementation slices/task clusters: R0 foundation, risk spikes, vertical slices, layer slices, cross-cutting slices, integration gates, verification gates, and release/packaging slices when in scope.
-2. Load `task-scoring-rubric.md` and score each candidate task. Use the result to choose priority, split/merge, spike needs, dependencies, parallel eligibility, and evidence depth.
-3. Load `../references/ask-user-question-gates.md` if scoring or slicing detects unapproved scope expansion, unresolved architecture tie, missing evidence, contract ambiguity, or final contradiction.
-4. Do not ask about facts that targeted scout, repo files, tests, or official/current docs can answer.
+1. Load `phase-decision-matrix.md` only if the task boundaries are unclear.
+2. Load `task-scoring-rubric.md` only if an actual split/merge, dependency, or
+   evidence-depth decision needs it. Scoring is optional and never selects a
+   lane or makes tasks mandatory.
+3. Load `../references/ask-user-question-gates.md` only for an unapproved scope
+   change, unresolved architecture choice, missing evidence, or contradiction.
+4. Use targeted scout, repository files, tests, and current primary docs for
+   facts before asking the user.
 
-The raw score table does not need to appear in each task file. The task file must reflect the decisions: why the task exists, what it depends on, why it is split/merged, whether it can be parallel, and what proof is required.
+The task file must explain only decisions that affect execution: scope,
+dependencies, ownership, proof, and any intentional split/merge.
 
 ### 1. Natural Language Descriptions
 Focus on capabilities and outcomes, not code structure.
@@ -32,7 +41,10 @@ Detail bullets must include:
    - API payloads, routes, and JSON contracts.
    - Edge cases, error handling, and exact validation thresholds (e.g., `Return 403 if invalid`).
 
-**Rationale**: Humans review tasks to verify business requirements are met; AI Coders (like implementer or ck) read tasks to write explicit code. If you only write business jargon, the AI hallucinates. If you only write code names, the human reviewer cannot verify the business value. You MUST provide both.
+**Rationale**: Humans review tasks to verify business requirements are met;
+coding agents read tasks to write explicit code. If you only write business
+jargon, the AI hallucinates. If you only write code names, the human reviewer
+cannot verify the business value. You MUST provide both.
 
 ### 2. Task Integration & Progression
 
@@ -48,8 +60,10 @@ Detail bullets must include:
 - Reuse canonical contracts from `design.md` verbatim; never invent alternate auth/provider/deletion policies in task prose
 - Use major task summaries sparingly—omit detail bullets if the work is fully captured by child tasks.
 
-**End with integration tasks** to wire everything together.
-- For UI/app/runtime workflows, the final integration task MUST name the real entrypoint (`App.tsx`, route, command, worker, extension manifest, API route, etc.) and verify every user-visible surface from the requirements is reachable from that entrypoint.
+**Add integration proof when the surface needs it**.
+- For UI/app/runtime workflows, the last task or a final integration section
+  names the real entrypoint (`App.tsx`, route, command, worker, extension
+  manifest, API route, etc.) and verifies every scoped surface is reachable.
 - Components, services, routes, commands, workers, providers, and data loaders created by earlier tasks MUST be consumed by a later integration task or explicitly marked as internal support in `design.md`; orphaned deliverables are invalid.
 - Prefer compact, implementation-ready task prose over large boilerplate. The golden shape is: `Context` -> `Steps` -> `Requirements` -> `Related Files` -> `Completion Criteria` -> `Evidence` -> `Risk Assessment`.
 - A compact task is valid when it names exact files/contracts, maps requirements, and gives executable evidence. Do not expand it into nested filler just to satisfy a template.
@@ -94,15 +108,24 @@ Some requirements (e.g., "language handling", "error handling") naturally touch 
 
 Grouping tasks vertically by requirement carries the risk of "siloed" or fragmented code (e.g., each requirement building its own isolated setup). To ensure the system remains cohesive:
 
-1. **Foundation First (The R0 Concept)**: Extract shared infrastructure, core database migrations, authentication wrappers, and base UI layouts into foundational tasks running before feature work. If these aren't explicitly in requirements, classify them as `task-R0-XX-foundation.md` or map them to the most logical architectural requirement. All parallel feature tasks MUST depend on these foundation tasks.
+1. **Foundation only when real**: Add a foundation task only for a shared
+   prerequisite that has its own ownership or proof boundary. Do not invent an
+   R0 task for a small bounded change.
 2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
 3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
-4. **Final Runtime Integration**: For any feature that has a user-facing screen, public route, CLI command, background worker, browser extension surface, or API flow, create a final integration task (or a final integration section in the last dependent task) that proves the whole scoped feature works from its runtime entrypoint. This task MUST fail if prior-task outputs exist but are not imported, mounted, registered, or invoked.
-5. **Scored Sequencing**: Use `task-scoring-rubric.md` to schedule high-value/high-dependency tasks early, but only after required foundation/spike work. High file-conflict or high blast-radius tasks must not be marked `(P)` without isolated ownership.
+4. **Final Runtime Integration**: For a feature with a user-facing or
+   runtime-facing surface, include a final integration task or section only if
+   the existing task evidence does not already prove the entrypoint. It MUST
+   fail when outputs are not imported, mounted, registered, or invoked.
+5. **Advisory sequencing**: If the optional rubric was used, apply its
+   dependency/ownership notes. Never use a score to add ceremony or override
+   the persisted lane.
 
-### 3d. Spike Tasks for Complex/Uncertain Areas (MANDATORY)
+### 3d. Spike tasks for unresolved uncertainty (ADVISORY)
 
-When the 5-Dimension Complexity Assessment (Step 3) flags a component or requirement as **Risk = Complex** (Cynefin), the task breakdown MUST include a dedicated **spike/prototype task** before the main implementation task for that area.
+When the assessment flags an unproven assumption, a time-boxed spike may be
+useful before implementation. A Cynefin `Complex` label alone does not mandate
+one, change the lane, or create a registry/DAG.
 
 **Purpose**: Validate assumptions and reduce uncertainty before committing to full implementation.
 
@@ -117,8 +140,9 @@ When the 5-Dimension Complexity Assessment (Step 3) flags a component or require
 5. **Dependencies**: The main implementation task for this area MUST depend on the spike task.
 
 **When NOT to create spike tasks:**
-- Risk = Clear or Complicated → skip spike, proceed directly.
-- The uncertain area is already covered by research.md with concrete evidence (real API tests, not just documentation links).
+- the assumption is already grounded by targeted evidence or required research;
+- the change is clear enough for a direct implementation/proof path;
+- the spike would add ceremony without reducing a concrete uncertainty.
 
 ### 6. Risk Assessment Table (MANDATORY)
 
@@ -190,7 +214,9 @@ Choose verification by task risk and touched surface. Do not force every task to
 | Bug fix/regression | Regression test reproducing the old failure, then passing |
 | Performance/security-sensitive requirement or touched surface | Performance/security check only when specified by requirements, design risk, or changed boundary |
 
-`hapo:specs` writes the expected proof into each task. `hapo:develop` executes the task-local proof before marking the task done. `hapo:test` runs the broader system pass after implementation or for a requested feature scope.
+`hapo:specs` writes the expected proof into each task. `hapo:test` is the sole
+execution-proof owner and emits the canonical receipt. `hapo:develop` consumes
+that proof at closeout; it does not create a second execution receipt.
 
 ### Frontend Fidelity Rule (when a visual reference is provided)
 
@@ -260,12 +286,15 @@ Reuse vs new component:
 
 ## Requirements Coverage
 
-**Mandatory Check**:
-- ALL requirements from requirements.md MUST be covered
+**Check when a task bundle exists**:
+- ALL requirements assigned to the task bundle MUST be covered
 - Cross-reference every requirement ID with task mappings
 - If gaps found: Return to requirements or design phase
 - No requirement should be left without corresponding tasks
 
-Use the requirement ID style already present in `requirements.md` (`R1`, `REQ-01`, or `N.M`). The task filename cluster (`task-R1-01-*`) does not have to mirror every requirement ID exactly, but every requirement MUST be listed in at least one task's `## Requirements` section.
+Use the requirement ID style already present in `requirements.md` (`R1`,
+`REQ-01`, or `N.M`). The task filename cluster (`task-R1-01-*`) does not have
+to mirror every requirement ID exactly, but every requirement represented by
+the bundle MUST be listed in at least one task's `## Requirements` section.
 
 Document any intentionally deferred requirements with rationale.

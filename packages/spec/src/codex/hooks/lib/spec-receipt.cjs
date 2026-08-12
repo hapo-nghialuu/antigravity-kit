@@ -10,7 +10,40 @@ const EVIDENCE_NAMES = [
 ];
 const PASS_MARKER = /^\s*Verification:\s*PASS\s*$/m;
 const LEGACY_SUCCESS = /^\s*(?:PASS(?:ED)?|✓)(?:\s*:|$)|exit\s+code\s*[:=]?\s*0\b/im;
-const EXPLICIT_FAILURE = /\bFAIL(?:ED|URE|URES|ING)?\b|tests?\s+failed|exit\s+code\s*[:=]?\s*[1-9]\d*|\b0\s+tests?\b/i;
+
+// Single authority: delegate to shared workflow-policy validator. If an
+// installed policy exists but is broken, do not fall back to another copy.
+function loadSharedPolicy() {
+  const installed = path.join(__dirname, '../../scripts/workflow-policy.cjs');
+  const repo = path.join(__dirname, '../../../claude/scripts/workflow-policy.cjs');
+  const candidates = fs.existsSync(installed) ? [installed] : [repo];
+  let lastError = new Error('shared workflow policy is missing');
+  for (const candidate of candidates) {
+    try {
+      const policy = require(candidate);
+      if (typeof policy?.validateCanonicalReceipt !== 'function') {
+        throw new Error('shared workflow policy has no validateCanonicalReceipt function');
+      }
+      return { policy, error: null, path: candidate };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  return { policy: null, error: lastError, path: candidates[0] };
+}
+
+function getSharedPolicy() {
+  return loadSharedPolicy().policy;
+}
+
+function getSharedValidate() {
+  return loadSharedPolicy().policy?.validateCanonicalReceipt || null;
+}
+
+function isTapMetadataHeading(line) {
+  const policy = getSharedPolicy();
+  return typeof policy?.isTapMetadataHeading === 'function' && policy.isTapMetadataHeading(line);
+}
 
 function evidenceBody(text) {
   const lines = text.split('\n');
@@ -28,7 +61,7 @@ function evidenceBody(text) {
   let end = lines.length;
   for (let index = start; index < lines.length; index += 1) {
     const heading = lines[index].match(/^(#{1,6})\s+/);
-    if (heading && heading[1].length <= level) {
+    if (heading && heading[1].length <= level && !isTapMetadataHeading(lines[index])) {
       end = index;
       break;
     }
@@ -37,37 +70,29 @@ function evidenceBody(text) {
 }
 
 function safeTaskFile(featureDir, taskPath) {
+  const resolvedFeature = path.resolve(featureDir);
   const target = path.resolve(featureDir, taskPath);
-  const relative = path.relative(featureDir, target);
+  const relative = path.relative(resolvedFeature, target);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+  if (!fs.existsSync(target)) return null;
+  try {
+    const canonicalFeature = fs.realpathSync(resolvedFeature);
+    const canonicalTarget = fs.realpathSync(target);
+    const rel = path.relative(canonicalFeature, canonicalTarget);
+    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return null;
+  } catch {
+    return null;
+  }
   return target;
 }
 
-function validateCanonicalReceipt(body) {
-  const failures = [];
-  if (!/^\s*Verification:\s*PASS\s*$/m.test(body)) {
-    failures.push('verification_state');
-  }
-  if (!/^\s*Command(?:\(s\))?\s*:/m.test(body)) {
-    failures.push('command');
-  }
-  if (!/^\s*Exit\s*:|exit\s+code\s*[:=]|\bResult\s*:\s*PASS\b/im.test(body)) {
-    failures.push('exit_result');
-  }
-  const hasBase = /^\s*Base[ \t]*:[ \t]*\S/im.test(body);
-  const hasHead = /^\s*Head[ \t]*:[ \t]*\S/im.test(body);
-  const hasBaseSha = /\bbase_sha[ \t]*:[ \t]*\S/im.test(body);
-  const hasHeadSha = /\bhead_sha[ \t]*:[ \t]*\S/im.test(body);
-  if (!((hasBase && hasHead) || (hasBaseSha && hasHeadSha))) {
-    failures.push('provenance');
-  }
-  if (/\bartifact\b/i.test(body) && !/sha256:/i.test(body)) {
-    failures.push('artifact_hash');
-  }
-  return failures;
+function validateCanonicalReceipt(body, options = {}) {
+  const fn = getSharedValidate();
+  if (!fn) return ['shared_validator'];
+  return fn(body, options);
 }
 
-function checkReceipt(featureDir, taskPath, task) {
+function checkReceipt(featureDir, taskPath, task, runtimeContext) {
   const failures = [];
   const file = safeTaskFile(featureDir, taskPath);
   if (!file || !fs.existsSync(file)) return ['a'];
@@ -83,37 +108,38 @@ function checkReceipt(featureDir, taskPath, task) {
     failures.push('b');
   } else if (
     /\{\{[^}]+\}\}/.test(body)
-    || EXPLICIT_FAILURE.test(body)
     || !(PASS_MARKER.test(body) || LEGACY_SUCCESS.test(body))
   ) {
     failures.push('c');
   } else {
-    // Canonical receipt requirements: command, exit/result, provenance, unambiguous PASS
-    // For done tasks, require canonical fields. If missing, add e/f/g.
-    const canonical = validateCanonicalReceipt(body);
-    // Map canonical failures to letters e,f,g,h for backward compat checks
-    // Use detailed names but also add letters for gate reporting
+    const policy = loadSharedPolicy().policy;
+    const options = typeof policy?.receiptValidatorOptions === 'function'
+      ? policy.receiptValidatorOptions(task, { runtimeContext, requireProvenanceBinding: true })
+      : { requireProvenanceBinding: true };
+    const canonical = validateCanonicalReceipt(body, options);
     const map = {
-      verification_state: 'c', // already covers but keep distinct
+      verification_state: 'c',
       command: 'e',
       exit_result: 'f',
       provenance: 'g',
       artifact_hash: 'h',
+      artifact_declaration: 'h',
+      placeholder: 'c',
+      shared_validator: 'c',
+      validator_unavailable: 'c',
     };
     for (const fail of canonical) {
-      const letter = map[fail];
-      // Avoid duplicating c if already failed, but add specific
-      if (fail === 'verification_state' && failures.includes('c')) continue;
-      if (fail === 'verification_state') {
-        // This should have been caught by c, but if PASS present via legacy, still need strict PASS
-        if (!PASS_MARKER.test(body)) failures.push('c');
+      if (fail === 'verification_state' || fail === 'shared_validator' || fail === 'validator_unavailable') {
+        if (!failures.includes('c')) failures.push('c');
         continue;
       }
+      if (fail === 'placeholder') {
+        if (!failures.includes('c')) failures.push('c');
+        continue;
+      }
+      const letter = map[fail];
       if (letter && !failures.includes(letter)) failures.push(letter);
     }
-    // Additional strict check: legacy success alone is not sufficient for canonical
-    // If body contains only legacy PASS but not canonical Verification: PASS, c already would have caught if no PASS_MARKER?
-    // But we allow legacy for backward compat in c, but canonical requires PASS_MARKER, so we must enforce.
     if (!PASS_MARKER.test(body)) {
       if (!failures.includes('c')) failures.push('c');
     }
@@ -128,4 +154,11 @@ function checkReceipt(featureDir, taskPath, task) {
   return failures;
 }
 
-module.exports = { checkReceipt, evidenceBody, safeTaskFile, validateCanonicalReceipt };
+module.exports = {
+  checkReceipt,
+  evidenceBody,
+  safeTaskFile,
+  validateCanonicalReceipt,
+  loadSharedPolicy,
+  getSharedPolicy,
+};

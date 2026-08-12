@@ -1,100 +1,119 @@
 ---
 name: hapo:code-review
-description: "Adversarial code review with technical rigor. Supports 3-Stage Protocol with ai-multimodal injection for multimodal spec compliance. Red-team analysis finds security holes, logic gaps, and architecture violations."
+description: "Review a change for correctness, security, and specification compliance without owning execution proof."
 user-invocable: true
-when_to_use: "Invoke to review a diff for correctness and quality before merge."
+when_to_use: "Use for a pending diff, commit, PR, or explicitly scoped review."
 category: dev-tools
-keywords: [review, diff, quality, correctness]
+keywords: [review, diff, correctness, security]
 argument-hint: "[#PR | COMMIT | --pending | scope]"
 metadata:
   author: haposoft
-  version: "1.0.0"
+  version: "2.0.0"
 ---
-# Code Review
+# Code Review — correctness and compliance owner
 
-Adversarial code review with technical rigor, evidence-based claims, and visual/document intelligence via the `hapo:ai-multimodal` Hub.
+Review evaluates correctness, security, scope, architecture, and specification
+compliance. It does not execute the test suite, create a canonical execution
+receipt, or turn a missing test result into a review-owned proof. `hapo:test`
+owns execution proof; the single closeout owner combines both results.
 
-Runs during the `hapo:develop` Quality Gate (parallel to `hapo:test`), or standalone.
+## Input and depth
 
-## Load First
-Before executing any review, firmly grasp these two pillars:
-- `references/spec-compliance-review.md` (Stage 1 rules)
-- `references/verification-gate.md` (Execution Proofs)
-- `references/pre-landing-checklists.md` (Stage 2 rules)
-- `references/adversarial-review.md` (Stage 3 rules)
+With no argument, review the pending diff. Supported targets are a PR, commit,
+pending changes, or an explicit path. Load only the spec and references needed
+for the target.
 
-## Core Principles
+Select review depth from the persisted lane, risk, and blast radius:
 
-Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Review outputs and consumers must use its exact `PASS | FAIL | BLOCKED` verdict enum.
+- Direct: targeted correctness/security/spec check;
+- Standard: bounded feature review at closeout;
+- Critical: independent, adversarial review covering every required obligation.
 
-1. **YAGNI**, **KISS**, **DRY** always prevail. 
-2. Technical correctness over social comfort. Be honest and straight to the point.
-3. If Specs are provided as PDF or Design Images, do not guess — use `hapo:ai-multimodal` to verify.
+Do not use file count as the depth selector. `execution_tier` is a read-only
+legacy adapter and cannot choose a review sequence. The review contract has no
+fixed Light/Standard/Deep sequence.
 
-## Usage & Input Modes
+## Review stages
 
-If invoked without explicit arguments, default to reviewing recent changes (pending diff).
+### 1. Specification compliance
 
-| Input | Mode | Target Definition |
-|-------|------|--------------------|
-| `#123` | **PR** | Full PR diff via `gh pr diff` |
-| `abc1234` | **Commit** | Single commit diff via `git show` |
-| `--pending`| **Pending** | Staged + unstaged changes via `git diff` |
-| `scope` | **Path** | Specific files or directories |
+Compare the diff with `scope_lock`, requirements, design contracts, active task
+criteria, and declared runtime reachability. Identify missing behavior,
+unjustified extras, contract substitution, orphaned outputs, and incorrect
+completion claims. If a design image or document carries requirements, load its
+multimodal reference only when needed; do not guess from a filename.
 
-## 3-Stage Adversarial Protocol
+### 2. Correctness and security
 
-Ensure verification walks through these three stages before delivering a final verdict.
+Trace changed entrypoints and callers. Check boundary validation, error paths,
+resource handling, race assumptions, secrets, authorization, persistence, and
+failure recovery in proportion to risk. Apply YAGNI/KISS/DRY as maintainability
+signals, not as a numeric score.
 
-### Stage 1 — Spec Compliance (with `ai-multimodal` injection)
-Does the code match what was requested?
-- Read contextual spec records (markdown files).
-- **Multimodal Delegation:** If the spec references or provides PDF requirements, architecture diagrams, or UI mockups (images), **STOP**. Delegate to `hapo:ai-multimodal` scripts (e.g. `gemini_batch_process.py`) to parse the JSON constraints from the document, then compare the implementation against the true layout/logic constraints.
-- Any missing requirements? Any unjustified extras?
+### 3. Adversarial checks
 
-### Stage 2 — Code Quality
-- Identify YAGNI, DRY, KISS violations. 
-- Ensure readability, naming conventions, and proper component boundaries (MVC/Clean Architecture compliance).
-- Check for hardcoded values and missing tests.
+Try empty, malformed, unauthorized, duplicate, stale, boundary, and concurrent
+inputs where the changed contract makes them relevant. For Critical obligations,
+review the required independent evidence and provenance. A marker such as
+`Audit: PASS` is not independent evidence.
 
-### Stage 3 — Adversarial Review (Red-Team)
-Actively try to break the code.
-- **Edge Case Scouting:** If the Pull Request modifies >= 5 files, activate `hapo:inspect` or call the `inspector` agent to scout where modified functions/components are imported and whether boundary errors exist before finishing the review.
-- Find security holes (XSS, SQL Injection, Hardcoded tokens, Exposed Secrets).
-- Find false assumptions, resource exhaustion loops, and race conditions.
-- Find unhandled edge cases (e.g. empty strings, null pointers, negative integers). 
+The independent-audit proof must be a durable object with exactly
+`schema_version: "1"`, distinct concrete `reviewer_session_id` and
+`implementation_session_id`, `expected_provenance: { base, head }` matching the
+runtime binding, concrete `evidence`, and literal `verdict: "PASS"`.
+`independent: true`, `PASS_WITH_WARNINGS`, missing binding, or reused session
+provenance is insufficient.
 
-## Output
+## Execution-proof boundary
 
-Your report MUST classify every finding by severity and return exactly one verdict from `PASS | FAIL | BLOCKED`. Every review verdict/output consumer MUST accept only `PASS | FAIL | BLOCKED` and reject any other value.
-- **PASS:** no Critical findings, no High findings, at most one Medium.
-- **FAIL:** one or more Critical or High findings, or two or more Medium findings.
-- **BLOCKED:** missing execution proof, permission, environment, or user-owned decision prevents review completion. Stop without blind retry; report blocker and required input.
+Consume the current canonical receipt when available and report its identity,
+scope, and caveats. Never rerun commands to manufacture proof. If execution
+proof is missing, say `execution proof unavailable` and leave the overall
+closeout to the test owner; do not claim PASS on the feature from review alone.
+A review can still return a correctness verdict when its review inputs are
+complete.
 
-Format:
+## Verdict
+
+Use the shared adapter surface exactly:
+
+`PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`
+
+Legacy adapter inputs may include `PASS | FAIL | BLOCKED`, but they are
+normalized to the shared surface and no second enum is allowed. `PASS` means no
+Critical/High correctness, security, or compliance finding. `PASS_WITH_WARNINGS`
+means only documented non-blocking findings remain. `FAIL` requires remediation;
+`PASS` also requires no blocking Medium finding. `PASS_WITH_WARNINGS` may carry
+documented non-blocking findings. Finding count never selects depth or overrides
+missing execution proof. A review `PASS_WITH_WARNINGS` remains an unfinished
+closeout result; only literal `PASS` can finish a task. `BLOCKED` means the review input or a user-owned
+decision is unavailable.
+
 ```markdown
 # Code Review Results [hapo:code-review]
 
-**Verdict:** PASS | FAIL | BLOCKED
+**Verdict:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
+**Lane / risk:** [snapshot and relevant signals]
+**Execution proof:** consumed | unavailable (owned by hapo:test)
 
-## Stage 1: Spec Compliance
-- [Issue or OK] (If visual/PDF used, mention ai-multimodal analysis result)
+## Findings
+- [Critical|High|Medium|Low] path:line — issue, failure scenario, evidence,
+  and fix boundary.
 
-## Stage 2: Code Quality
-- [Issue or OK]
-
-## Stage 3: Adversarial Findings
-- [🔴 Critical] ...
-- [🟠 High] ...
-- [🟡 Medium] ...
-- [🔵 Suggestion] ...
-
-## Fix Commands (Terminal ready)
-[List exact bash commands or SED replacements to fix the issues quickly if possible]
+## Decision
+- Scope/spec compliance: PASS | WARN | FAIL
+- Correctness/security: PASS | WARN | FAIL
+- Reachability/provenance review: PASS | WARN | FAIL
 ```
 
-## Related
-- Parallel skill: `/hapo:test`
-- AI Hub: `/hapo:ai-multimodal`
-- Parent orchestrator: `quality-gate.md`
+Do not add a test command, a fabricated receipt, or an `Audit: PASS` marker to
+make the review look complete. Return unresolved questions at the end.
+
+## References
+
+- `references/spec-compliance-review.md` — load for detailed scope checks.
+- `references/pre-landing-checklists.md` — load for the selected risk surface.
+- `references/adversarial-review.md` — load for Critical/adversarial depth.
+- `references/verification-gate.md` — receipt consumption only; execution stays
+  with `hapo:test`.
