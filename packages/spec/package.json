@@ -1,6 +1,6 @@
 {
   "name": "@haposoft/cafekit",
-  "version": "0.16.0-rc.2",
+  "version": "0.16.0-rc.3",
   "description": "Native spec-driven workflows for Claude Code, Codex CLI, and OpenCode. Bundles CafeKit skills, runtime hooks, agents, and installer scaffolding.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
