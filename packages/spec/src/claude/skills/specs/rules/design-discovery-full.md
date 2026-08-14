@@ -1,93 +1,45 @@
-# Full Discovery Process for Technical Design
+# Full design discovery
 
-## Objective
-Conduct comprehensive research and analysis to ensure the technical design is based on complete, accurate, and up-to-date information.
+Load this rule only after the artifact router selects `Full`. Full controls
+design detail; it does not select research, web access, tasks, or ceremony.
 
-## Discovery Steps
+## Discovery boundary
 
-### 1. Requirements Analysis
-**Map Requirements to Technical Needs**
-- Extract all functional requirements from EARS format
-- Identify non-functional requirements (performance, security, scalability)
-- Determine technical constraints and dependencies
-- List core technical challenges
+Inspect only facts needed to remove an implementation-significant ambiguity:
 
-### 2. Existing Implementation Analysis
-**Understand Current System** (if modifying/extending):
-- Analyze codebase structure and architecture patterns
-- Map reusable components, services, utilities
-- Identify domain boundaries and data flows
-- Document integration points and dependencies
-- Determine approach: extend vs refactor vs wrap
+1. map scoped requirements to existing entrypoints and behavior owners;
+2. inspect reusable contracts, data flows, dependencies, and recovery paths;
+3. identify decisions whose alternatives would change observable behavior;
+4. ground each chosen decision to repository anchors or, when needed, a
+   primary external source; and
+5. stop when the routed design can be implemented without a product decision.
 
-### 3. Technology Research
-**Investigate Best Practices and Solutions**:
-- **Use WebSearch** to find:
-  - Latest architectural patterns for similar problems
-  - Industry best practices for the technology stack
-  - Recent updates or changes in relevant technologies
-  - Common pitfalls and solutions
+Do not inventory unrelated architecture, compare fashionable patterns, or
+collect findings merely because they are available. Repository scouting is
+normal design work and does not by itself create `research.md`.
 
-- **Use WebFetch** to analyze:
-  - Official documentation for frameworks/libraries
-  - API references and usage examples
-  - Migration guides and breaking changes
-  - Performance benchmarks and comparisons
+## Research gate
 
-### 4. External Dependencies Investigation
-**For Each External Service/Library**:
-- Search for official documentation and GitHub repositories
-- Verify API signatures and authentication methods
-- Check version compatibility with existing stack
-- Investigate rate limits and usage constraints
-- Find community resources and known issues
-- Document security considerations
-- Note any gaps requiring implementation investigation
+Create `research.md` only when the router has found at least one of:
 
-### 5. Architecture Pattern & Boundary Analysis
-**Evaluate Architectural Options**:
-- Compare relevant patterns (MVC, Clean, Hexagonal, Event-driven)
-- Assess fit with existing architecture and steering principles
-- Identify domain boundaries and ownership seams required to avoid team conflicts
-- Consider scalability implications and operational concerns
-- Evaluate maintainability and team expertise
-- Document preferred pattern and rejected alternatives in `research.md`
+- unresolved material uncertainty that can change requirements or design;
+- an external-current fact that must be grounded; or
+- an explicit user request for durable research.
 
-### 6. Risk Assessment
-**Identify Technical Risks**:
-- Performance bottlenecks and scaling limits
-- Security vulnerabilities and attack vectors
-- Integration complexity and coupling
-- Technical debt creation vs resolution
-- Knowledge gaps and training needs
+If none applies, research is absent: do not load the research template, invoke
+a researcher, search the web, or create a placeholder. When external-current
+facts matter, prefer primary authoritative sources and capture only evidence
+that resolves the named uncertainty. General best-practice browsing is not a
+research trigger.
 
-## Research Guidelines
+## Projection
 
-### When to Search
-**Always search for**:
-- External API documentation and updates
-- Security best practices for authentication/authorization
-- Performance optimization techniques for identified bottlenecks
-- Latest versions and migration paths for dependencies
+Put settled behavior, contracts, invariants, negative paths, and grounded
+anchors in `design.md`. If research was selected, keep `research.md` minimal:
+named uncertainty, relevant evidence, resulting decision, and remaining gaps.
+Synchronize every promoted semantic decision into `spec.json`; research notes
+that do not affect semantics remain supporting evidence, not authority.
 
-**Search if uncertain about**:
-- Architectural patterns for specific use cases
-- Industry standards for data formats/protocols
-- Compliance requirements (GDPR, HIPAA, etc.)
-- Scalability approaches for expected load
-
-### Search Strategy
-1. Start with official sources (documentation, GitHub)
-2. Check recent blog posts and articles (last 6 months)
-3. Review Stack Overflow for common issues
-4. Investigate similar open-source implementations
-
-## Output Requirements
-Capture all findings that impact design decisions in `research.md` using the shared template:
-- Key insights affecting architecture, technology alignment, and contracts
-- Constraints discovered during research
-- Recommended approaches and selected architecture pattern with rationale
-- Rejected alternatives and trade-offs (documented in the Design Decisions section)
-- Updated domain boundaries that inform Components & Interface Contracts
-- Risks and mitigation strategies
-- Gaps requiring further investigation during implementation
+Full may add flow, data, error/recovery, security/privacy, migration, or proof
+detail only when the scoped topology activates that section. Delete unused
+sections rather than reserving them for implementation.

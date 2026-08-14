@@ -122,6 +122,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/semantic-review-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/semantic-review-authority.cjs\""
+          },
+          {
+            "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
             "commandWindows": "node \".codex/hooks/state.cjs\""
           }

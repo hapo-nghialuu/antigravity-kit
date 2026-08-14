@@ -63,6 +63,11 @@
       "scan-staged-secrets.cjs",
       "workflow-policy.cjs",
       "spec-resolver.cjs",
+      "spec-receipt.cjs",
+      "spec-ground.cjs",
+      "spec-semantic-model.cjs",
+      "spec-final-state.cjs",
+      "spec-readiness.cjs",
       "provenance.cjs"
     ]
   },
@@ -107,6 +112,7 @@
       "hooks/completion-authority.cjs",
       "hooks/completion-authority-check.cjs",
       "hooks/completion-authority-state.cjs",
+      "hooks/semantic-review-authority.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",

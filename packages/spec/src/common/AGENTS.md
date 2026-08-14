@@ -3,7 +3,7 @@
 ## Shared CafeKit instructions
 
 - Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.
-- For spec work, `Completion Criteria` and `## Evidence` in `specs/<feature>/tasks/*.md` are the source of truth for task state.
+- For Specs v2.1, treat `spec.json` as machine authority and Markdown as human projections. Keep task status and plan synchronized with `task_registry`; derive ownership, dependencies, transitions, proof, and parallelism only from typed `coordination.boundaries`. Never invent proof, readiness, approval, or audit state.
 - `NO_TESTS` and `0 tests + exit 0` do not pass when the task requires automated tests.
 - When a hook blocks an action, that is an instruction boundary — do not work around it.
 - Use conventional commits. Do not add AI attribution unless requested.

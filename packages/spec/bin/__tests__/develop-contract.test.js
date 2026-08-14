@@ -12,7 +12,15 @@ const PACKAGE_ROOT = path.join(__dirname, '../..');
 const POLICY_PATH = path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs');
 const POLICY = require(POLICY_PATH);
 const PROVENANCE_HELPER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'));
+const FINAL_STATE = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-final-state.cjs'));
+const VALIDATOR = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/validate-spec-output.cjs'));
+const GROUNDER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-ground.cjs'));
+const SEMANTIC_AUTHORITY = require(path.join(PACKAGE_ROOT, 'src/claude/hooks/semantic-review-authority.cjs'));
+const READINESS = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-readiness.cjs'));
+const { copyClaudeTestRuntime } = require('./test-runtime-dependency-closure.cjs');
 const DEVELOP = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/SKILL.md');
+const SPECS = path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md');
+const SCAFFOLD = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-scaffold.cjs');
 const GATE = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/quality-gate.md');
 const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
 const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
@@ -47,6 +55,183 @@ function initFixtureGit(root) {
     const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
   }
+}
+
+function installClaudeRuntimeClosure(fixtureRoot, entry = 'hooks/spec-gate.cjs') {
+  const destinationRoot = path.join(fixtureRoot, '.claude');
+  copyClaudeTestRuntime(PACKAGE_ROOT, destinationRoot);
+  const hooksRoot = path.join(PACKAGE_ROOT, 'src', 'claude', 'hooks');
+  for (const hook of [
+    'spec-gate.cjs',
+    'completion-authority-check.cjs',
+    'completion-authority-state.cjs',
+    'semantic-review-authority.cjs',
+  ]) {
+    const target = path.join(destinationRoot, 'hooks', hook);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(hooksRoot, hook), target);
+  }
+  return path.join(destinationRoot, entry);
+}
+
+function markdownSection(content, heading) {
+  const marker = `## ${heading}`;
+  const start = content.indexOf(marker);
+  assert.notEqual(start, -1, `missing section ${heading}`);
+  const rest = content.slice(start + marker.length);
+  const end = rest.search(/\n## /);
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
+function markdownTable(section, firstHeader) {
+  const lines = section.split('\n').filter((line) => line.trim().startsWith('|'));
+  const cells = (line) => line.split('|').slice(1, -1).map((cell) => cell.trim());
+  const headerIndex = lines.findIndex((line) => cells(line)[0] === firstHeader);
+  assert.notEqual(headerIndex, -1, `missing table headed by ${firstHeader}`);
+  const headers = cells(lines[headerIndex]);
+  const rows = {};
+  for (const line of lines.slice(headerIndex + 2)) {
+    const values = cells(line);
+    if (values.length !== headers.length) break;
+    rows[values[0].replaceAll('`', '')] = Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+  }
+  return rows;
+}
+
+function runNode(root, script, args) {
+  return spawnSync(process.execPath, [script, ...args], { cwd: root, encoding: 'utf8' });
+}
+
+function commandOutput(result) {
+  return `${result.stdout}\n${result.stderr}`;
+}
+
+function createCanonicalAuthoringFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-develop-contract-'));
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'test'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'artifacts'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src', 'entry.js'), 'module.exports = { enabled: true };\n');
+  fs.writeFileSync(path.join(root, 'test', 'service.test.js'), 'require("node:test")("service", () => {});\n');
+  const scaffold = runNode(root, SCAFFOLD, ['feature']);
+  assert.equal(scaffold.status, 0, commandOutput(scaffold));
+  const specDir = path.join(root, 'specs', 'feature');
+  const specPath = path.join(specDir, 'spec.json');
+  fs.writeFileSync(path.join(specDir, 'requirements.md'), `# Requirements
+
+## Requirements
+### Requirement 1: Observable service behavior
+- **R1.1**: When valid input arrives, the service shall return enabled state; invalid input shall return rejected state.
+- **R1.2**: The verifier shall produce separate observable proof for enabled and rejected states.
+`);
+  fs.writeFileSync(path.join(specDir, 'design.md'), `# Design
+
+## Architecture
+The entrypoint exposes the bounded service behavior and a separate proof artifact.
+
+## Typed Anchors
+| ID | Type | Target | Role | Access | Action |
+|---|---|---|---|---|---|
+| A-D-01 | file | \`src/entry.js\` | service boundary | read | read |
+| A-D-02 | artifact | \`artifacts/design-proof.json\` | proof evidence | write | create |
+
+## Canonical Contracts & Invariants
+### D1 — Dispatch decision
+The entrypoint dispatches exactly once.
+### I1 — Invalid-state invariant
+Invalid input never returns enabled state.
+### C1 — Result contract
+The result contains one enabled boolean.
+
+## Verification Definitions
+- **V1**: Subject criteria R1.1; Subject owner A-D-01; Proof criteria R1.2; Proof owner A-D-02; Evidence anchor A-D-02; Decision refs D1, I1, C1; Method command \`node --test test/service.test.js\`; Expected exit 0 with enabled state and separate proof evidence; Negative/failure invalid input returns rejected state without enabled output; Reachability/grounding entrypoint \`src/entry.js\` via A-D-01, A-D-02.
+`);
+  return { root, specDir, specPath };
+}
+
+function createOrdinaryAuthoringFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-ordinary-readiness-'));
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'test'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src', 'entry.js'), 'module.exports = { action: "delete" };\n');
+  fs.writeFileSync(path.join(root, 'test', 'entry.test.js'), 'require("node:test")("entry", () => {});\n');
+  const scaffold = runNode(root, SCAFFOLD, ['ordinary']);
+  assert.equal(scaffold.status, 0, commandOutput(scaffold));
+  const specDir = path.join(root, 'specs', 'ordinary');
+  const specPath = path.join(specDir, 'spec.json');
+  fs.writeFileSync(path.join(specDir, 'requirements.md'), `# Requirements
+
+## Requirements
+### Requirement 1: Delete behavior
+- **R1.1**: When deletion is requested, the service shall delete the selected record and report deleted state.
+`);
+  fs.writeFileSync(path.join(specDir, 'design.md'), `# Design
+
+## Typed Anchors
+| ID | Type | Target | Role | Access | Action |
+|---|---|---|---|---|---|
+| A-D-01 | file | \`src/entry.js\` | behavior owner | read | read |
+
+## Canonical Contracts & Invariants
+### D1 — Delete decision
+The selected record is deleted rather than archived.
+### I1 — State invariant
+Deleted state is reported only after deletion succeeds.
+### C1 — Result contract
+The result contains the literal deleted state.
+
+## Verification Definitions
+- **V1**: Criteria R1.1; Owner A-D-01; Decision refs D1, I1, C1; Method command \`node --test test/entry.test.js\`; Expected exit 0 and the service reports deleted state; Negative/failure a missing record returns not-found without deleted state; Reachability/grounding entrypoint \`src/entry.js\` via A-D-01.
+`);
+  const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+  spec.authoring.requirements = 'validated';
+  spec.authoring.design = 'validated';
+  fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
+  initFixtureGit(root);
+  return { root, specDir, specPath };
+}
+
+function ordinaryReview() {
+  return {
+    reviewed_criteria: ['R1.1'],
+    counterexamples: [{
+      criterion: 'R1.1', case_kind: 'failure',
+      scenario: 'Deletion targets a record that does not exist in the current store.',
+      expected: 'The service returns not-found and never reports the record as deleted.',
+      decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+    }],
+  };
+}
+
+function promoteCanonicalModel(fixture) {
+  const result = runNode(fixture.root, SCAFFOLD, ['feature', '--sync-semantic-model']);
+  assert.equal(result.status, 0, commandOutput(result));
+}
+
+function makeCanonicalReady(fixture) {
+  const spec = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+  spec.authoring.requirements = 'validated';
+  spec.authoring.design = 'validated';
+  fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+  const result = READINESS.finalizeReadiness({
+    specDir: fixture.specDir,
+    projectRoot: fixture.root,
+    reviewResult: {
+    reviewed_criteria: ['R1.1', 'R1.2'],
+    counterexamples: [{
+      criterion: 'R1.1', case_kind: 'failure',
+      scenario: 'The service receives invalid input without its required discriminator.',
+      expected: 'The service returns rejected state and never emits enabled true.',
+      decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+    }, {
+      criterion: 'R1.2', case_kind: 'adversarial',
+      scenario: 'The service reports enabled state without producing separate proof evidence.',
+      expected: 'Verification fails because the independent proof artifact is absent.',
+      decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+    }],
+    },
+  });
+  return result.spec;
 }
 
 function bindFixtureReceipt(root, value, feature = 'demo', session = 'test') {
@@ -121,7 +306,7 @@ test('delegation plan consumes legacy tiers as obligations without an agent chai
   const standard = POLICY.delegationPlan({ tier: 'Standard', mode: 'specific-task' });
   const deep = POLICY.delegationPlan({ tier: 'Deep', mode: 'full-spec', taskCount: 2 });
   assert.deepEqual(light.proof_obligations, ['needsExecutionProof']);
-  assert.deepEqual(standard.proof_obligations, ['needsInspection', 'needsExecutionProof']);
+  assert.deepEqual(standard.proof_obligations, ['needsExecutionProof']);
   assert.deepEqual(deep.proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit']);
   for (const plan of [light, standard, deep]) {
     assert.equal(Object.hasOwn(plan, 'delegated'), false);
@@ -156,19 +341,29 @@ test('lane classifier forces Critical for named high-risk signals', () => {
   ]);
 });
 
-test('P1 persists one strict workflow-policy snapshot and rejects malformed snapshots', () => {
+test('P1 persists the minimal v2.1 policy and derives compatibility views', () => {
   const initial = POLICY.persistWorkflowPolicySnapshot(
-    { feature_name: 'bounded', override_receipt: 'legacy-duplicate' },
+    { feature_name: 'bounded' },
     { riskSignals: {} },
   );
   const snapshot = initial.workflow_policy;
-  assert.deepEqual(Object.keys(snapshot).sort(), [...POLICY.WORKFLOW_POLICY_FIELDS].sort());
-  assert.equal(snapshot.version, '1');
-  assert.equal(snapshot.lane, 'Standard');
-  assert.equal(snapshot.automatic_lane, 'Standard');
-  assert.equal(snapshot.artifact_profile, 'bounded');
-  assert.deepEqual(snapshot.proof_obligations, ['needsInspection', 'needsExecutionProof']);
-  assert.equal(Object.hasOwn(initial, 'override_receipt'), false);
+  assert.deepEqual(Object.keys(snapshot).sort(), [...POLICY.CANONICAL_WORKFLOW_POLICY_FIELDS].sort());
+  assert.equal(snapshot.version, POLICY.CANONICAL_WORKFLOW_POLICY_VERSION);
+  assert.equal(snapshot.planning_depth, 'Compact');
+  assert.equal(snapshot.assurance_level, 'Routine');
+  assert.deepEqual(snapshot.classified_minimum, {
+    planning_depth: 'Compact',
+    assurance_level: 'Routine',
+  });
+  for (const derivedField of ['lane', 'automatic_lane', 'artifact_profile', 'proof_obligations', 'actor_needs']) {
+    assert.equal(Object.hasOwn(snapshot, derivedField), false, `${derivedField} must not be persisted`);
+  }
+  const view = POLICY.readWorkflowPolicySnapshot(initial);
+  assert.equal(view.lane, 'Standard');
+  assert.equal(view.automatic_lane, 'Standard');
+  assert.equal(view.artifact_profile, 'bounded');
+  assert.deepEqual(view.proof_obligations, ['needsExecutionProof']);
+  assert.equal(Object.hasOwn(initial, 'override_' + 'receipt'), false);
   assert.equal(POLICY.validateWorkflowPolicySnapshot(snapshot).valid, true);
 
   const persistedAgain = POLICY.persistWorkflowPolicySnapshot(initial, {
@@ -177,16 +372,16 @@ test('P1 persists one strict workflow-policy snapshot and rejects malformed snap
   });
   assert.deepEqual(persistedAgain.workflow_policy, snapshot, 'persist-once must not reclassify an existing snapshot');
 
-  const malformed = { ...snapshot, artifact_profile: 'strict', extra: true };
+  const malformed = { ...snapshot, lane: 'Critical' };
   const validation = POLICY.validateWorkflowPolicySnapshot(malformed);
   assert.equal(validation.valid, false);
-  assert.match(validation.errors.join('; '), /fields must be exactly|artifact_profile/);
+  assert.match(validation.errors.join('; '), /v2\.1 fields must be exactly/);
   assert.throws(() => POLICY.readWorkflowPolicySnapshot({ workflow_policy: malformed }), /Invalid workflow policy snapshot/);
 
-  const malformedShape = { ...snapshot, proof_obligations: { needsExecutionProof: true } };
+  const malformedShape = { ...snapshot, classified_minimum: { planning_depth: 'Compact' } };
   const shapeValidation = POLICY.validateWorkflowPolicySnapshot(malformedShape);
   assert.equal(shapeValidation.valid, false);
-  assert.match(shapeValidation.errors.join('; '), /proof_obligations must be an array/);
+  assert.match(shapeValidation.errors.join('; '), /classified_minimum must contain exactly/);
 
   const malformedRisks = { ...snapshot, risks: { auth: true } };
   const risksValidation = POLICY.validateWorkflowPolicySnapshot(malformedRisks);
@@ -204,7 +399,9 @@ test('P1 workflow-policy validation is semantic and explicit workflow_policy val
     assert.equal(POLICY.validateWorkflowPolicySnapshot(legitimate).valid, true);
   }
   assert.equal(escalatedCritical.lane, 'Critical');
-  assert.equal(escalatedCritical.automatic_lane, 'Direct');
+  assert.equal(escalatedCritical.automatic_lane, 'Critical');
+  assert.equal(escalatedCritical.planning_depth, 'None');
+  assert.equal(escalatedCritical.assurance_level, 'Strict');
 
   const forgedDirectAuth = { ...direct, risks: ['auth'] };
   const forgedDirectUnknown = { ...direct, risks: ['unclassified-risk'] };
@@ -212,7 +409,7 @@ test('P1 workflow-policy validation is semantic and explicit workflow_policy val
   for (const forged of [forgedDirectAuth, forgedDirectUnknown, forgedStandardAuth]) {
     const result = POLICY.validateWorkflowPolicySnapshot(forged);
     assert.equal(result.valid, false);
-    assert.match(result.errors.join('; '), /at least (Standard|Critical)/);
+    assert.match(result.errors.join('; '), /at least (Elevated|Strict)/);
   }
   for (const riskAlias of ['Auth', 'authentication', 'public_contract']) {
     const escalated = POLICY.escalateWorkflowPolicy(direct, { risks: [riskAlias] });
@@ -278,7 +475,9 @@ test('P1 workflow policy escalation is monotonic across all newly classified ris
 
   const standard = POLICY.escalateWorkflowPolicy(direct, { risks: ['new-standard-risk'], riskLevel: 'standard' });
   assert.equal(standard.lane, 'Standard');
-  assert.equal(standard.artifact_profile, 'bounded');
+  assert.equal(standard.artifact_profile, 'targeted');
+  assert.equal(standard.planning_depth, 'None');
+  assert.equal(standard.assurance_level, 'Elevated');
   assert.equal(standard.risks.includes('new-standard-risk'), true);
   assert.deepEqual(standard.proof_obligations, ['needsInspection', 'needsExecutionProof']);
 
@@ -287,14 +486,16 @@ test('P1 workflow policy escalation is monotonic across all newly classified ris
 
   const critical = POLICY.escalateWorkflowPolicy(standard, { risks: ['auth'] });
   assert.equal(critical.lane, 'Critical');
-  assert.equal(critical.artifact_profile, 'strict');
+  assert.equal(critical.artifact_profile, 'targeted');
+  assert.equal(critical.planning_depth, 'None');
+  assert.equal(critical.assurance_level, 'Strict');
   assert.equal(critical.proof_obligations.includes('needsIndependentAudit'), true);
-  assert.equal(critical.proof_obligations.includes('needsResearchGrounding'), true);
+  assert.equal(critical.proof_obligations.includes('needsResearchGrounding'), false);
 
   const noDowngrade = POLICY.escalateWorkflowPolicy(critical, { risks: ['another-standard-risk'], riskLevel: 'standard' });
   assert.equal(noDowngrade.lane, 'Critical');
   assert.equal(noDowngrade.proof_obligations.includes('needsIndependentAudit'), true);
-  assert.equal(noDowngrade.proof_obligations.includes('needsResearchGrounding'), true);
+  assert.equal(noDowngrade.proof_obligations.includes('needsResearchGrounding'), false);
 
   const criticalAgain = POLICY.escalateWorkflowPolicy(critical, { risks: ['auth'] });
   assert.deepEqual(criticalAgain, critical, 'repeating known risks must not create a new escalation');
@@ -316,41 +517,57 @@ test('P1 legacy execution tier is read-compatible without becoming emitted polic
   assert.equal(POLICY.workflowPolicySnapshot({ design_context: { execution_tier: 'standard' } }).lane, 'Standard');
 });
 
-test('lane override keeps automatic result and surfaces downgrade warning', () => {
-  const validReceipt = {
-    automaticLane: 'Critical',
-    requestedLane: 'Direct',
-    risks: ['privacy'],
-    source: 'runtime',
-    timestamp: '2026-08-11T00:00:00.000Z',
-    sessionId: 'test-session-123',
-  };
-  // P0.4 fail-closed: even shape-correct runtime receipt without verified issuer is rejected
-  assert.throws(() => POLICY.classifyLane({
-    reversible: true,
-    riskSignals: { privacy: true },
-    override: 'Direct',
-    overrideReceipt: validReceipt,
-  }), /is blocked.*no trusted runtime issuer/);
-  // Also verify that a receipt with verified flag still fails if not properly bound? For now fail-closed.
-  const forgedVerified = { ...validReceipt, verifiedByRuntime: true };
-  // Still blocked because we require additional binding beyond shape; keep blocked until trusted issuer lands
-  // (The verified flag makes isValidOverrideReceipt check pass lane binding, but we keep fail-closed by requiring internal issuer proof that tests don't have)
-  // For P0 we keep downgrade blocked regardless — this assert documents fail-closed.
-  assert.throws(() => POLICY.classifyLane({
-    reversible: true,
-    riskSignals: { privacy: true },
-    override: 'Direct',
-    overrideReceipt: forgedVerified,
-  }), /is blocked.*no trusted runtime issuer/);
+test('legacy v1 policy is read-compatible, immutable on read, and explicitly migrates to v2.1', () => {
+  const cases = [
+    { lane: 'Direct', risks: [], obligations: ['needsExecutionProof'] },
+    { lane: 'Standard', risks: [], obligations: ['needsInspection', 'needsExecutionProof'] },
+    { lane: 'Critical', risks: ['auth'], obligations: ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit', 'needsResearchGrounding'] },
+  ];
+  for (const fixture of cases) {
+    const v1 = {
+      version: '1',
+      lane: fixture.lane,
+      automatic_lane: fixture.lane,
+      risks: fixture.risks,
+      artifact_profile: { Direct: 'targeted', Standard: 'bounded', Critical: 'strict' }[fixture.lane],
+      proof_obligations: fixture.obligations,
+      actor_needs: POLICY.actorNeedsFor(fixture.obligations),
+      override_receipt: null,
+    };
+    assert.equal(POLICY.validateWorkflowPolicySnapshot(v1).valid, true, fixture.lane);
+    const source = { feature_name: `legacy-${fixture.lane}`, workflow_policy: v1 };
+    const before = JSON.stringify(source);
+    const adapted = POLICY.readWorkflowPolicySnapshot(source);
+    assert.equal(adapted.version, '2');
+    assert.deepEqual(adapted.proof_obligations, fixture.obligations, fixture.lane);
+    assert.deepEqual(adapted.actor_needs, v1.actor_needs, fixture.lane);
+    assert.equal(POLICY.validateWorkflowPolicySnapshot(adapted).valid, true, fixture.lane);
+    assert.equal(JSON.stringify(source), before, 'read adapter must not mutate persisted v1 state');
+    const migrated = POLICY.persistWorkflowPolicySnapshot(source).workflow_policy;
+    assert.equal(migrated.version, POLICY.CANONICAL_WORKFLOW_POLICY_VERSION);
+    assert.deepEqual(Object.keys(migrated).sort(), [...POLICY.CANONICAL_WORKFLOW_POLICY_FIELDS].sort());
+    const migratedView = POLICY.readWorkflowPolicySnapshot({ workflow_policy: migrated });
+    assert.equal(migratedView.lane, adapted.lane, fixture.lane);
+    assert.equal(migratedView.artifact_profile, adapted.artifact_profile, fixture.lane);
+    assert.deepEqual(migratedView.proof_obligations, POLICY.obligationsForAssurance(
+      migrated.assurance_level,
+      migrated.risks,
+    ), fixture.lane);
+  }
 });
 
-test('unsafe downgrade without user authorization is blocked', () => {
-  assert.throws(() => POLICY.classifyLane({
-    reversible: true,
-    riskSignals: { privacy: true },
-    override: 'Direct',
-  }), /is blocked.*no trusted runtime issuer/);
+test('post-classification downgrade is unsupported', () => {
+  assert.throws(
+    () => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct' }),
+    (error) => /planning_depth downgrade/.test(error.message) && /not permitted/.test(error.message),
+  );
+});
+
+test('caller-requested downgrade is blocked before persistence', () => {
+  assert.throws(
+    () => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct' }),
+    (error) => /planning_depth downgrade/.test(error.message) && /not permitted/.test(error.message),
+  );
   // also via CLI
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
@@ -360,7 +577,7 @@ test('unsafe downgrade without user authorization is blocked', () => {
     '--json',
   ], { encoding: 'utf8' });
   assert.equal(cli.status, 2);
-  assert.match(cli.stderr, /is blocked.*no trusted runtime issuer/);
+  assert.match(cli.stderr, /planning_depth downgrade.*not permitted/i);
 });
 
 test('forged approval via legacy approved field is rejected', () => {
@@ -380,14 +597,14 @@ test('forged approval via legacy approved field is rejected', () => {
   assert.match(legacyCheck.error, /Legacy/);
 });
 
-test('approval state never infers user approval from generated or agent validation', () => {
+test('technical approval readiness ignores legacy user_approved', () => {
   const state = POLICY.approvalState({ generated: true, agent_validated: true });
   assert.equal(state.generated, true);
   assert.equal(state.agent_validated, true);
-  assert.equal(state.user_approved, false);
-  assert.equal(state.ready, false);
+  assert.equal(state.ready, true);
   assert.equal(state.schema_version, '2.0');
   assert.equal(POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true }).ready, true);
+  assert.equal(POLICY.approvalState({ generated: true, agent_validated: true, user_approved: false }).ready, true);
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
     '--approval-state',
@@ -396,7 +613,7 @@ test('approval state never infers user approval from generated or agent validati
     '--json',
   ], { encoding: 'utf8' });
   assert.equal(cli.status, 0, `${cli.stdout}\n${cli.stderr}`);
-  assert.equal(JSON.parse(cli.stdout).state.user_approved, false);
+  assert.equal(JSON.parse(cli.stdout).state.ready, true);
 });
 
 test('approval schema fails closed for explicit null, array, empty, and malformed states', () => {
@@ -422,7 +639,7 @@ test('approval schema fails closed for explicit null, array, empty, and malforme
   assert.throws(() => POLICY.approvalState({ schema_version: '1.0' }), /schema_version/);
 });
 
-test('CLI exposes JSON lane classification and develop has no universal spec hard gate', () => {
+test('CLI exposes a derived lane and Develop consumes independent canonical policy axes', () => {
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
     '--classify-lane',
@@ -436,65 +653,59 @@ test('CLI exposes JSON lane classification and develop has no universal spec har
   assert.equal(payload.policy.requiresSpec, false);
   const develop = read(DEVELOP);
   assert.doesNotMatch(develop, /DO NOT write implementation code until an approved spec exists/i);
-  assert.match(develop, /Direct.*Skip spec\/state/i);
-  assert.match(develop, /Standard.*bounded.*spec profile/i);
-  assert.match(develop, /workflow-policy snapshot/i);
-  assert.match(develop, /user_approved[\s\S]*explicit user[\s\S]*approval/i);
-  assert.match(develop, /Critical.*strict profile/i);
+  const policySection = develop.split('## Policy authority')[1]?.split('\n## ')[0] || '';
+  for (const authorityTerm of ['planning_depth', 'assurance_level', 'Risk', 'derived']) {
+    assert.ok(policySection.includes(authorityTerm), `policy authority missing ${authorityTerm}`);
+  }
+  for (const compatibilityView of ['**Direct**', '**Standard**', '**Critical**']) {
+    assert.ok(policySection.includes(compatibilityView), `missing derived view ${compatibilityView}`);
+  }
+  assert.ok(policySection.includes('derived Strict view'));
+  assert.ok(policySection.includes('Legacy approval fields'));
+  assert.ok(policySection.replace(/\s+/g, ' ').includes('zero authority'));
   assert.match(develop, /Classify lane[\s\S]*test receipt[\s\S]*docs-impact sync/i);
   assert.doesNotMatch(develop, /D2\[Step 3/);
   assert.match(develop, /--notes.*opt-in/i);
   assert.doesNotMatch(develop, /--no-notes/);
   assert.doesNotMatch(develop, /planner|implementer|test-runner|code-auditor|docs-keeper/i);
-  const specsSkill = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
-  assert.match(specsSkill, /Standard[\s\S]*bounded[\s\S]*exactly `spec\.json`, `requirements\.md`, `design\.md`, and one `feature-receipt\.md`/i);
-  assert.match(specsSkill, /persisted.*spec\.json\.workflow_policy/i);
-  assert.match(specsSkill, /explicit user approval/i);
+  const fullRoutine = POLICY.readWorkflowPolicySnapshot({
+    workflow_policy: POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Full', assurance_level: 'Routine' }),
+  });
+  const compactStrict = POLICY.readWorkflowPolicySnapshot({
+    workflow_policy: POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Strict' }),
+  });
+  assert.equal(fullRoutine.planning_depth, 'Full');
+  assert.equal(fullRoutine.assurance_level, 'Routine');
+  assert.equal(compactStrict.planning_depth, 'Compact');
+  assert.equal(compactStrict.assurance_level, 'Strict');
+  assert.notEqual(fullRoutine.artifact_profile, compactStrict.artifact_profile);
+  assert.notDeepEqual(fullRoutine.proof_obligations, compactStrict.proof_obligations);
 });
 
-test('P2 reduces ceremony without weakening lane and proof contracts', () => {
-  const specs = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
-  const develop = read(DEVELOP);
-  const testSkill = read(TEST_SKILL);
-  const review = read(CODE_REVIEW_SKILL);
-  const gate = read(GATE);
-  const specMaker = read(path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md'));
-
-  assert.ok(specs.trimEnd().split('\n').length >= 150 && specs.trimEnd().split('\n').length <= 220);
-  assert.ok(develop.trimEnd().split('\n').length >= 140 && develop.trimEnd().split('\n').length <= 200);
-  assert.match(specs, /Direct[\s\S]*Do not create a spec/i);
-  assert.ok(specs.includes('Do not require') && specs.includes('task_registry'));
-  assert.match(specs, /Critical[\s\S]*registry\/DAG[\s\S]*research/i);
-  assert.match(specs, /Load\s+`rules\/ears-format\.md` when/);
-  assert.match(specs, /Task scoring is optional advisory/);
-  assert.match(specs, /Cynefin is advisory/);
-  assert.match(specs, /execution_tier[\s\S]*legacy read adapter/i);
-  assert.match(specs, /spec-ready[\s\S]*PENDING/i);
-  assert.match(specs, /canonical execution receipt/i);
-  assert.match(specs, /Audit: PASS.*not.*evidence/i);
-  assert.match(specs, /Set `ready_for_implementation = true` only[\s\S]*deterministic spec validation[\s\S]*grounded requirement\/task mappings and contracts/i);
-  assert.match(specs, /neither a[\s\S]*canonical execution receipt[\s\S]*independent closeout audit is required yet/i);
-  assert.match(specs, /After implementation, feature\/task closeout is a separate gate[\s\S]*canonical execution receipt/i);
-
-  assert.match(develop, /specific-task mode never selects or chains/i);
-  assert.match(develop, /exactly one closeout owner/i);
-  assert.match(develop, /test owner[\s\S]*canonical execution receipt/i);
-  assert.match(develop, /review owner[\s\S]*never creates or claims execution proof/i);
-  assert.match(develop, /docs impact/i);
-  assert.match(gate, /no fixed Light\/Standard\/Deep agent sequence/i);
-  assert.match(gate, /no\s+blocking Medium finding/i);
-  assert.match(gate, /Finding count never selects review depth/i);
-  assert.doesNotMatch(gate, /at most one Medium/i);
-  assert.match(testSkill, /sole owner of canonical execution proof/i);
-  assert.match(review, /does not[\s\S]*canonical execution[\s\S]*receipt/i);
-  assert.match(review, /lane, risk, and blast radius/i);
-  assert.match(review, /no\s+blocking Medium finding/i);
-  assert.match(review, /Finding count never selects depth/i);
-  assert.match(specMaker, /no canonical execution receipt[\s\S]*independent closeout audit is required[\s\S]*yet/i);
-  assert.match(specMaker, /passing deterministic spec validation/i);
-  for (const content of [develop, gate, review]) {
-    assert.doesNotMatch(content, /planner|implementer|test-runner|code-auditor|docs-keeper/i);
+test('artifact router keeps optional expansion bound to uncertainty and typed topology', () => {
+  const router = markdownSection(read(SPECS), 'Artifact router');
+  const rows = markdownTable(router, 'Depth');
+  assert.deepEqual(Object.keys(rows), ['None', 'Compact', 'Full']);
+  assert.equal(rows.None['Durable core'], 'none');
+  for (const depth of ['Compact', 'Full']) {
+    assert.deepEqual(
+      rows[depth]['Durable core'].match(/`[^`]+`/g),
+      ['`spec.json`', '`requirements.md`', '`design.md`'],
+      `${depth} must share the canonical three-file core`,
+    );
+    assert.equal(rows[depth]['Research route'], 'only on a research trigger');
+    assert.equal(rows[depth]['Task route'], 'only on a typed topology trigger');
   }
+  assert.notEqual(rows.Compact['Design expansion'], rows.Full['Design expansion']);
+  for (const falseTrigger of ['Requirement count', 'size', 'planning depth', 'assurance level', 'risk label', 'architectural layers']) {
+    assert.ok(router.includes(falseTrigger), `router must name inert trigger ${falseTrigger}`);
+  }
+  for (const boundary of ['ownership', 'dependency', 'transition', 'proof', 'parallel']) {
+    assert.ok(router.includes(boundary), `router must name typed topology ${boundary}`);
+  }
+  assert.ok(router.includes('unresolved material uncertainty'));
+  assert.ok(router.includes('external-current fact'));
+  assert.ok(router.includes('explicit user request'));
 });
 
 test('canonical verdict adapter handles completion and unfinished decisions', () => {
@@ -619,16 +830,201 @@ test('completion decision requires canonical execution receipt and every workflo
   assert.ok(artifactBlocked.missingProof.some((item) => item.includes('artifact_hash')));
 });
 
-test('P1 auto generation pauses without forging approval or readiness', () => {
-  const specsSkill = read(path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md'));
-  const specMaker = read(path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md'));
-  assert.match(specsSkill, /--auto/i);
-  assert.match(specsSkill, /explicit user approval/i);
-  assert.match(specsSkill, /paused.*not-ready/i);
-  assert.match(specMaker, /--auto.*never sets `user_approved`/s);
-  assert.match(specMaker, /paused\/not-ready/i);
-  assert.match(specMaker, /never sets `user_approved`/i);
-  assert.doesNotMatch(specMaker, /auto-approval/i);
+test('auto authoring reaches readiness only after promotion, validation, grounding, and current review', () => {
+  const fixture = createCanonicalAuthoringFixture();
+  try {
+    let spec = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    assert.equal(spec.semantic_model, null);
+    spec.ready_for_implementation = true;
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+    let validation = VALIDATOR.validateSpec(fixture.specDir);
+    assert.ok(validation.errors.some((error) => error.includes('requires explicit promoted machine semantic authority')));
+
+    spec.ready_for_implementation = false;
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+    promoteCanonicalModel(fixture);
+    spec = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    assert.ok(spec.semantic_model && spec.semantic_model.criteria.length === 2);
+    spec.ready_for_implementation = true;
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+    validation = VALIDATOR.validateSpec(fixture.specDir);
+    assert.ok(validation.errors.some((error) => error.includes('readiness requires validated')));
+    assert.ok(validation.errors.some((error) => error.includes('requires completed semantic review')));
+
+    spec = makeCanonicalReady(fixture);
+    validation = VALIDATOR.validateSpec(fixture.specDir);
+    assert.deepEqual(validation.errors, [], validation.errors.join('\n'));
+    assert.equal(GROUNDER.groundSpec({ specDir: fixture.specDir, root: fixture.root, spec }).errors.length, 0);
+
+    const specs = read(SPECS);
+    const executableBlocks = [...specs.matchAll(/```bash\n([\s\S]*?)```/g)].map((match) => match[1]);
+    assert.ok(executableBlocks.every((block) => !/hapo:?develop/i.test(block)), 'Specs must never execute Develop');
+    const handoff = markdownSection(specs, 'Platform acceptance and handoff');
+    assert.ok(handoff.includes('After readiness'));
+    assert.ok(handoff.includes('/hapo:develop <feature>'));
+    assert.ok(handoff.includes('$hapo-develop <feature>'));
+    assert.ok(handoff.includes('must stop in Specs'));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('atomic readiness supports one-criterion Routine specs and binds semantic text', () => {
+  const fixture = createOrdinaryAuthoringFixture();
+  try {
+    const authored = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    authored.decisions = [
+      { id: 'Q1', classification: 'repository_fact', statement: 'The runtime entrypoint is src/entry.js.', status: 'grounded', evidence: 'Repository anchor A-D-01 resolves to src/entry.js.' },
+      { id: 'Q2', classification: 'reversible_assumption', statement: 'Use the existing direct module export for this bounded change.', status: 'recorded', evidence: 'Reversal is limited to src/entry.js and does not alter product data.' },
+    ];
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(authored, null, 2)}\n`);
+    const result = READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() });
+    assert.equal(result.spec.ready_for_implementation, true);
+    assert.equal(result.spec.semantic_model.criteria.length, 1);
+    assert.match(result.spec.semantic_model.criteria[0].text, /delete the selected record/);
+    assert.deepEqual(VALIDATOR.validateSpec(fixture.specDir).errors, []);
+
+    const beforeDigest = result.semantic_digest;
+    const design = path.join(fixture.specDir, 'design.md');
+    const originalDesign = fs.readFileSync(design, 'utf8');
+    fs.writeFileSync(design, originalDesign.replace('deleted rather than archived', 'archived rather than deleted'));
+    const decisionProjection = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-semantic-model.cjs')).modelFromMarkdown(fixture.specDir, result.spec);
+    assert.notDeepEqual(decisionProjection.model.design_records, result.spec.semantic_model.design_records);
+    const decisionDigest = VALIDATOR.computeSemanticDigest21(fixture.specDir, { ...result.spec, semantic_model: decisionProjection.model });
+    assert.equal(decisionDigest.errors.length, 0, decisionDigest.errors.join('\n'));
+    assert.notEqual(decisionDigest.digest, beforeDigest);
+    fs.writeFileSync(design, originalDesign);
+
+    const requirements = path.join(fixture.specDir, 'requirements.md');
+    fs.writeFileSync(requirements, fs.readFileSync(requirements, 'utf8').replace('delete the selected record', 'archive the selected record'));
+    const projection = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-semantic-model.cjs')).modelFromMarkdown(fixture.specDir, result.spec);
+    assert.notEqual(projection.model.criteria[0].text, result.spec.semantic_model.criteria[0].text);
+    const changed = VALIDATOR.computeSemanticDigest21(fixture.specDir, { ...result.spec, semantic_model: projection.model });
+    assert.equal(changed.errors.length, 0, changed.errors.join('\n'));
+    assert.notEqual(changed.digest, beforeDigest);
+    assert.ok(VALIDATOR.validateSpec(fixture.specDir).errors.some((error) => /projection|stale/.test(error)));
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test('atomic readiness preserves exact bytes on review, grounding, decision, and Strict authority failures', () => {
+  const fixture = createOrdinaryAuthoringFixture();
+  try {
+    const original = fs.readFileSync(fixture.specPath);
+    for (const mutate of [
+      (review) => ({ ...review, reviewed_criteria: [] }),
+      (review) => ({ ...review, counterexamples: [] }),
+    ]) {
+      assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: mutate(ordinaryReview()) }), /readiness validation/);
+      assert.equal(fs.readFileSync(fixture.specPath).equals(original), true);
+    }
+    fs.unlinkSync(path.join(fixture.root, 'src', 'entry.js'));
+    assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() }), /grounding|validation/);
+    assert.equal(fs.readFileSync(fixture.specPath).equals(original), true);
+    fs.writeFileSync(path.join(fixture.root, 'src', 'entry.js'), 'module.exports = { action: "delete" };\n');
+
+    process.env.CAFEKIT_FINALIZE_FAIL_BEFORE_RENAME = '1';
+    try {
+      assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() }), /injected finalization failure/);
+      assert.equal(fs.readFileSync(fixture.specPath).equals(original), true);
+    } finally { delete process.env.CAFEKIT_FINALIZE_FAIL_BEFORE_RENAME; }
+
+    const blocked = JSON.parse(original);
+    blocked.decisions = [{ id: 'Q1', classification: 'user_owned', statement: 'Choose permanent deletion or retention archive behavior.', status: 'unresolved', evidence: null }];
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(blocked, null, 2)}\n`);
+    const blockedBytes = fs.readFileSync(fixture.specPath);
+    assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() }), /unresolved material user-owned decision/);
+    assert.equal(fs.readFileSync(fixture.specPath).equals(blockedBytes), true);
+
+    delete blocked.decisions;
+    blocked.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Strict' });
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(blocked, null, 2)}\n`);
+    const strictBytes = fs.readFileSync(fixture.specPath);
+    assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() }), /Strict readiness/);
+    assert.equal(fs.readFileSync(fixture.specPath).equals(strictBytes), true);
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test('Strict atomic readiness succeeds only after current allowlisted host observation', () => {
+  const fixture = createOrdinaryAuthoringFixture();
+  try {
+    const spec = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Strict' });
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+    const before = fs.readFileSync(fixture.specPath);
+    assert.throws(() => READINESS.finalizeReadiness({ specDir: fixture.specDir, projectRoot: fixture.root, reviewResult: ordinaryReview() }), /Strict readiness/);
+    assert.equal(fs.readFileSync(fixture.specPath).equals(before), true);
+
+    const digest = VALIDATOR.computeSemanticDigest21(fixture.specDir, spec);
+    assert.equal(digest.errors.length, 0, digest.errors.join('\n'));
+    const authorityHome = path.join(fixture.root, 'authority-home');
+    const claim = `CAFEKIT_SEMANTIC_REVIEW_ATTESTATION ${JSON.stringify({ feature_name: 'ordinary', spec_file: 'specs/ordinary/spec.json', semantic_digest: digest.digest, verdict: 'PASS' })}`;
+    const observed = spawnSync(process.execPath, [path.join(PACKAGE_ROOT, 'src/claude/hooks/semantic-review-authority.cjs')], {
+      cwd: fixture.root,
+      env: { ...process.env, HOME: authorityHome, USERPROFILE: authorityHome, PROJECT_ROOT: fixture.root },
+      input: JSON.stringify({ hook_event_name: 'SubagentStop', session_id: 'host-session', agent_id: 'reviewer-1', agent_type: 'code_auditor', last_assistant_message: claim, cwd: fixture.root }),
+      encoding: 'utf8',
+    });
+    assert.equal(observed.status, 0, observed.stderr);
+    const reviewFile = path.join(fixture.root, 'review.json');
+    fs.writeFileSync(reviewFile, `${JSON.stringify(ordinaryReview())}\n`);
+    const finalized = spawnSync(process.execPath, [path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-readiness.cjs'), fixture.specDir, '--review-result', reviewFile], {
+      cwd: fixture.root,
+      env: { ...process.env, HOME: authorityHome, USERPROFILE: authorityHome, PROJECT_ROOT: fixture.root },
+      encoding: 'utf8',
+    });
+    assert.equal(finalized.status, 0, `${finalized.stdout}\n${finalized.stderr}`);
+    assert.equal(JSON.parse(fs.readFileSync(fixture.specPath, 'utf8')).ready_for_implementation, true);
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test('done is a final-state request bound to current semantic model and digest', () => {
+  const fixture = createCanonicalAuthoringFixture();
+  try {
+    promoteCanonicalModel(fixture);
+    const spec = makeCanonicalReady(fixture);
+    spec.status = 'done';
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+    const candidate = {
+      featureDir: fixture.specDir,
+      featureName: 'feature',
+      specFile: fixture.specPath,
+      spec,
+    };
+    const dependencies = () => ({
+      validator: VALIDATOR,
+      grounder: GROUNDER,
+      semanticAuthority: SEMANTIC_AUTHORITY,
+    });
+    const current = FINAL_STATE.validateCanonicalFinalState({
+      policy: POLICY, projectRoot: fixture.root, candidate, dependencies,
+    });
+    assert.equal(current.ok, true, current.reason);
+    assert.equal(current.semanticDigest, spec.validation.semantic_review.semantic_digest);
+
+    const requirementsPath = path.join(fixture.specDir, 'requirements.md');
+    const requirements = fs.readFileSync(requirementsPath, 'utf8');
+    fs.writeFileSync(requirementsPath, requirements.replace('invalid input shall return rejected state', 'invalid input shall return a deterministic rejected state'));
+    const staleDigest = FINAL_STATE.validateCanonicalFinalState({
+      policy: POLICY, projectRoot: fixture.root, candidate, dependencies,
+    });
+    assert.equal(staleDigest.ok, false);
+    assert.match(staleDigest.reason, /stale|differs from Markdown projection/i);
+
+    fs.writeFileSync(requirementsPath, requirements);
+    const staleModel = structuredClone(spec);
+    staleModel.semantic_model.criteria[0].owner = 'A-D-02';
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(staleModel, null, 2)}\n`);
+    const invalidModel = FINAL_STATE.validateCanonicalFinalState({
+      policy: POLICY,
+      projectRoot: fixture.root,
+      candidate: { ...candidate, spec: staleModel },
+      dependencies,
+    });
+    assert.equal(invalidModel.ok, false);
+    assert.match(invalidModel.reason, /semantic projection|semantic_model|validation failed/i);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
 });
 
 test('flash PASS promotes proof; only trusted sync-finalize completes', () => {
@@ -665,22 +1061,19 @@ test('flash PASS promotes proof; only trusted sync-finalize completes', () => {
 
 test('spec-gate rejects stale FLASH_UNVERIFIED done state', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-spec-gate-'));
-  const claude = path.join(root, '.claude');
-  fs.mkdirSync(path.join(claude, 'hooks'), { recursive: true });
-  fs.mkdirSync(path.join(claude, 'scripts'), { recursive: true });
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs'), path.join(claude, 'hooks/spec-gate.cjs'));
-  fs.copyFileSync(POLICY_PATH, path.join(claude, 'scripts/workflow-policy.cjs'));
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), path.join(claude, 'scripts/provenance.cjs'));
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'), path.join(claude, 'scripts/spec-resolver.cjs'));
+  const specGate = installClaudeRuntimeClosure(root);
+  assert.equal(fs.existsSync(path.join(root, '.claude', 'scripts', 'spec-final-state.cjs')), true);
+  assert.equal(fs.existsSync(path.join(root, '.claude', 'scripts', 'validate-spec-output.cjs')), true);
   fs.mkdirSync(path.join(root, 'specs', 'demo', 'tasks'), { recursive: true });
   fs.writeFileSync(path.join(root, 'specs', 'demo', 'spec.json'), JSON.stringify({
     status: 'in_progress',
+    current_phase: 'closeout',
     feature_name: 'demo',
     task_registry: { 'tasks/task.md': { status: 'done', receipt: 'FLASH_UNVERIFIED' } },
   }));
   initFixtureGit(root);
   try {
-    const result = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
+    const result = spawnSync(process.execPath, [specGate], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
       input: JSON.stringify({ cwd: root, session_id: 'test' }),
@@ -698,24 +1091,21 @@ test('spec-gate rejects stale FLASH_UNVERIFIED done state', () => {
 test('first-run cache bypass is blocked - canonical receipt required even without cache', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-first-run-'));
   const claude = path.join(root, '.claude');
-  fs.mkdirSync(path.join(claude, 'hooks'), { recursive: true });
-  fs.mkdirSync(path.join(claude, 'scripts'), { recursive: true });
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/spec-gate.cjs'), path.join(claude, 'hooks/spec-gate.cjs'));
-  fs.copyFileSync(POLICY_PATH, path.join(claude, 'scripts/workflow-policy.cjs'));
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), path.join(claude, 'scripts/provenance.cjs'));
-  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'), path.join(claude, 'scripts/spec-resolver.cjs'));
+  const specGate = installClaudeRuntimeClosure(root);
   const specDir = path.join(root, 'specs', 'demo', 'tasks');
   fs.mkdirSync(specDir, { recursive: true });
   // Done task without canonical receipt (missing Command, provenance)
   fs.writeFileSync(path.join(root, 'specs', 'demo', 'spec.json'), JSON.stringify({
-    status: 'in_progress',
+    status: 'done',
+    current_phase: 'closeout',
     feature_name: 'demo',
-    task_registry: { 'tasks/task.md': { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } },
+    task_registry: { 'tasks/task-R1-01-one.md': { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } },
   }));
-  fs.writeFileSync(path.join(specDir, 'task.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\n```\nnpm test\n```\n');
+  fs.writeFileSync(path.join(specDir, 'task-R1-01-one.md'), '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\n```\nnpm test\n```\n');
   initFixtureGit(root);
   try {
-    const result = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
+    assert.equal(fs.existsSync(path.join(claude, 'hooks', '.logs', 'spec-gate-last.json')), false);
+    const result = spawnSync(process.execPath, [specGate], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
       input: JSON.stringify({ cwd: root, session_id: 'test' }),
@@ -724,15 +1114,25 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
     assert.equal(result.status, 0);
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.decision, 'block', 'first-run without canonical receipt must block');
-    assert.match(payload.reason, /tasks\/task\.md/);
+    assert.match(payload.reason, /tasks\/task-R1-01-one\.md/);
+    assert.match(payload.reason, /receipt|command|provenance/i);
     // Also test that with canonical receipt it passes
-    fs.writeFileSync(path.join(specDir, 'task.md'), bindFixtureReceipt(root, '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n```\nnpm test\nPASS\n```\n'));
+    fs.writeFileSync(path.join(specDir, 'task-R1-01-one.md'), '# Task R1-01: One\n\n**Status:** done\n\n## Outcome\n\nVerified result.\n\n## Scope and Typed Anchors\n\n- **In scope:** focused result\n- **Out of scope:** none\n\n## Changes\n\n- [x] Verify result.\n\n## Acceptance\n\n- Result is verified.\n\n## Dependencies\n\n- none\n\n## Verification Plan\n\n- **Command:** `pnpm test`\n- **Expected:** focused tests pass\n- **Negative path:** not relevant for fixture\n- **Reachability:** fixture test entrypoint\n');
+    fs.mkdirSync(path.join(root, 'specs', 'demo', 'receipts'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'specs', 'demo', 'receipts', 'task-R1-01-one.md'),
+      bindFixtureReceipt(root, '# Task Receipt\n\nTask: task-R1-01-one.md\nTask path: tasks/task-R1-01-one.md\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nExpected: focused tests pass\nObserved: focused tests passed\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n```\nnpm test\nPASS\n```\n'),
+    );
+    fs.writeFileSync(
+      path.join(root, 'specs', 'demo', 'feature-receipt.md'),
+      bindFixtureReceipt(root, '# Feature Receipt\n\nFeature: demo\nVerification: PASS\nCommand: pnpm test\nExit: 0\nResult: PASS\nExpected: integrated feature passes\nObserved: integrated feature passed\nBase: 0123456789abcdef0123456789abcdef01234567\nHead: 89abcdef0123456789abcdef0123456789abcdef\n'),
+    );
     // Clear cache to simulate fresh first-run with valid receipt
     try { fs.unlinkSync(path.join(claude, 'hooks', '.logs', 'spec-gate-last.json')); } catch {}
     try { fs.unlinkSync(path.join(__dirname, '..', '.logs', 'spec-gate-last.json')); } catch {}
     // Need to clear the cache that the hook uses (under claude hooks .logs) - we already cleared above
     // Re-run with valid receipt - should not block
-    const result2 = spawnSync(process.execPath, [path.join(claude, 'hooks/spec-gate.cjs')], {
+    const result2 = spawnSync(process.execPath, [specGate], {
       cwd: root,
       env: { ...process.env, PROJECT_ROOT: root },
       input: JSON.stringify({ cwd: root, session_id: 'test' }),
@@ -997,29 +1397,27 @@ test('lane traces - Direct, Standard, Critical classification, override, state m
   // Standard: default
   const standard = POLICY.classifyLane({ title: 'add pagination to list', taskCount: 1 });
   assert.equal(standard.lane, 'Standard');
-  assert.deepEqual(POLICY.lanePolicy(standard).proof_obligations, ['needsInspection', 'needsExecutionProof']);
+  assert.deepEqual(POLICY.lanePolicy(standard).proof_obligations, ['needsExecutionProof']);
   assert.equal(POLICY.lanePolicy(standard).shipPoint, 'feature');
   // Critical: auth signal
   const critical = POLICY.classifyLane({ riskSignals: { auth: true }, taskCount: 1 });
   assert.equal(critical.lane, 'Critical');
   assert.ok(critical.risks.includes('auth'));
-  assert.deepEqual(POLICY.lanePolicy(critical).proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit', 'needsResearchGrounding']);
+  assert.deepEqual(POLICY.lanePolicy(critical).proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit']);
   // Override: Direct requesting Critical is allowed (upgrade) without extra auth
   const upgrade = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1, override: 'Critical' });
   assert.equal(upgrade.lane, 'Critical');
   assert.equal(upgrade.automaticLane, 'Direct');
   // Downgrade without auth is blocked
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard' }), /is blocked.*no trusted runtime issuer/);
-  // Downgrade with legacy boolean flags is still blocked (P0.4 fail-closed, no trusted issuer)
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', userAuthorized: true }), /is blocked.*no trusted runtime issuer/);
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', user_approved: true }), /is blocked.*no trusted runtime issuer/);
-  // Even structured receipt without verified issuer is blocked fail-closed
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', overrideReceipt: { automaticLane: 'Critical', requestedLane: 'Standard', risks: ['payment'], source: 'runtime', timestamp: '2026-08-11T00:00:00.000Z', sessionId: 's-123' } }), /is blocked.*no trusted runtime issuer/);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard' }), /assurance_level downgrade.*blocked/i);
+  // Caller-owned booleans cannot weaken the classified minimum.
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', userAuthorized: true }), /assurance_level downgrade.*blocked/i);
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { payment: true }, override: 'Standard', user_approved: true }), /assurance_level downgrade.*blocked/i);
   // State mutation: approvalState
   const pendingApproval = POLICY.approvalState({ generated: true, agent_validated: false, user_approved: false });
   assert.equal(pendingApproval.ready, false);
   const agentValidated = POLICY.approvalState({ generated: true, agent_validated: true, user_approved: false });
-  assert.equal(agentValidated.ready, false, 'agent_validated alone must not imply ready');
+  assert.equal(agentValidated.ready, true, 'generated plus agent validation is technical readiness');
   const approved = POLICY.approvalState({ generated: true, agent_validated: true, user_approved: true });
   assert.equal(approved.ready, true);
   // Completion: flash work remains in_progress and does not unblock
@@ -1946,24 +2344,29 @@ test('P0 Claude and Codex reject configured specs roots outside the project', ()
   }
 });
 
-test('P0 forged approvals: user_approved and boolean userAuthorized do not downgrade', () => {
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', user_approved: true }), /is blocked.*no trusted runtime issuer/);
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', userApproved: true }), /is blocked.*no trusted runtime issuer/);
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', userAuthorized: true }), /is blocked.*no trusted runtime issuer/);
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { auth: true }, override: 'Standard', confirmDowngrade: true }), /is blocked.*no trusted runtime issuer/);
-  // Direct check of isUserAuthorizedForDowngrade returns false for booleans
-  assert.equal(POLICY.isUserAuthorizedForDowngrade({ user_approved: true }), false);
-  assert.equal(POLICY.isUserAuthorizedForDowngrade({ userAuthorized: true }), false);
-  assert.equal(POLICY.isUserAuthorizedForDowngrade({ userAuthorized: true }, 'Critical', 'Direct', ['privacy']), false);
+test('P0 caller-owned downgrade flags have no canonical capability', () => {
+  for (const callerClaim of [{ user_approved: true }, { userApproved: true }, { userAuthorized: true }]) {
+    assert.throws(
+      () => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', ...callerClaim }),
+      (error) => /downgrade/.test(error.message) && /not permitted/.test(error.message),
+    );
+  }
+  assert.throws(() => POLICY.classifyLane({ riskSignals: { auth: true }, override: 'Standard', confirmDowngrade: true }), /assurance_level downgrade.*blocked/i);
+  assert.equal(POLICY.isUserAuthorizedForDowngrade, undefined);
 });
 
-test('P0 downgrade fail-closed when no verified issuer', () => {
-  const receipt = { automaticLane: 'Critical', requestedLane: 'Direct', risks: ['privacy'], source: 'runtime', timestamp: '2026-08-11T00:00:00.000Z', sessionId: 'sess-1' };
-  assert.equal(POLICY.isValidOverrideReceipt(receipt, 'Critical', 'Direct', ['privacy']), false, 'shape-correct runtime receipt must still be invalid without verified issuer');
-  assert.throws(() => POLICY.classifyLane({ riskSignals: { privacy: true }, override: 'Direct', overrideReceipt: receipt }), /is blocked.*no trusted runtime issuer/);
-  const withVerified = { ...receipt, verifiedByRuntime: true };
-  // Even with verified flag, P0 stays fail-closed (always false) — documents future issuer need
-  assert.equal(POLICY.isValidOverrideReceipt(withVerified, 'Critical', 'Direct', ['privacy']), false);
+test('P0 canonical policy exposes no caller-owned downgrade authority', () => {
+  assert.equal(POLICY.isUserAuthorizedForDowngrade, undefined);
+  assert.equal(POLICY.isValidOverrideReceipt, undefined);
+  assert.equal(POLICY.CANONICAL_WORKFLOW_POLICY_FIELDS.includes('override_' + 'receipt'), false);
+  assert.throws(
+    () => POLICY.classifyLane({
+      riskSignals: { privacy: true },
+      override: 'Direct',
+      overrideReceipt: { verifiedByRuntime: true },
+    }),
+    (error) => /downgrade/.test(error.message) && /not permitted/.test(error.message),
+  );
 });
 
 test('P0 active spec deterministic: multiple active ambiguity and explicit target/path containment', () => {
@@ -2056,7 +2459,7 @@ test('P0 regression: placeholder, explicit failure, artifact and lanePolicy forg
   const POLICY_PATH = path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs');
   const forged = spawnSync(process.execPath, [POLICY_PATH, '--lane-policy', '--task-json', JSON.stringify({ lane: 'Direct', automaticLane: 'Direct', riskSignals: { auth: true } }), '--json'], { encoding: 'utf8' });
   assert.equal(forged.status, 2, 'forged Direct with auth should be blocked via lanePolicy');
-  assert.match(forged.stderr, /is blocked.*no trusted runtime issuer/);
+  assert.match(forged.stderr, /downgrade.*not permitted/i);
   const forged2 = spawnSync(process.execPath, [POLICY_PATH, '--lane-policy', '--task-json', JSON.stringify({ lane: 'Direct', automaticLane: 'Direct' }), '--json'], { encoding: 'utf8' });
   assert.equal(forged2.status, 2, 'plain Direct without justification should be blocked');
 
@@ -2067,7 +2470,7 @@ test('P0 regression: placeholder, explicit failure, artifact and lanePolicy forg
   assert.throws(() => { 'use strict'; trusted.lane = 'Direct'; }, /read only|Cannot assign|TypeError/);
   const paymentTrusted = POLICY.classifyLane({ riskSignals: { payment: true } });
   const forgedCopy = { ...paymentTrusted, lane: 'Direct' };
-  assert.throws(() => POLICY.lanePolicy(forgedCopy), /is blocked/);
+  assert.equal(POLICY.lanePolicy(forgedCopy).lane, 'Critical', 'compatibility lane is derived from authoritative axes');
 });
 
 test('P0 regression: symlink spec/task containment and malformed spec handling', () => {
@@ -2167,10 +2570,17 @@ test('P0 regression: safeTaskFile fail-closed on realpath error and single autho
   // Single authority: Claude hook should delegate to POLICY, not duplicate parser
   assert.match(specGateSrc, /POLICY\.validateCanonicalReceipt/);
   assert.doesNotMatch(specGateSrc, /const EXPLICIT_FAILURE/);
+  // Codex and OpenCode should delegate to shared workflow-policy
   const codexSrc = fs2.readFileSync(path2.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'), 'utf8');
   assert.match(codexSrc, /getSharedValidate/);
   assert.match(codexSrc, /workflow-policy\.cjs/);
   assert.doesNotMatch(codexSrc, /const PLACEHOLDER_TOKENS/);
+  const opencodeSrc = fs2.readFileSync(path2.join(PACKAGE_ROOT, 'src/opencode/plugins/spec-gate.ts'), 'utf8');
+  assert.match(opencodeSrc, /getSharedValidate/);
+  assert.match(opencodeSrc, /workflow-policy\.cjs/);
+  // The parser should only exist in workflow-policy, not in adapters (check that adapter does not define full validate logic)
+  const opencodeValidateCount = (opencodeSrc.match(/function validateCanonicalReceipt/g) || []).length;
+  assert.equal(opencodeValidateCount, 1, 'OpenCode should have only delegating validate, not duplicate parser');
   // safeTaskFile fail-closed: simulate realpathSync throwing
   const tmp = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'cafekit-realpath-'));
   try {

@@ -761,50 +761,64 @@ test('copyRecursive skips generated artifacts while copying normal files', () =>
   });
 });
 
-test('OpenCode parity: AGENTS marks advisory completion gate and plugin provides best-effort spec-gate', () => {
+test('OpenCode gate uses a real before-hook block and documents the host boundary', () => {
   const opencodeAgents = fs.readFileSync(path.join(__dirname, '../../src/opencode/AGENTS.md'), 'utf8');
-  assert.match(opencodeAgents, /advisory/i);
-  assert.match(opencodeAgents, /tier-2/i);
-  assert.match(opencodeAgents, /completion gate/i);
-  assert.match(opencodeAgents, /Do not claim parity with Claude\/Codex on `completion_gate`/);
-  assert.match(opencodeAgents, /spec-gate/);
-  // docs must describe actual after-hook, not before, and warning/banner semantics (not advisory-pass)
-  assert.match(opencodeAgents, /tool\.execute\.after/);
-  assert.doesNotMatch(opencodeAgents, /tool\.execute\.before/);
-  assert.match(opencodeAgents, /emits an advisory warning\/banner but does not hard-block the turn/);
-  assert.doesNotMatch(opencodeAgents, /treat `done` without a receipt as advisory-pass/);
-  // plugin file must exist and be advisory (never hard-block)
+  const assertOpenCodeBoundary = (content) => {
+    assert.match(content, /tool\.execute\.before/);
+    assert.match(content, /hard-block supported completion\/state tools/);
+    assert.match(content, /`task`, `taskupdate`, and `todowrite`/);
+    assert.match(content, /CAFEKIT_SPEC_GATE_BLOCKED/);
+    assert.match(content, /`session\.idle`\/Stop/);
+    assert.match(content, /final assistant-turn cancellation boundary/);
+    assert.match(content, /observational only/);
+    assert.match(content, /full-turn parity with Claude\/Codex/);
+    assert.doesNotMatch(content, /tool\.execute\.after/);
+    assert.doesNotMatch(content, /best-effort/);
+    assert.doesNotMatch(content, /tier-2/);
+    assert.doesNotMatch(content, /\badvisory\b/i);
+  };
+  assertOpenCodeBoundary(opencodeAgents);
+
   const pluginPath = path.join(__dirname, '../../src/opencode/plugins/spec-gate.ts');
-  assert.equal(fs.existsSync(pluginPath), true, 'OpenCode spec-gate plugin must exist for parity contract');
+  assert.equal(fs.existsSync(pluginPath), true, 'OpenCode spec-gate plugin must exist');
   const plugin = fs.readFileSync(pluginPath, 'utf8');
-  assert.match(plugin, /advisory/i);
   assert.match(plugin, /completion_gate/);
-  assert.match(plugin, /fail-open/i);
-  assert.match(plugin, /session\.idle|tool\.execute\.after/);
+  assert.match(plugin, /tool\.execute\.before/);
+  assert.match(plugin, /CAFEKIT_SPEC_GATE_BLOCKED/);
+  assert.match(plugin, /throw createBlockError/);
+  assert.match(plugin, /session\.idle/);
+  assert.match(plugin, /final assistant message[\s\S]*outside this adapter's boundary/);
+  assert.doesNotMatch(plugin, /advisory/i);
+  assert.doesNotMatch(plugin, /fail-open/i);
   // JSDoc-safe wording: must not contain block-comment-closing pattern specs/*/spec.json
   assert.doesNotMatch(plugin, /specs\/\*\/spec\.json/);
-  assert.match(plugin, /specs\/<feature>\/spec\.json/);
-  // traversal check must be sibling-prefix safe (resolve + relative, not simple startsWith)
+  // Traversal check must be sibling-prefix safe (resolve + relative, not simple startsWith).
   assert.match(plugin, /relative\s*\(\s*resolvedFeatureDir/);
   assert.match(plugin, /isAbsolute/);
   assert.doesNotMatch(plugin, /if \(!abs\.startsWith\(featureDir\)\)/);
-  // provenance must require both endpoints (Base+Head or base_sha+head_sha) matching Claude/Codex policy
-  assert.match(plugin, /hasBase\s*&&\s*hasHead/);
-  assert.match(plugin, /hasBaseSha\s*&&\s*hasHeadSha/);
-  assert.match(plugin, /hasBase.*hasHead.*hasBaseSha.*hasHeadSha/s);
-  // hardened: non-empty same-line values required, not just field names
-  assert.match(plugin, /Base\\s\*:\[ \\t\]\*\\S/);
-  assert.match(plugin, /base_sha\\s\*:\[ \\t\]\*\\S/);
-  assert.match(plugin, /head_sha\\s\*:\[ \\t\]\*\\S/);
-  // shipped docs must not claim OpenCode parity for hard completion gate
+  // Single executable authorities: OpenCode delegates both validation and resolution.
+  assert.match(plugin, /workflow-policy\.cjs/);
+  assert.match(plugin, /spec-resolver\.cjs/);
+  assert.match(plugin, /getSharedValidate|validateCanonicalReceipt/);
+  assert.doesNotMatch(plugin, /const hasBase\s*&&\s*hasHead/);
+  assert.doesNotMatch(plugin, /PLACEHOLDER_TOKENS/);
+
   const installerDocs = fs.readFileSync(path.join(__dirname, '../../../../docs/installer-architecture.md'), 'utf8');
   assert.doesNotMatch(installerDocs, /OpenCode.*hard.*completion gate/i);
-  // combined install must copy the plugin
+
+  // Combined install must copy the plugin and both shared authorities.
   inTempProject((root) => {
     const result = spawnSync(process.execPath, [INSTALLER, '--platform', 'opencode', '--yes'], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.equal(fs.existsSync(path.join(root, '.opencode/plugins/spec-gate.ts')), true);
+    assert.equal(fs.existsSync(path.join(root, '.opencode/scripts/workflow-policy.cjs')), true);
+    assert.equal(fs.existsSync(path.join(root, '.opencode/scripts/spec-resolver.cjs')), true);
+    const installedAgents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    assertOpenCodeBoundary(managedBody(installedAgents, OPENCODE_START, OPENCODE_END));
     const installed = fs.readFileSync(path.join(root, '.opencode/plugins/spec-gate.ts'), 'utf8');
-    assert.match(installed, /advisory/i);
+    assert.match(installed, /tool\.execute\.before/);
+    assert.match(installed, /CAFEKIT_SPEC_GATE_BLOCKED/);
+    assert.match(installed, /workflow-policy\.cjs/);
+    assert.match(installed, /spec-resolver\.cjs/);
   });
 });

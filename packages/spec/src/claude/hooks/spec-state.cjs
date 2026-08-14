@@ -54,9 +54,11 @@ try {
 
   let POLICY;
   let RESOLVER;
+  let RECEIPT;
   try {
     POLICY = require(path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs'));
     RESOLVER = require(path.join(__dirname, '..', 'scripts', 'spec-resolver.cjs'));
+    RECEIPT = require(path.join(__dirname, '..', 'scripts', 'spec-receipt.cjs'));
     if (typeof POLICY.flashState !== 'function') throw new Error('shared workflow policy has no flashState function');
   } catch (error) {
     logCrash(error);
@@ -132,6 +134,8 @@ try {
     const deps = Array.isArray(task?.dependencies) ? task.dependencies : [];
     return status === 'pending' && deps.every((dep) => taskStatusByPath.get(dep) === 'done');
   });
+  const featureDir = path.join(specsPath, featureName);
+  const featureReceiptPresent = RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
 
   // ── State-change gate: only emit the full tollgate when spec state changed ──
   // The cache is shared by installed hook copies, so its key must carry the
@@ -150,6 +154,7 @@ try {
     phase,
     done: taskCounts.done || 0,
     total: taskEntries.length,
+    featureReceiptPresent,
   });
   const cacheFile = path.join(__dirname, '.logs', 'tollgate-last.txt');
 
@@ -182,8 +187,9 @@ try {
   if (flashTasks.length > 0) {
     lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
-  lines.push(`- Sync \`spec.json\` + task file after verified work; run \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` before \`ready_for_implementation=true\`.`);
-  lines.push(`- A completion gate verifies receipts when you end a turn with newly-done tasks.`);
+  lines.push(`- Sync \`spec.json\` + task Markdown status after verified work; task proof belongs in \`receipts/<task-basename>.md\`.`);
+  lines.push(`- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`);
+  lines.push(`- Validate with \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
   lines.push('');
 
   console.log(lines.join('\n'));

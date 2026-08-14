@@ -10,21 +10,43 @@ const LEGACY_DIAGNOSTIC_VERDICTS = Object.freeze(['PARTIAL', 'NO_TESTS']);
 const REVIEW_VERDICTS = CANONICAL_VERDICTS;
 const EXECUTION_TIERS = Object.freeze(['Light', 'Standard', 'Deep']);
 const LANES = Object.freeze(['Direct', 'Standard', 'Critical']);
+const PLANNING_DEPTHS = Object.freeze(['None', 'Compact', 'Full']);
+const ASSURANCE_LEVELS = Object.freeze(['Routine', 'Elevated', 'Strict']);
 const ARTIFACT_PROFILES = Object.freeze(['targeted', 'bounded', 'strict']);
+const PLANNING_OBLIGATIONS = Object.freeze([
+  'needsRequirements',
+  'needsDesign',
+]);
 const PROOF_OBLIGATIONS = Object.freeze([
   'needsInspection',
   'needsExecutionProof',
   'needsIndependentAudit',
   'needsDurableTaskState',
+]);
+const READ_COMPAT_PROOF_OBLIGATIONS = Object.freeze([
+  ...PROOF_OBLIGATIONS,
   'needsResearchGrounding',
 ]);
-const WORKFLOW_POLICY_VERSION = '1';
+const WORKFLOW_POLICY_VERSION = '2';
+const CANONICAL_WORKFLOW_POLICY_VERSION = '2.1';
+const CANONICAL_WORKFLOW_POLICY_FIELDS = Object.freeze([
+  'version',
+  'planning_depth',
+  'assurance_level',
+  'classified_minimum',
+  'risks',
+]);
 const WORKFLOW_POLICY_FIELDS = Object.freeze([
   'version',
+  'planning_depth',
+  'automatic_planning_depth',
+  'assurance_level',
+  'automatic_assurance_level',
   'lane',
   'automatic_lane',
   'risks',
   'artifact_profile',
+  'planning_obligations',
   'proof_obligations',
   'actor_needs',
   'override_receipt',
@@ -41,7 +63,12 @@ const INDEPENDENT_AUDIT_FIELDS = Object.freeze([
 ]);
 const FLASH_PROMOTION_FIELDS = Object.freeze(['readyForSync', 'flashTransition', 'promotionReceipt']);
 const LEGACY_TIER_LANES = Object.freeze({ Light: 'Direct', Standard: 'Standard', Deep: 'Critical' });
+const V1_POLICY_FIELDS = Object.freeze([
+  'version', 'lane', 'automatic_lane', 'risks', 'artifact_profile',
+  'proof_obligations', 'actor_needs', 'override_receipt',
+]);
 const ARTIFACT_PROFILE_BY_LANE = Object.freeze({ Direct: 'targeted', Standard: 'bounded', Critical: 'strict' });
+const ARTIFACT_PROFILE_BY_PLANNING = Object.freeze({ None: 'targeted', Compact: 'bounded', Full: 'strict' });
 const ACTOR_NEEDS_BY_OBLIGATION = Object.freeze({
   needsInspection: Object.freeze({ capability: 'inspection', independence: 'same-session' }),
   needsExecutionProof: Object.freeze({ capability: 'execution-proof', independence: 'same-session' }),
@@ -71,7 +98,7 @@ const LANE_RISK_KEYS = Object.freeze({
   auth: ['auth', 'authentication', 'authorization'],
   payment: ['payment', 'billing', 'charge'],
   privacy: ['privacy', 'pii', 'personal data'],
-  data: ['data', 'dataset', 'records'],
+  data: ['data loss', 'loss of data', 'data corruption', 'corrupt data', 'data integrity'],
   schema: ['schema'],
   migration: ['migration', 'migrate', 'database migration'],
   publicContract: ['publicContract', 'public_contract', 'public contract', 'api contract', 'breaking change', 'backward compatibility'],
@@ -415,15 +442,51 @@ function hasExplicitFailure(body) {
   return false;
 }
 const trustedClassifications = new WeakSet();
+const trustedV1Adapters = new WeakSet();
+
+function clonePolicySnapshot(snapshot) {
+  const clone = JSON.parse(JSON.stringify(snapshot));
+  if (trustedV1Adapters.has(snapshot)) trustedV1Adapters.add(clone);
+  return clone;
+}
 
 const APPROVAL_SCHEMA_VERSION = '2.0';
-const LEGACY_APPROVAL_ERROR = `Legacy approval state detected (field \`approved\`). Migration required: replace \`approved\` with \`agent_validated\` and \`user_approved\` per schema v${APPROVAL_SCHEMA_VERSION} (schema_version: "${APPROVAL_SCHEMA_VERSION}"). See spec-state.json template. Refusing to infer user approval.`;
+const LEGACY_APPROVAL_ERROR = `Legacy approval state detected (field \`approved\`). Migration required: replace \`approved\` with \`agent_validated\` per schema v${APPROVAL_SCHEMA_VERSION} (schema_version: "${APPROVAL_SCHEMA_VERSION}"). See spec-state.json template.`;
 
 function assertLane(lane) {
   if (!LANES.includes(lane)) {
     throw new TypeError(`Unsupported workflow lane: ${String(lane)}`);
   }
   return lane;
+}
+
+function assertPlanningDepth(depth) {
+  if (!PLANNING_DEPTHS.includes(depth)) {
+    throw new TypeError(`Unsupported planning depth: ${String(depth)}`);
+  }
+  return depth;
+}
+
+function assertAssuranceLevel(level) {
+  if (!ASSURANCE_LEVELS.includes(level)) {
+    throw new TypeError(`Unsupported assurance level: ${String(level)}`);
+  }
+  return level;
+}
+
+function compatibilityLane(planningDepth, assuranceLevel) {
+  assertPlanningDepth(planningDepth);
+  assertAssuranceLevel(assuranceLevel);
+  if (assuranceLevel === 'Strict') return 'Critical';
+  if (planningDepth === 'None' && assuranceLevel === 'Routine') return 'Direct';
+  return 'Standard';
+}
+
+function v1Axes(lane) {
+  assertLane(lane);
+  if (lane === 'Direct') return { planningDepth: 'None', assuranceLevel: 'Routine' };
+  if (lane === 'Critical') return { planningDepth: 'Full', assuranceLevel: 'Strict' };
+  return { planningDepth: 'Compact', assuranceLevel: 'Routine' };
 }
 
 function asTrue(value) {
@@ -444,11 +507,13 @@ function textValue(input) {
 
 function classifyRiskSignals(input = {}) {
   const nestedSignals = input.signals && typeof input.signals === 'object' ? input.signals : {};
-  const declaredSignals = [input.riskSignals, input.risks]
+  const declaredRiskValues = [input.riskSignals, input.risks]
     .flatMap((value) => Array.isArray(value) ? value : [])
-    .filter((value) => typeof value === 'string')
+    .filter((value) => typeof value === 'string');
+  const declaredSignals = declaredRiskValues
     .join(' ')
     .toLowerCase();
+  const explicitRisk = (terms) => declaredRiskValues.some((value) => terms.includes(value.trim().toLowerCase()));
   const source = {
     ...input,
     ...nestedSignals,
@@ -469,7 +534,9 @@ function classifyRiskSignals(input = {}) {
     auth: signalValue(source, LANE_RISK_KEYS.auth) || hasTerm(LANE_RISK_KEYS.auth),
     payment: signalValue(source, LANE_RISK_KEYS.payment) || hasTerm(LANE_RISK_KEYS.payment),
     privacy: signalValue(source, LANE_RISK_KEYS.privacy) || hasTerm(LANE_RISK_KEYS.privacy),
-    data: signalValue(source, LANE_RISK_KEYS.data) || hasTerm(LANE_RISK_KEYS.data) || /\bdata\b/.test(declaredSignals),
+    data: signalValue(source, ['data', 'dataset', 'records'])
+      || explicitRisk(['data', 'dataset', 'records'])
+      || hasTerm(LANE_RISK_KEYS.data),
     schema: signalValue(source, LANE_RISK_KEYS.schema) || hasTerm(LANE_RISK_KEYS.schema),
     migration: signalValue(source, LANE_RISK_KEYS.migration) || hasTerm(LANE_RISK_KEYS.migration),
     publicContract: signalValue(source, LANE_RISK_KEYS.publicContract) || hasTerm(LANE_RISK_KEYS.publicContract),
@@ -499,23 +566,6 @@ function overrideLane(input = {}) {
   return input.override ?? input.laneOverride ?? input.requestedLane ?? input.lane ?? null;
 }
 
-function isValidOverrideReceipt(receipt, automaticLane, requestedLane, risks = []) {
-  // P0.4 fail-closed: no trusted runtime issuer exists yet.
-  // Even a correctly shaped object with source:runtime must NOT be considered valid provenance.
-  // Downgrade is blocked until a verifiable, runtime-issued override receipt is implemented
-  // (bound to automaticLane/requestedLane/risks/session and verifiable by that issuer).
-  // Keep this function fail-closed; do not accept plain objects — always return false for P0.
-  return false;
-}
-
-function isUserAuthorizedForDowngrade(input = {}, automaticLane, requestedLane, risks) {
-  // P0.4: downgrade requires structured override receipt with runtime provenance.
-  // Boolean flags (userAuthorized, user_approved, etc.) are never trusted.
-  // Fail closed — no trusted issuer exists yet, so always false.
-  // Explicitly ignore all boolean/string downgrade flags to prevent forged approvals.
-  return false;
-}
-
 function freezeClassification(obj) {
   Object.freeze(obj);
   if (Array.isArray(obj.warnings)) Object.freeze(obj.warnings);
@@ -525,63 +575,82 @@ function freezeClassification(obj) {
   return obj;
 }
 
+function requestedAxis(input, snake, camel) {
+  return input[snake] ?? input[camel] ?? null;
+}
+
+function inferredPlanningDepth(input, taskCount) {
+  const complexity = String(input.systemComplexity ?? input.system_complexity ?? input.complexity ?? '').toLowerCase();
+  const scope = String(input.scope ?? input.scopeSize ?? input.scope_size ?? '').toLowerCase();
+  if (['high', 'complex', 'system', 'cross-system'].includes(complexity)
+    || ['large', 'broad', 'multi-package', 'system'].includes(scope)
+    || taskCount >= 5) return 'Full';
+  if (explicitReversible(input) && input.lowRisk === true && input.isolated === true && taskCount <= 2) return 'None';
+  return 'Compact';
+}
+
+function minimumAssuranceForRisks(risks = []) {
+  const listed = Array.isArray(risks) ? risks : [];
+  const classified = classifyRiskSignals({ risks: listed });
+  if (Object.entries(classified).some(([risk, active]) => active && CRITICAL_RISKS.has(risk))) return 'Strict';
+  return listed.length > 0 ? 'Elevated' : 'Routine';
+}
+
 function classifyLane(input = {}) {
   if (typeof input === 'string') {
-    const c = { lane: assertLane(input), automaticLane: input, overridden: false, warnings: [], risks: [], signals: {} };
-    return freezeClassification(c);
+    const axes = v1Axes(input);
+    return freezeClassification({
+      ...axes,
+      automaticPlanningDepth: axes.planningDepth,
+      automaticAssuranceLevel: axes.assuranceLevel,
+      lane: input,
+      automaticLane: input,
+      overridden: false,
+      warnings: [], risks: [], signals: {},
+    });
   }
   if (!input || typeof input !== 'object') throw new TypeError('Lane classification input must be an object');
-
-  const signals = classifyRiskSignals(input);
-  const risks = Object.entries(signals).filter(([, active]) => active).map(([name]) => name);
   const taskCount = input.taskCount === undefined ? 1 : input.taskCount;
   if (!Number.isInteger(taskCount) || taskCount < 1) throw new RangeError('taskCount must be a positive integer');
 
-  const automaticLane = risks.length > 0
-    ? 'Critical'
-    : explicitReversible(input) && input.lowRisk === true && input.isolated === true && taskCount <= 2
-      ? 'Direct'
-      : 'Standard';
-  const requested = overrideLane(input);
-  if (requested === null || requested === undefined) {
-    const c = {
-      lane: automaticLane,
-      automaticLane,
-      overridden: false,
-      warnings: [],
-      risks,
-      signals,
-    };
-    return freezeClassification(c);
+  const signals = classifyRiskSignals(input);
+  const explicitRisks = Array.isArray(input.risks)
+    ? input.risks.filter((risk) => typeof risk === 'string' && risk.trim() !== '')
+    : [];
+  const risks = [...new Set([
+    ...Object.entries(signals).filter(([, active]) => active).map(([name]) => name),
+    ...explicitRisks,
+  ])];
+  const inferredPlanning = inferredPlanningDepth(input, taskCount);
+  const automaticAssurance = minimumAssuranceForRisks(risks);
+  const legacyRequested = overrideLane(input);
+  const legacyAxes = legacyRequested === null || legacyRequested === undefined ? null : v1Axes(assertLane(legacyRequested));
+  const requestedPlanning = requestedAxis(input, 'planning_depth', 'planningDepth') ?? legacyAxes?.planningDepth;
+  const requestedAssurance = requestedAxis(input, 'assurance_level', 'assuranceLevel') ?? legacyAxes?.assuranceLevel;
+  if (requestedPlanning !== null && requestedPlanning !== undefined) assertPlanningDepth(requestedPlanning);
+  if (requestedAssurance !== null && requestedAssurance !== undefined) assertAssuranceLevel(requestedAssurance);
+  if (requestedPlanning && PLANNING_DEPTHS.indexOf(requestedPlanning) < PLANNING_DEPTHS.indexOf(inferredPlanning)) {
+    throw new Error(`planning_depth downgrade from ${inferredPlanning} to ${requestedPlanning} is not permitted`);
   }
-  assertLane(requested);
-  const isDowngrade = LANES.indexOf(requested) < LANES.indexOf(automaticLane);
-  if (isDowngrade && !isUserAuthorizedForDowngrade(input, automaticLane, requested, risks)) {
-    throw new Error(
-      `Downgrade from ${automaticLane} to ${requested} is blocked: no trusted runtime issuer is available to authorize Critical downgrades. ` +
-      `Automatic ${automaticLane} due to: ${risks.join(', ') || 'default risk policy'}. ` +
-      `Keep ${automaticLane} or escalate; downgrade is unavailable until a verifiable runtime override receipt is implemented.`
-    );
+  if (requestedAssurance && ASSURANCE_LEVELS.indexOf(requestedAssurance) < ASSURANCE_LEVELS.indexOf(automaticAssurance)) {
+    throw new Error(`assurance_level downgrade from ${automaticAssurance} to ${requestedAssurance} is blocked for risks: ${risks.join(', ')}`);
   }
-  const warnings = [`Explicit lane override selected: ${requested}.`];
-  if (requested !== automaticLane) {
-    warnings.push(`Override changes automatic ${automaticLane} classification to ${requested}.`);
-    if (LANES.indexOf(requested) < LANES.indexOf(automaticLane)) {
-      warnings.push(`Downgrading risk lane may reduce review and evidence coverage: ${risks.join(', ') || 'default risk policy'}.`);
-      if (isUserAuthorizedForDowngrade(input, automaticLane, requested, risks)) {
-        warnings.push(`Downgrade authorized by user - proceeding with ${requested} despite ${automaticLane} signals.`);
-      }
-    }
-  }
-  const c2 = {
-    lane: requested,
+  const planningDepth = requestedPlanning || inferredPlanning;
+  const assuranceLevel = requestedAssurance || automaticAssurance;
+  const lane = compatibilityLane(planningDepth, assuranceLevel);
+  const automaticLane = compatibilityLane(inferredPlanning, automaticAssurance);
+  return freezeClassification({
+    planningDepth,
+    automaticPlanningDepth: inferredPlanning,
+    assuranceLevel,
+    automaticAssuranceLevel: automaticAssurance,
+    lane,
     automaticLane,
-    overridden: true,
-    warnings,
+    overridden: Boolean(requestedPlanning || requestedAssurance || legacyAxes),
+    warnings: legacyAxes ? [`Legacy lane ${legacyRequested} adapted to Specs v2 axes.`] : [],
     risks,
     signals,
-  };
-  return freezeClassification(c2);
+  });
 }
 
 function uniqueStrings(values, field) {
@@ -593,64 +662,181 @@ function uniqueStrings(values, field) {
   return { valid: true };
 }
 
-function obligationsForLane(lane, risks = []) {
-  assertLane(lane);
-  const riskSet = new Set(risks);
+function planningObligationsFor(depth) {
+  assertPlanningDepth(depth);
+  if (depth === 'None') return [];
+  if (depth === 'Compact') return ['needsRequirements', 'needsDesign'];
+  return [...PLANNING_OBLIGATIONS];
+}
+
+function obligationsForAssurance(level, risks = []) {
+  assertAssuranceLevel(level);
   const obligations = new Set(['needsExecutionProof']);
-  if (lane === 'Standard') obligations.add('needsInspection');
-  if (lane === 'Critical') {
+  if (level === 'Elevated') obligations.add('needsInspection');
+  if (level === 'Strict') {
     obligations.add('needsInspection');
     obligations.add('needsIndependentAudit');
-    if ([
-      'destructive', 'reversibility', 'rollback', 'data', 'schema', 'migration',
-      'privacy', 'payment', 'crossRuntime',
-    ].some((risk) => riskSet.has(risk))) {
-      obligations.add('needsDurableTaskState');
-    }
-    if ([
-      'auth', 'payment', 'privacy', 'schema', 'migration', 'publicContract',
-      'crossRuntime', 'ambiguity',
-    ].some((risk) => riskSet.has(risk))) {
-      obligations.add('needsResearchGrounding');
-    }
   }
   return PROOF_OBLIGATIONS.filter((obligation) => obligations.has(obligation));
+}
+
+function obligationsForLane(lane, risks = []) {
+  return obligationsForAssurance(v1Axes(assertLane(lane)).assuranceLevel, risks);
+}
+
+function legacyObligationsForLane(lane, risks = []) {
+  assertLane(lane);
+  const riskSet = new Set(risks);
+  const selected = new Set(['needsExecutionProof']);
+  if (lane !== 'Direct') selected.add('needsInspection');
+  if (lane === 'Critical') selected.add('needsIndependentAudit');
+  if (lane === 'Critical' && [
+    'destructive', 'reversibility', 'rollback', 'data', 'schema', 'migration',
+    'privacy', 'payment', 'crossRuntime',
+  ].some((risk) => riskSet.has(risk))) selected.add('needsDurableTaskState');
+  if (lane === 'Critical' && [
+    'auth', 'payment', 'privacy', 'schema', 'migration', 'publicContract',
+    'crossRuntime', 'ambiguity',
+  ].some((risk) => riskSet.has(risk))) selected.add('needsResearchGrounding');
+  return [...PROOF_OBLIGATIONS, 'needsResearchGrounding'].filter((obligation) => selected.has(obligation));
 }
 
 function actorNeedsFor(obligations) {
   return obligations.map((obligation) => ({ ...ACTOR_NEEDS_BY_OBLIGATION[obligation] }));
 }
 
-function minimumLaneForRisks(risks = []) {
-  const listedRisks = Array.isArray(risks) ? risks : [];
-  const classifiedRisks = classifyRiskSignals({ risks: listedRisks });
-  if (Object.entries(classifiedRisks).some(([risk, active]) => active && CRITICAL_RISKS.has(risk))) {
-    return 'Critical';
-  }
-  if (listedRisks.length > 0) return 'Standard';
-  return 'Direct';
+function mergeProofObligations(...groups) {
+  const selected = new Set(groups.flat());
+  return READ_COMPAT_PROOF_OBLIGATIONS.filter((obligation) => selected.has(obligation));
 }
 
 function snapshotFromClassification(classification) {
-  const lane = assertLane(classification.lane);
-  const automaticLane = assertLane(classification.automaticLane || lane);
-  if (LANES.indexOf(lane) < LANES.indexOf(automaticLane)) {
-    throw new Error(`Workflow policy cannot downgrade ${automaticLane} to ${lane} without a trusted override receipt`);
+  const planningDepth = assertPlanningDepth(classification.planningDepth);
+  const automaticPlanningDepth = assertPlanningDepth(classification.automaticPlanningDepth || planningDepth);
+  const assuranceLevel = assertAssuranceLevel(classification.assuranceLevel);
+  const automaticAssuranceLevel = assertAssuranceLevel(classification.automaticAssuranceLevel || assuranceLevel);
+  if (PLANNING_DEPTHS.indexOf(planningDepth) < PLANNING_DEPTHS.indexOf(automaticPlanningDepth)) {
+    throw new Error(`Workflow policy cannot downgrade planning_depth ${automaticPlanningDepth} to ${planningDepth}`);
+  }
+  if (ASSURANCE_LEVELS.indexOf(assuranceLevel) < ASSURANCE_LEVELS.indexOf(automaticAssuranceLevel)) {
+    throw new Error(`Workflow policy cannot downgrade assurance_level ${automaticAssuranceLevel} to ${assuranceLevel}`);
   }
   const risks = Array.isArray(classification.risks) ? [...new Set(classification.risks)] : [];
-  const minimumLane = minimumLaneForRisks(risks);
-  if (LANES.indexOf(lane) < LANES.indexOf(minimumLane)) {
-    throw new Error(`Workflow policy lane ${lane} is below ${minimumLane} for risks: ${risks.join(', ')}`);
+  const minimumAssurance = minimumAssuranceForRisks(risks);
+  if (ASSURANCE_LEVELS.indexOf(assuranceLevel) < ASSURANCE_LEVELS.indexOf(minimumAssurance)) {
+    throw new Error(`Workflow policy assurance_level ${assuranceLevel} is below ${minimumAssurance} for risks: ${risks.join(', ')}`);
   }
+  const lane = compatibilityLane(planningDepth, assuranceLevel);
+  const automaticLane = compatibilityLane(automaticPlanningDepth, automaticAssuranceLevel);
+  const proofObligations = obligationsForAssurance(assuranceLevel, risks);
   return {
     version: WORKFLOW_POLICY_VERSION,
+    planning_depth: planningDepth,
+    automatic_planning_depth: automaticPlanningDepth,
+    assurance_level: assuranceLevel,
+    automatic_assurance_level: automaticAssuranceLevel,
     lane,
     automatic_lane: automaticLane,
     risks,
-    artifact_profile: ARTIFACT_PROFILE_BY_LANE[lane],
-    proof_obligations: obligationsForLane(lane, risks),
-    actor_needs: actorNeedsFor(obligationsForLane(lane, risks)),
+    artifact_profile: ARTIFACT_PROFILE_BY_PLANNING[planningDepth],
+    planning_obligations: planningObligationsFor(planningDepth),
+    proof_obligations: proofObligations,
+    actor_needs: actorNeedsFor(proofObligations),
     override_receipt: null,
+  };
+}
+
+function canonicalSnapshotFromAxes({
+  planningDepth,
+  assuranceLevel,
+  automaticPlanningDepth,
+  automaticAssuranceLevel,
+  risks = [],
+}) {
+  assertPlanningDepth(planningDepth);
+  assertAssuranceLevel(assuranceLevel);
+  assertPlanningDepth(automaticPlanningDepth);
+  assertAssuranceLevel(automaticAssuranceLevel);
+  if (PLANNING_DEPTHS.indexOf(planningDepth) < PLANNING_DEPTHS.indexOf(automaticPlanningDepth)) {
+    throw new Error(`Workflow policy cannot downgrade planning_depth ${automaticPlanningDepth} to ${planningDepth}`);
+  }
+  if (ASSURANCE_LEVELS.indexOf(assuranceLevel) < ASSURANCE_LEVELS.indexOf(automaticAssuranceLevel)) {
+    throw new Error(`Workflow policy cannot downgrade assurance_level ${automaticAssuranceLevel} to ${assuranceLevel}`);
+  }
+  const uniqueRisks = [...new Set(risks)];
+  const minimumForRisks = minimumAssuranceForRisks(uniqueRisks);
+  if (ASSURANCE_LEVELS.indexOf(assuranceLevel) < ASSURANCE_LEVELS.indexOf(minimumForRisks)) {
+    throw new Error(`Workflow policy assurance_level ${assuranceLevel} is below ${minimumForRisks} for risks: ${uniqueRisks.join(', ')}`);
+  }
+  return {
+    version: CANONICAL_WORKFLOW_POLICY_VERSION,
+    planning_depth: planningDepth,
+    assurance_level: assuranceLevel,
+    classified_minimum: {
+      planning_depth: automaticPlanningDepth,
+      assurance_level: automaticAssuranceLevel,
+    },
+    risks: uniqueRisks,
+  };
+}
+
+function canonicalWorkflowPolicySnapshot(input = {}) {
+  if (input && typeof input === 'object' && hasOwn(input, 'workflow_policy')) {
+    const view = readWorkflowPolicySnapshot(input);
+    return canonicalSnapshotFromAxes({
+      planningDepth: view.planning_depth,
+      assuranceLevel: view.assurance_level,
+      automaticPlanningDepth: view.automatic_planning_depth,
+      automaticAssuranceLevel: view.automatic_assurance_level,
+      risks: view.risks,
+    });
+  }
+  const classification = trustedClassifications.has(input) ? input : classifyLane(input);
+  return canonicalSnapshotFromAxes({
+    planningDepth: classification.planningDepth,
+    assuranceLevel: classification.assuranceLevel,
+    automaticPlanningDepth: classification.automaticPlanningDepth,
+    automaticAssuranceLevel: classification.automaticAssuranceLevel,
+    risks: classification.risks,
+  });
+}
+
+function isCanonicalTasklessTerminalSpec(spec, specDir) {
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec) || spec.schema_version !== '2.1') return false;
+  const policy = spec.workflow_policy;
+  const validation = validateWorkflowPolicySnapshot(policy);
+  if (!validation.valid || policy.version !== CANONICAL_WORKFLOW_POLICY_VERSION
+    || !['Compact', 'Full'].includes(policy.planning_depth)) return false;
+  if (Object.prototype.hasOwnProperty.call(spec, 'task_files')
+    && (!Array.isArray(spec.task_files) || spec.task_files.length !== 0)) return false;
+  if (Object.prototype.hasOwnProperty.call(spec, 'task_registry')
+    && (!spec.task_registry || typeof spec.task_registry !== 'object'
+      || Array.isArray(spec.task_registry) || Object.keys(spec.task_registry).length !== 0)) return false;
+  if (typeof specDir !== 'string' || specDir.trim() === '') return false;
+  try {
+    const entries = fs.readdirSync(path.join(specDir, 'tasks'));
+    return entries.length === 0;
+  } catch (error) {
+    return error && error.code === 'ENOENT';
+  }
+}
+
+function canonicalPolicyView(snapshot) {
+  const planningDepth = snapshot.planning_depth;
+  const assuranceLevel = snapshot.assurance_level;
+  const automaticPlanningDepth = snapshot.classified_minimum.planning_depth;
+  const automaticAssuranceLevel = snapshot.classified_minimum.assurance_level;
+  const proofObligations = obligationsForAssurance(assuranceLevel, snapshot.risks);
+  return {
+    ...JSON.parse(JSON.stringify(snapshot)),
+    automatic_planning_depth: automaticPlanningDepth,
+    automatic_assurance_level: automaticAssuranceLevel,
+    lane: compatibilityLane(planningDepth, assuranceLevel),
+    automatic_lane: compatibilityLane(automaticPlanningDepth, automaticAssuranceLevel),
+    artifact_profile: ARTIFACT_PROFILE_BY_PLANNING[planningDepth],
+    planning_obligations: planningObligationsFor(planningDepth),
+    proof_obligations: proofObligations,
+    actor_needs: actorNeedsFor(proofObligations),
   };
 }
 
@@ -663,7 +849,8 @@ function workflowPolicySnapshot(input = {}) {
   }
   if (input && typeof input === 'object' && isWorkflowPolicySnapshot(input)) {
     assertWorkflowPolicySnapshot(input);
-    return JSON.parse(JSON.stringify(input));
+    if (input.version === WORKFLOW_POLICY_VERSION) return clonePolicySnapshot(input);
+    return readWorkflowPolicySnapshot({ workflow_policy: input });
   }
   const classification = trustedClassifications.has(input)
     ? input
@@ -672,9 +859,37 @@ function workflowPolicySnapshot(input = {}) {
 }
 
 function isWorkflowPolicySnapshot(value) {
-  return Boolean(value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'version')
-    && Object.prototype.hasOwnProperty.call(value, 'automatic_lane')
-    && Object.prototype.hasOwnProperty.call(value, 'artifact_profile'));
+  return Boolean(value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'version'));
+}
+
+function validateV1Snapshot(snapshot) {
+  const errors = [];
+  if (JSON.stringify(Object.keys(snapshot).sort()) !== JSON.stringify([...V1_POLICY_FIELDS].sort())) {
+    errors.push(`workflow_policy v1 fields must be exactly ${V1_POLICY_FIELDS.join(', ')}`);
+  }
+  if (!LANES.includes(snapshot.lane)) errors.push(`workflow_policy.lane must be one of ${LANES.join(', ')}`);
+  if (!LANES.includes(snapshot.automatic_lane)) errors.push(`workflow_policy.automatic_lane must be one of ${LANES.join(', ')}`);
+  if (LANES.includes(snapshot.lane) && LANES.includes(snapshot.automatic_lane)
+    && LANES.indexOf(snapshot.lane) < LANES.indexOf(snapshot.automatic_lane)) errors.push('workflow_policy.lane cannot be lower than automatic_lane');
+  const risks = uniqueStrings(snapshot.risks, 'workflow_policy.risks');
+  if (!risks.valid) errors.push(risks.error);
+  if (risks.valid && LANES.includes(snapshot.lane)) {
+    const minimum = compatibilityLane('None', minimumAssuranceForRisks(snapshot.risks));
+    if (LANES.indexOf(snapshot.lane) < LANES.indexOf(minimum)) errors.push(`workflow_policy.lane must be at least ${minimum} for its risks`);
+  }
+  if (LANES.includes(snapshot.lane) && snapshot.artifact_profile !== ARTIFACT_PROFILE_BY_LANE[snapshot.lane]) {
+    errors.push(`workflow_policy.artifact_profile must be ${ARTIFACT_PROFILE_BY_LANE[snapshot.lane]} for ${snapshot.lane}`);
+  }
+  const obligations = uniqueStrings(snapshot.proof_obligations, 'workflow_policy.proof_obligations');
+  if (!obligations.valid) errors.push(obligations.error);
+  else if (LANES.includes(snapshot.lane) && risks.valid) {
+    const expected = legacyObligationsForLane(snapshot.lane, snapshot.risks);
+    if (JSON.stringify(snapshot.proof_obligations) !== JSON.stringify(expected)) errors.push('workflow_policy.proof_obligations do not match v1 lane and risks');
+  }
+  if (!Array.isArray(snapshot.actor_needs)) errors.push('workflow_policy.actor_needs must be an array');
+  else if (obligations.valid && JSON.stringify(snapshot.actor_needs) !== JSON.stringify(actorNeedsFor(snapshot.proof_obligations))) errors.push('workflow_policy.actor_needs must correspond to proof_obligations');
+  if (snapshot.override_receipt !== null) errors.push('workflow_policy.override_receipt must be null');
+  return { valid: errors.length === 0, errors };
 }
 
 function validateWorkflowPolicySnapshot(snapshot) {
@@ -682,43 +897,98 @@ function validateWorkflowPolicySnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
     return { valid: false, errors: ['workflow_policy must be an object'] };
   }
+  if (snapshot.version === CANONICAL_WORKFLOW_POLICY_VERSION) {
+    const keys = Object.keys(snapshot).sort();
+    if (JSON.stringify(keys) !== JSON.stringify([...CANONICAL_WORKFLOW_POLICY_FIELDS].sort())) {
+      errors.push(`workflow_policy v2.1 fields must be exactly ${CANONICAL_WORKFLOW_POLICY_FIELDS.join(', ')}`);
+    }
+    if (!PLANNING_DEPTHS.includes(snapshot.planning_depth)) {
+      errors.push(`workflow_policy.planning_depth must be one of ${PLANNING_DEPTHS.join(', ')}`);
+    }
+    if (!ASSURANCE_LEVELS.includes(snapshot.assurance_level)) {
+      errors.push(`workflow_policy.assurance_level must be one of ${ASSURANCE_LEVELS.join(', ')}`);
+    }
+    const minimum = snapshot.classified_minimum;
+    if (!minimum || typeof minimum !== 'object' || Array.isArray(minimum)
+      || Object.keys(minimum).sort().join(',') !== 'assurance_level,planning_depth') {
+      errors.push('workflow_policy.classified_minimum must contain exactly planning_depth and assurance_level');
+    } else {
+      if (!PLANNING_DEPTHS.includes(minimum.planning_depth)) {
+        errors.push(`workflow_policy.classified_minimum.planning_depth must be one of ${PLANNING_DEPTHS.join(', ')}`);
+      }
+      if (!ASSURANCE_LEVELS.includes(minimum.assurance_level)) {
+        errors.push(`workflow_policy.classified_minimum.assurance_level must be one of ${ASSURANCE_LEVELS.join(', ')}`);
+      }
+      if (PLANNING_DEPTHS.includes(snapshot.planning_depth) && PLANNING_DEPTHS.includes(minimum.planning_depth)
+        && PLANNING_DEPTHS.indexOf(snapshot.planning_depth) < PLANNING_DEPTHS.indexOf(minimum.planning_depth)) {
+        errors.push('workflow_policy.planning_depth cannot be lower than classified_minimum.planning_depth');
+      }
+      if (ASSURANCE_LEVELS.includes(snapshot.assurance_level) && ASSURANCE_LEVELS.includes(minimum.assurance_level)
+        && ASSURANCE_LEVELS.indexOf(snapshot.assurance_level) < ASSURANCE_LEVELS.indexOf(minimum.assurance_level)) {
+        errors.push('workflow_policy.assurance_level cannot be lower than classified_minimum.assurance_level');
+      }
+    }
+    const risks = uniqueStrings(snapshot.risks, 'workflow_policy.risks');
+    if (!risks.valid) errors.push(risks.error);
+    if (risks.valid && ASSURANCE_LEVELS.includes(snapshot.assurance_level)) {
+      const riskMinimum = minimumAssuranceForRisks(snapshot.risks);
+      if (ASSURANCE_LEVELS.indexOf(snapshot.assurance_level) < ASSURANCE_LEVELS.indexOf(riskMinimum)) {
+        errors.push(`workflow_policy.assurance_level must be at least ${riskMinimum} for its risks`);
+      }
+    }
+    return { valid: errors.length === 0, errors };
+  }
+  if (snapshot.version === '1') return validateV1Snapshot(snapshot);
   const keys = Object.keys(snapshot).sort();
   const expectedKeys = [...WORKFLOW_POLICY_FIELDS].sort();
   if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
     errors.push(`workflow_policy fields must be exactly ${WORKFLOW_POLICY_FIELDS.join(', ')}`);
   }
-  if (snapshot.version !== WORKFLOW_POLICY_VERSION) errors.push('workflow_policy.version must be "1"');
+  if (snapshot.version !== WORKFLOW_POLICY_VERSION) errors.push('workflow_policy.version must be "2"');
+  if (!PLANNING_DEPTHS.includes(snapshot.planning_depth)) errors.push(`workflow_policy.planning_depth must be one of ${PLANNING_DEPTHS.join(', ')}`);
+  if (!PLANNING_DEPTHS.includes(snapshot.automatic_planning_depth)) errors.push(`workflow_policy.automatic_planning_depth must be one of ${PLANNING_DEPTHS.join(', ')}`);
+  if (!ASSURANCE_LEVELS.includes(snapshot.assurance_level)) errors.push(`workflow_policy.assurance_level must be one of ${ASSURANCE_LEVELS.join(', ')}`);
+  if (!ASSURANCE_LEVELS.includes(snapshot.automatic_assurance_level)) errors.push(`workflow_policy.automatic_assurance_level must be one of ${ASSURANCE_LEVELS.join(', ')}`);
   if (!LANES.includes(snapshot.lane)) errors.push(`workflow_policy.lane must be one of ${LANES.join(', ')}`);
   if (!LANES.includes(snapshot.automatic_lane)) errors.push(`workflow_policy.automatic_lane must be one of ${LANES.join(', ')}`);
-  if (LANES.includes(snapshot.lane) && LANES.includes(snapshot.automatic_lane)
-    && LANES.indexOf(snapshot.lane) < LANES.indexOf(snapshot.automatic_lane)) {
-    errors.push('workflow_policy.lane cannot be lower than automatic_lane without a trusted override receipt');
-  }
-  if (LANES.includes(snapshot.lane) && snapshot.artifact_profile !== ARTIFACT_PROFILE_BY_LANE[snapshot.lane]) {
-    errors.push(`workflow_policy.artifact_profile must be ${ARTIFACT_PROFILE_BY_LANE[snapshot.lane]} for ${snapshot.lane}`);
-  }
+  if (PLANNING_DEPTHS.includes(snapshot.planning_depth) && PLANNING_DEPTHS.includes(snapshot.automatic_planning_depth)
+    && PLANNING_DEPTHS.indexOf(snapshot.planning_depth) < PLANNING_DEPTHS.indexOf(snapshot.automatic_planning_depth)) errors.push('workflow_policy.planning_depth cannot be lower than automatic_planning_depth');
+  if (ASSURANCE_LEVELS.includes(snapshot.assurance_level) && ASSURANCE_LEVELS.includes(snapshot.automatic_assurance_level)
+    && ASSURANCE_LEVELS.indexOf(snapshot.assurance_level) < ASSURANCE_LEVELS.indexOf(snapshot.automatic_assurance_level)) errors.push('workflow_policy.assurance_level cannot be lower than automatic_assurance_level');
+  if (PLANNING_DEPTHS.includes(snapshot.planning_depth) && ASSURANCE_LEVELS.includes(snapshot.assurance_level)
+    && snapshot.lane !== compatibilityLane(snapshot.planning_depth, snapshot.assurance_level)) errors.push('workflow_policy.lane is not the derived compatibility lane');
+  if (PLANNING_DEPTHS.includes(snapshot.automatic_planning_depth) && ASSURANCE_LEVELS.includes(snapshot.automatic_assurance_level)
+    && snapshot.automatic_lane !== compatibilityLane(snapshot.automatic_planning_depth, snapshot.automatic_assurance_level)) errors.push('workflow_policy.automatic_lane is not the derived compatibility lane');
+  if (PLANNING_DEPTHS.includes(snapshot.planning_depth) && snapshot.artifact_profile !== ARTIFACT_PROFILE_BY_PLANNING[snapshot.planning_depth]) errors.push('workflow_policy.artifact_profile does not match planning_depth');
   const risks = uniqueStrings(snapshot.risks, 'workflow_policy.risks');
   if (!risks.valid) errors.push(risks.error);
-  if (risks.valid && LANES.includes(snapshot.lane)) {
-    const minimumLane = minimumLaneForRisks(snapshot.risks);
-    if (LANES.indexOf(snapshot.lane) < LANES.indexOf(minimumLane)) {
-      errors.push(`workflow_policy.lane must be at least ${minimumLane} for its risks`);
+  if (risks.valid && ASSURANCE_LEVELS.includes(snapshot.assurance_level)) {
+    const minimumAssurance = minimumAssuranceForRisks(snapshot.risks);
+    if (ASSURANCE_LEVELS.indexOf(snapshot.assurance_level) < ASSURANCE_LEVELS.indexOf(minimumAssurance)) {
+      errors.push(`workflow_policy.assurance_level must be at least ${minimumAssurance} for its risks`);
     }
   }
+  const planning = uniqueStrings(snapshot.planning_obligations, 'workflow_policy.planning_obligations');
+  if (!planning.valid) errors.push(planning.error);
+  else if (PLANNING_DEPTHS.includes(snapshot.planning_depth)
+    && JSON.stringify(snapshot.planning_obligations) !== JSON.stringify(planningObligationsFor(snapshot.planning_depth))) errors.push('workflow_policy.planning_obligations do not match planning_depth');
   const obligations = uniqueStrings(snapshot.proof_obligations, 'workflow_policy.proof_obligations');
   if (!obligations.valid) {
     errors.push(obligations.error);
   } else {
     for (const obligation of snapshot.proof_obligations) {
-      if (!PROOF_OBLIGATIONS.includes(obligation)) errors.push(`workflow_policy.proof_obligations has unknown obligation ${obligation}`);
+      if (!READ_COMPAT_PROOF_OBLIGATIONS.includes(obligation)) errors.push(`workflow_policy.proof_obligations has unknown obligation ${obligation}`);
     }
     if (!snapshot.proof_obligations.includes('needsExecutionProof')) {
       errors.push('workflow_policy.proof_obligations must include needsExecutionProof');
     }
-    if (LANES.includes(snapshot.lane) && risks.valid) {
-      const expected = obligationsForLane(snapshot.lane, snapshot.risks);
-      if (JSON.stringify(snapshot.proof_obligations) !== JSON.stringify(expected)) {
-        errors.push('workflow_policy.proof_obligations do not match lane and risks');
+    if (ASSURANCE_LEVELS.includes(snapshot.assurance_level) && risks.valid) {
+      const expected = obligationsForAssurance(snapshot.assurance_level, snapshot.risks);
+      const exact = JSON.stringify(snapshot.proof_obligations) === JSON.stringify(expected);
+      const trustedCompat = trustedV1Adapters.has(snapshot)
+        && JSON.stringify(snapshot.proof_obligations) === JSON.stringify(mergeProofObligations(expected, snapshot.proof_obligations));
+      if (!exact && !trustedCompat) {
+        errors.push('workflow_policy.proof_obligations do not match assurance_level and risks');
       }
     }
   }
@@ -734,14 +1004,12 @@ function validateWorkflowPolicySnapshot(snapshot) {
         break;
       }
     }
-    if (LANES.includes(snapshot.lane) && obligations.valid
+    if (ASSURANCE_LEVELS.includes(snapshot.assurance_level) && obligations.valid
       && JSON.stringify(snapshot.actor_needs) !== JSON.stringify(actorNeedsFor(snapshot.proof_obligations))) {
       errors.push('workflow_policy.actor_needs must correspond to proof_obligations');
     }
   }
-  if (snapshot.override_receipt !== null) {
-    errors.push('workflow_policy.override_receipt must be null until a trusted downgrade issuer exists');
-  }
+  if (snapshot.override_receipt !== null) errors.push('legacy workflow_policy.override_receipt is inert and must be null');
   return { valid: errors.length === 0, errors };
 }
 
@@ -754,8 +1022,36 @@ function assertWorkflowPolicySnapshot(snapshot) {
 function readWorkflowPolicySnapshot(spec = {}) {
   if (!spec || typeof spec !== 'object') throw new TypeError('Spec state must be an object');
   if (hasOwn(spec, 'workflow_policy')) {
-    assertWorkflowPolicySnapshot(spec.workflow_policy);
-    return JSON.parse(JSON.stringify(spec.workflow_policy));
+    let persisted = spec.workflow_policy;
+    if (persisted?.version === CANONICAL_WORKFLOW_POLICY_VERSION
+      && hasOwn(persisted, 'override_receipt')) {
+      if (persisted.override_receipt !== null) {
+        throw new TypeError('Invalid workflow policy snapshot: legacy workflow_policy.override_receipt is inert and must be null');
+      }
+      persisted = { ...persisted };
+      delete persisted.override_receipt;
+    }
+    assertWorkflowPolicySnapshot(persisted);
+    if (persisted.version === CANONICAL_WORKFLOW_POLICY_VERSION) {
+      return canonicalPolicyView(persisted);
+    }
+    if (persisted.version === WORKFLOW_POLICY_VERSION) return clonePolicySnapshot(persisted);
+    const selected = v1Axes(persisted.lane);
+    const automatic = v1Axes(persisted.automatic_lane);
+    const adapted = snapshotFromClassification({
+      ...selected,
+      automaticPlanningDepth: automatic.planningDepth,
+      automaticAssuranceLevel: automatic.assuranceLevel,
+      risks: persisted.risks,
+    });
+    const proofObligations = mergeProofObligations(adapted.proof_obligations, persisted.proof_obligations);
+    const result = {
+      ...adapted,
+      proof_obligations: proofObligations,
+      actor_needs: actorNeedsFor(proofObligations),
+    };
+    trustedV1Adapters.add(result);
+    return result;
   }
   // Legacy state is read-compatible only. The fallback is deliberately not
   // written back and cannot authorize a downgrade or override new input.
@@ -764,7 +1060,10 @@ function readWorkflowPolicySnapshot(spec = {}) {
     ? Object.keys(LEGACY_TIER_LANES).find((tier) => tier.toLowerCase() === rawLegacyTier.toLowerCase())
     : null;
   const legacyLane = legacyTier ? LEGACY_TIER_LANES[legacyTier] : null;
-  if (legacyLane) return snapshotFromClassification({ lane: legacyLane, automaticLane: legacyLane, risks: [] });
+  if (legacyLane) {
+    const axes = v1Axes(legacyLane);
+    return snapshotFromClassification({ ...axes, automaticPlanningDepth: axes.planningDepth, automaticAssuranceLevel: axes.assuranceLevel, risks: [] });
+  }
   throw new TypeError('workflow_policy snapshot is missing at the spec boundary');
 }
 
@@ -773,29 +1072,31 @@ function persistWorkflowPolicySnapshot(spec, input = {}) {
   const next = { ...spec };
   delete next.override_receipt;
   if (hasOwn(spec, 'workflow_policy')) {
-    assertWorkflowPolicySnapshot(spec.workflow_policy);
-    return { ...next, workflow_policy: JSON.parse(JSON.stringify(spec.workflow_policy)) };
+    return { ...next, workflow_policy: canonicalWorkflowPolicySnapshot(spec) };
   }
-  return { ...next, workflow_policy: workflowPolicySnapshot(input) };
+  return { ...next, workflow_policy: canonicalWorkflowPolicySnapshot(input) };
 }
 
 const persistWorkflowPolicy = persistWorkflowPolicySnapshot;
 const createWorkflowPolicySnapshot = workflowPolicySnapshot;
 
-function candidateLaneForRisks(input, risks) {
+function candidateAssuranceForRisks(input, risks) {
   const explicitLevel = String(input?.riskLevel || input?.risk_level || input?.level || '').toLowerCase();
-  const explicitLane = ['critical', 'high', 'deep'].includes(explicitLevel)
-    ? 'Critical'
+  const explicitLevelValue = ['critical', 'high', 'deep', 'strict'].includes(explicitLevel)
+    ? 'Strict'
     : ['standard', 'medium'].includes(explicitLevel)
-      ? 'Standard'
+      ? 'Elevated'
       : null;
-  const riskLane = minimumLaneForRisks(risks);
-  if (explicitLane === null && riskLane === 'Direct') return null;
-  if (explicitLane === null) return riskLane;
-  return LANES[Math.max(LANES.indexOf(explicitLane), LANES.indexOf(riskLane))];
+  const riskLevel = minimumAssuranceForRisks(risks);
+  if (explicitLevelValue === null && riskLevel === 'Routine') return null;
+  if (explicitLevelValue === null) return riskLevel;
+  return ASSURANCE_LEVELS[Math.max(ASSURANCE_LEVELS.indexOf(explicitLevelValue), ASSURANCE_LEVELS.indexOf(riskLevel))];
 }
 
 function escalateWorkflowPolicy(policyOrSpec, riskInput = {}) {
+  const canonicalInput = policyOrSpec && typeof policyOrSpec === 'object'
+    && (policyOrSpec.version === CANONICAL_WORKFLOW_POLICY_VERSION
+      || policyOrSpec.workflow_policy?.version === CANONICAL_WORKFLOW_POLICY_VERSION);
   const current = policyOrSpec && typeof policyOrSpec === 'object' && hasOwn(policyOrSpec, 'workflow_policy')
     ? readWorkflowPolicySnapshot(policyOrSpec)
     : workflowPolicySnapshot(policyOrSpec);
@@ -809,14 +1110,24 @@ function escalateWorkflowPolicy(policyOrSpec, riskInput = {}) {
   ])];
   const risks = [...new Set([...current.risks, ...newRisks])];
   if (newRisks.every((risk) => current.risks.includes(risk))) return current;
-  const candidate = candidateLaneForRisks(riskInput, newRisks);
+  const candidate = candidateAssuranceForRisks(riskInput, risks);
   if (!candidate) return current;
-  const lane = LANES[Math.max(LANES.indexOf(current.lane), LANES.indexOf(candidate))];
-  return snapshotFromClassification({
-    lane,
-    automaticLane: current.automatic_lane,
+  const automaticAssuranceLevel = ASSURANCE_LEVELS[Math.max(
+    ASSURANCE_LEVELS.indexOf(current.automatic_assurance_level),
+    ASSURANCE_LEVELS.indexOf(candidate),
+  )];
+  const assuranceLevel = ASSURANCE_LEVELS[Math.max(
+    ASSURANCE_LEVELS.indexOf(current.assurance_level),
+    ASSURANCE_LEVELS.indexOf(automaticAssuranceLevel),
+  )];
+  const axes = {
+    planningDepth: current.planning_depth,
+    automaticPlanningDepth: current.automatic_planning_depth,
+    assuranceLevel,
+    automaticAssuranceLevel,
     risks,
-  });
+  };
+  return canonicalInput ? canonicalSnapshotFromAxes(axes) : snapshotFromClassification(axes);
 }
 
 function policyForSpec(spec, riskInput = null) {
@@ -828,15 +1139,17 @@ function lanePolicy(input = {}) {
   const snapshot = input && typeof input === 'object' && hasOwn(input, 'workflow_policy')
     ? readWorkflowPolicySnapshot(input)
     : input && typeof input === 'object' && isWorkflowPolicySnapshot(input)
-      ? (assertWorkflowPolicySnapshot(input), JSON.parse(JSON.stringify(input)))
+      ? (assertWorkflowPolicySnapshot(input), clonePolicySnapshot(input))
       : workflowPolicySnapshot(input);
   const lane = assertLane(snapshot.lane);
   return {
     ...snapshot,
     proof_obligations: [...snapshot.proof_obligations],
     actor_needs: snapshot.actor_needs.map((need) => ({ ...need })),
-    requiresSpec: lane !== 'Direct',
-    requiresState: lane === 'Critical',
+    planning_obligations: [...snapshot.planning_obligations],
+    requiresSpec: snapshot.planning_depth !== 'None',
+    requiresState: snapshot.planning_depth === 'Full'
+      || snapshot.proof_obligations.includes('needsDurableTaskState'),
     qualityGate: lane === 'Direct' ? 'main-session' : lane === 'Standard' ? 'combined-feature-review' : 'strict-evidence',
     shipPoint: lane === 'Direct' ? 'task' : 'feature',
     evidence: snapshot.artifact_profile,
@@ -873,8 +1186,8 @@ function validateApprovalSchema(spec) {
       return { valid: false, absent: false, legacy: false, error: `approvals.${stage} must be an approval object` };
     }
     const keys = Object.keys(val).sort();
-    if (keys.join(',') !== 'agent_validated,generated,user_approved') {
-      return { valid: false, absent: false, legacy: false, error: `approvals.${stage} must contain exactly generated, agent_validated, and user_approved` };
+    if (!['agent_validated,generated', 'agent_validated,generated,user_approved'].includes(keys.join(','))) {
+      return { valid: false, absent: false, legacy: false, error: `approvals.${stage} must contain generated and agent_validated; legacy user_approved is readable but has zero authority` };
     }
     if (keys.some((key) => typeof val[key] !== 'boolean')) {
       return { valid: false, absent: false, legacy: false, error: `approvals.${stage} fields must be boolean` };
@@ -908,7 +1221,6 @@ function approvalState(state = {}) {
     return {
       generated: false,
       agent_validated: false,
-      user_approved: false,
       ready: false,
       present: true,
       schema_version: APPROVAL_SCHEMA_VERSION,
@@ -936,13 +1248,13 @@ function approvalState(state = {}) {
   const result = {
     generated: state.generated === true,
     agent_validated: state.agent_validated === true,
-    user_approved: state.user_approved === true,
   };
   return {
     ...result,
-    ready: result.generated && result.agent_validated && result.user_approved,
+    ready: result.generated && result.agent_validated,
     present,
     schema_version: APPROVAL_SCHEMA_VERSION,
+    legacy_user_approved: state.user_approved === true,
   };
 }
 function assertVerdict(verdict) {
@@ -1073,7 +1385,7 @@ function workflowPolicyObligations(context) {
               : null)
           : null;
   if (!validateWorkflowPolicySnapshot(policy).valid) return null;
-  return [...policy.proof_obligations];
+  return [...readWorkflowPolicySnapshot({ workflow_policy: policy }).proof_obligations];
 }
 
 function executionReceiptFromContext(context) {
@@ -1271,6 +1583,7 @@ function completionDecisionForSpec(spec, {
   taskContext,
 } = {}) {
   const policy = spec && typeof spec === 'object' ? spec.workflow_policy : null;
+  const policyView = policy ? readWorkflowPolicySnapshot({ workflow_policy: policy }) : null;
   const context = {
     workflow_policy: policy,
     runtime_context: runtimeContext,
@@ -1279,7 +1592,7 @@ function completionDecisionForSpec(spec, {
   };
   const trustedProofs = runtimeBoundProofsFromSpec(spec, runtimeContext);
   if (trustedProofs) context.proofs = trustedProofs;
-  if (policy && policy.lane === 'Direct') {
+  if (policyView && policyView.lane === 'Direct') {
     return {
       completion: 'not_applicable',
       unfinished: false,
@@ -1857,8 +2170,9 @@ function runCli(argv = process.argv.slice(2)) {
     }
     if (options.action === 'policy-snapshot') {
       if (!options.task) throw new Error('--policy-snapshot requires --task-json');
-      const snapshot = workflowPolicySnapshot(options.task);
-      return cliResult({ ok: true, snapshot, exitCode: 0, message: `Policy snapshot: ${snapshot.lane}` }, options.json);
+      const snapshot = canonicalWorkflowPolicySnapshot(options.task);
+      const view = readWorkflowPolicySnapshot({ workflow_policy: snapshot });
+      return cliResult({ ok: true, snapshot, exitCode: 0, message: `Policy snapshot: ${view.lane}` }, options.json);
     }
     if (options.action === 'validate-policy') {
       if (!options.task) throw new Error('--validate-policy requires --task-json');
@@ -1920,10 +2234,15 @@ module.exports = {
   LEGACY_DIAGNOSTIC_VERDICTS,
   EXECUTION_TIERS,
   LANES,
+  PLANNING_DEPTHS,
+  ASSURANCE_LEVELS,
   ARTIFACT_PROFILES,
+  PLANNING_OBLIGATIONS,
   PROOF_OBLIGATIONS,
   WORKFLOW_POLICY_VERSION,
   WORKFLOW_POLICY_FIELDS,
+  CANONICAL_WORKFLOW_POLICY_VERSION,
+  CANONICAL_WORKFLOW_POLICY_FIELDS,
   RECEIPT_BINDING_FIELDS,
   INDEPENDENT_AUDIT_SCHEMA_VERSION,
   INDEPENDENT_AUDIT_FIELDS,
@@ -1931,12 +2250,17 @@ module.exports = {
   LEGACY_APPROVAL_ERROR,
   executionPolicy,
   classifyLane,
+  compatibilityLane,
+  planningObligationsFor,
+  obligationsForAssurance,
   obligationsForLane,
   actorNeedsFor,
   isWorkflowPolicySnapshot,
   validateWorkflowPolicySnapshot,
   assertWorkflowPolicySnapshot,
   workflowPolicySnapshot,
+  canonicalWorkflowPolicySnapshot,
+  isCanonicalTasklessTerminalSpec,
   createWorkflowPolicySnapshot,
   persistWorkflowPolicySnapshot,
   persistWorkflowPolicy,
@@ -1947,8 +2271,6 @@ module.exports = {
   approvalState,
   validateApprovalSchema,
   isLegacyApprovalObject,
-  isUserAuthorizedForDowngrade,
-  isValidOverrideReceipt,
   isTapMetadataHeading,
   deriveRuntimeContext: PROVENANCE.deriveRuntimeContext,
   recomputeRuntimeContext: PROVENANCE.recomputeRuntimeContext,

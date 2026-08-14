@@ -3,17 +3,15 @@
  *
  * OpenCode Plugin — spec-gate.ts
  *
- * Advisory port of .claude/hooks/spec-gate.cjs and .codex/hooks/spec-gate.cjs.
+ * OpenCode exposes a cancellable `tool.execute.before` hook, so completion
+ * related state tools can be hard-blocked with a controlled error. It does
+ * not expose a cancellable Stop/session.idle hook: a final assistant message
+ * without a guarded tool call is therefore outside this adapter's boundary.
+ * The plugin never presents that observer event as Claude/Codex parity.
  *
- * OpenCode has no Stop-hook equivalent that can hard-block a turn end.
- * This plugin provides a best-effort advisory gate:
- * - On tool.execute.after for writes to specs/<feature>/spec.json or task markdown, re-validate
- *   any newly-done task receipts (Verification: PASS, Command, Exit, provenance, completed_at).
- * - On session.idle (≈ Claude Stop), run the same check and surface a banner + stderr warning.
- *
- * It never throws to break the turn (fail-open). Disable via `.opencode/runtime.json`
- * `{ "spec": { "completion_gate": false } }`. Missing key keeps the advisory gate ON.
- * This is tier-2 compared to Claude/Codex hard gates — docs must not claim parity.
+ * Receipt validation and active-spec resolution are loaded from the installed
+ * shared executable authorities. Missing or malformed authorities are a
+ * blocked/unavailable result; this adapter never invents a local PASS.
  */
 
 import type { Plugin } from "@opencode-ai/plugin";
@@ -23,19 +21,26 @@ import {
   writeFileSync,
   mkdirSync,
   appendFileSync,
-  readdirSync,
+  realpathSync,
 } from "node:fs";
 import { join, dirname, relative, resolve, sep, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url));
 const SPEC_GATE_BANNER_START = "<!-- CAFEKIT SPEC-GATE START -->";
 const SPEC_GATE_BANNER_END = "<!-- CAFEKIT SPEC-GATE END -->";
+const BLOCK_CODE = "CAFEKIT_SPEC_GATE_BLOCKED";
+const SHARED_POLICY_FILE = "workflow-policy.cjs";
+const SHARED_RESOLVER_FILE = "spec-resolver.cjs";
 
 type TaskEntry = {
   status?: string;
   completed_at?: string;
   receipt?: string;
+  artifacts?: string[];
 };
 
 type SpecJson = {
@@ -45,12 +50,115 @@ type SpecJson = {
   task_registry?: Record<string, TaskEntry>;
 };
 
-const EVIDENCE_NAMES = ["Evidence", "Task Test Plan & Verification Evidence", "Verification & Evidence"];
-const PASS_MARKER = /^\s*Verification:\s*PASS\s*$/m;
-const LEGACY_SUCCESS = /^\s*(?:PASS(?:ED)?|✓)(?:\s*:|$)|exit\s+code\s*[:=]?\s*0\b/im;
-const EXPLICIT_FAILURE = /\bFAIL(?:ED|URE|URES|ING)?\b|tests?\s+failed|exit\s+code\s*[:=]?\s*[1-9]\d*|\b0\s+tests?\b/i;
+type ActiveSpec = {
+  featureName: string;
+  spec: SpecJson;
+  specsDir: string;
+  featureDir: string;
+  specFile: string;
+};
 
-function readRuntime(cwd: string): Record<string, any> {
+type SharedModule = {
+  policy: any | null;
+  resolver: any | null;
+  error: Error | null;
+  path: string;
+};
+
+type GateMultiple = {
+  error: "multiple_active";
+  candidates: string[];
+  reason: string;
+  taskPath: string;
+};
+
+type GateInvalid = {
+  error: "invalid_specs";
+  candidates: string[];
+  reason: string;
+  taskPath: string;
+};
+
+type GateExplicit = {
+  error: "explicit_not_found" | "explicit_malformed";
+  reason: string;
+  taskPath: string;
+};
+
+type GateUnavailable = {
+  error: "validator_unavailable" | "resolver_unavailable";
+  reason: string;
+  taskPath: string;
+};
+
+type GateFailures = {
+  featureName: string;
+  failures: { taskPath: string; fails: string[] }[];
+};
+
+type CollectResult = GateFailures | GateMultiple | GateInvalid | GateExplicit | GateUnavailable | null;
+
+const EVIDENCE_NAMES = ["Evidence", "Task Test Plan & Verification Evidence", "Verification & Evidence"];
+const GATED_TOOLS = new Set(["edit", "write", "apply_patch", "task", "taskupdate", "todowrite"]);
+const HARD_BLOCK_TOOLS = new Set(["task", "taskupdate", "todowrite"]);
+
+function loadSharedModule(kind: "policy" | "resolver"): SharedModule {
+  const authorityFile = kind === "policy" ? SHARED_POLICY_FILE : SHARED_RESOLVER_FILE;
+  const relativePath = `../scripts/${authorityFile}`;
+  const sourcePath = `../../claude/scripts/${authorityFile}`;
+  const installed = join(PLUGIN_DIR, relativePath);
+  const source = join(PLUGIN_DIR, sourcePath);
+  // Prefer the installed authority. If it exists but cannot load, do not
+  // silently substitute another copy with potentially different semantics.
+  const candidate = existsSync(installed) ? installed : source;
+  try {
+    const module = require(candidate);
+    const requiredExport = kind === "policy" ? "validateCanonicalReceipt" : "resolveActiveSpec";
+    if (!module || typeof module[requiredExport] !== "function") {
+      throw new Error(`shared ${kind} has no ${requiredExport} function`);
+    }
+    return {
+      policy: kind === "policy" ? module : null,
+      resolver: kind === "resolver" ? module : null,
+      error: null,
+      path: candidate,
+    };
+  } catch (error) {
+    return {
+      policy: null,
+      resolver: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+      path: candidate,
+    };
+  }
+}
+
+function loadSharedPolicy(): { policy: any | null; error: Error; path: string } {
+  const loaded = loadSharedModule("policy");
+  return {
+    policy: loaded.policy,
+    error: loaded.error || new Error("shared workflow policy is unavailable"),
+    path: loaded.path,
+  };
+}
+
+function getSharedPolicy(): any | null {
+  return loadSharedPolicy().policy;
+}
+
+function getSharedValidate(): ((body: string, options?: any) => string[]) | null {
+  const shared = loadSharedPolicy().policy;
+  return shared && typeof shared.validateCanonicalReceipt === "function"
+    ? shared.validateCanonicalReceipt
+    : null;
+}
+
+function isTapMetadataHeading(line: string): boolean {
+  const shared = getSharedPolicy();
+  return Boolean(shared && typeof shared.isTapMetadataHeading === "function" && shared.isTapMetadataHeading(line));
+}
+
+function readRuntime(cwd: string): Record<string, unknown> {
   try {
     const file = join(cwd, ".opencode", "runtime.json");
     return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
@@ -63,146 +171,196 @@ function evidenceBody(text: string): string | null {
   const lines = text.split("\n");
   let start = -1;
   let level = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^(#{2,3})\s+(.+?)\s*$/);
-    if (m && EVIDENCE_NAMES.includes(m[2])) {
-      start = i + 1;
-      level = m[1].length;
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{2,3})\s+(.+?)\s*$/);
+    if (match && EVIDENCE_NAMES.includes(match[2])) {
+      start = index + 1;
+      level = match[1].length;
       break;
     }
   }
   if (start < 0) return null;
   let end = lines.length;
-  for (let i = start; i < lines.length; i++) {
-    const hm = lines[i].match(/^(#{1,6})\s+/);
-    if (hm && hm[1].length <= level) {
-      end = i;
+  for (let index = start; index < lines.length; index += 1) {
+    const heading = lines[index].match(/^(#{1,6})\s+/);
+    if (heading && heading[1].length <= level && !isTapMetadataHeading(lines[index])) {
+      end = index;
       break;
     }
   }
   return lines.slice(start, end).join("\n");
 }
 
-function validateCanonicalReceipt(body: string): string[] {
-  const fails: string[] = [];
-  if (!/^\s*Verification:\s*PASS\s*$/m.test(body)) fails.push("verification_state");
-  if (!/^\s*Command(?:\(s\))?\s*:/m.test(body)) fails.push("command");
-  if (!/^\s*Exit\s*:|exit\s+code\s*[:=]|\bResult\s*:\s*PASS\b/im.test(body)) fails.push("exit_result");
-  const hasBase = /^\s*Base\s*:[ \t]*\S/im.test(body);
-  const hasHead = /^\s*Head\s*:[ \t]*\S/im.test(body);
-  const hasBaseSha = /\bbase_sha\s*:[ \t]*\S/im.test(body);
-  const hasHeadSha = /\bhead_sha\s*:[ \t]*\S/im.test(body);
-  if (!((hasBase && hasHead) || (hasBaseSha && hasHeadSha))) fails.push("provenance");
-  if (/\bartifact\b/i.test(body) && !/sha256:/i.test(body)) fails.push("artifact_hash");
-  return fails;
+function validateCanonicalReceipt(body: string, options?: any): string[] {
+  const shared = getSharedValidate();
+  return shared ? shared(body, options) : ["shared_validator"];
 }
 
-function checkReceipt(featureDir: string, taskPath: string, task: TaskEntry): string[] {
+function checkReceipt(featureDir: string, taskPath: string, task: TaskEntry, policy: any): string[] {
   const fails: string[] = [];
-  const abs = resolve(join(featureDir, taskPath));
   const resolvedFeatureDir = resolve(featureDir);
+  const abs = resolve(featureDir, taskPath);
   const rel = relative(resolvedFeatureDir, abs);
-  // prevent path traversal: taskPath must stay inside featureDir (cross-platform sibling-prefix safe)
-  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return ["a"];
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return ["a"];
   if (!existsSync(abs)) return ["a"];
+  try {
+    const canonicalFeature = realpathSync(resolvedFeatureDir);
+    const canonicalTarget = realpathSync(abs);
+    const canonicalRelative = relative(canonicalFeature, canonicalTarget);
+    if (canonicalRelative === "" || canonicalRelative === ".." || canonicalRelative.startsWith(`..${sep}`) || isAbsolute(canonicalRelative)) return ["a"];
+  } catch {
+    return ["a"];
+  }
+
   let text: string;
   try {
     text = readFileSync(abs, "utf8");
   } catch {
     return ["a"];
   }
-  const statusLine = text.split("\n").find((l) => /^\s*(?:\*\*)?Status(?:\*\*)?\s*:/i.test(l));
+  const statusLine = text.split("\n").find((line) => /^\s*(?:\*\*)?Status(?:\*\*)?\s*:/i.test(line));
   if (!statusLine || !/\bdone\b/i.test(statusLine)) fails.push("a");
+
   const body = evidenceBody(text);
   if (body === null) {
     fails.push("b");
-  } else if (/\{\{[^}]+\}\}/.test(body) || EXPLICIT_FAILURE.test(body) || !(PASS_MARKER.test(body) || LEGACY_SUCCESS.test(body))) {
-    fails.push("c");
   } else {
-    const canonical = validateCanonicalReceipt(body);
-    const map: Record<string, string> = { verification_state: "c", command: "e", exit_result: "f", provenance: "g", artifact_hash: "h" };
-    for (const f of canonical) {
-      if (f === "verification_state") {
-        if (!PASS_MARKER.test(body) && !fails.includes("c")) fails.push("c");
-        continue;
-      }
-      const letter = map[f];
+    const options = typeof policy?.receiptValidatorOptions === "function"
+      ? policy.receiptValidatorOptions(task)
+      : {};
+    const canonical = validateCanonicalReceipt(body, options);
+    const map: Record<string, string> = {
+      verification_state: "c",
+      command: "e",
+      exit_result: "f",
+      provenance: "g",
+      artifact_hash: "h",
+      artifact_declaration: "h",
+      placeholder: "c",
+      shared_validator: "c",
+      validator_unavailable: "c",
+    };
+    for (const failure of canonical) {
+      const letter = map[failure];
       if (letter && !fails.includes(letter)) fails.push(letter);
     }
-    if (!PASS_MARKER.test(body) && !fails.includes("c")) fails.push("c");
   }
-  const at = task?.completed_at;
-  if (typeof at !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(at) || Number.isNaN(Date.parse(at))) fails.push("d");
+
+  const completedAt = task?.completed_at;
+  if (typeof completedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(completedAt) || Number.isNaN(Date.parse(completedAt))) {
+    fails.push("d");
+  }
   return fails;
 }
 
-function findActiveSpec(specsPath: string): { featureName: string; spec: SpecJson; specsDir: string; featureDir: string } | null {
-  if (!existsSync(specsPath)) return null;
-  let entries;
-  try {
-    entries = readdirSync(specsPath, { withFileTypes: true });
-  } catch {
-    return null;
-  }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const specFile = join(specsPath, entry.name, "spec.json");
-    if (!existsSync(specFile)) continue;
-    try {
-      const data = JSON.parse(readFileSync(specFile, "utf8")) as SpecJson;
-      if (data.status === "in_progress" || data.status === "in-progress") {
-        return { featureName: entry.name, spec: data, specsDir: specsPath, featureDir: join(specsPath, entry.name) };
-      }
-    } catch {
-      // skip bad json
-    }
-  }
-  return null;
+function resolverUnavailable(loaded: SharedModule): GateUnavailable {
+  return {
+    error: "resolver_unavailable",
+    reason: `${loaded.error?.message || "shared spec resolver is unavailable"} (${loaded.path})`,
+    taskPath: "shared spec resolver",
+  };
 }
 
-function isStaleFlashDone(task: TaskEntry): boolean {
-  return task?.status === "done" && task.receipt === "FLASH_UNVERIFIED";
-}
-
-function collectFailures(cwd: string): { featureName: string; failures: { taskPath: string; fails: string[] }[] } | null {
+function collectFailures(cwd: string, targetSources: unknown[] = []): CollectResult {
   const runtime = readRuntime(cwd);
-  if (runtime.spec && runtime.spec.completion_gate === false) return null;
-  const specsPath = join(cwd, runtime.paths?.specs || "specs");
-  const active = findActiveSpec(specsPath);
-  if (!active) return null;
+  if (runtime.spec && (runtime.spec as Record<string, unknown>).completion_gate === false) return null;
+
+  const resolverLoaded = loadSharedModule("resolver");
+  if (!resolverLoaded.resolver) return resolverUnavailable(resolverLoaded);
+
+  const resolver = resolverLoaded.resolver;
+  const target = typeof resolver.extractExplicitTarget === "function"
+    ? resolver.extractExplicitTarget(...targetSources)
+    : null;
+  let resolved: any;
+  try {
+    resolved = resolver.resolveActiveSpec({ projectRoot: cwd, runtime, ...(target || {}) });
+  } catch (error) {
+    return {
+      error: "resolver_unavailable",
+      reason: `${error instanceof Error ? error.message : String(error)} (${resolverLoaded.path})`,
+      taskPath: "shared spec resolver",
+    };
+  }
+  if (!resolved) return null;
+  if (resolved.error === "multiple_active") {
+    return { error: "multiple_active", candidates: resolved.candidates, reason: resolved.reason, taskPath: `specs (${resolved.candidates.join(", ")})` };
+  }
+  if (resolved.error === "invalid_specs") {
+    return { error: "invalid_specs", candidates: resolved.candidates, reason: resolved.reason, taskPath: `specs (${resolved.candidates.join(", ")})` };
+  }
+  if (resolved.error === "explicit_not_found" || resolved.error === "explicit_malformed") {
+    return { error: resolved.error, reason: resolved.reason || "explicit target is invalid", taskPath: "explicit spec target" };
+  }
+  if (resolved.error) {
+    return { error: "resolver_unavailable", reason: `${resolved.error}: ${resolved.reason || "resolution failed"}`, taskPath: "shared spec resolver" };
+  }
+
+  const policyLoaded = loadSharedPolicy();
+  if (!policyLoaded.policy) {
+    return {
+      error: "validator_unavailable",
+      reason: `${policyLoaded.error.message} (${policyLoaded.path})`,
+      taskPath: "shared workflow policy",
+    };
+  }
+
+  const active = resolved as ActiveSpec;
   const registry = active.spec.task_registry || {};
-  const staleFlash = Object.entries(registry).filter(([, t]) => isStaleFlashDone(t as TaskEntry));
+  const staleFlash = Object.entries(registry).filter(([, task]) => task?.status === "done" && task.receipt === "FLASH_UNVERIFIED");
   if (staleFlash.length > 0) {
     return {
       featureName: active.featureName,
-      failures: staleFlash.map(([p]) => ({ taskPath: p, fails: ["flash"] })),
+      failures: staleFlash.map(([taskPath]) => ({ taskPath, fails: ["flash"] })),
     };
   }
-  // Check every done task (advisory — we have no cache to know newly-done, so check all)
+
   const failures: { taskPath: string; fails: string[] }[] = [];
   for (const [taskPath, task] of Object.entries(registry)) {
-    if ((task as TaskEntry)?.status !== "done") continue;
-    const fails = checkReceipt(active.featureDir, taskPath, task as TaskEntry);
+    if (task?.status !== "done") continue;
+    const fails = checkReceipt(active.featureDir, taskPath, task, policyLoaded.policy);
     if (fails.length > 0) failures.push({ taskPath, fails });
   }
-  if (failures.length === 0) return null;
-  return { featureName: active.featureName, failures };
+  return failures.length > 0 ? { featureName: active.featureName, failures } : null;
 }
 
-function formatReason(featureName: string, failures: { taskPath: string; fails: string[] }[]): string {
-  const flashOnly = failures.length === 1 && failures[0].fails.includes("flash");
-  if (flashOnly) {
-    return `Completion gate (advisory): 1 task(s) marked done with FLASH_UNVERIFIED (${failures[0].taskPath}). Run /hapo:test for exact proof, then use explicit sync-finalize.`;
+function formatReason(result: CollectResult): string {
+  if (!result) return "";
+  const targetHint = "Provide `featureName`/`feature` or `specPath`/`featurePath` in the host tool input; do not rely on first-directory selection.";
+  if (result.error === "multiple_active") {
+    return `Completion gate blocked: multiple active specs detected (${result.candidates.join(", ")}). ${targetHint}`;
   }
-  const lines = [`⚠️ Completion gate (advisory): ${failures.length} done task(s) lack a verification receipt.`];
-  for (const { taskPath, fails } of failures) {
-    if (fails.includes("flash")) {
-      lines.push(`- \`${taskPath}\`: FLASH_UNVERIFIED`);
-    } else {
-      lines.push(`- \`${taskPath}\`: failed check(s) ${fails.join(", ")}`);
-    }
+  if (result.error === "invalid_specs") {
+    return `Completion gate blocked: invalid spec JSON detected (${result.candidates.join(", ")}): ${result.reason}. Repair the malformed spec before completing tasks.`;
+  }
+  if (result.error === "explicit_not_found" || result.error === "explicit_malformed") {
+    return `Completion gate blocked: explicit spec target is invalid: ${result.reason}. ${targetHint}`;
+  }
+  if (result.error === "validator_unavailable" || result.error === "resolver_unavailable") {
+    return `Completion gate blocked: ${result.error}: ${result.reason}. Repair the shared authority before completing tasks.`;
+  }
+  const flashOnly = result.failures.length === 1 && result.failures[0].fails.includes("flash");
+  if (flashOnly) {
+    return `Completion gate blocked: feature ${result.featureName}; task ${result.failures[0].taskPath} is FLASH_UNVERIFIED. Run /hapo:test for exact proof, then use explicit sync-finalize.`;
+  }
+  const lines = [`Completion gate blocked: feature ${result.featureName}; ${result.failures.length} done task(s) lack valid verification evidence.`];
+  for (const { taskPath, fails } of result.failures) {
+    lines.push(`- \`${taskPath}\`: failed check(s) ${fails.join(", ")}`);
   }
   return lines.slice(0, 8).join("\n");
+}
+
+function createBlockError(result: CollectResult): Error {
+  const reason = formatReason(result);
+  const error = new Error(`[${BLOCK_CODE}]\n${reason}`) as Error & { code?: string; result?: unknown };
+  error.name = "CafeKitSpecGateBlocked";
+  error.code = BLOCK_CODE;
+  error.result = { decision: "block", reason };
+  return error;
+}
+
+function isControlledBlock(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && (error as { code?: string }).code === BLOCK_CODE);
 }
 
 function writeBanner(cwd: string, reason: string | null): void {
@@ -223,10 +381,9 @@ function writeBanner(cwd: string, reason: string | null): void {
       return;
     }
     const block = [SPEC_GATE_BANNER_START, reason, SPEC_GATE_BANNER_END].join("\n");
-    const next = cleaned ? `${cleaned}\n\n${block}\n` : `${block}\n`;
-    writeFileSync(file, next);
+    writeFileSync(file, cleaned ? `${cleaned}\n\n${block}\n` : `${block}\n`);
   } catch {
-    // fail-open
+    // Banner persistence is secondary to the before-hook decision.
   }
 }
 
@@ -236,43 +393,60 @@ function logCrash(error: unknown): void {
     if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
     appendFileSync(
       join(logDir, "hook-log.jsonl"),
-      JSON.stringify({ ts: new Date().toISOString(), hook: "spec-gate", status: "crash", error: error instanceof Error ? error.message : String(error) }) + "\n",
+      `${JSON.stringify({ ts: new Date().toISOString(), hook: "spec-gate", status: "crash", error: error instanceof Error ? error.message : String(error) })}\n`,
     );
   } catch {
-    // fail-open
+    // Logging errors are intentionally ignored.
   }
 }
-
-const RELEVANT_TOOLS = new Set(["edit", "write", "apply_patch", "task", "taskcreate", "taskupdate", "todowrite"]);
 
 export const SpecGate: Plugin = async ({ directory }) => ({
   event: async ({ event }) => {
     try {
-      if (event.type === "session.idle") {
-        const result = collectFailures(directory);
-        if (result) {
-          const reason = formatReason(result.featureName, result.failures);
-          writeBanner(directory, reason);
-          console.error(reason);
-        } else {
-          writeBanner(directory, null);
-        }
+      if (event.type !== "session.idle") return;
+      const eventRecord = event as unknown as Record<string, unknown>;
+      const properties = eventRecord.properties as Record<string, unknown> | undefined;
+      const result = collectFailures(directory, [eventRecord, properties]);
+      if (result) {
+        const reason = formatReason(result);
+        writeBanner(directory, reason);
+        console.error(`[spec-gate] ${reason}`);
+      } else {
+        writeBanner(directory, null);
       }
     } catch (error) {
       logCrash(error);
     }
   },
+
+  // OpenCode's documented cancellation boundary is before tool execution.
+  // Throwing here aborts the guarded completion/state tool call.
+  "tool.execute.before": async (input, output) => {
+    try {
+      if (!GATED_TOOLS.has(input.tool)) return;
+      const result = collectFailures(directory, [input, (output as { args?: unknown })?.args]);
+      if (!result) return;
+      const reason = formatReason(result);
+      writeBanner(directory, reason);
+      if (HARD_BLOCK_TOOLS.has(input.tool)) throw createBlockError(result);
+      console.error(`[spec-gate] ${reason}`);
+    } catch (error) {
+      if (isControlledBlock(error)) throw error;
+      logCrash(error);
+    }
+  },
+
+  // After-hook output is observational only; the tool has already run.
   "tool.execute.after": async (input) => {
     try {
-      if (!RELEVANT_TOOLS.has(input.tool)) return;
-      const result = collectFailures(directory);
+      if (!GATED_TOOLS.has(input.tool)) return;
+      const result = collectFailures(directory, [input, (input as { args?: unknown }).args]);
       if (result) {
-        const reason = formatReason(result.featureName, result.failures);
+        const reason = formatReason(result);
         writeBanner(directory, reason);
-        console.error(`[spec-gate advisory] ${reason}`);
+        console.error(`[spec-gate] ${reason}`);
       } else {
-        // clear banner if no failures after a relevant tool
-        // (keep banner if failures still exist from other tasks — collectFailures already handles)
+        writeBanner(directory, null);
       }
     } catch (error) {
       logCrash(error);

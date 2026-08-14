@@ -23,7 +23,8 @@ With no argument, review the pending diff. Supported targets are a PR, commit,
 pending changes, or an explicit path. Load only the spec and references needed
 for the target.
 
-Select review depth from the persisted lane, risk, and blast radius:
+Select review depth from `assurance_level`, risk, and blast radius. Lane is a
+derived view:
 
 - Direct: targeted correctness/security/spec check;
 - Standard: bounded feature review at closeout;
@@ -38,7 +39,9 @@ fixed Light/Standard/Deep sequence.
 ### 1. Specification compliance
 
 Compare the diff with `scope_lock`, requirements, design contracts, active task
-criteria, and declared runtime reachability. Identify missing behavior,
+Outcome/Scope/Anchors and Ownership/Changes/Acceptance/Dependencies/
+`Verification Plan`, typed `coordination.boundaries`, and declared
+runtime reachability. Identify missing behavior,
 unjustified extras, contract substitution, orphaned outputs, and incorrect
 completion claims. If a design image or document carries requirements, load its
 multimodal reference only when needed; do not guess from a filename.
@@ -73,6 +76,12 @@ closeout to the test owner; do not claim PASS on the feature from review alone.
 A review can still return a correctness verdict when its review inputs are
 complete.
 
+For new tasks, read proof from `receipts/<task-basename>.md`; use legacy task
+`## Evidence` only as fallback. If both exist and their proof identities
+conflict, fail closed. At feature closeout also consume `feature-receipt.md`.
+Receipt validity never supplies approval, readiness, audit status, or product
+semantics.
+
 ## Verdict
 
 Use the shared adapter surface exactly:
@@ -94,7 +103,7 @@ decision is unavailable.
 
 **Verdict:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
-**Lane / risk:** [snapshot and relevant signals]
+**Assurance / risk:** [canonical policy input and relevant signals]
 **Execution proof:** consumed | unavailable (owned by hapo:test)
 
 ## Findings

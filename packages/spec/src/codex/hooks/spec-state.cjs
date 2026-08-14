@@ -10,7 +10,7 @@ const {
   logCrash,
   readPayload
 } = require('./lib/hook-context.cjs');
-const { loadSharedPolicy } = require('./lib/spec-receipt.cjs');
+const { loadSharedPolicy, loadSharedReceipt } = require('./lib/spec-receipt.cjs');
 
 function emitControlledFailure(reason) {
   process.stdout.write(`> ⚠️ Spec tollgate unavailable: ${reason}. Repair the installed workflow policy before continuing.\n`);
@@ -34,6 +34,9 @@ try {
     process.exit(0);
   }
   const POLICY = loaded.policy;
+  const receiptLoaded = loadSharedReceipt();
+  if (!receiptLoaded.receipt) throw receiptLoaded.error;
+  const RECEIPT = receiptLoaded.receipt;
   const { projectRoot, runtime } = getHookContext(payload);
   if (runtime.spec?.tollgate === false) process.exit(0);
   const { resolveActiveSpec } = require('./lib/spec-utils.cjs');
@@ -81,6 +84,8 @@ try {
     (task?.status || 'pending') === 'pending'
     && (task?.dependencies || []).every((dependency) => statuses.get(dependency) === 'done')
   ));
+  const featureDir = path.join(active.specsDir, active.featureName);
+  const featureReceiptPresent = RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
   const stateKey = JSON.stringify({
     project_root: runtimeContext.project_root,
     specs_root: runtimeContext.specs_root,
@@ -94,6 +99,7 @@ try {
     phase,
     done: counts.done || 0,
     total: tasks.length,
+    feature_receipt_present: featureReceiptPresent,
   });
   const cache = cacheFile(projectRoot, runtimeContext.runtime_session);
   let previous = '';
@@ -117,9 +123,10 @@ try {
     lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
   lines.push(
-    '- Sync `spec.json` and the task file only after verified work.',
+    '- Sync `spec.json` and task Markdown status only after verified work; task proof belongs in `receipts/<task-basename>.md`.',
+    `- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`,
     `- Validate with \`node .codex/scripts/validate-spec-output.cjs specs/${active.featureName}\`.`,
-    '- The Stop completion gate checks receipts for newly-done tasks.'
+    '- Hooks revalidate receipt bytes but never grant approval.'
   );
   process.stdout.write(`${lines.join('\n')}\n`);
 } catch (error) {

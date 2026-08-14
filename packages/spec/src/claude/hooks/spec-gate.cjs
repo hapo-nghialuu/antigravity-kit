@@ -5,7 +5,7 @@
  * Stop Hook — spec-gate.cjs
  * Implements: https://docs.anthropic.com/en/docs/claude-code/hooks
  *
- * Blocks turn end when *newly-done* tasks lack a verification receipt.
+ * Blocks turn end when any done task lacks a verification receipt.
  * Block contract (exit 0 + stdout): {"decision":"block","reason":"..."}.
  *
  * Safety: stop_hook_active loop guard; no worker-writable completion-gate
@@ -83,11 +83,17 @@ try {
 
   let POLICY;
   let RESOLVER;
+  let RECEIPT;
+  let FINAL_STATE;
   try {
     POLICY = require(policyPath);
     RESOLVER = require(path.join(__dirname, '..', 'scripts', 'spec-resolver.cjs'));
+    RECEIPT = require(path.join(__dirname, '..', 'scripts', 'spec-receipt.cjs'));
+    FINAL_STATE = require('./completion-authority-check.cjs');
     if (typeof POLICY.validateCanonicalReceipt !== 'function'
-      || typeof POLICY.completionDecisionForSpec !== 'function') {
+      || typeof POLICY.completionDecisionForSpec !== 'function'
+      || typeof RECEIPT.checkTaskReceipt !== 'function'
+      || typeof FINAL_STATE.evaluateCloseout !== 'function') {
       throw new Error('shared workflow policy lacks completion authority functions');
     }
   } catch (error) {
@@ -106,11 +112,9 @@ try {
   } catch { /* gate stays on */ }
   // Active-spec discovery via shared resolver — explicit target if present, else fail on ambiguity.
   const baseDir   = cwd;
-  const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
-  const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
-  const resolved = RESOLVER.resolveActiveSpec({ projectRoot: baseDir, runtime, explicitFeature, explicitPath });
+  const resolved = FINAL_STATE.resolveCandidate({ resolver: RESOLVER, projectRoot: baseDir, runtime, payload });
   if (!resolved) process.exit(0);
-  if (resolved.error === 'multiple_active') {
+  if (resolved.error === 'multiple_active' || resolved.error === 'multiple_persisted') {
     process.stdout.write(JSON.stringify({
       decision: 'block',
       reason: `Completion gate: multiple active specs detected (${resolved.candidates.join(', ')}). Provide explicit feature target or resolve ambiguity before completing tasks. Candidates: ${resolved.candidates.join(', ')}`
@@ -136,6 +140,23 @@ try {
   const activeSpec = resolved.spec;
   const featureName = resolved.featureName;
   const specsPath = resolved.specsDir;
+  const lifecyclePhase = activeSpec.current_phase || activeSpec.phase;
+  const explicitCloseout = ['done', 'completed', 'complete'].includes(activeSpec.status)
+    || ['closeout', 'completion', 'completed', 'complete'].includes(lifecyclePhase);
+  if (activeSpec.schema_version === '2.1') {
+    const finalState = FINAL_STATE.evaluateCloseout({
+      resolver: RESOLVER,
+      policy: POLICY,
+      projectRoot: baseDir,
+      runtime,
+      payload: { ...payload, session_id: sessionIdentity(payload) },
+    });
+    if (!finalState.ok) {
+      emitBlock(`Completion gate: ${finalState.reason}`);
+      process.exit(0);
+    }
+    if (finalState.active) process.exit(0);
+  }
   const runtimeContext = POLICY.deriveRuntimeContext({
     projectRoot: baseDir,
     specsRoot: specsPath,
@@ -181,117 +202,27 @@ try {
   const allDoneTasks = Object.keys(taskRegistry).filter((tp) =>
     (taskRegistry[tp]?.status || 'pending') === 'done'
   );
-  const receiptBodies = new Map();
-  // /m so ^ matches line starts (Evidence is never at byte 0 of the file).
-  // legacy heading aliases: read-compat only, no longer advertised
-  const EVID_RE = /^#{2,3}\s+(Evidence|Task Test Plan & Verification Evidence|Verification & Evidence)\b/m;
-  const PASS_MARKER_RE = /^\s*Verification:\s*PASS\s*$/m;
-  const LEGACY_SUCCESS_RE = /^\s*(?:PASS(?:ED)?|✓)(?:\s*:|$)|exit\s+code\s*[:=]?\s*0\b/im;
-
-  /** Body of first Evidence heading until next same-or-higher heading. */
-  function evidenceBody(text) {
-    const lines = text.split('\n');
-    let start = -1, level = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const m = lines[i].match(/^(#{2,3})\s+(Evidence|Task Test Plan & Verification Evidence|Verification & Evidence)\b/);
-      if (m) { start = i + 1; level = m[1].length; break; }
-    }
-    if (start < 0) return null;
-    let end = lines.length;
-    for (let i = start; i < lines.length; i++) {
-      const hm = lines[i].match(/^(#{1,6})\s+/);
-      const isTapMetadata = typeof POLICY.isTapMetadataHeading === 'function'
-        && POLICY.isTapMetadataHeading(lines[i]);
-      if (hm && hm[1].length <= level && !isTapMetadata) { end = i; break; }
-    }
-    return lines.slice(start, end).join('\n');
-  }
-
-  function validateCanonicalReceipt(body, options) {
-    return POLICY.validateCanonicalReceipt(body, options);
-  }
-
-  // Receipt checks a–h → failed letter list.
-  // a: file + Status header has "done"; b: Evidence heading; c: no {{...}} + unambiguous PASS; d: completed_at; e: command; f: exit/result; g: provenance; h: artifact hash
-  function safeTaskFile(featureDir, taskPath) {
-    const resolvedFeature = path.resolve(featureDir);
-    const target = path.resolve(featureDir, taskPath);
-    const relative = path.relative(resolvedFeature, target);
-    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
-    if (!fs.existsSync(target)) return null;
-    try {
-      const canonicalFeature = fs.realpathSync(resolvedFeature);
-      const canonicalTarget = fs.realpathSync(target);
-      const rel = path.relative(canonicalFeature, canonicalTarget);
-      if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return null;
-    } catch {
-      return null;
-    }
-    return target;
-  }
-
-  function checkReceipt(taskPath) {
-    const fails = [];
-    const featureDir = path.join(specsPath, featureName);
-    const abs = safeTaskFile(featureDir, taskPath);
-    if (!abs || !fs.existsSync(abs)) return ['a'];
-    let text = '';
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { return ['a']; }
-
-    const statusLine = text.split('\n').find((l) => /^\s*(\*\*)?Status(\*\*)?\s*:/i.test(l));
-    if (!statusLine || !/\bdone\b/i.test(statusLine)) fails.push('a');
-
-    const body = evidenceBody(text);
-    if (body !== null) receiptBodies.set(taskPath, body);
-    if (body === null || !EVID_RE.test(text)) {
-      fails.push('b');
-    } else if (
-      /\{\{[^}]+\}\}/.test(body) ||
-      !(PASS_MARKER_RE.test(body) || LEGACY_SUCCESS_RE.test(body))
-    ) {
-      fails.push('c');
-    } else {
-      // Canonical receipt checks for done tasks — delegated to shared validator (single authority)
-      const canonicalFails = validateCanonicalReceipt(body, POLICY.receiptValidatorOptions(taskRegistry[taskPath], {
-        runtimeContext,
-        requireProvenanceBinding: true,
-      }));
-      const map = { verification_state: 'c', command: 'e', exit_result: 'f', provenance: 'g', artifact_hash: 'h', artifact_declaration: 'h', placeholder: 'c', shared_validator: 'c', validator_unavailable: 'c' };
-      for (const cf of canonicalFails) {
-        if (cf === 'verification_state' || cf === 'shared_validator' || cf === 'validator_unavailable') {
-          if (!fails.includes('c')) fails.push('c');
-          continue;
-        }
-        if (cf === 'placeholder') {
-          if (!fails.includes('c')) fails.push('c');
-          continue;
-        }
-        const letter = map[cf];
-        if (letter && !fails.includes(letter)) fails.push(letter);
-      }
-      // Enforce strict Verification: PASS, not just legacy success
-      if (!PASS_MARKER_RE.test(body) && !fails.includes('c')) fails.push('c');
-    }
-
-    const at = taskRegistry[taskPath]?.completed_at;
-    if (
-      typeof at !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}T/.test(at) ||
-      Number.isNaN(Date.parse(at))
-    ) fails.push('d');
-    return fails;
-  }
-
+  const featureDir = path.join(specsPath, featureName);
   const failures = allDoneTasks
-    .map((tp) => ({ taskPath: tp, fails: checkReceipt(tp) }))
+    .map((taskPath) => ({
+      taskPath,
+      fails: RECEIPT.checkTaskReceipt(featureDir, taskPath, taskRegistry[taskPath], runtimeContext, POLICY).failures,
+    }))
     .filter((f) => f.fails.length > 0);
 
-  const firstReceiptTask = allDoneTasks.find((taskPath) => receiptBodies.has(taskPath));
-  const completion = allDoneTasks.length > 0 && Object.prototype.hasOwnProperty.call(activeSpec, 'workflow_policy')
+  const featureCloseoutRequired = explicitCloseout && allDoneTasks.length > 0;
+  const featureReceipt = featureCloseoutRequired
+    ? RECEIPT.checkFeatureReceipt(featureDir, runtimeContext, POLICY)
+    : null;
+  if (featureReceipt && featureReceipt.failures.length) {
+    failures.push({ taskPath: 'feature-receipt.md', fails: featureReceipt.failures });
+  }
+  const completion = featureCloseoutRequired && featureReceipt?.failures.length === 0
+    && Object.prototype.hasOwnProperty.call(activeSpec, 'workflow_policy')
     ? POLICY.completionDecisionForSpec(activeSpec, {
       runtimeContext,
-      executionReceipt: firstReceiptTask ? receiptBodies.get(firstReceiptTask) : null,
-      taskContext: firstReceiptTask ? taskRegistry[firstReceiptTask] : null,
+      executionReceipt: featureReceipt.body,
+      taskContext: {},
     })
     : null;
 
@@ -310,20 +241,19 @@ try {
     fs.writeFileSync(cacheFile, JSON.stringify(cache));
   } catch { /* fail-open */ }
 
-  if (allDoneTasks.length === 0) process.exit(0);
   const completionBlocked = completion && completion.completion !== 'complete' && completion.completion !== 'not_applicable';
   if (failures.length === 0 && !completionBlocked) process.exit(0);
 
   const lines = [
     failures.length > 0
-      ? `⚠️ Completion gate: ${failures.length} newly-done task(s) lack a verification receipt.`
+      ? `⚠️ Completion gate: ${failures.length} done task(s) lack a verification receipt.`
       : '⚠️ Completion gate: workflow completion proof is incomplete.',
   ];
   for (const { taskPath, fails } of failures) {
     lines.push(`- \`${taskPath}\`: failed check(s) ${fails.join(', ')}`);
-    lines.push(
-      `  Fix: add \`Verification: PASS\` plus commands and successful outcomes to \`## Evidence\` in \`specs/${featureName}/${taskPath}\`, then re-sync spec.json`
-    );
+    lines.push(taskPath === 'feature-receipt.md'
+      ? `  Fix: run final integration proof, then write \`specs/${featureName}/feature-receipt.md\`.`
+      : `  Fix: write canonical proof to \`specs/${featureName}/receipts/${path.posix.basename(taskPath)}\`; legacy \`## Evidence\` remains read-compatible.`);
   }
   if (completionBlocked) {
     lines.push(`- Completion decision unfinished: ${completion.blocker || 'required workflow proof is missing.'}`);

@@ -1,6 +1,6 @@
 ---
 name: hapo:develop
-description: "Implement an approved or explicitly low-risk change with lane-proportional evidence and one closeout owner."
+description: "Implement an explicitly invoked ready or low-risk change with policy-proportional evidence and one closeout owner."
 user-invocable: true
 when_to_use: "Use to implement a ready spec, a specific task, or a Direct low-risk change."
 category: utilities
@@ -12,9 +12,12 @@ metadata:
 ---
 # Develop — implementation and closeout contract
 
-Implement the requested scope, then close it with one canonical execution owner. Keep the lane, not a legacy tier or fixed actor sequence, as authority.
-
-The executable policy source is `src/claude/scripts/workflow-policy.cjs`; the persisted workflow-policy snapshot is the contract (installed as `.claude/scripts/workflow-policy.cjs`). It owns `workflow_policy`, escalation, approvals, verdict adaptation, receipt validation, and flash promotion.
+Implement the requested scope, then close it with one canonical execution owner.
+For a durable spec, `spec.json` is machine authority and Markdown is a human
+projection. The v2.1 policy snapshot persists minimum input; lane, label,
+artifact profile, and ceremony are derived views. The executable policy source
+is `src/claude/scripts/workflow-policy.cjs` (installed as
+`.claude/scripts/workflow-policy.cjs`).
 
 ## Usage and pre-state guard
 
@@ -43,7 +46,12 @@ Remediation: run `/hapo:develop <feature> --flash` or `/hapo:develop <feature> -
 No spec state, task receipt, worktree, subagent, or commit was created.
 ```
 
-## Lane authority
+## Policy authority
+
+For durable specs, persisted `workflow_policy` authority is the v2.1 minimum.
+Canonical authoring supplies `planning_depth`, `assurance_level`,
+`classified_minimum`, and normalized `risks`; lane and ceremony remain derived
+views.
 
 Classify before spec/state mutation:
 
@@ -51,45 +59,35 @@ Classify before spec/state mutation:
 node .claude/scripts/workflow-policy.cjs --classify-lane --task-json '<task JSON>' --json
 ```
 
-- **Direct**: clear, isolated, reversible, low-risk. Skip spec/state/registry
-  ceremony and run targeted verification with proportional evidence.
-- **Standard**: use the bounded spec profile and focused inspection. A small
-  feature need not have a task registry or task bundle. Close once at the
-  feature boundary.
-- **Critical**: require the approved strict profile. Add durable task state,
-  registry/DAG, research, or independent audit only when the persisted
-  `proof_obligations` require each one.
+- **Direct**: clear, isolated, reversible, low-risk. Skip spec/state/registry ceremony and run targeted verification with proportional evidence.
+- **Standard**: use the bounded spec profile and focused inspection. A small feature needs no task registry/bundle and closes once at the feature boundary.
+- **Critical**: derived Strict view. Add durable task state, research, or review
+  only when actual topology, uncertainty, or assurance requires it.
 
-Risk can escalate but cannot downgrade the persisted lane. A downgrade without a
-trusted runtime-issued receipt is blocked; `user_approved` requires explicit user
-approval, and `userAuthorized` plus similar booleans are not authorization.
+Risk can raise the classified minimum. Reclassify before persistence. After
+persistence, a per-feature baseline is monotonic and no downgrade is supported
+until a trusted issuer exists; the baseline applies only to that feature.
+Legacy approval fields and caller booleans have zero authority.
 
-`execution_tier` (`Light | Standard | Deep`) is a read-only legacy adapter
-(`Direct | Standard | Critical`). It cannot emit policy, create obligations,
-select a workflow, or override the lane. Do not branch on it for new behavior.
+Develop starts only from the user's explicit Develop invocation. Technical
+`ready_for_implementation` never dispatches Develop, and Specs must never
+auto-chain into this workflow.
+
+`execution_tier` (`Light | Standard | Deep`) is a read-only legacy adapter (`Direct | Standard | Critical`). It cannot emit policy, create obligations, select a workflow, or override the lane. Do not branch on it for new behavior.
 
 ## Modes
 
 ### Specific task
 
-Load exactly one task packet, implement only its scope, run its evidence, and
-stop after synchronization. Specific-task mode never selects or chains into the
-next task, even when another task is pending.
+Load exactly one task packet, implement only its scope, run its evidence, and stop after synchronization. Specific-task mode never selects or chains into another pending task.
 
 ### Full feature
 
-For a task-bearing policy, resolve one unblocked task at a time, complete its
-cycle, synchronize, and recompute the queue. A bounded Standard feature without
-tasks runs one feature-level cycle. Stop on the first unresolved block or
-missing proof. Run a final integration check only when the feature has no more
-pending tasks.
+For a task-bearing policy, resolve one unblocked task at a time, complete its cycle, synchronize, and recompute the queue. A bounded Standard feature without tasks runs one feature-level cycle. Stop on the first unresolved block or missing proof; run final integration only after all pending tasks finish.
 
 ### Parallel (opt-in)
 
-Load `references/parallel-waves.md` only when `--parallel` is present. It may
-use isolated worktrees and a bounded wave, but lane obligations, single-writer
-rules, immutable provenance, and the final integration check remain in force.
-Without `--parallel`, process one unblocked task at a time.
+Load `references/parallel-waves.md` only with `--parallel`. It may use isolated worktrees and a bounded wave, but lane obligations, single-writer rules, immutable provenance, and final integration remain in force. Otherwise process one unblocked task at a time.
 
 ### 3. Flash Mode (`--flash`)
 Flash is an explicit speed trade-off, not a completion shortcut:
@@ -104,12 +102,7 @@ Flash is an explicit speed trade-off, not a completion shortcut:
 - never claim `Test PASS`, `Evidence PASS`, `Auto-Approved`, or
   `production-ready`.
 
-Only trusted sync-finalize may promote a flash task. It must receive the current
-`FLASH_UNVERIFIED` task plus explicit `--verdict PASS` and a canonical proof;
-caller-supplied promotion fields are ignored/rejected. A marker-only proof
-never promotes or finalizes. Stored state keeps `in_progress`,
-`FLASH_UNVERIFIED`, `dependencyBlocked: true`, `unblocks: false`, and a concrete
-blocker, omits promotion fields, and binds proof to expected Base/Head anchors.
+Only trusted sync-finalize may promote a current `FLASH_UNVERIFIED` task with explicit `--verdict PASS` and canonical proof; caller promotion fields are ignored/rejected, and marker-only proof never promotes. Stored state remains `in_progress`/`FLASH_UNVERIFIED`, dependency-blocked with a concrete blocker, omits promotion fields, and binds proof to expected Base/Head anchors.
 ## Workflow
 `Classify lane → load lane artifacts → scout obligations → implement current
 scope → one closeout owner → test receipt → review → docs-impact sync.`
@@ -117,46 +110,46 @@ scope → one closeout owner → test receipt → review → docs-impact sync.`
 ### Step 1 — Load and scope
 
 - Direct does not create a spec, state, registry, task bundle, or notes file.
-- Standard requires its bounded artifacts and explicit approval, but not a
+- Standard requires its bounded validated artifacts, but not a
   registry when the scope is small and no task obligation is persisted.
 - Critical requires only the artifacts named by its snapshot obligations.
 - For task-bearing work, load one requested task or one unblocked task and
-  extract scope, requirements, contracts, completion criteria, and exact
-  evidence commands.
+  extract the exact seven v2.1 sections: `Outcome`, `Scope`, `Anchors and Ownership`,
+  `Changes`, `Acceptance`, `Dependencies`, and `Verification Plan`.
+  Use typed `coordination.boundaries` for ownership/DAG/proof/parallel authority.
+- Before implementation, transition `pending` to `in_progress` in task Markdown `**Status:**` and `spec.json.task_registry[path]` with synchronized timestamps. Never write execution proof into the task plan.
 - A spec-ready execution-evidence or independent-audit slot may be `PENDING`
   before implementation; pending is not proof and cannot close the feature.
 
 ### Step 2 — Scout
 
-Scout depth follows the persisted lane, risk, and blast radius. Identify real
-entrypoints/callers, integration points, dependent files, reachability risks,
-and safe scope. Do not use file count as a proxy for review depth. If a runtime
-entrypoint cannot be grounded, stop.
+Scout depth follows assurance, risk, and blast radius. Identify real
+entrypoints/callers, integration points, dependents, reachability risks, and
+safe scope. File count is not review depth; stop if a runtime entrypoint cannot
+be grounded.
 
 ### Step 3 — Implement
 
-Implement only the approved scope and named contracts. Do not silently replace
+Implement only the scoped behavior and named contracts. Do not silently replace
 frameworks, auth, transport, storage, or runtime boundaries. Do not mark a
 runtime-facing file complete while it is orphaned, unmounted, unregistered, or
 uncalled. A specific-task request ends after that task; no automatic chain.
 
 <SCOPE-FIDELITY>
-The approved `scope_lock`, requirements, design contracts, and active task are
+The `scope_lock`, requirements, design contracts, and active task are
 the implementation contract. Scope escape requires a concrete reachability or
 compile reason and must not deliver a later task early.
 </SCOPE-FIDELITY>
 
 ### Step 4 — Closeout owner
 
-The controller assigns exactly one closeout owner for the current task or
-feature. That owner invokes the test workflow once, receives its result, then
-invokes the review workflow once when the lane requires it. No other phase
-re-runs the same test or review as a hidden gate.
+The controller assigns exactly one closeout owner for the current task or feature. It invokes testing once, then review once when required; no phase re-runs either as a hidden gate.
 
-- The test owner executes commands and creates the canonical execution receipt.
+- For task-bearing work, the test owner executes the Verification Plan and writes the canonical execution receipt to `receipts/<task-basename>.md` only after real execution.
 - The review owner evaluates correctness, security, and spec compliance; it
   consumes existing proof but never creates or claims execution proof.
-- Review depth follows lane, risk, and blast radius. It does not follow the
+- Review depth follows `assurance_level`, risk, and blast radius. Lane is only
+  a derived view, and depth does not follow the
   number of files changed.
 - Finding count never selects review depth or overrides missing execution proof.
 - Use the shared adapter surface: `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`.
@@ -167,11 +160,7 @@ fixed Light/Standard/Deep agent sequence.
 
 ### Step 5 — Sync and docs checkpoint
 
-Only a canonical execution receipt with command, exit result, bound provenance,
-and required artifact hashes can close a task/feature. Missing, pending,
-marker-only, or contradictory evidence stays unfinished. Critical audits need
-distinct session IDs, expected Base/Head binding, concrete evidence, and literal
-`verdict: "PASS"`; `Audit: PASS` is not evidence.
+Only a canonical receipt with task identity/path, exact command/result, expected versus observed behavior, bound provenance, applicable negative/reachability proof, and required artifact hashes can close a task. Prefer `receipts/<task-basename>.md`; legacy task `## Evidence` is read-compatible, but conflicting proof identities fail closed. Missing, pending, marker-only, or contradictory evidence stays unfinished. Critical audits need distinct session IDs, expected Base/Head binding, concrete evidence, and literal `verdict: "PASS"`; `Audit: PASS` is not evidence.
 After verification, synchronize status/timestamps/task state. Then evaluate
 actual docs impact:
 
@@ -188,9 +177,7 @@ a receipt bound to expected Base/Head, and every lane obligation. Only literal
 `PASS` can complete; `PASS_WITH_WARNINGS` remains unfinished.
 `--flash` records only `FLASH_UNVERIFIED` and never done.
 
-For a full feature, after the last task run the **Final Integration Scout** when
-runtime-facing surfaces exist; compare reachability and scope before reporting
-completion. For a specific task, stop after its synchronized result.
+For a full feature, after the last task run the **Final Integration Scout** for runtime-facing surfaces and compare reachability/scope before completion. The same test owner creates `feature-receipt.md` exactly once from final integration proof. Task-bearing closeout requires every task receipt plus that feature receipt; taskless Compact/Full creates only the feature receipt at closeout. Its earlier absence is normal. A specific task stops after synchronization and creates no feature receipt unless it also completes the full integration boundary.
 
 ## Attached references
 

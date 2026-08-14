@@ -60,9 +60,9 @@ function allFiles(root, predicate) {
   return found;
 }
 
-function allHookHandlers(config) {
-  return Object.values(config.hooks).flatMap((groups) => (
-    groups.flatMap((group) => group.hooks)
+function allHookLaunchers(config) {
+  return Object.entries(config.hooks).flatMap(([event, groups]) => (
+    groups.flatMap((group) => group.hooks.map((handler) => ({ event, handler })))
   ));
 }
 
@@ -70,6 +70,156 @@ function parseGeneratedTomlString(content, key) {
   const match = content.match(new RegExp(`^${key} = (.+)$`, 'm'));
   assert.ok(match, `missing TOML key: ${key}`);
   return JSON.parse(match[1]);
+}
+
+function renderCanonicalVerificationExample(template) {
+  const values = new Map([
+    ['SUBJECT_REQ', '1'],
+    ['X', '1'],
+    ['PROOF_REQ', '1'],
+    ['Y', '2'],
+    ['exact command', 'node --test test/installed.test.js'],
+    ['exact anchored target', 'src/installed.js#entry'],
+    ['exact/repository/entrypoint', 'src/installed.js'],
+    ['observable result', 'the subject behavior and verifier proof both pass'],
+    ['concrete observable result and proof', 'the subject behavior and verifier proof both pass'],
+    ['concrete rejected or recovery case', 'invalid input remains rejected and observable'],
+    ['real entrypoint/caller and grounded anchor expectation', 'the installed entrypoint reaches A-D-01'],
+  ]);
+  return template.replace(/\{\{([^}]+)\}\}/g, (placeholder, name) => (
+    values.has(name) ? values.get(name) : placeholder
+  ));
+}
+
+function assertInstalledVerificationModel(grounderPath, designTemplate) {
+  const { parseVerificationDefinitions } = require(grounderPath);
+  assert.equal(typeof parseVerificationDefinitions, 'function');
+  const concreteDesign = renderCanonicalVerificationExample(designTemplate);
+  const errors = [];
+  const definitions = parseVerificationDefinitions(concreteDesign, errors);
+  assert.deepEqual(errors, []);
+  assert.equal(definitions.size, 1);
+  const definition = definitions.get('V1');
+  assert.ok(definition);
+  assert.deepEqual(definition.subject_criteria, ['R1.1']);
+  assert.deepEqual(definition.proof_criteria, []);
+  assert.equal(definition.proof_owner, null);
+  assert.equal(definition.evidence_anchor, null);
+  assert.deepEqual(definition.decision_refs, ['D1', 'I1', 'C1']);
+  for (const field of [
+    'subject_criteria', 'subject_owner', 'decision_refs', 'method', 'expected',
+    'negative', 'reachability'
+  ]) {
+    const value = definition[field];
+    assert.ok(
+      Array.isArray(value)
+        ? value.length > 0
+        : (typeof value === 'string' ? value.trim() !== '' : value && Object.keys(value).length > 0)
+    );
+  }
+  for (const mutation of [
+    concreteDesign.replace('- **V1**:', '### V1 —'),
+    concreteDesign.replace('- **V1**:', '| V1 |'),
+    concreteDesign.replace('; Expected ', '\nExpected '),
+    concreteDesign.replace('Decision refs ', 'Decisions '),
+  ]) {
+    const mutationErrors = [];
+    const mutated = parseVerificationDefinitions(mutation, mutationErrors);
+    assert.ok(mutationErrors.length > 0);
+    assert.equal(mutated.has('V1'), false);
+  }
+}
+
+function artifactRouterRecords(skill) {
+  const lines = skill.split('\n');
+  const heading = lines.findIndex((line) => line.trim() === '## Artifact router');
+  const start = lines.findIndex((line, index) => index > heading && line.trim().startsWith('|'));
+  const rows = [];
+  for (let index = start; index >= 0 && index < lines.length && lines[index].trim().startsWith('|'); index += 1) {
+    const cells = lines[index].split('|').slice(1, -1).map((cell) => cell.trim());
+    if (!cells.every((cell) => /^:?-+:?$/.test(cell))) rows.push(cells);
+  }
+  const header = rows.shift() || [];
+  return new Map(rows.map((cells) => [
+    (cells[0] || '').replaceAll('`', ''),
+    Object.fromEntries(header.map((name, index) => [name, cells[index] || '']))
+  ]));
+}
+
+function installedAuthoringProjectionIssues(files) {
+  const issues = [];
+  const routes = artifactRouterRecords(files.skill);
+  const none = routes.get('None');
+  if (!none || none['Durable core'] !== 'none'
+    || none['Research route'] !== 'absent' || none['Task route'] !== 'absent') {
+    issues.push('none-route');
+  }
+  for (const depth of ['Compact', 'Full']) {
+    const route = routes.get(depth);
+    if (!route || !['spec.json', 'requirements.md', 'design.md'].every((name) => (
+      route['Durable core'].includes(`\`${name}\``)
+    ))) issues.push(`${depth.toLowerCase()}-core`);
+    if (!route?.['Research route'].includes('research trigger')) issues.push(`${depth.toLowerCase()}-research`);
+    if (!route?.['Task route'].includes('typed topology trigger')) issues.push(`${depth.toLowerCase()}-tasks`);
+  }
+  if (/\balways search\b|\bcomprehensive research\b|\bcapture all findings\b/i.test(files.discovery)) {
+    issues.push('default-research');
+  }
+  if (/(?:limit|maximum|at most|top|≤|<=)\s*(?:to\s*)?3\b/i.test(files.review)) {
+    issues.push('review-cap');
+  }
+  if (!/For every `RN\.M`/.test(files.review)) issues.push('criterion-coverage');
+  if (/\bcurrent_phase\b/.test(files.codex)) issues.push('phase-alias');
+  for (const state of ['in_progress', 'paused', 'blocked', 'done']) {
+    if (!files.codex.includes(`\`${state}\``)) issues.push(`lifecycle-${state}`);
+  }
+  if (/^##\s+Evidence\s*$/m.test(files.tasks)) issues.push('task-evidence');
+  if (/\(P\)/.test(files.tasks)) issues.push('task-priority-marker');
+  for (const claudeOnly of [
+    'AskUserQuestion', 'TaskCreate', 'TaskGet', 'TaskUpdate', 'TaskList',
+    'WebSearch', 'WebFetch', 'SendMessage'
+  ]) {
+    if (files.codex.includes(claudeOnly)) issues.push(`claude-tool-${claudeOnly}`);
+  }
+  if (!files.codex.includes('semantic_model')
+    || !files.codex.includes('explicit installed machine semantic-sync step')
+    || !files.codex.includes('round-trip')
+    || !files.codex.includes('node .codex/scripts/spec-scaffold.cjs <feature> --sync-semantic-model')) {
+    issues.push('semantic-model-promotion');
+  }
+  return issues;
+}
+
+function assertInstalledAuthoringProjection(root) {
+  const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+  const files = {
+    skill: read('.agents/skills/specs/SKILL.md'),
+    discovery: [
+      read('.agents/skills/specs/rules/design-discovery-light.md'),
+      read('.agents/skills/specs/rules/design-discovery-full.md')
+    ].join('\n'),
+    review: [
+      read('.agents/skills/specs/rules/design-review.md'),
+      read('.agents/skills/specs/references/review.md')
+    ].join('\n'),
+    tasks: [
+      read('.agents/skills/specs/rules/tasks-generation.md'),
+      read('.agents/skills/specs/rules/task-scoring-rubric.md'),
+      read('.agents/skills/specs/rules/phase-decision-matrix.md')
+    ].join('\n'),
+    codex: [read('AGENTS.md'), read('.codex/rules/state-sync.md')].join('\n')
+  };
+  assert.deepEqual(installedAuthoringProjectionIssues(files), []);
+  const mutations = [
+    ['discovery', (value) => `${value}\nAlways search before design.`],
+    ['review', (value) => `${value}\nLimit to 3 blockers.`],
+    ['codex', (value) => `${value}\nSet current_phase then call TaskUpdate.`],
+    ['tasks', (value) => `${value}\n## Evidence\nUse (P).`]
+  ];
+  for (const [key, mutate] of mutations) {
+    const changed = { ...files, [key]: mutate(files[key]) };
+    assert.notDeepEqual(installedAuthoringProjectionIssues(changed), []);
+  }
 }
 
 test('Codex payload transform emits native skill and subagent syntax', () => {
@@ -441,9 +591,10 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
     const config = JSON.parse(
       fs.readFileSync(path.join(projectRoot, '.codex', 'hooks.json'), 'utf8')
     );
-    const handlers = allHookHandlers(config);
-    assert.equal(handlers.length, 16);
-    for (const handler of handlers) {
+    const launchers = allHookLaunchers(config);
+    assert.ok(launchers.length > 0, 'installed Codex config must register hook launchers');
+    const semanticReviewEvents = [];
+    for (const { event, handler } of launchers) {
       assert.doesNotMatch(handler.commandWindows, /\$\(/);
       assert.doesNotMatch(handler.commandWindows, /\bgit\b/i);
       assert.doesNotMatch(handler.commandWindows, /process\.cwd\(\)|existsSync/);
@@ -456,7 +607,11 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
         true,
         `missing installed hook: ${path.basename(target)}`
       );
+      if (path.basename(target) === 'semantic-review-authority.cjs') {
+        semanticReviewEvents.push(event);
+      }
     }
+    assert.deepEqual(semanticReviewEvents, ['SubagentStop']);
 
     const nested = path.join(projectRoot, 'nested', 'workspace');
     fs.mkdirSync(nested, { recursive: true });
@@ -506,12 +661,43 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
       '.codex/hooks/privacy-block.cjs',
       '.codex/rules/workflow.md',
       '.codex/rules/hook-protocols.md',
+      '.codex/rules/state-sync.md',
+      '.codex/scripts/spec-ground.cjs',
       '.codex/scripts/validate-spec-output.cjs',
       '.agents/.gitignore',
-      '.agents/skills/specs/SKILL.md'
+      '.agents/skills/specs/SKILL.md',
+      '.agents/skills/specs/templates/design.md',
+      '.agents/skills/specs/templates/task.md',
+      '.agents/skills/specs/templates/spec-state.json'
     ]) {
       assert.equal(fs.existsSync(path.join(root, relative)), true, `missing ${relative}`);
     }
+
+    const installedDesign = fs.readFileSync(
+      path.join(root, '.agents/skills/specs/templates/design.md'), 'utf8'
+    );
+    assert.equal((installedDesign.match(/^## Verification Definitions$/gm) || []).length, 1);
+    assertInstalledVerificationModel(
+      path.join(root, '.codex/scripts/spec-ground.cjs'),
+      installedDesign
+    );
+    assertInstalledAuthoringProjection(root);
+
+    const installedTask = fs.readFileSync(
+      path.join(root, '.agents/skills/specs/templates/task.md'), 'utf8'
+    );
+    assert.deepEqual(
+      [...installedTask.matchAll(/^## (.+)$/gm)].map((match) => match[1]),
+      ['Outcome', 'Scope', 'Anchors and Ownership', 'Changes', 'Acceptance', 'Dependencies', 'Verification Plan']
+    );
+    assert.match(installedTask, /^- \*\*Task role:\*\*/m);
+
+    const installedState = JSON.parse(fs.readFileSync(
+      path.join(root, '.agents/skills/specs/templates/spec-state.json'), 'utf8'
+    ));
+    assert.deepEqual(Object.keys(installedState.workflow_policy).sort(), [
+      'assurance_level', 'classified_minimum', 'planning_depth', 'risks', 'version'
+    ]);
 
     const agentsGitignore = fs.readFileSync(
       path.join(root, '.agents', '.gitignore'),
@@ -663,6 +849,7 @@ test('Codex install on top of existing Claude installation preserves content and
     assert.equal(fs.existsSync(path.join(root, '.codex', 'runtime.json')), true, '.codex/runtime.json should exist');
     assert.equal(fs.existsSync(path.join(root, '.codex', 'hooks', 'privacy-block.cjs')), true, '.codex/hooks/privacy-block.cjs should exist');
     assert.equal(fs.existsSync(path.join(root, '.codex', 'rules', 'workflow.md')), true, '.codex/rules/workflow.md should exist');
+    assert.equal(fs.existsSync(path.join(root, '.codex', 'scripts', 'spec-ground.cjs')), true, '.codex/scripts/spec-ground.cjs should exist');
     assert.equal(fs.existsSync(path.join(root, '.codex', 'scripts', 'validate-spec-output.cjs')), true, '.codex/scripts/validate-spec-output.cjs should exist');
     assert.equal(fs.existsSync(path.join(root, '.agents', '.gitignore')), true, '.agents/.gitignore should exist');
     assert.equal(fs.existsSync(path.join(root, '.agents', 'skills', 'specs', 'SKILL.md')), true, '.agents/skills/specs/SKILL.md should exist');

@@ -30,7 +30,8 @@ independent proof path.
 - Low evidence plus risk ≥2: consider a time-boxed spike, but do not create one
   solely because a Cynefin label says `Complex`.
 - Blast radius 3: include rollback/negative-path proof.
-- File conflict ≥2: remove `(P)` unless ownership is isolated.
+- File conflict ≥2: parallel eligibility remains false unless a typed parallel
+  boundary proves isolated ownership and disjoint resources.
 - High value plus dependency ≥2: schedule early only after real prerequisites.
 
 Cynefin is advisory discovery language. It may suggest a spike or research

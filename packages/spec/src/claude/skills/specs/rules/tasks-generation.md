@@ -1,300 +1,183 @@
-# Task Generation Rules
+# Task generation rules
 
-## Core Principles
+Load this file only after the task gate passes. Compact durable specs are
+taskless by default, but may have a task bundle and matching registry when a real
+ownership, dependency, durable transition, separate proof, or parallel
+coordination boundary activates the same gate used by Full specs. Full depth
+does not activate the gate by itself.
 
-### 0. Conditional generation gates
+## Generation gate
 
-This file is loaded only after the persisted lane obligations say that a task
-bundle is needed. A bounded Standard scope may finish with its feature receipt
-and no `tasks/` or registry.
+A task must represent at least one real boundary: distinct ownership, a durable
+dependency, a state transition, separate proof, or parallel coordination. If no
+boundary exists, keep behavior in requirements/design and generate no task.
 
-Before writing any `tasks/task-R*.md` file:
+Persist the audited topology only in typed `spec.json.coordination.boundaries`:
 
-1. Load `phase-decision-matrix.md` only if the task boundaries are unclear.
-2. Load `task-scoring-rubric.md` only if an actual split/merge, dependency, or
-   evidence-depth decision needs it. Scoring is optional and never selects a
-   lane or makes tasks mandatory.
-3. Load `../references/ask-user-question-gates.md` only for an unapproved scope
-   change, unresolved architecture choice, missing evidence, or contradiction.
-4. Use targeted scout, repository files, tests, and current primary docs for
-   facts before asking the user.
+- `ownership`: disjoint task write sets;
+- `dependency`: producer, consumer, and exact deliverable;
+- `transition`: owner/consumers plus pre/post/failure/recovery semantics;
+- `proof`: subject, verifier, verification ref, and verifier-owned artifact anchor;
+- `parallel`: independent tasks and exact resources.
 
-The task file must explain only decisions that affect execution: scope,
-dependencies, ownership, proof, and any intentional split/merge.
+A task bundle requires at least one complete boundary. Legacy trigger fields,
+coordination flags, artifact flags, priority markers, and prose labels are
+read compatibility inputs and forbidden in schema 2.1 authoring. Optional
+phases may group task IDs but must reference a typed owner boundary.
 
-### 1. Natural Language Descriptions
-Focus on capabilities and outcomes, not code structure.
+Use `phase-decision-matrix.md` only when split/merge boundaries remain unclear.
+Use the scoring rubric only as advisory input; scores, effort estimates, risk
+labels, and requirement count never make a task mandatory.
 
-**Describe**:
-- What functionality to achieve
-- Business logic and behavior
-- Features and capabilities
-- Domain language and concepts
-- Data relationships and workflows
-**Required (Hybrid Human-AI Style)**:
-Every sub-task MUST balance Human Intent (for PM review) and Code-Level Details (for AI implementation).
-Detail bullets must include:
-1. **Human Intent (The "Why")**: Briefly explain the business logic, expected UX behavior, or why this code exists (e.g., "Mục đích: Chặn user sử dụng extension nếu chưa đồng ý Privacy").
-2. **AI Code-Level Details (The "How")**:
-   - File paths and specific UI components to create/modify.
-   - Database tables, columns, and Zod/Type schemas (e.g., `Update users.consent_version`).
-   - API payloads, routes, and JSON contracts.
-   - Edge cases, error handling, and exact validation thresholds (e.g., `Return 403 if invalid`).
+## Default decomposition
 
-**Rationale**: Humans review tasks to verify business requirements are met;
-coding agents read tasks to write explicit code. If you only write business
-jargon, the AI hallucinates. If you only write code names, the human reviewer
-cannot verify the business value. You MUST provide both.
+Prefer a vertical outcome slice that implements behavior through its real
+runtime entrypoint and proves the result. Split horizontally only when:
 
-### 2. Task Integration & Progression
+- one owner must produce a contract, schema, or transition before consumers;
+- file or contract ownership must be disjoint;
+- a proof surface has a different durable owner; or
+- parallel work has no dependency or shared resource contention.
 
-**Every task must**:
-- Build on previous outputs (no orphaned code)
-- Connect to the overall system (no hanging features)
-- Stay inside the approved `scope_lock` and requirement IDs; do not add unapproved features or silently drop scoped behavior
-- Progress incrementally (no big jumps in complexity)
-- Validate core functionality early in sequence
-- Respect architecture boundaries defined in design.md (Architecture Pattern & Boundary Map)
-- Honor interface contracts documented in design.md
-- Translate completion criteria into concrete proof (commands, artifacts, routes, manifests, schema objects, UI states)
-- Reuse canonical contracts from `design.md` verbatim; never invent alternate auth/provider/deletion policies in task prose
-- Use major task summaries sparingly—omit detail bullets if the work is fully captured by child tasks.
+Do not create foundation, integration, spike, testing, or release tasks by
+habit. A support output must be consumed by a named later task or identified as
+internal to the same vertical slice.
 
-**Add integration proof when the surface needs it**.
-- For UI/app/runtime workflows, the last task or a final integration section
-  names the real entrypoint (`App.tsx`, route, command, worker, extension
-  manifest, API route, etc.) and verifies every scoped surface is reachable.
-- Components, services, routes, commands, workers, providers, and data loaders created by earlier tasks MUST be consumed by a later integration task or explicitly marked as internal support in `design.md`; orphaned deliverables are invalid.
-- Prefer compact, implementation-ready task prose over large boilerplate. The golden shape is: `Context` -> `Steps` -> `Requirements` -> `Related Files` -> `Completion Criteria` -> `Evidence` -> `Risk Assessment`.
-- A compact task is valid when it names exact files/contracts, maps requirements, and gives executable evidence. Do not expand it into nested filler just to satisfy a template.
+## Task shape
 
-### 3. Flexible Task Sizing
+Each task contains exactly the information an implementer needs:
 
-**Guidelines**:
-- **Major tasks**: As many sub-tasks as logically needed (group by cohesion)
-- **Sub-tasks**: 1-3 hours each, 3-10 details per sub-task
-- Balance between too granular and too broad
+1. **Outcome** — observable behavior delivered by the task.
+2. **Scope** — exact in/out behavior boundary.
+3. **Anchors and Ownership** — one six-column ownership projection.
+4. **Changes** — behavior and code changes, including relevant negative paths.
+5. **Acceptance** — measurable requirement IDs and task-local outcomes.
+6. **Dependencies** — projection of typed dependency boundaries or `none`.
+7. **Verification Plan** — command/inspection, expected result, negative path,
+   runtime reachability, exact design `V` ID, and task role when applicable.
 
-### 3b. Requirement-to-Task Splitting Heuristics
+Do not add estimated effort, empty risk tables, receipt fields, Base/Head,
+verdicts, provenance, agent chains, or generic completion ceremony.
 
-Each requirement from `requirements.md` generates **1 or more task files**. Use the following decision logic to determine how many:
+`**Status:**` is the canonical files-first lifecycle projection for each task.
+Its value must stay byte-for-byte equivalent in meaning to
+`spec.json.task_registry[path].status`; use the same exact canonical token in
+both places. Allowed values are `pending`, `in_progress`, `blocked`, and `done`.
+Authoring initializes tasks as `pending`. A later lifecycle transition updates
+the task Markdown and registry together. `done` proof remains owned by execution
+closeout; do not add receipts, Evidence sections, Base/Head bindings, verdicts,
+or provenance to the task plan.
 
-#### When to keep as 1 task file
-- Requirement has ≤ 3 acceptance criteria
-- All criteria touch the same architectural layer (e.g., all frontend, all backend)
-- Total estimated effort ≤ 3 hours
+## Typed anchors
 
-#### When to split into multiple task files
-- Requirement has > 3 acceptance criteria spanning different concerns
-- Acceptance criteria touch **multiple architectural layers** (e.g., frontend + backend + database)
-- Total estimated effort > 4 hours
-- Criteria contain both "happy path" AND "error/edge case" logic that are independently testable
+The task's only ownership table is `ID | Type | Target | Role | Access |
+Action`. IDs are unique across the spec. `Access` is `read` or `write`; read
+requires `Action=read`, while write requires `create`, `modify`, or `delete`.
+Targets are exact and grounded, never globs or parent-directory claims. Allowed
+types are `file`, `symbol`, `command`, `route`, `schema`, `contract`, `artifact`,
+and `external`.
 
-#### Splitting strategy
-When splitting a requirement into multiple tasks:
-1. **Split by architectural layer** — e.g., R1-01 for content script, R1-02 for API endpoint, R1-03 for database schema
-2. **Split by concern** — e.g., R3-01 for consent onboarding UI, R3-02 for consent version re-check logic
-3. **Split by dependency chain** — if acceptance criteria A must finish before B can start, they belong in separate task files with explicit `Dependencies:`
-4. **Never split by arbitrary size** — don't create 3 task files just because "3 feels right"
-5. **Use the Phase Decision Matrix** — only split when the implementation slice has an independent deliverable boundary or proof path.
+- Files-first: list exact `file` anchors before anchors contained by those files.
+- Task-owned anchors use `A-R{requirement}-{sequence}-NN`, populated from the
+  canonical task ID; their counter is local to that namespace, not globally
+  reused as an unnamespaced counter.
+- When the task only consumes a target already anchored by design, reference the
+  canonical `A-D-NN` anchor instead of creating another anchor for that target.
+- `Modify`, `Delete`, and `Read` paths must exist when authored; `Create` paths
+  need a grounded parent/boundary.
+- A symbol target names or references its containing file.
+- A command target is copied from real project tooling, not invented.
+- A contract anchor references its stable design ID; never copy the contract
+  body into the task.
+- Duplicate IDs anywhere in design or tasks block readiness.
 
-#### Cross-cutting requirements
-Some requirements (e.g., "language handling", "error handling") naturally touch code in many other requirements' tasks. For these:
-- Create 1 primary task file for the core logic (e.g., `task-R6-01-language-detection.md`)
-- Add secondary `_Requirements: 6_` references in other tasks' sub-tasks where the cross-cutting concern applies
-- Do NOT duplicate the same work across multiple task files
+## Contracts, ownership, and dependencies
 
-### 3c. Maintaining the Big Picture (Preventing Fragmentation)
+Each cross-task contract, invariant, schema transition, or recovery authority
+has exactly one owner task. Every consumer:
 
-Grouping tasks vertically by requirement carries the risk of "siloed" or fragmented code (e.g., each requirement building its own isolated setup). To ensure the system remains cohesive:
+- references the named contract/invariant ID;
+- depends directly or transitively on the owner; and
+- does not redefine the canonical body.
 
-1. **Foundation only when real**: Add a foundation task only for a shared
-   prerequisite that has its own ownership or proof boundary. Do not invent an
-   R0 task for a small bounded change.
-2. **Shared Interfaces (Horizontal Contracts)**: Sub-tasks that touch shared cross-requirement architecture (like registering a new page in a global `router.ts` or adding a column to a shared table) MUST explicitly reference the shared contract defined in `design.md`. 
-3. **Integration Enforcers**: If R1 and R2 interact (e.g., R2 UI displays data fetched by R1 backend), the later task MUST have a sub-task explicitly dedicated to "Wiring/Integrating with [Previous Feature] output".
-4. **Final Runtime Integration**: For a feature with a user-facing or
-   runtime-facing surface, include a final integration task or section only if
-   the existing task evidence does not already prove the entrypoint. It MUST
-   fail when outputs are not imported, mounted, registered, or invoked.
-5. **Advisory sequencing**: If the optional rubric was used, apply its
-   dependency/ownership notes. Never use a score to add ceremony or override
-   the persisted lane.
+Each `RN.M` has exactly one implementation owner. A proof boundary means its
+subject implements the product criterion and its verifier verifies the referenced
+`V` definition through a separately owned proof criterion/artifact. The verifier
+must not repeat the subject's criterion in `Acceptance`; sharing a proof boundary
+does not create a second implementation owner. Their shared V definition names
+both exact criteria so subject, verifier, and proof boundary resolve to one
+verification contract.
 
-### 3d. Spike tasks for unresolved uncertainty (ADVISORY)
+Task Markdown and `spec.json.task_registry[path]` must keep both `status` and
+`dependencies` synchronized. Derive task ID from
+`tasks/task-R{N}-{SEQ}-<slug>.md`; use two-digit `SEQ`. Do not create shorthand
+filenames.
 
-When the assessment flags an unproven assumption, a time-boxed spike may be
-useful before implementation. A Cynefin `Complex` label alone does not mandate
-one, change the lane, or create a registry/DAG.
+Parallel eligibility exists only when a typed `parallel` boundary proves exact
+disjoint resources, no dependency path, and no shared transition/proof
+authority. Do not author a parallel-priority marker.
 
-**Purpose**: Validate assumptions and reduce uncertainty before committing to full implementation.
+## Changes and acceptance
 
-**Naming convention:** `tasks/task-R{N}-00-spike-<slug>.md`
-- Use `00` as the sequence number to ensure it runs FIRST within its requirement group.
+Describe product behavior and the code boundary together. Name exact validation,
+state, route, schema, error, and integration behavior only when relevant. Keep
+all work inside `scope_lock`; an expansion pauses for explicit user approval.
 
-**Spike task structure:**
-1. **Objective**: State the specific uncertainty to resolve (e.g., "Validate that Google Meet captions DOM can be reliably scraped across account types")
-2. **Success Criteria**: Define what a successful spike looks like (e.g., "Demonstrate caption text extraction from 3 different Meet account types")
-3. **Time-box**: Maximum 4 hours. If spike exceeds time-box, escalate to user.
-4. **Output**: A brief findings report (can be inline in the task file) and a go/no-go recommendation.
-5. **Dependencies**: The main implementation task for this area MUST depend on the spike task.
+Map acceptance to numeric `N.M` IDs from `requirements.md`. Include negative or
+error outcomes where invalid input, missing permission, failure, conflict,
+timeout, retry, rollback, or recovery is relevant. Do not add vague acceptance
+such as “works”, “safe”, or “performant”.
 
-**When NOT to create spike tasks:**
-- the assumption is already grounded by targeted evidence or required research;
-- the change is clear enough for a direct implementation/proof path;
-- the spike would add ceremony without reducing a concrete uncertainty.
+## Verification plan
 
-### 6. Risk Assessment Table (MANDATORY)
+Choose proportional proof for the changed surface:
 
-Every task file MUST contain the Risk Assessment table, even if no risks are identified.
-- **Rule**: If there are risks, list them with Severity and Mitigation.
-- **Rule**: If no risks are found, you MUST still include the table and write `| None identified | — | — |`.
-- Never skip the `## Risk Assessment` section.
+- exact command-shaped invocation or justified `N/A`;
+- expected exit, output, state, artifact, or UI result;
+- contract-preserving negative-path check when relevant; and
+- real entrypoint/caller for runtime-facing work, or the exact dependent task
+  that will establish reachability.
 
-### 4. Requirements Mapping
+Declare exactly `Verification ref: Vn` and `Task role: subject` or `Task role:
+verifier`. The V definition lives once in `design.md` using the canonical
+single-line bold-ID syntax. The task references it and does not copy its body.
 
-**End each task detail section with**:
-- `_Requirements: X.X, Y.Y_` listing **only numeric requirement IDs** (comma-separated). Never append descriptive text, parentheses, translations, or free-form labels.
-- For cross-cutting requirements, list every relevant requirement ID. All requirements MUST have numeric IDs in requirements.md. If an ID is missing, stop and correct requirements.md before generating tasks.
-- Reference components/interfaces from design.md when helpful (e.g., `_Contracts: AuthService API`)
-- If a validation interview or red-team finding changes implementation behavior, update the sub-task itself. Do NOT hide the decision only inside `Risk Assessment`.
+Access/action reachability is deterministic:
 
-### 5. Code-Only Focus
+| Access | Allowed Action | Grounding meaning |
+|---|---|---|
+| `read` | `read` | Exact target already exists and is inspected/consumed. |
+| `write` | `modify` or `delete` | Exact target already exists and is owned by this task. |
+| `write` | `create` | Exact target is absent and its parent/boundary is grounded. |
 
-**Include ONLY**:
-- Coding tasks (implementation)
-- Testing tasks (unit, integration, E2E)
-- Technical setup tasks (infrastructure, configuration)
+Commands, symbols, contracts, routes, schemas, artifacts, and external targets
+also receive their type-specific grounding check. Grounding is mandatory before
+readiness; the deterministic validator/grounder recompute facts and never create
+an extra receipt or claim semantic judgment.
 
-**Exclude**:
-- Deployment tasks
-- Documentation tasks
-- User testing
-- Marketing/business activities
+Build success alone is not behavior proof. Static validation may check command
+shape and anchors, but execution owns actual runtime proof.
 
-### Optional Test Coverage Tasks
+`feature-receipt.md` is created only during execution closeout. Never create or
+reference it as a spec-ready requirement.
 
-- When the design already guarantees functional coverage and rapid MVP delivery is prioritized, mark purely test-oriented follow-up work (e.g., baseline rendering/unit tests) as **optional** using the `- [ ]*` checkbox form.
-- Only apply the optional marker when the sub-task directly references acceptance criteria from requirements.md in its detail bullets.
-- Never mark implementation work or integration-critical verification as optional—reserve `*` for auxiliary/deferrable test coverage that can be revisited post-MVP.
-- Never mark auth, permissions, privacy, data deletion, migration, schema, or contract verification work as optional.
+Every physical task participates in at least one justified typed boundary.
+Ownership and parallel resource maps are keyed exactly by their participants,
+contain non-empty unique exact targets, and equal the task write anchors they
+claim. An ownership boundary is truthful only when at least two physical tasks
+have distinct, non-overlapping exact write anchors. A dependency boundary must match
+the registry DAG and producer-write/consumer-read anchors. Proof, transition,
+and parallel boundaries must satisfy their typed fields; labels never suffice.
 
-### Mandatory Evidence Section
+## Task graph and phases
 
-Every new task file MUST include a `## Evidence` section (`## Evidence` (legacy heading aliases still parse)).
+When a task bundle exists:
 
-That section is the task-level test plan and proof checklist. It MUST contain:
-1. **Automated proof** — exact command(s) for typecheck, tests, build, or explicit `N/A`
-2. **Artifact/runtime proof** — exact files, routes, UI surfaces, generated outputs, or persisted state to inspect
-3. **Contract/negative-path proof** — at least one contract-preserving check for unauthorized, invalid, missing-permission, rollback, or failure-path behavior when relevant
-4. **Reachability proof** — when the task creates a runtime-facing artifact, name the upstream entrypoint or caller that reaches it; if reachability is deferred, name the exact later integration task responsible
+- cover every scoped acceptance criterion exactly where it is implemented or
+  proven;
+- keep owner-before-consumer ordering explicit;
+- rebuild registry inventory from physical task files before readiness; and
+- use optional phases only as compact task-ID groups in `spec.json` for a
+  complex Full graph.
 
-Rules:
-- If the task produces a build artifact or generated file, name the exact artifact path to inspect.
-- If the task wires entrypoints (popup, content script, route, worker, CLI command), name the exact runtime surface that must exist after implementation.
-- If the task creates a UI component, service, hook, reducer, route handler, worker, command, or data loader, the evidence MUST prove it is either reachable from the declared runtime surface or intentionally internal support for a named later task.
-- If verification depends on environment or manual setup, document the blocker explicitly instead of implying success.
-- Build success alone is NEVER enough evidence for a completed task.
-- For provider-sensitive work, use provider-neutral wording unless the scope lock explicitly names a vendor.
-- For delete-data/privacy work, task text MUST match the single deletion/retention policy chosen in `design.md`. Mixed policies are invalid.
-
-### Test Type Selection
-
-Choose verification by task risk and touched surface. Do not force every task to include every test type, but do not omit the test type that proves the task's actual behavior.
-
-| Task kind | Required / expected proof |
-|---|---|
-| Pure logic, data transform, parser, sorting, filtering, validator | Unit test plus negative-path case |
-| Stateful UI component or user interaction | Component test or integration test; add runtime UI check if the component must be mounted |
-| Cross-module state, API, persistence, provider, or service boundary | Integration test that proves real contract/state handoff |
-| User-facing workflow across screens/components | E2E or UI flow verification after the vertical slice exists |
-| Layout, theme, responsive, visual style | Runtime/visual viewport checks; screenshot proof when practical |
-| Keyboard/focus/form/modal/table interaction | Accessibility check for focus, labels, roles, and keyboard behavior |
-| Scaffolding/config/release plumbing | Smoke checks: typecheck/build/test/dev-server or equivalent |
-| Bug fix/regression | Regression test reproducing the old failure, then passing |
-| Performance/security-sensitive requirement or touched surface | Performance/security check only when specified by requirements, design risk, or changed boundary |
-
-`hapo:specs` writes the expected proof into each task. `hapo:test` is the sole
-execution-proof owner and emits the canonical receipt. `hapo:develop` consumes
-that proof at closeout; it does not create a second execution receipt.
-
-### Frontend Fidelity Rule (when a visual reference is provided)
-
-If the user/spec provides ANY visual reference for a frontend task — design image, Figma frame, screenshot, mockup, brand palette, design tokens, or a style guide — the task MUST reproduce it faithfully, not approximate it. Concretely, the task file MUST:
-
-1. **Extract concrete values into the task** (do NOT paraphrase as "make it look nice"): exact colors (`#DAF1EE`), font family + sizes, spacing/radius/shadow when the reference shows them, and verbatim UI text/labels (especially non-English copy, e.g. `「投稿を削除しました」`).
-2. **State a `MUST: match <reference>` constraint** naming the exact reference (e.g. `image_4.png` / Figma node / `tokens.css`), so fidelity is a requirement, not a suggestion.
-3. **Prove fidelity in Evidence**: a visual/runtime check that compares the rendered UI against the named reference (screenshot diff or side-by-side inspection), plus accessibility/contrast if interactive.
-
-Reuse vs new component:
-- **Reuse** an existing component → reference it by path; it carries the design system's style (no need to restate pixels).
-- **New** component (`Create`) WITH a reference → the task MUST cite the concrete tokens/values from the reference (this is the gap that lets new components drift from the design).
-- **New** component WITHOUT any reference → derive from a named sibling component or explicitly flag it as an open design question; never invent un-grounded styling silently.
-
-> Rationale: a spec that says "build the list screen" but omits the provided palette/text/spacing forces the implementer to guess, and the result drifts from what the user actually showed. When a reference exists, "looks roughly similar" is a failure — the task must carry the real values so the build matches the design.
-
-## Task Hierarchy Rules
-
-### Maximum 2 Levels
-- Prefer one actionable checkbox per real implementation step.
-- Use sub-tasks (`1.1`, `1.2`) only when a step has multiple separately verifiable units.
-- **No deeper nesting** (no `1.1.1`).
-- If a major task would contain only a single actionable item, collapse the structure and promote the sub-task to the major level.
-- When a major task exists purely as a container, keep the checkbox description concise and avoid duplicating detailed bullets.
-
-### Sequential Numbering
-- Major tasks MUST increment: 1, 2, 3, 4, 5...
-- Sub-tasks reset per major task: 1.1, 1.2, then 2.1, 2.2...
-- Never repeat major task numbers
-
-### Parallel Analysis (default)
-- Assume parallel analysis is enabled unless explicitly disabled (e.g. `--sequential` flag).
-- Identify tasks that can run concurrently when **all** conditions hold:
-  - No data dependency on other pending tasks
-  - No shared file or resource contention
-  - No prerequisite review/approval from another task
-  - Environment/setup work needed by the task is already satisfied or covered within the task itself
-- Validate that identified parallel tasks operate within separate boundaries defined in the Architecture Pattern & Boundary Map.
-- Confirm API/event contracts from design.md do not overlap in ways that cause conflicts.
-- Append `(P)` immediately after the task number for each parallel-capable task, kept **outside** the checkbox brackets:
-  - Example: `- [ ] 2.1 (P) Build background worker`
-  - Apply to both major tasks and sub-tasks when appropriate.
-- If sequential mode is requested, omit `(P)` markers entirely.
-- Group parallel tasks logically (same parent when possible) and highlight any ordering caveats in detail bullets.
-- Do not mark container-only major tasks (no own actionable bullets) with `(P)` — evaluate parallelism at the sub-task level.
-- Explicitly call out dependencies that prevent `(P)` even when tasks look similar.
-
-### Checkbox Format
-```markdown
-- [ ] 1. Major task description
-- [ ] 1.1 Sub-task description
-  - Detail item 1
-  - Detail item 2
-  - _Requirements: X.X_
-
-- [ ] 1.2 Sub-task description
-  - Detail items...
-  - _Requirements: Y.Y_
-
-- [ ] 1.3 Sub-task description
-  - Detail items...
-  - _Requirements: Z.Z, W.W_
-
-- [ ] 2. Next major task (NOT 1 again!)
-- [ ] 2.1 Sub-task...
-```
-
-## Requirements Coverage
-
-**Check when a task bundle exists**:
-- ALL requirements assigned to the task bundle MUST be covered
-- Cross-reference every requirement ID with task mappings
-- If gaps found: Return to requirements or design phase
-- No requirement should be left without corresponding tasks
-
-Use the requirement ID style already present in `requirements.md` (`R1`,
-`REQ-01`, or `N.M`). The task filename cluster (`task-R1-01-*`) does not have
-to mirror every requirement ID exactly, but every requirement represented by
-the bundle MUST be listed in at least one task's `## Requirements` section.
-
-Document any intentionally deferred requirements with rationale.
+Never create phase files or repeat task prose in phase metadata.

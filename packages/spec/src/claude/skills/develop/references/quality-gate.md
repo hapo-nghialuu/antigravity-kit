@@ -1,12 +1,12 @@
 # Quality Gate — one closeout, separate proof and review
 
 This reference is loaded at develop closeout. It is an executable contract, not
-a fixed actor checklist. The lane snapshot is authoritative; `execution_tier`
-is only a legacy read adapter.
+a fixed actor checklist. Canonical v2.1 policy input is authoritative; lane and
+`execution_tier` are derived/read-only compatibility views.
 
 ## Inputs and ownership
 
-The single closeout owner receives the current scope, lane, risk signals, blast
+The single closeout owner receives the current scope, assurance, risk signals, blast
 radius, exact evidence commands, and the current diff. It calls the test owner
 once, then the review owner once when required. No parallel path, review path,
 or sync hook runs a duplicate hidden gate.
@@ -16,7 +16,7 @@ or sync hook runs a duplicate hidden gate.
   consumes the receipt but never creates or claims execution proof.
 - **Closeout owner:** combines both results and performs one state/docs sync.
 
-Review depth follows lane, risk, and blast radius, not the number of files or
+Review depth follows assurance, risk, and blast radius, not the number of files or
 tasks. There is no fixed Light/Standard/Deep agent sequence. The shared verdict
 surface is `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`; all adapters must use
 the same normalizer.
@@ -32,11 +32,12 @@ synchronization remain single-writer operations.
 Before completion, verify:
 
 1. compile/typecheck precheck and every exact command named by the active
-   Evidence section;
+   `Verification Plan`;
 2. real runtime reachability and declared artifact inspection;
-3. canonical receipt with non-empty command, successful exit result, both
-   provenance anchors bound to the runtime's expected Base/Head pair, and
-   required SHA-256 declarations;
+3. canonical `receipts/<task-basename>.md` with task identity/path, non-empty
+   exact command, successful exit/result, expected versus observed behavior,
+   applicable negative/reachability proof, both provenance anchors bound to the
+   runtime's expected Base/Head pair, and required SHA-256 declarations;
 4. correctness/security/spec review at the selected depth;
 5. a real independent audit when `needsIndependentAudit` is persisted. The
    audit must use schema version `1`, distinct reviewer and implementation
@@ -50,8 +51,8 @@ the shared completion verdict `PASS`.
 
 ## Spec compliance review
 
-Check scope lock, requirements, design contracts, completion criteria, evidence,
-runtime reachability, and artifact/provenance boundaries. A missing or orphaned
+Check scope lock, requirements, design contracts, task Acceptance, Verification
+Plan, runtime reachability, and artifact/provenance boundaries. A missing or orphaned
 runtime deliverable is a failure even when compilation succeeds.
 
 **Specific-task mode:** review exactly the requested task and its diff, then
@@ -67,7 +68,7 @@ Apply only the checks relevant to the touched boundary. For logging/redaction,
 check safe identifiers, quoted schemes, idempotence, and receipt secrecy. For
 filesystem writes, check lexical and canonical containment, symlink rejection,
 atomic same-directory replacement, cleanup, and canonical return paths. Add
-auth, persistence, provider, or concurrency checks only when lane/risk requires.
+auth, persistence, provider, or concurrency checks only when scope/risk requires.
 
 ## Quality cycle
 
@@ -83,7 +84,7 @@ if retry_count reaches 3: stop and request user intervention
 
 Only `FAIL` enters remediation. `BLOCKED` is terminal until its prerequisite
 changes. `PASS_WITH_WARNINGS` is a review result only and remains unfinished;
-only literal `PASS` may close when all execution and lane obligations are
+only literal `PASS` may close when all execution and policy obligations are
 complete.
 
 ## Flash Gate (`--flash`)
@@ -131,6 +132,12 @@ missing execution proof. Evaluate docs impact from the actual behavior change:
 
 Do not run a docs checkpoint merely because a task completed. Do not refresh the
 whole repository for a local change.
+
+After every task receipt is valid, final integration execution creates
+`feature-receipt.md` once. A task-bearing feature cannot close without all task
+receipts and the feature receipt. A taskless Compact/Full feature closes from a
+valid feature receipt; absence before final closeout is not a failure. Receipts
+never supply or imply approval, readiness, audit status, or product semantics.
 
 ## Review threshold
 

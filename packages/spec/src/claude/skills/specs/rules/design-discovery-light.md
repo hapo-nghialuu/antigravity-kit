@@ -1,49 +1,28 @@
-# Light Discovery Process for Extensions
+# Compact design discovery
 
-## Objective
-Quickly analyze existing system and integration requirements for feature extensions.
+Load this rule only after the artifact router selects `Compact`. The goal is a
+bounded durable design, not a reduced version of a default research process.
 
-## Focused Discovery Steps
+## Focus
 
-### 1. Extension Point Analysis
-**Identify Integration Approach**:
-- Locate existing extension points or interfaces
-- Determine modification scope (files, components)
-- Check for existing patterns to follow
-- Identify backward compatibility requirements
+1. locate the real entrypoint and existing behavior owner;
+2. inspect the smallest set of contracts and dependencies touched by scope;
+3. record compatibility, negative-path, and verification constraints; and
+4. ground the selected anchors and stop.
 
-### 2. Dependency Check
-**Verify Compatibility**:
-- Check version compatibility of new dependencies
-- Validate API contracts haven't changed
-- Ensure no breaking changes in pipeline
+Keep the result in `design.md`. File lists without behavior ownership, generic
+best practices, and broad architecture inventories are not useful discovery.
 
-### 3. Quick Technology Verification
-**For New Libraries Only**:
-- Use WebSearch for official documentation
-- Verify basic usage patterns
-- Check for known compatibility issues
-- Confirm licensing compatibility
-- Record key findings in `research.md` (technology alignment section)
+## Research gate
 
-### 4. Integration Risk Assessment
-**Quick Risk Check**:
-- Impact on existing functionality
-- Performance implications
-- Security considerations
-- Testing requirements
+Research remains absent unless there is unresolved material uncertainty, an
+external-current fact that must be grounded, or an explicit user request. A new
+library is not automatically a trigger: inspect repository declarations first;
+consult primary external documentation only when a current fact can change the
+decision. When the gate opens, create the minimal uncertainty-to-evidence-to-
+decision projection and retain any honest remaining gap.
 
-## When to Escalate to Full Discovery
-Switch to full discovery if you find:
-- Significant architectural changes needed
-- Complex external service integrations
-- Security-sensitive implementations
-- Performance-critical components
-- Unknown or poorly documented dependencies
-
-## Output Requirements
-- Clear integration approach (note boundary impacts in `research.md`)
-- List of files/components to modify
-- New dependencies with versions
-- Integration risks and mitigations
-- Testing focus areas
+If discovery reveals cross-boundary behavior needing materially more design
+detail, reclassify planning depth before persistence. If the Compact baseline
+is already persisted, expand monotonically to Full; do not silently downgrade
+or create optional artifacts merely to resemble Full.

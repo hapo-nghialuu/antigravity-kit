@@ -86,7 +86,8 @@ these mandatory lines:
 
 1. "You are in an isolated git worktree. Implement ONLY this task."
 2. "Do NOT edit `spec.json` or any `tasks/*.md` — the orchestrator owns spec state."
-3. "Do NOT touch files outside this task's `Related Files`."
+3. "Write only exact targets granted by this task's `Anchors and Ownership`
+   table and typed ownership/parallel boundaries."
 4. "When done, `git add` your changes and `git commit -m \"task(<id>): <title>\"` —
    an uncommitted worktree cannot be merged."
 5. End with the standard `Status: DONE|CONCERNS|BLOCKED|NEEDS_INFO` block, plus
@@ -150,14 +151,15 @@ cherry-pick remains the recipe regardless.
 ## 6. Post-merge integration check (per wave)
 
 After the wave's last cherry-pick, run an affected integration command derived
-from the task's `## Evidence` and repository contract (build or affected test
+from the task's `Verification Plan` and repository contract (build or affected test
 subset; never the full suite mid-flight). Record command, `base_sha`, `head_sha`,
 range, and result in the wave receipt. Failure blocks the next wave.
 
 After the final wave, run an explicit feature/full integration command derived
-from the repository contract — for example the feature's exact Evidence suite
+from the repository contract — for example the feature's exact verification suite
 or the repository's documented full test/build command. A final scout is not a
-substitute. Classify every failure before acting as exactly one of:
+substitute. On PASS, the test owner creates `feature-receipt.md` once; task
+receipts alone cannot close the feature. Classify every failure before acting as exactly one of:
 
 - `baseline` — reproduces from the recorded destination `base_sha`;
 - `environment` — tool, dependency, permission, or service unavailable;
@@ -172,8 +174,9 @@ sequential fallback according to the task contract.
 
 Only the orchestrator writes `spec.json` and task markdown, after each task's
 cherry-pick: registry `status`/`completed_at`/`last_updated_at`, task-md `Status`,
-checkbox ticks, and a verification receipt citing the worktree gate evidence plus
-the post-merge check result. The Stop completion gate (`spec-gate.cjs`) applies
+checkbox ticks, and a canonical `receipts/<task-basename>.md` citing the
+worktree gate evidence plus the post-merge check result. Never append execution
+proof to task Markdown. The Stop completion gate (`spec-gate.cjs`) applies
 unchanged — a receipt-less done blocks the turn. After syncing the wave, recompute
 §2 and continue until no pending tasks remain.
 

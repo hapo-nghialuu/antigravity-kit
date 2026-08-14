@@ -14,9 +14,7 @@
 
 - Read `README.md` and relevant project instructions before non-trivial work.
 - Choose the matching CafeKit skill before improvising a workflow.
-- Read `.codex/rules/workflow.md`, `.codex/rules/ai-dev-rules.md`, and
-  `.codex/rules/skill-workflow-routing.md` for non-trivial work. Load the other
-  `.codex/rules/*.md` files when their topic applies.
+- Read `.codex/rules/workflow.md`, `.codex/rules/ai-dev-rules.md`, and `.codex/rules/skill-workflow-routing.md` for non-trivial work. Load the other `.codex/rules/*.md` files when their topic applies.
 - Keep scope surgical; prefer YAGNI, KISS, then DRY.
 - Do not claim completion without fresh build, test, runtime, or artifact evidence.
 - For spec tasks, keep `spec.json`, task status, `Completion Criteria`, and `Evidence` synchronized only after verification.
@@ -40,3 +38,12 @@ Always respond in **Tiếng Việt**. Technical terms, code identifiers, and fil
 
 
 <!-- CAFEKIT CODEX END -->
+
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration — Herdr-first project
+
+Inside a Herdr pane, route every implementation, bug-fix, or multi-step task in this project through Herdr with the `herdr-orchestrator` skill: act as controller and delegate to workers started with the role profiles in `.claude/settings.*.json`. Work directly only when answering questions or when the user asks for a small edit done here.
+Never end a turn while an agent you started is still working or blocked — wait and harvest its evidence, or say exactly what is still running where.
+
+Outside a Herdr pane (`HERDR_ENV` unset), this preference is not a blocker: do the work normally, and for a substantial task mention once that this project prefers Herdr orchestration.
+<!-- hod:end -->

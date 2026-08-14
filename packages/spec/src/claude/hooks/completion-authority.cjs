@@ -88,6 +88,7 @@ function approve(payload) {
 }
 
 function stop(payload) {
+  if (payload.stop_hook_active === true) return;
   const root = projectRoot(payload);
   const runtime = readRuntime(root);
   const resolverPath = path.join(__dirname, '..', 'scripts', 'spec-resolver.cjs');
@@ -120,6 +121,7 @@ function stop(payload) {
     }
     return;
   }
+  if (result.active === false) return;
   if (!result.ok) {
     STATE.clearState(root);
     emitBlock(`Completion authority: ${result.reason}`);
@@ -135,13 +137,17 @@ let mode = process.argv[2] || null;
 try {
   const payload = readPayload();
   mode = mode || (payload.hook_event_name === 'UserPromptSubmit' ? '--approve' : '--stop');
-  const dependencyError = loadAuthority();
-  if (dependencyError) {
-    if (mode === '--approve') rejectApproval(`authority dependency unavailable (${dependencyError.message})`);
-    else emitBlock(`Completion authority unavailable: ${dependencyError.message}. Repair the installed authority before completing tasks`);
-  } else if (mode === '--approve') approve(payload);
-  else if (mode === '--stop') stop(payload);
-  else throw new Error('completion authority mode is required');
+  if (mode === '--stop' && payload.stop_hook_active === true) {
+    // Host loop prevention is always silent, including when dependencies are unavailable.
+  } else {
+    const dependencyError = loadAuthority();
+    if (dependencyError) {
+      if (mode === '--approve') rejectApproval(`authority dependency unavailable (${dependencyError.message})`);
+      else emitBlock(`Completion authority unavailable: ${dependencyError.message}. Repair the installed authority before completing tasks`);
+    } else if (mode === '--approve') approve(payload);
+    else if (mode === '--stop') stop(payload);
+    else throw new Error('completion authority mode is required');
+  }
 } catch (error) {
   if (mode === '--approve') rejectApproval(`authority failed safely (${error.message})`);
   else emitBlock(`Completion authority controlled failure: ${error.message}. Completion is blocked until the authority is repaired`);

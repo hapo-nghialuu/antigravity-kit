@@ -41,14 +41,15 @@ receipt, or claim execution proof.
 - Preserve the exact command, exit result, provenance, and artifact hashes
   required by the canonical receipt schema.
 
-## Scope and lane
+## Scope and policy
 
 For a feature target, load `spec.json`, `requirements.md`, `design.md`, and
-task evidence only when that target exists. Compare actual execution against
+the active task's exact seven v2.1 sections and typed coordination boundaries
+when that target exists. Compare actual execution against
 `scope_lock`, contracts, completion criteria, runtime reachability, and
 negative-path obligations.
 
-Choose depth from the persisted lane, risk, and blast radius:
+Choose depth from `assurance_level`, risk, and blast radius. Lane is derived:
 
 - Direct: targeted commands and diff/runtime self-check;
 - Standard: bounded affected suite and feature receipt;
@@ -79,8 +80,10 @@ requirements. Use UI checks only when a reachable UI surface is in scope.
    performance, or security proof for the changed surface.
 4. Inspect runtime reachability and declared artifacts when the task creates
    runtime-facing or generated output.
-5. Preserve raw outcomes and write one canonical receipt. A receipt must not
-   contain secrets or placeholder provenance.
+5. Preserve raw outcomes and, only after real execution, write one canonical
+   receipt. For a task use `receipts/<task-basename>.md`; never append execution
+   evidence to the task plan. A receipt must not contain secrets or placeholder
+   provenance.
 
 Required proof type follows the behavior, not ceremony:
 
@@ -98,7 +101,9 @@ Required proof type follows the behavior, not ceremony:
 ## Canonical receipt
 
 The receipt is execution evidence, not a status marker. It must contain the
-actual command, a successful exit result, both provenance anchors (`Base` and
+task identity and canonical `tasks/task-*.md` path for task receipts, the actual
+command, a successful exit/result, expected versus observed behavior, applicable
+negative-path and reachability proof, both provenance anchors (`Base` and
 `Head`, or their canonical aliases), and any declared artifact SHA-256. Reject
 `Exit: 1`, conflicting outcomes, empty commands, placeholders, missing
 provenance, zero execution, and failure summaries. No-artifact tasks remain
@@ -112,6 +117,11 @@ pass `receipt_binding: binding` to `completionDecision` or include the binding's
 compares both receipt anchors before completion or flash promotion.
 
 For a normal closeout, emit a receipt that the shared policy validator accepts.
+Legacy task `## Evidence` remains readable, but prefer the separate receipt. If
+both exist and their proof identities conflict, report `FAIL` and do not choose
+one. After all task receipts pass, execute final integration and create
+`feature-receipt.md` exactly once. Taskless Compact/Full specs create that file
+only at final closeout; absence before closeout is normal.
 For `--flash`, emit proof for the current `FLASH_UNVERIFIED` task only. Only explicit trusted sync-finalize may promote it. The
 receipt may make the task eligible for trusted sync-finalize, but it must not
 promote the task, unblock dependents, or fabricate a done state.
@@ -161,7 +171,7 @@ security, and spec compliance against this proof.
 ## Flash proof
 
 When the target contains an in-progress `FLASH_UNVERIFIED` task, test only its
-exact Evidence and reachability obligations. On pass, keep the task
+exact Verification Plan and reachability obligations. On pass, keep the task
 `in_progress`, keep `FLASH_UNVERIFIED`, `dependencyBlocked: true`, and
 `unblocks: false`; return canonical proof to trusted sync-finalize. On failure,
 blocker, or no tests, do not promote any task.

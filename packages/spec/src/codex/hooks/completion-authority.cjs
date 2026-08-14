@@ -45,6 +45,7 @@ function approve(payload) {
 }
 
 function stop(payload) {
+  if (payload.stop_hook_active === true) return;
   const loaded = loadSharedPolicy();
   if (!loaded.policy) {
     emitBlock(`Completion authority unavailable: shared workflow policy could not be loaded (${loaded.error.message}). Repair ${loaded.path} before completing tasks`);
@@ -69,6 +70,7 @@ function stop(payload) {
     }
     return;
   }
+  if (result.active === false) return;
   if (!result.ok) {
     STATE.clearState(projectRoot);
     emitBlock(`Completion authority: ${result.reason}`);
@@ -84,13 +86,17 @@ let mode = process.argv[2] || null;
 try {
   const payload = readPayload();
   mode = mode || (payload.hook_event_name === 'UserPromptSubmit' ? '--approve' : '--stop');
-  const dependencyError = loadAuthority();
-  if (dependencyError) {
-    if (mode === '--approve') context(`CafeKit completion approval failed safely; authority dependency unavailable (${dependencyError.message}).`);
-    else emitBlock(`Completion authority unavailable: ${dependencyError.message}. Repair the installed authority before completing tasks`);
-  } else if (mode === '--approve') approve(payload);
-  else if (mode === '--stop') stop(payload);
-  else throw new Error('completion authority mode is required');
+  if (mode === '--stop' && payload.stop_hook_active === true) {
+    // Host loop prevention is always silent, including when dependencies are unavailable.
+  } else {
+    const dependencyError = loadAuthority();
+    if (dependencyError) {
+      if (mode === '--approve') context(`CafeKit completion approval failed safely; authority dependency unavailable (${dependencyError.message}).`);
+      else emitBlock(`Completion authority unavailable: ${dependencyError.message}. Repair the installed authority before completing tasks`);
+    } else if (mode === '--approve') approve(payload);
+    else if (mode === '--stop') stop(payload);
+    else throw new Error('completion authority mode is required');
+  }
 } catch (error) {
   if (mode === '--approve') context(`CafeKit completion approval failed safely; no grant was issued (${error.message}).`);
   else {

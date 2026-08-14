@@ -250,9 +250,7 @@ function isPathInsideLegacy(parent, child) {
 }
 
 function explicitTargetValue(value) {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  return typeof value === 'string' ? value.trim() : value;
 }
 
 /**
@@ -265,12 +263,14 @@ function extractExplicitTarget(...sources) {
     if (!source || typeof source !== 'object') continue;
 
     for (const key of ['explicitFeature', 'featureName', 'feature']) {
-      const value = explicitTargetValue(source[key]);
-      if (value) return { explicitFeature: value };
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        return { explicitFeature: explicitTargetValue(source[key]) };
+      }
     }
     for (const key of ['explicitPath', 'specPath', 'spec_path', 'featurePath']) {
-      const value = explicitTargetValue(source[key]);
-      if (value) return { explicitPath: value };
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        return { explicitPath: explicitTargetValue(source[key]) };
+      }
     }
 
     const target = source.target;
@@ -278,8 +278,8 @@ function extractExplicitTarget(...sources) {
       const nested = extractExplicitTarget(target);
       if (nested) return nested;
     }
-    const targetValue = explicitTargetValue(target);
-    if (targetValue) {
+    if (Object.prototype.hasOwnProperty.call(source, 'target')) {
+      const targetValue = explicitTargetValue(target);
       return /[\\/]/.test(targetValue) || /(?:^|[\\/])spec\.json$/.test(targetValue)
         ? { explicitPath: targetValue }
         : { explicitFeature: targetValue };
@@ -302,14 +302,23 @@ function resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath
   if (!projectRoot) throw new TypeError('projectRoot required');
   const rt = runtime || {};
   const normalizedTarget = extractExplicitTarget(target);
-  explicitFeature = explicitFeature || normalizedTarget?.explicitFeature;
-  explicitPath = explicitPath || normalizedTarget?.explicitPath;
+  if (explicitFeature === undefined && normalizedTarget
+    && Object.prototype.hasOwnProperty.call(normalizedTarget, 'explicitFeature')) {
+    explicitFeature = normalizedTarget.explicitFeature;
+  }
+  if (explicitPath === undefined && normalizedTarget
+    && Object.prototype.hasOwnProperty.call(normalizedTarget, 'explicitPath')) {
+    explicitPath = normalizedTarget.explicitPath;
+  }
+  const hasExplicitFeature = explicitFeature !== undefined && explicitFeature !== null;
+  const hasExplicitPath = explicitPath !== undefined && explicitPath !== null;
+  const hasExplicitTarget = hasExplicitFeature || hasExplicitPath;
   let specsDir;
   try {
     specsDir = specsDirectory(projectRoot, rt);
   } catch (error) {
     return {
-      error: explicitFeature || explicitPath ? 'explicit_malformed' : 'invalid_specs',
+      error: hasExplicitTarget ? 'explicit_malformed' : 'invalid_specs',
       candidates: ['<specs>'],
       explicitFeature,
       explicitPath,
@@ -319,7 +328,7 @@ function resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath
   let canonicalSpecs;
   const specsLstat = lstatOptional(specsDir);
   if (specsLstat.error) {
-    if (explicitFeature || explicitPath) {
+    if (hasExplicitTarget) {
       return { error: 'explicit_malformed', explicitFeature, explicitPath, reason: `specs lstat error: ${specsLstat.error.message}` };
     }
     return { error: 'invalid_specs', candidates: ['<specs>'], invalid: [{ featureName: '<specs>', reason: `specs lstat error: ${specsLstat.error.message}`, specFile: specsDir }], reason: `Invalid spec JSON: <specs>: specs lstat error: ${specsLstat.error.message}` };
@@ -330,14 +339,14 @@ function resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath
     try {
       canonicalSpecs = fs.realpathSync(specsDir);
     } catch (e) {
-      if (explicitFeature || explicitPath) {
+      if (hasExplicitTarget) {
         return { error: 'explicit_malformed', explicitFeature, explicitPath, reason: `specs root canonicalization error: ${e.message}` };
       }
       return { error: 'invalid_specs', candidates: ['<specs>'], invalid: [{ featureName: '<specs>', reason: `specs root canonicalization error: ${e.message}`, specFile: specsDir }], reason: `Invalid spec JSON: <specs>: specs root canonicalization error: ${e.message}` };
     }
   }
 
-  if (explicitFeature) {
+  if (hasExplicitFeature) {
     if (typeof explicitFeature !== 'string' || explicitFeature.trim() === '' || explicitFeature.includes('/') || explicitFeature.includes('\\') || explicitFeature.includes('..')) {
       return { error: 'explicit_malformed', explicitFeature, reason: `malformed feature name: ${explicitFeature}` };
     }
@@ -367,7 +376,7 @@ function resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath
     }
   }
 
-  if (explicitPath) {
+  if (hasExplicitPath) {
     if (typeof explicitPath !== 'string' || explicitPath.trim() === '') {
       return { error: 'explicit_malformed', explicitPath, reason: 'empty explicit path' };
     }
@@ -441,10 +450,52 @@ function resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath
   };
 }
 
+/**
+ * Resolve one persisted feature identity. Explicit host targets are inspected
+ * directly and never scan siblings; only the no-target path performs a global
+ * persisted-candidate scan and therefore owns ambiguity/invalid-sibling errors.
+ */
+function resolvePersistedSpec({ projectRoot, runtime, explicitFeature, explicitPath, target } = {}) {
+  const normalized = extractExplicitTarget(
+    target,
+    explicitFeature !== undefined ? { explicitFeature } : null,
+    explicitPath !== undefined ? { explicitPath } : null,
+  );
+  if (normalized) {
+    const value = Object.prototype.hasOwnProperty.call(normalized, 'explicitFeature')
+      ? normalized.explicitFeature
+      : normalized.explicitPath;
+    if (value === null || value === undefined) {
+      return { error: 'explicit_malformed', ...normalized, reason: 'explicit target must be a non-empty string' };
+    }
+    return resolveActiveSpec({ projectRoot, runtime, ...normalized });
+  }
+  try {
+    const candidates = findAllSpecCandidates(projectRoot, runtime);
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+    return {
+      error: 'multiple_persisted',
+      candidates: candidates.map((candidate) => candidate.featureName),
+      reason: `Multiple persisted specs found: ${candidates.map((candidate) => candidate.featureName).join(', ')}. Provide explicit feature.`,
+    };
+  } catch (error) {
+    return {
+      error: 'invalid_specs',
+      candidates: Array.isArray(error.invalid)
+        ? error.invalid.map((entry) => entry.featureName)
+        : ['<specs>'],
+      invalid: error.invalid || [],
+      reason: error.message,
+    };
+  }
+}
+
 module.exports = {
   specsDirectory,
   findAllActiveSpecs,
   findAllSpecCandidates,
   extractExplicitTarget,
   resolveActiveSpec,
+  resolvePersistedSpec,
 };

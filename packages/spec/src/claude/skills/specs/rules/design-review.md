@@ -1,110 +1,52 @@
-# Design Review Process
+# Design review contract
 
-## Objective
-Conduct interactive quality review of technical design documents to ensure they are solid enough to proceed to implementation with acceptable risk.
+Review the complete routed artifact graph for implementation-blocking semantic
+gaps. Concise presentation is encouraged; inventory size is never capped.
 
-## Review Philosophy
-- **Quality assurance, not perfection seeking**
-- **Critical focus**: Limit to 3 most important concerns
-- **Interactive dialogue**: Engage with designer, not one-way evaluation
-- **Balanced assessment**: Recognize strengths and weaknesses
-- **Clear decision**: Definitive GO/NO-GO with rationale
+## Coverage
 
-## Scope & Non-Goals
+For every `RN.M` criterion:
 
-- Scope: Evaluate the quality of the design document against project context and standards to decide GO/NO-GO.
-- Non-Goals: Do not perform implementation-level design, deep technology research, or finalize technology choices. Defer such items to the design phase iteration.
+1. trace the exact implementation owner, boundary, applicable `D`/`I`/`C`
+   definitions, and canonical `V` definition;
+2. construct a concrete counterexample or failure scenario;
+3. confirm the expected result rejects or handles that scenario;
+4. confirm referenced anchors are reachable and grounded; and
+5. record every unresolved contradiction, ambiguity, missing owner, broken
+   dependency, unreachable proof, or scope violation as a blocker.
 
-## Core Review Criteria
+Also review cross-criterion contracts, state transitions, concurrency,
+authorization, recovery, compatibility, and rollback where scope activates
+them. Do not perform broad technology research during review; return an exact
+uncertainty to the artifact router when new material uncertainty is discovered.
 
-### 1. Existing Architecture Alignment (Critical)
-- Integration with existing system boundaries and layers
-- Consistency with established architectural patterns
-- Proper dependency direction and coupling management
-- Alignment with current module organization
+## Finding shape
 
-### 2. Design Consistency & Standards
-- Adherence to project naming conventions and code standards
-- Consistent error handling and logging strategies
-- Uniform configuration and dependency management
-- Alignment with established data modeling patterns
+Each blocker states:
 
-### 3. Extensibility & Maintainability
-- Design flexibility for future requirements
-- Clear separation of concerns and single responsibility
-- Testability and debugging considerations
-- Appropriate complexity for requirements
+- affected criterion and design/verification refs;
+- concrete counterexample;
+- observed conflicting or missing artifact content;
+- impact on implementation or proof; and
+- smallest semantic decision or correction required.
 
-### 4. Type Safety & Interface Design
-- Proper type definitions and interface contracts
-- Avoidance of unsafe patterns (e.g., `any` in TypeScript)
-- Clear API boundaries and data structures
-- Input validation and error handling coverage
+Group duplicates for readability without dropping distinct blockers. Positive
+observations are optional and never displace a blocker.
 
-## Review Process
+## Decision
 
-### Step 1: Analyze
-Analyze design against all review criteria, focusing on critical issues impacting integration, maintainability, complexity, and requirements fulfillment.
+- `PASS`: the full routed graph is coherent, grounded, and every criterion's
+  counterexample is resolved.
+- `FAIL`: at least one semantic or structural blocker is actionable now.
+- `BLOCKED`: required product input, trusted capability, or external evidence
+  is unavailable.
 
-### Step 2: Identify Critical Issues (≤3)
-For each issue:
-```
-🔴 **Critical Issue [1-3]**: [Brief title]
-**Concern**: [Specific problem]
-**Impact**: [Why it matters]
-**Suggestion**: [Concrete improvement]
-**Traceability**: [Requirement ID/section from requirements.md]
-**Evidence**: [Design doc section/heading]
-```
+Routine and Elevated require semantic review but no reviewer ceremony. Strict
+requires an independent allowlisted reviewer capability observed by the host
+hook. An author, task marker, receipt text, or claimed role cannot self-attest
+that capability. Deterministic validation checks implemented structure and
+grounding; it never replaces this semantic judgment.
 
-### Step 3: Recognize Strengths
-Acknowledge 1-2 strong aspects to maintain balanced feedback.
-
-### Step 4: Decide GO/NO-GO
-- **GO**: No critical architectural misalignment, requirements addressed, clear implementation path, acceptable risks
-- **NO-GO**: Fundamental conflicts, critical gaps, high failure risk, disproportionate complexity
-
-## Traceability & Evidence
-
-- Link each critical issue to the relevant requirement(s) from `requirements.md` (ID or section).
-- Cite evidence locations in the design document (section/heading, diagram, or artifact) to support the assessment.
-- When applicable, reference constraints from steering context to justify the issue.
-
-## Output Format
-
-### Design Review Summary
-2-3 sentences on overall quality and readiness.
-
-### Critical Issues (≤3)
-For each: Issue, Impact, Recommendation, Traceability (e.g., 1.1, 1.2), Evidence (design.md section).
-
-### Design Strengths
-1-2 positive aspects.
-
-### Final Assessment
-Decision (GO/NO-GO), Rationale (1-2 sentences), Next Steps.
-
-### Interactive Discussion
-Engage on designer's perspective, alternatives, clarifications, and necessary changes.
-
-## Length & Focus
-
-- Summary: 2–3 sentences
-- Each critical issue: 5–7 lines total (including Issue/Impact/Recommendation/Traceability/Evidence)
-- Overall review: keep concise (~400 words guideline)
-
-## Review Guidelines
-
-1. **Critical Focus**: Only flag issues that significantly impact success
-2. **Constructive Tone**: Provide solutions, not just criticism
-3. **Interactive Approach**: Engage in dialogue rather than one-way evaluation
-4. **Balanced Assessment**: Recognize both strengths and weaknesses
-5. **Clear Decision**: Make definitive GO/NO-GO recommendation
-6. **Actionable Feedback**: Ensure all suggestions are implementable
-
-## Final Checklist
-
-- **Critical Issues ≤ 3** and each includes Impact and Recommendation
-- **Traceability**: Each issue references requirement ID/section
-- **Evidence**: Each issue cites design doc location
-- **Decision**: GO/NO-GO with clear rationale and next steps
+Readiness stays false until the complete blocker inventory is resolved and all
+required machine gates pass. Review does not claim implementation execution,
+approval, closeout, or lifecycle completion.

@@ -19,6 +19,10 @@ const { stateDir: codexStateDir } = require(
 );
 
 function runHook(file, cwd, payload) {
+  if (path.basename(file) === 'spec-gate.cjs') {
+    const rootResult = spawnSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' });
+    if (rootResult.status === 0) installFeatureReceipts(rootResult.stdout.trim(), payload.session_id || 'session-a');
+  }
   return spawnSync(process.execPath, [file], {
     cwd,
     input: JSON.stringify(payload),
@@ -41,6 +45,36 @@ function bindReceipt(root, value, feature = 'auth', session = 'session-a') {
   return value.replaceAll(VALID_BASE, context.base).replaceAll(VALID_HEAD, context.head);
 }
 
+function installFeatureReceipts(root, session = 'session-a') {
+  const specsRoot = path.join(root, 'specs');
+  if (!fs.existsSync(specsRoot)) return;
+  for (const feature of fs.readdirSync(specsRoot)) {
+    const featureDir = path.join(specsRoot, feature);
+    const specFile = path.join(featureDir, 'spec.json');
+    if (!fs.existsSync(specFile)) continue;
+    let spec;
+    try { spec = JSON.parse(fs.readFileSync(specFile, 'utf8')); } catch { continue; }
+    const lifecyclePhase = spec.current_phase || spec.phase;
+    const explicitCloseout = ['completed', 'complete'].includes(spec.status)
+      || ['closeout', 'completion', 'completed', 'complete'].includes(lifecyclePhase);
+    if (!explicitCloseout) continue;
+    const tasks = Object.values(spec.task_registry || {});
+    if (tasks.length === 0 || tasks.some((task) => task.status !== 'done')) continue;
+    const context = runtimeContext(root, feature, session);
+    fs.writeFileSync(path.join(featureDir, 'feature-receipt.md'), [
+      `Feature: ${feature}`,
+      'Expected: final integration verification passes',
+      'Observed: final integration verification passed',
+      'Verification: PASS',
+      'Command: node --test',
+      'Exit: 0',
+      `Base: ${context.base}`,
+      `Head: ${context.head}`,
+      '',
+    ].join('\n'));
+  }
+}
+
 function inHookFixture(run, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-codex-hooks-'));
   const hooks = path.join(root, '.codex', 'hooks');
@@ -59,12 +93,22 @@ function inHookFixture(run, options = {}) {
           path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'),
           path.join(root, '.codex', 'scripts', 'provenance.cjs'),
         );
+        fs.copyFileSync(
+          path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-receipt.cjs'),
+          path.join(root, '.codex', 'scripts', 'spec-receipt.cjs'),
+        );
       }
     }
     fs.copyFileSync(
       path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'),
       path.join(root, '.codex', 'scripts', 'spec-resolver.cjs'),
     );
+    for (const file of ['validate-spec-output.cjs', 'spec-ground.cjs', 'spec-semantic-model.cjs', 'spec-final-state.cjs']) {
+      fs.copyFileSync(
+        path.join(PACKAGE_ROOT, 'src/claude/scripts', file),
+        path.join(root, '.codex', 'scripts', file),
+      );
+    }
     fs.writeFileSync(path.join(root, '.codex', 'scripts', 'spec-scaffold.cjs'), '');
     for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test'], ['commit', '--allow-empty', '-qm', 'fixture']]) {
       const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -293,10 +337,25 @@ test('Codex completion gate cannot be bypassed from a nested cwd', () => {
     fs.writeFileSync(path.join(feature, 'spec.json'), `${JSON.stringify(spec)}\n`);
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n');
 
-    const blocked = runHook(gate, nested, payload);
-    assert.equal(blocked.status, 0);
-    assert.equal(JSON.parse(blocked.stdout).decision, 'block');
-    assert.match(JSON.parse(blocked.stdout).reason, /verification receipt/);
+    const blockedBeforeCloseout = runHook(gate, nested, payload);
+    assert.equal(blockedBeforeCloseout.status, 0);
+    assert.equal(JSON.parse(blockedBeforeCloseout.stdout).decision, 'block');
+    assert.match(JSON.parse(blockedBeforeCloseout.stdout).reason, /verification receipt/);
+
+    fs.writeFileSync(path.join(feature, taskPath), bindReceipt(root, [
+      'Status: done', '', '## Evidence', '', 'Verification: PASS',
+      'Command: node --test', 'Exit: 0', `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`,
+    ].join('\n'), 'auth'));
+    const validBeforeCloseout = runHook(gate, nested, payload);
+    assert.equal(validBeforeCloseout.status, 0);
+    assert.equal(validBeforeCloseout.stdout, '');
+    assert.equal(fs.existsSync(path.join(feature, 'feature-receipt.md')), false);
+
+    spec.current_phase = 'closeout';
+    fs.writeFileSync(path.join(feature, 'spec.json'), `${JSON.stringify(spec)}\n`);
+    const closeout = runHook(gate, nested, payload);
+    assert.equal(closeout.status, 0);
+    assert.equal(closeout.stdout, '');
   });
 });
 
@@ -322,6 +381,7 @@ test('empty or forged Codex hook authority fails closed', () => {
     fs.mkdirSync(path.join(feature, 'tasks'), { recursive: true });
     fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({
       status: 'in_progress',
+      current_phase: 'closeout',
       feature_name: 'auth',
       task_registry: { [taskPath]: { status: 'done', completed_at: '2026-08-11T00:00:00.000Z' } },
     }));
@@ -354,6 +414,7 @@ test('Critical Codex completion ignores worker-writable proof strings and remain
     fs.mkdirSync(path.join(feature, 'tasks'), { recursive: true });
     fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({
       status: 'in_progress',
+      current_phase: 'closeout',
       feature_name: 'auth',
       workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } }),
       proofs: {
@@ -453,6 +514,24 @@ test('Codex state hook persists direct native event fields at project root', () 
   });
 });
 
+test('semantic review authority hook is registered only for SubagentStop on Claude and Codex', () => {
+  const configurations = [
+    JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'src/claude/settings/settings.json'), 'utf8')).hooks,
+    JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'src/codex/hooks.json'), 'utf8')).hooks,
+  ];
+  for (const hooks of configurations) {
+    const registrations = [];
+    for (const [event, groups] of Object.entries(hooks)) {
+      for (const group of groups) {
+        for (const hook of group.hooks || []) {
+          if (String(hook.command || '').includes('semantic-review-authority.cjs')) registrations.push(event);
+        }
+      }
+    }
+    assert.deepEqual(registrations, ['SubagentStop']);
+  }
+});
+
 test('Codex canonical receipt provenance requires both Base and Head', () => {
   const receipt = require(path.join(CODEX_HOOKS, 'lib', 'spec-receipt.cjs'));
   const onlyBase = receipt.validateCanonicalReceipt('Verification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\n');
@@ -494,12 +573,12 @@ test('Codex canonical receipt provenance requires both Base and Head', () => {
     const payload = { cwd: path.join(root, 'packages', 'app'), session_id: 'session-a', hook_event_name: 'Stop', stop_hook_active: false };
 
     // only Base -> block
-    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'auth', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
+    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', current_phase: 'closeout', feature_name: 'auth', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc\n');
     fs.mkdirSync(payload.cwd, { recursive: true });
     const blocked = runHook(gate, payload.cwd, payload);
     assert.equal(JSON.parse(blocked.stdout).decision, 'block');
-    assert.match(JSON.parse(blocked.stdout).reason, /\bg\b|\bprovenance\b/);
+    assert.match(JSON.parse(blocked.stdout).reason, /\bprovenance\b/);
 
     // both -> no block
     fs.writeFileSync(path.join(feature, taskPath), bindReceipt(root, `Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: ${VALID_BASE}\nHead: ${VALID_HEAD}\n`));
@@ -511,14 +590,14 @@ test('Codex canonical receipt provenance requires both Base and Head', () => {
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase:\nHead: def\n');
     const blockedEmpty = runHook(gate, payload.cwd, payload);
     assert.equal(JSON.parse(blockedEmpty.stdout).decision, 'block');
-    assert.match(JSON.parse(blockedEmpty.stdout).reason, /\bg\b/);
+    assert.match(JSON.parse(blockedEmpty.stdout).reason, /\bprovenance\b/);
 
     // bare base_sha without colon should block — reset cache again
     try { fs.rmSync(path.join(root, '.codex', 'hooks', '.logs', 'spec-gate-last.json'), { force: true }); } catch {}
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nbase_sha head_sha\n');
     const blockedBare = runHook(gate, payload.cwd, payload);
     assert.equal(JSON.parse(blockedBare.stdout).decision, 'block');
-    assert.match(JSON.parse(blockedBare.stdout).reason, /\bg\b/);
+    assert.match(JSON.parse(blockedBare.stdout).reason, /\bprovenance\b/);
   });
 });
 
@@ -540,7 +619,7 @@ test('Codex cache hardening: every done re-validated — mutation, deletion, mal
 
     // first-run (no cache) with valid receipt → no block, cache seeded
     try { fs.rmSync(cacheFile, { force: true }); } catch {}
-    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'auth', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
+    fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({ status: 'in_progress', current_phase: 'closeout', feature_name: 'auth', task_registry: { [taskPath]: { status: 'done', completed_at: '2026-07-29T10:00:00.000Z' } } }));
     const validBody = bindReceipt(root, validBodyTemplate);
     fs.writeFileSync(path.join(feature, taskPath), validBody);
     let res = runHook(gate, appCwd, payload);
@@ -557,7 +636,7 @@ test('Codex cache hardening: every done re-validated — mutation, deletion, mal
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nExit: 0\nBase: abc123\nHead: def456\n```\npass\n```\n');
     res = runHook(gate, appCwd, payload);
     assert.equal(JSON.parse(res.stdout).decision, 'block', 'mutated receipt missing Verification/Command should block on cache-hit');
-    assert.match(JSON.parse(res.stdout).reason, /\bc\b|\be\b/);
+    assert.match(JSON.parse(res.stdout).reason, /\bverification_state\b|\bcommand\b/);
     // second hit still blocks
     res = runHook(gate, appCwd, payload);
     assert.equal(JSON.parse(res.stdout).decision, 'block', 'second hit after mutation still blocks');
@@ -568,7 +647,7 @@ test('Codex cache hardening: every done re-validated — mutation, deletion, mal
     fs.writeFileSync(path.join(feature, taskPath), 'Status: done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: abc123\n```\npass\n```\n');
     res = runHook(gate, appCwd, payload);
     assert.equal(JSON.parse(res.stdout).decision, 'block');
-    assert.match(JSON.parse(res.stdout).reason, /\bg\b/);
+    assert.match(JSON.parse(res.stdout).reason, /\bprovenance\b/);
 
     // deletion → block with check a
     fs.writeFileSync(path.join(feature, taskPath), validBody);
@@ -777,6 +856,7 @@ test('Codex adapter enforces declared task artifact SHA-256 with missing, invali
       fs.writeFileSync(path.join(root, 'output', 'bundle.js'), artifact);
       fs.writeFileSync(path.join(feature, 'spec.json'), JSON.stringify({
         status: 'in_progress',
+        current_phase: 'closeout',
         feature_name: 'artifact-demo',
         task_registry: {
           [taskPath]: {
@@ -805,7 +885,7 @@ test('Codex adapter enforces declared task artifact SHA-256 with missing, invali
       if (shouldBlock) {
         const block = JSON.parse(result.stdout);
         assert.equal(block.decision, 'block');
-        assert.match(block.reason, /\bh\b/);
+        assert.match(block.reason, /\bartifact_hash\b/);
       } else {
         assert.equal(result.stdout, '');
       }

@@ -10,7 +10,8 @@ const NONCE_RE = /^[a-f0-9]{24}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
 const TTL_MS = 5 * 60 * 1000;
 const KEY_BYTES = 32;
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+const LEGACY_SCHEMA_VERSION = 2;
 const EPHEMERAL_FILE_RE = /^(pending|grant)-([a-f0-9]{24})\.json$/;
 const BASELINE_FILE_RE = /^baseline-([a-f0-9]{64})\.json$/;
 const FLOOR_FILE = 'policy-floor.json';
@@ -222,7 +223,7 @@ function validateEphemeral(record, kind, nonce, now, key) {
     : ['schema_version', 'kind', 'nonce', 'binding', 'issued_at', 'expires_at', 'approved_at', 'mac'];
   if (!plain(record) || !exactKeys(record, expected)) return { ok: false, reason: 'malformed authority record' };
   if (!macMatches(record, key)) return { ok: false, reason: 'authority record MAC is invalid' };
-  if (record.schema_version !== SCHEMA_VERSION || record.kind !== kind || record.nonce !== nonce || !NONCE_RE.test(nonce)) return { ok: false, reason: 'authority record identity is invalid' };
+  if (![LEGACY_SCHEMA_VERSION, SCHEMA_VERSION].includes(record.schema_version) || record.kind !== kind || record.nonce !== nonce || !NONCE_RE.test(nonce)) return { ok: false, reason: 'authority record identity is invalid' };
   if (!plain(record.binding) || typeof record.binding.session_id !== 'string' || !record.binding.session_id.trim()) return { ok: false, reason: 'authority record binding is invalid' };
   if (!validTimestamp(record.issued_at) || !Number.isFinite(record.expires_at) || record.expires_at <= Date.parse(record.issued_at)) return { ok: false, reason: 'authority record timestamps are invalid' };
   if (kind === 'grant' && !validTimestamp(record.approved_at)) return { ok: false, reason: 'authority grant approval timestamp is invalid' };
@@ -234,7 +235,7 @@ function validateBaseline(record, filename, projectRoot, key) {
   const expected = ['schema_version', 'kind', 'identity', 'policy', 'issued_at', 'updated_at', 'mac'];
   if (!plain(record) || !exactKeys(record, expected)) return { ok: false, reason: 'malformed policy baseline' };
   if (!macMatches(record, key)) return { ok: false, reason: 'policy baseline MAC is invalid' };
-  if (record.schema_version !== SCHEMA_VERSION || record.kind !== 'baseline' || !validTimestamp(record.issued_at) || !validTimestamp(record.updated_at)) return { ok: false, reason: 'policy baseline identity or timestamps are invalid' };
+  if (![LEGACY_SCHEMA_VERSION, SCHEMA_VERSION].includes(record.schema_version) || record.kind !== 'baseline' || !validTimestamp(record.issued_at) || !validTimestamp(record.updated_at)) return { ok: false, reason: 'policy baseline identity or timestamps are invalid' };
   let identity;
   try { identity = normalizeIdentity(record.identity, { allowMissingSpec: true }); } catch (error) { return { ok: false, reason: error.message }; }
   if (filename !== `baseline-${identityDigest(identity)}.json` || identity.project_root !== canonicalProjectRoot(projectRoot)) return { ok: false, reason: 'policy baseline namespace is invalid' };
@@ -246,7 +247,7 @@ function validatePolicyFloor(record, filename, key) {
   const expected = ['schema_version', 'kind', 'policy', 'issued_at', 'updated_at', 'mac'];
   if (!plain(record) || !exactKeys(record, expected)) return { ok: false, reason: 'malformed project policy floor' };
   if (!macMatches(record, key)) return { ok: false, reason: 'project policy floor MAC is invalid' };
-  if (filename !== FLOOR_FILE || record.schema_version !== SCHEMA_VERSION || record.kind !== 'policy-floor' || !validTimestamp(record.issued_at) || !validTimestamp(record.updated_at)) {
+  if (filename !== FLOOR_FILE || ![LEGACY_SCHEMA_VERSION, SCHEMA_VERSION].includes(record.schema_version) || record.kind !== 'policy-floor' || !validTimestamp(record.issued_at) || !validTimestamp(record.updated_at)) {
     return { ok: false, reason: 'project policy floor identity or timestamps are invalid' };
   }
   if (!plain(record.policy)) return { ok: false, reason: 'project policy floor policy is malformed' };
@@ -344,10 +345,6 @@ function readState(projectRoot, now = Date.now()) {
   }
   if (!state.floor) {
     state.floorMissing = true;
-    if (state.pending || state.grant || state.baselines.length > 0) {
-      state.malformed = true;
-      state.reason ||= 'project policy floor is missing';
-    }
   }
   return state;
 }
@@ -509,6 +506,11 @@ module.exports = {
   FLOOR_FILE,
   stableStringify,
   digest,
+  canonicalProjectRoot,
+  atomicWrite,
+  readKey,
+  recordMac,
+  macMatches,
   userStateRoot,
   stateDir,
   clearState,

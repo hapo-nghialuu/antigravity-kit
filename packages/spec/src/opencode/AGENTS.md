@@ -28,9 +28,11 @@ The underlying CafeKit skills are still named `hapo:*` in their documentation.
 
 ## OpenCode limits
 
-Claude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent. The completion gate (`spec-gate`: `Verification: PASS` + `## Evidence` + `task_registry.completed_at`) is **advisory in OpenCode** — OpenCode has no Stop-hook equivalent and the `spec-gate` plugin (if present) runs as a best-effort `tool.execute.after` check, not a hard turn block like Claude/Codex.
+Claude Code hooks, statusline, and settings do not run in OpenCode. Map Claude-only tools to OpenCode built-ins: `TodoWrite` → `todowrite`, `AskUserQuestion` → `question`, `Task` → the agent/subtask flow. The installed plugins under `.opencode/plugins/` provide the privacy, inspect-scope, spec-state, scaffold-guard, session-state, and docs-sync gates; other Claude runtime behavior has no OpenCode equivalent.
 
-Runtime tier: OpenCode is **tier-2** for completion enforcement. Do not claim parity with Claude/Codex on `completion_gate`; `done` without a receipt emits an advisory warning/banner but does not hard-block the turn — rely on `spec-state` tollgate + manual `/hapo:test` verification.
+The installed `spec-gate` plugin uses the cancellable `tool.execute.before` hook to hard-block supported completion/state tools (`task`, `taskupdate`, and `todowrite`) with a controlled `CAFEKIT_SPEC_GATE_BLOCKED` result when shared policy/resolver or receipt evidence is invalid or unavailable. Receipt-repair tools remain available where the host boundary permits correction.
+
+OpenCode does not expose a cancellable `session.idle`/Stop hook or final assistant-turn cancellation boundary. Those event and prompt-injection paths are observational only; do not claim full-turn parity with Claude/Codex.
 
 ## Combined-install boundary
 

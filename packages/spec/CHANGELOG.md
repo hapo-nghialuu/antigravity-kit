@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Specs v2 authoring model**: introduced independent `planning_depth` (`None|Compact|Full`) and `assurance_level` (`Routine|Elevated|Strict`) decisions. `Direct|Standard|Critical` are derived compatibility lanes; `execution_tier` is a legacy read adapter.
+- **Adaptive artifact topology**: `None` creates no durable spec; Compact and Full start with `spec.json`, `requirements.md`, and `design.md`. Research is explicit uncertainty/grounding, tasks follow real ownership/dependency/transition/proof topology, and only complex Full task graphs may use lightweight phase groups in `spec.json`; phase files are forbidden.
+- **Adaptive authoring and review**: requirements/design keep only relevant sections and add scenarios where user or error workflows warrant them. Task plans use typed anchors and a `Verification Plan`; task receipts are separate and `feature-receipt.md` belongs only to final execution closeout. Structural validation, factual grounding, and whole-spec semantic/counterexample review remain separate gates; exit 0 alone is not semantic proof.
+- **Acceptance focus**: Claude Code and Codex are the primary Specs v2 semantic acceptance targets. Existing OpenCode support remains in place outside this acceptance atom.
+- **Usage guidance**: replaced the legacy always-to-Tasks/auto-approval guide with the adaptive Specs v2 artifact, approval, semantic-review, and execution-closeout contract.
+- **Durable semantic evidence**: added read-only `--semantic-digest` plus compact `validation.semantic_review` state. Readiness rejects stale artifact/topology digests, incomplete or unknown `RN.M` coverage, vague counterexamples, fake design references, and non-independent `Strict` review without creating another report artifact.
+
 ### Fixed
 
 - **Platform selection after prior install**: `resolvePlatforms` now correctly prompts for additional platforms when user has existing CafeKit setup. Previously, merging `savedPlatforms` with `detectPlatforms()` silently skipped interactive selection because `detectPlatforms()` only scanned disk directories, preventing users from adding Codex CLI to an existing Claude Code project without `--platform` flag.

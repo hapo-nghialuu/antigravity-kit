@@ -1,50 +1,42 @@
-# EARS Format Guidelines
+# EARS authoring rules
 
-## Overview
-EARS (Easy Approach to Requirements Syntax) is the standard format for acceptance criteria in spec-driven development.
+Use EARS to make behavior testable, not to fill a template.
 
-EARS patterns describe the logical structure of a requirement (condition + subject + response) and are not tied to any particular natural language.  
-Canonical acceptance criteria are written in **English** (`spec.json.language` is `en`). A non-English rendering only appears in the optional translation mirror (`i18n/<lang>/`, see `references/translation-mirror.md`), never in the canonical files.  
-Keep EARS trigger keywords and fixed phrases in English (`When`, `If`, `While`, `Where`, `The system shall`, `The [system] shall`). In the mirror, localize only the variable parts (`[event]`, `[precondition]`, `[trigger]`, `[feature is included]`, `[response/action]`); do not interleave translated text inside the trigger or fixed English phrases themselves.
+## Canonical IDs
 
-## Primary EARS Patterns
+- Top-level headings: `Requirement N: <outcome>`.
+- Acceptance criteria: literal `RN.M` (`R1.1`, `R1.2`, ...).
+- Task mappings: numeric `N.M` only.
+- Do not emit `REQ-01`, `NFR-1`, alphabetic IDs, or bare numbered criteria.
 
-### 1. Event-Driven Requirements
-- **Pattern**: When [event], the [system] shall [response/action]
-- **Use Case**: Responses to specific events or triggers
-- **Example**: When user clicks checkout button, the Checkout Service shall validate cart contents
+## Patterns
 
-### 2. State-Driven Requirements
-- **Pattern**: While [precondition], the [system] shall [response/action]
-- **Use Case**: Behavior dependent on system state or preconditions
-- **Example**: While payment is processing, the Checkout Service shall display loading indicator
+| Need | Pattern |
+|---|---|
+| Event | `When <event>, the <system> shall <observable response>.` |
+| State | `While <state>, the <system> shall <observable response>.` |
+| Negative/error | `If <invalid or failure condition>, the <system> shall <observable response or recovery>.` |
+| Optional scope | `Where <feature is enabled>, the <system> shall <observable response>.` |
+| Always true | `The <system> shall <observable property>.` |
 
-### 3. Unwanted Behavior Requirements
-- **Pattern**: If [trigger], the [system] shall [response/action]
-- **Use Case**: System response to errors, failures, or undesired situations
-- **Example**: If invalid credit card number is entered, then the website shall display error message
+Combine conditions only when they describe one behavior. Split criteria that
+have independent triggers, outcomes, or proof.
 
-### 4. Optional Feature Requirements
-- **Pattern**: Where [feature is included], the [system] shall [response/action]
-- **Use Case**: Requirements for optional or conditional features
-- **Example**: Where the car has a sunroof, the car shall have a sunroof control panel
+## Quality gate
 
-### 5. Ubiquitous Requirements
-- **Pattern**: The [system] shall [response/action]
-- **Use Case**: Always-active requirements and fundamental system properties
-- **Example**: The mobile phone shall have a mass of less than 100 grams
+Every criterion must be singular, unambiguous, observable, and testable. Name a
+concrete subject and replace words such as “fast”, “safe”, “graceful”, or “some”
+with an observable result or threshold. Use `shall` for mandatory behavior.
 
-## Combined Patterns
-- While [precondition], when [event], the [system] shall [response/action]
-- When [event] and [additional condition], the [system] shall [response/action]
+Add a negative/error criterion when invalid input, missing permission,
+unavailable dependency, conflict, timeout, retry, rollback, or partial failure
+is relevant. Add a concrete example when values, ordering, boundaries, or
+transformation rules would otherwise admit multiple interpretations.
 
-## Subject Selection Guidelines
-- **Software Projects**: Use concrete system/service name (e.g., "Checkout Service", "User Auth Module")
-- **Process/Workflow**: Use responsible team/role (e.g., "Support Team", "Review Process")
-- **Non-Software**: Use appropriate subject (e.g., "Marketing Campaign", "Documentation")
+User Story, rationale, scenario narrative, and role framing are optional. Keep
+them only when they explain a product decision not already clear from the
+outcome and criteria.
 
-## Quality Criteria
-- Requirements must be testable, verifiable, and describe a single behavior.
-- **Measurability:** Avoid qualitative terms (e.g. "safe state", "fast", "some coverage"). Replace with measurable thresholds (e.g., "HTTP 400 error", "< 500ms response", ">= 80% coverage").
-- Use objective language: "shall" for mandatory behavior, "should" for recommendations; avoid ambiguous terms.
-- Follow EARS syntax: [condition], the [system] shall [response/action].
+Non-functional requirements are not a standard appendix. Add one only for a
+feature-specific measurable performance, security, privacy, accessibility,
+reliability, or compatibility constraint, continuing the same numeric sequence.

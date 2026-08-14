@@ -27,6 +27,19 @@ To clear the Verification Gate, you must cite one of the following concrete proo
 - **Linter Completion:** Output proving no syntax errors exist.
 - **Multimodal Visual Evidence:** `hapo:ai-multimodal` confirming that the visual rendering perfectly matches the design layout.
 
+For Specs v2, accepted proof must be persisted by the test owner at
+`receipts/<task-basename>.md`; legacy `## Evidence` remains fallback-only. The
+receipt includes identity/path, exact command, exit/result, expected versus
+observed behavior, applicable negative/reachability/artifact proof, and bound
+Base/Head. Final integration uses `feature-receipt.md`. Missing final receipt is
+normal before closeout, but mandatory at closeout. Neither receipt grants
+approval, readiness, audit status, or product semantics.
+
+For v2.1, the semantic receipt is reviewed input, not execution proof. It binds
+exact criteria and counterexamples shaped as `criterion`, `case_kind`,
+`scenario`, `expected`, `decision_refs`, and `verification_ref`. Deterministic
+validator success is never a semantic-review verdict.
+
 ## 4. How to Handle Missing Proof
 If you are asked to review a PR or commit and no execution proof is available:
 1. **Return `BLOCKED`** and name missing commands, artifacts, permissions, or environment access.

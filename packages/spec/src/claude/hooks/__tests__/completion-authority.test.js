@@ -12,6 +12,9 @@ const CLAUDE_HOOK = path.join(__dirname, '..', 'completion-authority.cjs');
 const CODEX_HOOKS = path.join(ROOT, 'codex/hooks');
 const POLICY = require(path.join(ROOT, 'claude/scripts/workflow-policy.cjs'));
 const PROVENANCE = require(path.join(ROOT, 'claude/scripts/provenance.cjs'));
+const AUTHORITY_CHECK = require(path.join(ROOT, 'claude/hooks/completion-authority-check.cjs'));
+const RESOLVER = require(path.join(ROOT, 'claude/scripts/spec-resolver.cjs'));
+const { copyClaudeTestRuntime } = require(path.join(ROOT, '../bin/__tests__/test-runtime-dependency-closure.cjs'));
 const FEATURE = 'authority-fixture';
 const TASK = 'tasks/closeout.md';
 const TEST_HOMES = new Map();
@@ -56,7 +59,7 @@ function context(root, session = 'session-a', featureName = FEATURE) {
   });
 }
 
-function prepare(root, { lane = 'Standard', status = 'in_progress', proofs = true, feature = FEATURE } = {}) {
+function prepare(root, { lane = 'Standard', status = 'in_progress', phase = 'closeout', proofs = true, feature = FEATURE } = {}) {
   const featureDir = path.join(root, 'specs', feature);
   fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
   const policyInput = lane === 'Critical'
@@ -66,8 +69,9 @@ function prepare(root, { lane = 'Standard', status = 'in_progress', proofs = tru
       : { riskSignals: {} };
   const spec = {
     status,
+    current_phase: phase,
     feature_name: feature,
-    workflow_policy: POLICY.workflowPolicySnapshot(policyInput),
+    workflow_policy: POLICY.canonicalWorkflowPolicySnapshot(policyInput),
     task_registry: { [TASK]: { status: 'done', completed_at: '2026-08-12T00:00:00.000Z' } },
   };
   fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify(spec));
@@ -80,6 +84,13 @@ function prepare(root, { lane = 'Standard', status = 'in_progress', proofs = tru
     `Head: ${runtime.head}`,
   ].join('\n');
   fs.writeFileSync(path.join(featureDir, TASK), `# Closeout\n\nStatus: done\n\n## Evidence\n\n${body}\n`);
+  fs.writeFileSync(path.join(featureDir, 'feature-receipt.md'), [
+    `Feature: ${feature}`,
+    'Expected: final integration verification passes',
+    'Observed: final integration verification passed',
+    body,
+    '',
+  ].join('\n'));
   if (proofs) {
     spec.proofs = {
       needsInspection: { receipt: body },
@@ -121,12 +132,9 @@ function adapter(kind, root) {
       },
     };
   }
+  copyClaudeTestRuntime(path.join(ROOT, '..'), path.join(root, '.codex'));
   const hooks = path.join(root, '.codex/hooks');
   fs.cpSync(CODEX_HOOKS, hooks, { recursive: true });
-  fs.mkdirSync(path.join(root, '.codex/scripts'), { recursive: true });
-  for (const file of ['workflow-policy.cjs', 'provenance.cjs', 'spec-resolver.cjs']) {
-    fs.copyFileSync(path.join(ROOT, 'claude/scripts', file), path.join(root, '.codex/scripts', file));
-  }
   return {
     root,
     hook: path.join(hooks, 'completion-authority.cjs'),
@@ -157,6 +165,13 @@ function stateRecord(runtime, prefix) {
   assert.equal(files.length, 1, `expected exactly one ${prefix} authority record`);
   const projects = fs.readdirSync(runtime.state, { withFileTypes: true }).find((entry) => entry.isDirectory());
   return path.join(runtime.state, projects.name, files[0]);
+}
+
+function writeRuntime(runtime, value) {
+  const platformDir = runtime.hook.includes(`${path.sep}.codex${path.sep}`) ? '.codex' : '.claude';
+  const dir = path.join(runtime.root, platformDir);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'runtime.json'), `${JSON.stringify(value)}\n`);
 }
 
 function sessionStart(runtime, source = 'startup', sessionId = 'session-a') {
@@ -196,6 +211,39 @@ function nonceFrom(result) {
 }
 
 for (const kind of ['claude', 'codex']) {
+  test(`${kind}: authoring, partial execution, done-before-closeout, and stop loops are silent`, () => {
+    const root = gitFixture();
+    try {
+      const runtime = adapter(kind, root);
+      const fixture = prepare(root, { phase: 'authoring' });
+      let spec = JSON.parse(fs.readFileSync(fixture.specFile, 'utf8'));
+      spec.task_registry = {};
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      fs.rmSync(path.join(fixture.featureDir, 'feature-receipt.md'), { force: true });
+      assert.equal(stop(runtime).stdout.trim(), '', 'Compact taskless authoring pause must be silent');
+
+      spec.task_registry = { [TASK]: { status: 'in_progress', completed_at: null } };
+      spec.current_phase = 'implementation';
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      assert.equal(stop(runtime).stdout.trim(), '', 'partial task execution must be silent');
+
+      spec.task_registry[TASK] = { status: 'done', completed_at: '2026-08-12T00:00:00.000Z' };
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      assert.equal(stop(runtime).stdout.trim(), '', 'done tasks without explicit closeout must be silent');
+      assert.equal(stateFiles(runtime).length, 0, 'inactive stops must not mutate authority state');
+
+      const loop = stop(runtime, { stop_hook_active: true });
+      assert.equal(loop.status, 0, loop.stderr);
+      assert.equal(loop.stdout.trim(), '', 'recursive Stop invocation must be silent');
+
+      spec.current_phase = 'closeout';
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      assert.match(block(stop(runtime)).reason, /technical completion proof|feature-receipt/i);
+    } finally {
+      cleanupFixture(root);
+    }
+  });
+
   test(`${kind}: exact user approval is one-time and runtime-bound`, () => {
     const root = gitFixture();
     try {
@@ -300,7 +348,7 @@ for (const kind of ['claude', 'codex']) {
     }
   });
 
-  test(`${kind}: completed, empty/malformed candidates, Critical fake proofs, and Direct no-spec are fail-closed`, () => {
+  test(`${kind}: completed, invalid/malformed candidates, Critical fake proofs, and Direct no-spec are fail-closed`, () => {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
@@ -319,9 +367,9 @@ for (const kind of ['claude', 'codex']) {
 
       const specFile = path.join(root, 'specs', FEATURE, 'spec.json');
       const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
-      spec.task_registry = {};
+      spec.task_registry[TASK].completed_at = null;
       fs.writeFileSync(specFile, JSON.stringify(spec));
-      assert.match(block(stop(runtime)).reason, /task_registry is missing or empty/i);
+      assert.match(block(stop(runtime)).reason, /completed_at/i);
 
       fs.writeFileSync(specFile, '{ malformed');
       assert.equal(block(stop(runtime)).decision, 'block');
@@ -435,12 +483,12 @@ for (const kind of ['claude', 'codex']) {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
-      prepare(root, { proofs: false });
+      prepare(root, { lane: 'Critical', proofs: false });
       const incomplete = block(stop(runtime));
       assert.match(incomplete.reason, /technical|proof|missing/i);
       assert.equal(stateFiles(runtime).filter((name) => name.startsWith('baseline-')).length, 1);
 
-      prepare(root);
+      prepare(root, { lane: 'Critical' });
       const pending = nonceFrom(stop(runtime));
       assert.equal(sessionStart(runtime).status, 0);
       assert.equal(stateFiles(runtime).filter((name) => name.startsWith('baseline-')).length, 1);
@@ -454,7 +502,7 @@ for (const kind of ['claude', 'codex']) {
       approve(runtime, retry.nonce);
       const specFile = path.join(root, 'specs', FEATURE, 'spec.json');
       const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
-      spec.workflow_policy = POLICY.workflowPolicySnapshot({ reversible: true, lowRisk: true, isolated: true });
+      spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' });
       fs.writeFileSync(specFile, JSON.stringify(spec));
       const downgrade = block(stop(runtime));
       assert.match(downgrade.reason, /monotonic|downgraded/i);
@@ -463,7 +511,7 @@ for (const kind of ['claude', 'codex']) {
     }
   });
 
-  test(`${kind}: Critical feature A survives deletion and blocks Direct feature B`, () => {
+  test(`${kind}: Critical feature A cannot raise ceremony for Compact Routine feature B`, () => {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
@@ -472,9 +520,12 @@ for (const kind of ['claude', 'codex']) {
       assert.equal(stateFiles(runtime).filter((name) => name === 'policy-floor.json').length, 1);
 
       fs.rmSync(path.join(root, 'specs', 'critical-feature-a'), { recursive: true, force: true });
-      prepare(root, { feature: 'direct-feature-b', lane: 'Direct' });
-      const blocked = block(stop(runtime));
-      assert.match(blocked.reason, /project policy floor|monotonic|downgraded/i);
+      prepare(root, { feature: 'compact-feature-b', lane: 'Standard' });
+      const light = nonceFrom(stop(runtime));
+      assert.match(light.body.reason, /approval/i);
+      const floor = JSON.parse(fs.readFileSync(stateRecord(runtime, 'policy-floor'), 'utf8'));
+      assert.deepEqual(floor.policy, POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' }));
+      assert.equal(stateFiles(runtime).filter((name) => name.startsWith('baseline-')).length, 2);
     } finally {
       cleanupFixture(root);
     }
@@ -511,40 +562,39 @@ for (const kind of ['claude', 'codex']) {
     }
   });
 
-  test(`${kind}: project policy floor prevents risk and proof-obligation removal`, () => {
+  test(`${kind}: project policy floor prevents risk removal without coupling assurance to durable state`, () => {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
       prepare(root, { lane: 'Critical' });
-      nonceFrom(stop(runtime));
       const specFile = path.join(root, 'specs', FEATURE, 'spec.json');
+      const initialSpec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
+      initialSpec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ riskSignals: { auth: true, privacy: true } });
+      assert.equal(POLICY.readWorkflowPolicySnapshot(initialSpec).proof_obligations.includes('needsDurableTaskState'), false);
+      fs.writeFileSync(specFile, JSON.stringify(initialSpec));
+      nonceFrom(stop(runtime));
       const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
       assert.ok(spec.workflow_policy.risks.length > 0);
-      assert.ok(spec.workflow_policy.proof_obligations.length > 0);
-      const removedObligationIndex = spec.workflow_policy.proof_obligations.length - 1;
-      spec.workflow_policy = {
-        ...spec.workflow_policy,
-        risks: spec.workflow_policy.risks.slice(0, -1),
-        proof_obligations: spec.workflow_policy.proof_obligations.slice(0, -1),
-        actor_needs: spec.workflow_policy.actor_needs.filter((_, index) => index !== removedObligationIndex),
-      };
+      assert.ok(POLICY.readWorkflowPolicySnapshot(spec).proof_obligations.length > 0);
+      spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ riskSignals: { auth: true } });
       fs.writeFileSync(specFile, JSON.stringify(spec));
       const blocked = block(stop(runtime));
       assert.match(blocked.reason, /risk .*removed/i);
-      assert.match(blocked.reason, /obligation .*removed/i);
     } finally {
       cleanupFixture(root);
     }
   });
 
-  test(`${kind}: missing or corrupt project policy floor fails closed`, () => {
+  test(`${kind}: missing legacy floor migrates from config while corrupt floor fails closed`, () => {
     const missingRoot = gitFixture();
     try {
       const runtime = adapter(kind, missingRoot);
       prepare(missingRoot);
       nonceFrom(stop(runtime));
       fs.rmSync(stateRecord(runtime, 'policy-floor'), { force: true });
-      assert.match(block(stop(runtime)).reason, /floor|authority/i);
+      const migrated = nonceFrom(stop(runtime));
+      assert.match(migrated.body.reason, /approval/i);
+      assert.equal(JSON.parse(fs.readFileSync(stateRecord(runtime, 'policy-floor'), 'utf8')).schema_version, 3);
     } finally {
       cleanupFixture(missingRoot);
     }
@@ -561,19 +611,19 @@ for (const kind of ['claude', 'codex']) {
     }
   });
 
-  test(`${kind}: valid policy escalation is allowed, while missing policy is blocked`, () => {
+  test(`${kind}: configured minimum is stable across feature escalation, while missing policy is blocked`, () => {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
       prepare(root, { lane: 'Standard' });
       nonceFrom(stop(runtime));
       const standardFloor = JSON.parse(fs.readFileSync(stateRecord(runtime, 'policy-floor'), 'utf8'));
-      assert.equal(standardFloor.policy.lane, 'Standard');
+      assert.equal(POLICY.readWorkflowPolicySnapshot({ workflow_policy: standardFloor.policy }).lane, 'Standard');
       prepare(root, { lane: 'Critical' });
       const escalated = nonceFrom(stop(runtime));
       assert.match(escalated.body.reason, /approval/i);
       const criticalFloor = JSON.parse(fs.readFileSync(stateRecord(runtime, 'policy-floor'), 'utf8'));
-      assert.equal(criticalFloor.policy.lane, 'Critical');
+      assert.deepEqual(criticalFloor.policy, standardFloor.policy);
 
       const missingRoot = gitFixture();
       try {
@@ -591,21 +641,63 @@ for (const kind of ['claude', 'codex']) {
     }
   });
 
-  test(`${kind}: explicit targets cannot hide global persisted specs or mismatch the sole candidate`, () => {
+  test(`${kind}: canonical config minimum applies without inheriting feature policy`, () => {
+    const root = gitFixture();
+    try {
+      const runtime = adapter(kind, root);
+      writeRuntime(runtime, { spec: { policy_minimum: { planning_depth: 'Full', assurance_level: 'Elevated' } } });
+      prepare(root, { lane: 'Standard' });
+      assert.match(block(stop(runtime)).reason, /configured project minimum/i);
+      const strict = prepare(root, { lane: 'Critical' });
+      const spec = JSON.parse(fs.readFileSync(strict.specFile, 'utf8'));
+      spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Full', assurance_level: 'Strict', risks: ['auth'] });
+      fs.writeFileSync(strict.specFile, JSON.stringify(spec));
+      nonceFrom(stop(runtime));
+      const floor = JSON.parse(fs.readFileSync(stateRecord(runtime, 'policy-floor'), 'utf8'));
+      assert.deepEqual(floor.policy, POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Full', assurance_level: 'Elevated' }));
+    } finally {
+      cleanupFixture(root);
+    }
+  });
+
+  test(`${kind}: legacy v2 baseline migrates to canonical 2.1 without losing feature history`, () => {
+    const root = gitFixture();
+    try {
+      const runtime = adapter(kind, root);
+      const fixture = prepare(root);
+      const spec = JSON.parse(fs.readFileSync(fixture.specFile, 'utf8'));
+      spec.workflow_policy = POLICY.workflowPolicySnapshot({ riskSignals: {} });
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      nonceFrom(stop(runtime));
+      const first = JSON.parse(fs.readFileSync(stateRecord(runtime, 'baseline-'), 'utf8'));
+      assert.equal(first.policy.version, '2.1');
+      assert.equal(first.schema_version, 3);
+
+      spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' });
+      fs.writeFileSync(fixture.specFile, JSON.stringify(spec));
+      nonceFrom(stop(runtime));
+      const migrated = JSON.parse(fs.readFileSync(stateRecord(runtime, 'baseline-'), 'utf8'));
+      assert.equal(migrated.policy.version, '2.1');
+      assert.equal(migrated.issued_at, first.issued_at);
+    } finally {
+      cleanupFixture(root);
+    }
+  });
+
+  test(`${kind}: explicit target resolves before sibling ambiguity while no target remains ambiguous`, () => {
     const root = gitFixture();
     try {
       const runtime = adapter(kind, root);
       prepare(root);
       assert.match(block(stop(runtime, { featureName: 'other-feature' })).reason, /explicit/i);
-      const otherDir = path.join(root, 'specs', 'other-feature');
-      fs.mkdirSync(otherDir, { recursive: true });
-      fs.writeFileSync(path.join(otherDir, 'spec.json'), JSON.stringify({
-        feature_name: 'other-feature',
-        status: 'in_progress',
-        workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: {} }),
-        task_registry: { [TASK]: { status: 'in_progress' } },
-      }));
-      assert.match(block(stop(runtime, { featureName: FEATURE })).reason, /multiple_persisted|multiple/i);
+      prepare(root, { feature: 'other-feature', phase: 'implementation' });
+      assert.ok(nonceFrom(stop(runtime, { featureName: FEATURE })).nonce);
+      assert.match(block(stop(runtime)).reason, /multiple_persisted|multiple/i);
+      for (const malformed of [
+        { featureName: '' },
+        { featureName: 42 },
+        { specPath: '../escape/spec.json' },
+      ]) assert.match(block(stop(runtime, malformed)).reason, /explicit|malformed|escape/i);
     } finally {
       cleanupFixture(root);
     }
@@ -673,14 +765,7 @@ test('installed scaffold observes Critical policy before Stop and source scaffol
         });
       },
     };
-    const scaffolded = spawnSync(process.execPath, [
-      installedScaffold,
-      'installed-critical',
-      '--tasks',
-      'R0-01-authority-baseline',
-      '--lane',
-      'Critical',
-    ], {
+    const scaffolded = spawnSync(process.execPath, [installedScaffold, 'installed-critical', '--lane', 'Critical'], {
       cwd: root,
       env: { ...process.env, HOME: installedHome, USERPROFILE: installedHome },
       encoding: 'utf8',
@@ -698,14 +783,7 @@ test('installed scaffold observes Critical policy before Stop and source scaffol
     const disappeared = block(stop(installedRuntime));
     assert.match(disappeared.reason, /disappeared/i);
 
-    const sourceScaffolded = spawnSync(process.execPath, [
-      path.join(ROOT, 'claude/scripts/spec-scaffold.cjs'),
-      'source-critical',
-      '--tasks',
-      'R0-01-source-baseline',
-      '--lane',
-      'Critical',
-    ], {
+    const sourceScaffolded = spawnSync(process.execPath, [path.join(ROOT, 'claude/scripts/spec-scaffold.cjs'), 'source-critical', '--lane', 'Critical'], {
       cwd: sourceRoot,
       env: { ...process.env, HOME: sourceHome, USERPROFILE: sourceHome },
       encoding: 'utf8',
@@ -717,4 +795,153 @@ test('installed scaffold observes Critical policy before Stop and source scaffol
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(sourceHome, { recursive: true, force: true });
   }
+});
+
+test('canonical final-state decision rejects every stale mutation class before execution proof', () => {
+  const root = gitFixture();
+  try {
+    const featureDir = path.join(root, 'specs', 'final-state-matrix');
+    fs.mkdirSync(featureDir, { recursive: true });
+    const specFile = path.join(featureDir, 'spec.json');
+    const digest = `sha256:${'a'.repeat(64)}`;
+    const baseSpec = {
+      schema_version: '2.1', feature_name: 'final-state-matrix', ready_for_implementation: true,
+      validation: { status: 'completed', semantic_review: { status: 'completed', semantic_digest: digest } },
+      workflow_policy: POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' }),
+    };
+    fs.writeFileSync(specFile, JSON.stringify(baseSpec));
+    const candidate = { featureName: 'final-state-matrix', featureDir, specFile, spec: baseSpec };
+    const state = { validationErrors: [], groundingErrors: [], digest, observed: false };
+    const dependencies = {
+      validator: {
+        validateSpec: () => ({ errors: state.validationErrors, warnings: [] }),
+        computeSemanticDigest21: () => ({ errors: [], digest: state.digest }),
+      },
+      grounder: { groundSpec: () => ({ errors: state.groundingErrors, warnings: [], checked: 0 }) },
+      semanticAuthority: { verifyAttestation: () => ({ ok: state.observed, reason: 'missing observation' }) },
+    };
+    const cases = [
+      ['readiness', (spec) => { spec.ready_for_implementation = false; }, /readiness/],
+      ['canonical validation', () => { state.validationErrors = ['invalid current state']; }, /validation failed/],
+      ['grounding', () => { state.groundingErrors = ['ungrounded target']; }, /grounding failed/],
+      ['semantic digest', () => { state.digest = `sha256:${'b'.repeat(64)}`; }, /digest is stale/],
+    ];
+    for (const [name, mutate, expected] of cases) {
+      candidate.spec = structuredClone(baseSpec);
+      state.validationErrors = [];
+      state.groundingErrors = [];
+      state.digest = digest;
+      mutate(candidate.spec);
+      const result = AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies });
+      assert.equal(result.ok, false, name);
+      assert.match(result.reason, expected, name);
+    }
+
+    candidate.spec = structuredClone(baseSpec);
+    state.digest = digest;
+    assert.equal(AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies }).ok, true);
+    candidate.spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Full', assurance_level: 'Strict' });
+    assert.match(
+      AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies }).reason,
+      /host-hook-observed SubagentStop/,
+    );
+    state.observed = true;
+    assert.equal(AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies }).ok, true);
+  } finally { cleanupFixture(root); }
+});
+
+test('schema 2.1 lifecycle vocabulary is exact and legacy aliases stay in the legacy adapter', () => {
+  const canonical = [
+    ['in_progress', false],
+    ['paused', false],
+    ['blocked', false],
+    ['done', true],
+  ];
+  for (const checker of [AUTHORITY_CHECK, require(path.join(ROOT, 'codex/hooks/completion-authority-check.cjs'))]) {
+    for (const [status, terminal] of canonical) {
+      const spec = { schema_version: '2.1', status };
+      assert.equal(checker.isValidLifecycleStatus(spec), true, status);
+      assert.equal(checker.isDurableCloseout(spec), terminal, status);
+    }
+    for (const alias of ['completed', 'complete', 'in-progress']) {
+      const spec = { schema_version: '2.1', status: alias, current_phase: 'closeout' };
+      assert.equal(checker.isValidLifecycleStatus(spec), false, alias);
+      assert.equal(checker.isDurableCloseout(spec), false, alias);
+    }
+    assert.equal(checker.isValidLifecycleStatus({ schema_version: '2.0', status: 'completed' }), true);
+    assert.equal(checker.isDurableCloseout({ schema_version: '2.0', status: 'in_progress', current_phase: 'closeout' }), true);
+  }
+});
+
+test('final-state authority loads the validator CommonJS API directly and propagates canonical failures', () => {
+  const root = gitFixture();
+  try {
+    const validatorPath = path.join(ROOT, 'claude/scripts/validate-spec-output.cjs');
+    const canonicalValidator = require(validatorPath);
+    const featureDir = path.join(root, 'specs', 'direct-validator-api');
+    fs.mkdirSync(featureDir, { recursive: true });
+    const specFile = path.join(featureDir, 'spec.json');
+    const digest = `sha256:${'a'.repeat(64)}`;
+    const candidate = {
+      featureName: 'direct-validator-api', featureDir, specFile,
+      spec: {
+        schema_version: '2.1', status: 'done', ready_for_implementation: true,
+        validation: { status: 'completed', semantic_review: { status: 'completed', semantic_digest: digest } },
+        workflow_policy: POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' }),
+      },
+    };
+    fs.writeFileSync(specFile, `${JSON.stringify(candidate.spec, null, 2)}\n`);
+    const validatorFixture = path.join(root, 'direct-validator.cjs');
+    fs.writeFileSync(validatorFixture, [
+      "'use strict';",
+      "module.exports = {",
+      "  validateSpec() { return { errors: ['direct-api-canonical-failure'], warnings: [] }; },",
+      `  computeSemanticDigest21() { return { errors: [], digest: '${digest}' }; },`,
+      "};",
+      '',
+    ].join('\n'));
+    const invalidFixture = path.join(root, 'invalid-validator.cjs');
+    fs.writeFileSync(invalidFixture, 'module.exports = { validateSpec() {} };\n');
+
+    for (const [name, checkerPath] of [
+      ['claude', path.join(ROOT, 'claude/hooks/completion-authority-check.cjs')],
+      ['codex', path.join(ROOT, 'codex/hooks/completion-authority-check.cjs')],
+    ]) {
+      const checker = require(checkerPath);
+      assert.doesNotMatch(fs.readFileSync(checkerPath, 'utf8'), /spawnSync|node:child_process|require\(['"]child_process['"]\)/, `${name} has no validator CLI path`);
+      const dependencies = checker.finalStateDependencies();
+      assert.equal(dependencies.validator.validateSpec, canonicalValidator.validateSpec, `${name} resolves the source CommonJS API directly`);
+      assert.equal(dependencies.validator.computeSemanticDigest21, canonicalValidator.computeSemanticDigest21, `${name} resolves the digest API directly`);
+      const directValidator = checker.validatorApi(validatorFixture);
+      const result = checker.validateCanonicalFinalState({
+        policy: POLICY, projectRoot: root, candidate,
+        dependencies: {
+          validator: directValidator,
+          grounder: { groundSpec: () => ({ errors: [], warnings: [] }) },
+          semanticAuthority: { verifyAttestation: () => ({ ok: true }) },
+        },
+      });
+      assert.equal(result.ok, false, name);
+      assert.match(result.reason, /direct-api-canonical-failure/, name);
+      assert.throws(() => checker.validatorApi(invalidFixture), /must export validateSpec and computeSemanticDigest21/, name);
+    }
+  } finally { cleanupFixture(root); }
+});
+
+test('persisted resolver isolates exact explicit target from malformed siblings and scans globally only without target', () => {
+  const root = gitFixture();
+  try {
+    prepare(root, { feature: 'exact-target', phase: 'implementation' });
+    const malformedDir = path.join(root, 'specs', 'malformed-sibling');
+    fs.mkdirSync(malformedDir, { recursive: true });
+    fs.writeFileSync(path.join(malformedDir, 'spec.json'), '{ malformed');
+    const explicit = RESOLVER.resolvePersistedSpec({ projectRoot: root, runtime: {}, target: { featureName: 'exact-target' } });
+    assert.equal(explicit.error, undefined);
+    assert.equal(explicit.featureName, 'exact-target');
+    const global = RESOLVER.resolvePersistedSpec({ projectRoot: root, runtime: {} });
+    assert.equal(global.error, 'invalid_specs');
+    for (const target of [{ featureName: '' }, { featureName: 42 }, { specPath: '../escape/spec.json' }]) {
+      assert.match(RESOLVER.resolvePersistedSpec({ projectRoot: root, runtime: {}, target }).error, /^explicit_/);
+    }
+  } finally { cleanupFixture(root); }
 });

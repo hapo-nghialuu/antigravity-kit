@@ -50,10 +50,14 @@ When a relationship is detected, update `spec.json` of **BOTH** specs:
 
 ### Step 5: Handle Ambiguity
 
-If the relationship is unclear, ask user via `AskUserQuestion`:
-- **Title:** "Cross-Spec Dependencies"
-- **Question:** "Spec `A` and spec `B` appear related. What's the relationship?"
-- **Options:** "A blocks B" | "B blocks A" | "Mutual dependency" | "Not related"
+Treat dependency direction as a `repository_fact`: inspect owned outputs,
+consumers, typed boundaries, and current lifecycle, then ground the edge. Do not
+ask the user to guess a factual graph relationship. If no direction can be
+grounded, leave the edge absent and report the exact grounding blocker.
+
+If choosing which deliverable proceeds first changes user-owned scope, release
+ordering, data handling, or an irreversible commitment, HOLD and ASK for that
+decision; unresolved `user_owned` ordering blocks readiness.
 
 ## Blocked State
 

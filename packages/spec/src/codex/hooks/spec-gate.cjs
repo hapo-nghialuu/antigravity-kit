@@ -9,8 +9,13 @@ const {
   logCrash,
   readPayload
 } = require('./lib/hook-context.cjs');
-const { checkReceipt, evidenceBody, loadSharedPolicy } = require('./lib/spec-receipt.cjs');
+const {
+  checkFeatureReceipt,
+  checkReceiptDetails,
+  loadSharedPolicy,
+} = require('./lib/spec-receipt.cjs');
 const { taskStatusMap } = require('./lib/spec-utils.cjs');
+const FINAL_STATE = require('./completion-authority-check.cjs');
 
 function emitBlock(reason) {
   process.stdout.write(`${JSON.stringify({ decision: 'block', reason })}\n`);
@@ -24,22 +29,6 @@ function sessionIdentity(payload) {
     payload && payload.session && payload.session.id,
   ];
   return candidates.find((value) => typeof value === 'string' && value.trim() !== '') || null;
-}
-
-function readReceiptBody(featureDir, taskPath) {
-  const featureRoot = path.resolve(featureDir);
-  const target = path.resolve(featureRoot, taskPath);
-  const relative = path.relative(featureRoot, target);
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
-  try {
-    const canonicalFeature = fs.realpathSync(featureRoot);
-    const canonicalTarget = fs.realpathSync(target);
-    const canonicalRelative = path.relative(canonicalFeature, canonicalTarget);
-    if (canonicalRelative === '..' || canonicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(canonicalRelative)) return null;
-    return evidenceBody(fs.readFileSync(canonicalTarget, 'utf8'));
-  } catch (_) {
-    return null;
-  }
 }
 
 try {
@@ -56,12 +45,15 @@ try {
   if (typeof POLICY.completionDecisionForSpec !== 'function') {
     throw new Error('shared workflow policy lacks completion authority functions');
   }
-  const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
-  const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
-  const { resolveActiveSpec } = require('./lib/spec-utils.cjs');
-  const resolved = resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath);
+  const resolver = require('./lib/spec-utils.cjs');
+  const resolved = FINAL_STATE.resolveCandidate({
+    resolver,
+    projectRoot,
+    runtime,
+    payload,
+  });
   if (!resolved) process.exit(0);
-  if (resolved.error === 'multiple_active') {
+  if (resolved.error === 'multiple_active' || resolved.error === 'multiple_persisted') {
     process.stdout.write(`${JSON.stringify({
       decision: 'block',
       reason: `Completion gate: multiple active specs detected (${resolved.candidates.join(', ')}). Provide explicit feature target or resolve ambiguity before completing tasks.`
@@ -84,6 +76,22 @@ try {
   }
   if (resolved.error) process.exit(0);
   const active = resolved;
+  const lifecyclePhase = active.spec.current_phase || active.spec.phase;
+  const explicitCloseout = ['done', 'completed', 'complete'].includes(active.spec.status)
+    || ['closeout', 'completion', 'completed', 'complete'].includes(lifecyclePhase);
+  if (active.spec.schema_version === '2.1') {
+    const finalState = FINAL_STATE.evaluateCloseout({
+      policy: POLICY,
+      projectRoot,
+      runtime,
+      payload: { ...payload, session_id: sessionIdentity(payload) },
+    });
+    if (!finalState.ok) {
+      emitBlock(`Completion gate: ${finalState.reason}`);
+      process.exit(0);
+    }
+    if (finalState.active) process.exit(0);
+  }
   const runtimeContext = POLICY.deriveRuntimeContext({
     projectRoot,
     specsRoot: active.specsDir,
@@ -146,21 +154,28 @@ try {
   const receiptBodies = new Map();
   const failures = allDoneTasks
     .map((taskPath) => {
-      const body = readReceiptBody(featureDir, taskPath);
-      if (body !== null) receiptBodies.set(taskPath, body);
+      const proof = checkReceiptDetails(featureDir, taskPath, registry[taskPath], runtimeContext);
+      if (proof.body) receiptBodies.set(taskPath, proof.body);
       return {
         taskPath,
-        failures: checkReceipt(featureDir, taskPath, registry[taskPath], runtimeContext)
+        failures: proof.failures
       };
     })
     .filter((result) => result.failures.length);
 
-  const firstReceiptTask = allDoneTasks.find((taskPath) => receiptBodies.has(taskPath));
-  const completion = allDoneTasks.length > 0 && Object.prototype.hasOwnProperty.call(active.spec, 'workflow_policy')
+  const featureCloseoutRequired = explicitCloseout && allDoneTasks.length > 0;
+  const featureReceipt = featureCloseoutRequired
+    ? checkFeatureReceipt(featureDir, runtimeContext)
+    : null;
+  if (featureReceipt && featureReceipt.failures.length) {
+    failures.push({ taskPath: 'feature-receipt.md', failures: featureReceipt.failures });
+  }
+  const completion = featureCloseoutRequired && featureReceipt?.failures.length === 0
+    && Object.prototype.hasOwnProperty.call(active.spec, 'workflow_policy')
     ? POLICY.completionDecisionForSpec(active.spec, {
       runtimeContext,
-      executionReceipt: firstReceiptTask ? receiptBodies.get(firstReceiptTask) : null,
-      taskContext: firstReceiptTask ? registry[firstReceiptTask] : null,
+      executionReceipt: featureReceipt.body,
+      taskContext: {},
     })
     : null;
 
@@ -178,14 +193,14 @@ try {
   if (!failures.length && !completionBlocked) process.exit(0);
   const lines = [
     failures.length > 0
-      ? `Completion gate: ${failures.length} newly-done task(s) lack a verification receipt.`
+      ? `Completion gate: ${failures.length} done task(s) lack a verification receipt.`
       : 'Completion gate: workflow completion proof is incomplete.'
   ];
   for (const result of failures) {
-    lines.push(
-      `- \`${result.taskPath}\`: failed check(s) ${result.failures.join(', ')}`,
-      `  Add \`Verification: PASS\`, commands, and successful outcomes under \`## Evidence\` in \`specs/${active.featureName}/${result.taskPath}\`, then re-sync spec.json.`
-    );
+    lines.push(`- \`${result.taskPath}\`: failed check(s) ${result.failures.join(', ')}`);
+    lines.push(result.taskPath === 'feature-receipt.md'
+      ? `  Run final integration proof, then write \`specs/${active.featureName}/feature-receipt.md\`.`
+      : `  Write canonical proof to \`specs/${active.featureName}/receipts/${path.posix.basename(result.taskPath)}\`; legacy \`## Evidence\` remains read-compatible.`);
   }
   if (completionBlocked) {
     lines.push(`- Completion decision unfinished: ${completion.blocker || 'required workflow proof is missing.'}`);
