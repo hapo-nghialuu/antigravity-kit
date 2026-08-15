@@ -21,6 +21,12 @@ không hỗ trợ downgrade cho đến khi có trusted issuer. Baseline không l
 ceremony sang feature khác và độc lập với project minimum. Risk không tự tạo
 research, task, phase hoặc reviewer.
 
+Risk bất kỳ tự động nâng assurance tối thiểu từ `Routine` lên `Elevated` để có
+inspection kỹ hơn. `Strict` là opt-in: chỉ chọn khi user/project policy yêu cầu
+independent audit, hoặc user xác nhận một nhu cầu audit cụ thể của scope. Keyword
+như auth/privacy/migration, nhãn high/critical, `Full`, hay sở thích của model
+không tự bật `Strict`.
+
 ## Các lệnh chính
 
 ```text
@@ -73,10 +79,10 @@ ghi ở execution closeout.
 - bảng ownership duy nhất là `ID | Type | Target | Role | Access | Action`.
 
 `design.md` có đúng một section `Verification Definitions`. Mỗi dòng V dùng
-đúng syntax parser nhìn thấy:
+đúng syntax parser nhìn thấy (Criteria và Owner là bắt buộc):
 
 ```markdown
-- **V1**: Criterion R1.1; Decision refs D1, I1, C1; Method `npm test`; Expected exit 0 và state đúng; Negative/failure input sai trả lỗi đã định nghĩa; Reachability/grounding `src/entry.js` gọi boundary A-D-01 và anchors đều ground.
+- **V1**: Criteria R1.1; Owner A-D-01; Decision refs D1, I1, C1; Method command `npm test`; Expected exit 0 và state đúng; Negative/failure input sai trả lỗi đã định nghĩa; Reachability/grounding entrypoint `src/entry.js` via A-D-01.
 ```
 
 Không đổi thành table hoặc `### V1`. Mỗi `RN.M` có đúng một implementation
@@ -91,21 +97,39 @@ Validator structural exit 0 không tự chứng minh semantic quality. Trước
 readiness vẫn phải review toàn consistency graph và thử counterexample có thể
 khiến hai implementer chọn behavior khác nhau.
 
-Sau khi chốt bytes cuối, lấy digest read-only:
+Sau khi chốt bytes cuối, lấy digest read-only (không hand-edit authority):
 
 ```bash
+# Claude Code
 node .claude/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
+# Codex (installed projection)
+node .codex/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
 ```
 
-Ghi digest, toàn bộ exact `RN.M` và counterexample vào
-`validation.semantic_review`. Mỗi counterexample có đúng `criterion`,
-`case_kind`, `scenario`, `expected`, `decision_refs`, `verification_ref`, và
-mọi ref phải tồn tại trong `design.md`. Routine/Elevated không có reviewer
-ceremony. Strict cần event được host hook quan sát từ allowlisted reviewer
-capability; đây là honest-agent guardrail, không phải host-attested evidence hay
-security boundary. Không persist reviewer identity vào semantic receipt.
-Không tạo `semantic-review.md`; nếu artifact hoặc topology đổi, digest cũ tự
-trở thành stale và phải review lại.
+Tạo `review.json` với đúng hai field `reviewed_criteria` và `counterexamples` rồi gọi atomic finalizer duy nhất — không tự ghi `semantic_model`, `validation.semantic_review`, hay `ready_for_implementation`:
+
+```json
+{
+  "reviewed_criteria": ["R1.1"],
+  "counterexamples": [{
+    "criterion": "R1.1",
+    "case_kind": "failure",
+    "scenario": "Input sai tại boundary A-D-01.",
+    "expected": "Trả lỗi đã định nghĩa, không đổi state.",
+    "decision_refs": ["D1"],
+    "verification_ref": "V1"
+  }]
+}
+```
+
+```bash
+# Claude Code
+node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result review.json
+# Codex (installed projection)
+node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result review.json
+```
+
+Mỗi counterexample phải có đúng `criterion`, `case_kind`, `scenario`, `expected`, `decision_refs`, `verification_ref`, và mọi ref phải tồn tại trong `design.md`. Routine/Elevated không có reviewer ceremony. Strict cần event được host hook quan sát từ allowlisted reviewer capability; nếu host không cung cấp event này thì pause một lần và báo đúng blocker, không retry vòng reviewer, tự attestation, downgrade hay giả event. Đây là honest-agent guardrail, không phải host-attested evidence hay security boundary. Không persist reviewer identity vào semantic receipt. Không tạo `semantic-review.md`; nếu artifact hoặc topology đổi, digest cũ tự trở thành stale và phải review lại. Verify cả hai projection đã cài (`.claude` và `.codex/.agents`) chứ không giả định raw source path.
 
 Grounding là gate bắt buộc trước readiness: validator/grounder recompute
 path/symbol/command/reachability trên bytes hiện tại và không tạo thêm receipt.
@@ -136,6 +160,12 @@ Nếu bật mirror, bản dịch nằm tại `specs/<feature>/i18n/<lang>/`, có
 `<!-- TRANSLATION MIRROR — reference only -->`, và được đồng bộ từ canonical
 artifacts. Không sửa mirror như source of truth; validator và Develop chỉ dùng
 canonical tree.
+
+## Nguyên tắc ngữ nghĩa chung
+
+Canonical: `src/claude/skills/specs/rules/design-principles.md` (retention: clock anchor/source/timezone/precision/comparator/inclusivity/boundary + wrong-clock/boundary counterexample; API: method/route/auth/headers/schema/response/error/idempotency) và `src/claude/skills/specs/references/review.md` (test ownership via file/artifact hoặc proof boundary, docs-only, two-review advisory, benchmark). Nhắc ngắn:
+
+- Tuân canonical cho retention, API, test ownership, docs-only, review budget, benchmark targets (`≤10 phút` / `≤40 phút, ≤500K tokens` / 2 vòng), Direct/Compact và machine authority; không lặp nguyên đoạn dài. Vượt mục tiêu là tín hiệu tinh chỉnh, không phải để cắt gate; budget không thắng correctness.
 
 ## Quy tắc ngắn gọn
 

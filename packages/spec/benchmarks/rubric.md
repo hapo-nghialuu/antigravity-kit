@@ -23,13 +23,18 @@ Mỗi receipt phải ghi boolean quality fields và count nguyên không âm. `e
 
 ### Standard
 
-- Multi-file hoặc workflow mặc định, có acceptance/review evidence.
+- Bao gồm compatibility view của cả `Routine` và risk-aware `Elevated` khi
+  `assurance_level` chưa phải `Strict`. Auth, privacy, migration hoặc nhãn
+  high/critical tự chúng chỉ nâng automatic floor lên `Elevated`; không biến
+  task thành Critical.
 - Cùng quality gate như Direct.
 - Treatment chỉ đạt khi giảm rõ median latency và cost, đồng thời không tăng regression hoặc user correction, không tăng false-positive reviewer finding rate, và không giảm useful reviewer finding rate. Review findings phải phân biệt useful và false-positive.
 
 ### Critical
 
-- Auth/privacy, migration, public contract, cross-runtime, destructive hoặc rollback khó.
+- Chỉ áp dụng khi `assurance_level: Strict` được chọn rõ bởi yêu cầu
+  independent audit của user/project hoặc một quyết định audit scope-specific
+  đã được user xác nhận. Risk keyword, severity label hoặc `Full` không đủ.
 - Không được đánh đổi security/contract/evidence quality lấy latency/cost.
 - Treatment phải có correctness không thấp hơn baseline, regression và unsupported-completion rate không cao hơn baseline; useful reviewer finding rate không thấp hơn và false-positive reviewer finding rate không cao hơn baseline; evidence phải truy được và reviewer finding không bị bỏ qua.
 

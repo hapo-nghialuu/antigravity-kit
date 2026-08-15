@@ -98,6 +98,11 @@ Kernel v2.1 separates two independent choices:
 - `planning_depth`: `None`, `Compact`, or `Full` controls durable authoring.
 - `assurance_level`: `Routine`, `Elevated`, or `Strict` controls review depth.
 
+Any normalized risk raises the automatic assurance floor to `Elevated`.
+`Strict` is opt-in only for an explicit user/project independent-audit
+requirement or a user-confirmed, scope-specific audit decision; keywords,
+severity labels, `Full` depth, and model preference never select it alone.
+
 Canonical authoring supplies only `planning_depth`, `assurance_level`, their
 `classified_minimum`, and normalized `risks`; policy `version` identifies v2.1.
 `Direct`, `Standard`, and `Critical` are derived compatibility views. `None`
@@ -139,7 +144,9 @@ Readiness requires exact `RN.M` coverage plus counterexamples containing
 `verification_ref`. `Strict` additionally requires a host-hook-observed event
 from an allowlisted reviewer capability. This is an honest-agent integrity
 guardrail, not host-attested evidence or a security boundary. Routine and
-Elevated add no reviewer ceremony. Validator success never substitutes for
+Elevated add no reviewer ceremony. If the Strict host event is unavailable, the
+run pauses once with that capability blocker instead of retrying, downgrading,
+or simulating authority. Validator success never substitutes for
 semantic judgment. Grounding is mandatory before readiness and is recomputed
 deterministically; it adds no receipt ceremony.
 The compact receipt adds no report file and becomes stale when reviewed content
@@ -149,15 +156,18 @@ invocation.
 
 Authors ground repository facts, record bounded reversible assumptions, and ask
 the user about product/scope/security/data/irreversible choices. Only unresolved
-`user_owned` decisions block readiness. The supported atomic promotion command is:
+`user_owned` decisions block readiness. The supported atomic promotion commands are (verify installed projection, not raw source path):
 
 ```bash
+# Claude Code
 node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
+# Codex
+node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
 ```
 
-`review.json` contains exactly `reviewed_criteria` and `counterexamples`.
-Authors never assign `semantic_model`, `validation.semantic_review`, or
-`ready_for_implementation` directly.
+`review.json` contains exactly `reviewed_criteria` and `counterexamples` (see `docs/specs-usage-guide.md` for shape and both Claude/Codex digest commands). Authors never assign `semantic_model`, `validation.semantic_review`, or `ready_for_implementation` directly — those are finalizer-owned; legitimate scope/decision/topology product semantics are persisted only via the canonical scaffold/sync paths.
+
+Chi tiết chất lượng domain-generic (retention, API, test ownership, docs-only, two-review, benchmark, Direct/Compact, machine authority) xem canonical `src/claude/skills/specs/rules/design-principles.md` và `src/claude/skills/specs/references/review.md` — README chỉ nhắc ngắn.
 
 Claude Code and Codex CLI are the primary Specs v2 acceptance targets. OpenCode
 remains a supported CafeKit runtime; this v2 acceptance focus does not remove or

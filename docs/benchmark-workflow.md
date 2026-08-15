@@ -46,6 +46,30 @@ claim harness đã validate hai axis.
 
 `status: example_template` chỉ dành cho fixture/template. Validator từ chối receipt validation và live summary có receipts trên corpus này; fixture/live test phải dùng `status: frozen`.
 
+## Pilot semantic 8 bài
+
+Trước corpus release khoảng 24 bài, tune nhanh bằng 8 bài ghép cặp. Mỗi bài
+chạy baseline và treatment trên cùng repo snapshot, model/reasoning, tools,
+permissions và prompt; artifact được chấm nguyên trạng, không sửa giữa generation
+và adjudication:
+
+| ID | Tình huống | Kỳ vọng chính |
+|---|---|---|
+| P1 | Thay đổi local, reversible | `None/Routine`; không tạo durable spec. |
+| P2 | Behavior nhỏ nhưng cần lưu contract | `Compact/Routine`; chỉ core ba file, implementer không phải chọn behavior. |
+| P3 | Auth/privacy/migration đã rõ | `Compact/Elevated`; có targeted adversarial inspection, không tự bật Strict/research/tasks. |
+| P4 | Còn product choice thuộc user | Hỏi đúng một câu quyết định hoặc pause chính xác; không invent semantics. |
+| P5 | Multi-module với ownership/dependency thật | `Full/Elevated`; task/DAG chỉ xuất hiện cho typed topology và có owner/proof rõ. |
+| P6 | External-current fact có thể đổi design | Chỉ tạo research cho uncertainty đó, nguồn và quyết định được trace về requirements/design. |
+| P7 | Lifecycle/retention + public/replay API | Clock/cutoff/enforcement và API/error/idempotency đầy đủ; task test ownership cụ thể. |
+| P8 | User/project yêu cầu independent audit | Explicit `Strict`; event thật thì finalize, host không hỗ trợ thì pause trung thực, không simulate/retry loop. |
+
+Gate chính không phải “đủ file”: một implementer blind phải tìm được mọi behavior,
+owner, dependency và verification cần thiết mà không tự quyết thay user. Critical
+semantic omission, fabricated decision/evidence, hoặc unsupported completion claim
+đều fail cả bài; không dùng điểm trung bình để che. Chạy pilot trên Codex trước,
+tune policy từ lỗi lặp lại, rồi mới chạy cùng corpus trên Claude Code để đo parity.
+
 ## Freeze config
 
 Mỗi arm có config riêng; summary nhận nhiều `--config` để so baseline và treatment. Freeze bắt buộc:
@@ -211,6 +235,16 @@ Không có receipts: summary trả `status: "exploratory/no-live-runs"`, `live_r
 ## Repeat và blind adjudication
 
 Chọn repeat policy trước freeze; mục tiêu 2–3 repeats/task. Một repeat gắn nhãn exploratory, không đủ để claim ổn định. Mỗi repeat context-isolated, không dùng output/memory run trước. Nếu khả thi, adjudicator nhận artifact đã ẩn arm; rubric chấm correctness, regression, unsupported completion claim, user correction, useful/false-positive reviewer findings riêng. Test pass là tín hiệu, không phải correctness tổng.
+
+## Benchmark targets (ý định tinh chỉnh, không phải miễn correctness)
+
+Mục tiêu để đánh giá và tinh chỉnh harness, không phải lý do bỏ qua correctness, contract completeness, hoặc proof:
+
+- **Bài nhỏ** (Direct/Compact, 1–2 tasks, local): **≤10 phút** wall time.
+- **Bài phức tạp** (Full, multi-task, cross-boundary): **≤40 phút** và **≤500K tokens** tổng (input + output + context).
+- **Review cycles:** tối đa **2 vòng** independent semantic review và repair; sau vòng 2 còn fail thì pause với blockers thay vì loop.
+
+Vượt mục tiêu là tín hiệu để tối ưu artifact/ceremony, không phải để cắt semantic gates. Rollout gate vẫn ưu tiên correctness và regression trước latency/cost.
 
 ## Treatment gates theo lane (hiện tại)
 

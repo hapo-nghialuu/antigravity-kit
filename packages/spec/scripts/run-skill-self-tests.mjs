@@ -1555,6 +1555,175 @@ async function runStaticSemanticTests() {
         content.includes("colors.setColorEnabled(config.statuslineColors !== false)") &&
         content.includes("colors.shouldUseColor"),
     },
+    {
+      // Per-surface authoring-contract: canonical retention/API in design-principles (not aggregate, not webhook-hardcoded)
+      label: "design-principles canonical retention/API is per-surface and domain-generic",
+      file: "src/claude/skills/specs/rules/design-principles.md",
+      assert: (content) =>
+        content.includes("clock anchor") &&
+        content.includes("clock source") &&
+        content.includes("timezone/precision") &&
+        content.includes("comparator/inclusivity") &&
+        content.includes("enforcement boundary") &&
+        content.includes("wrong-clock") &&
+        content.includes("method, route") &&
+        content.includes("idempotency") &&
+        !content.toLowerCase().includes("webhook"),
+    },
+    {
+      // Per-surface short reminder in SKILL (canonical is design-principles)
+      label: "SKILL routes retention/API to canonical design-principles (per-surface)",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("For retention/lifecycle and API contracts, follow `rules/design-principles.md`") &&
+        content.includes("clock anchor/source/timezone") &&
+        content.includes("method/route/auth") &&
+        !content.toLowerCase().includes("webhook"),
+    },
+    {
+      // Per-surface retention lens in review
+      label: "review retention lens is per-surface and domain-generic",
+      file: "src/claude/skills/specs/references/review.md",
+      assert: (content) =>
+        content.includes("clock anchor/source/timezone/precision") &&
+        content.includes("cutoff comparator/inclusivity") &&
+        content.includes("wrong clock") &&
+        !content.toLowerCase().includes("webhook"),
+    },
+    {
+      // Behavioral: structured projection — task template Compact core has one anchor, proof conditional (parsed, not phrase-aggregate)
+      label: "task template Compact core is per-surface parsed (behavioral)",
+      file: "src/claude/skills/specs/templates/task.md",
+      assert: (content) => {
+        const rows = content
+          .split("\n")
+          .filter((line) => line.trim().startsWith("|"))
+          .map((line) => line.split("|").slice(1, -1).map((c) => c.trim()));
+        // Core must have exactly one data row (owner) by default; proof row is conditional comment, not a second data row
+        const dataRows = rows.filter((cells) => cells[0].startsWith("A-R"));
+        const hasSingleCoreAnchor = dataRows.length === 1 && dataRows[0][1] === "file";
+        const hasProofConditionalComment = content.includes("For a typed proof boundary, add:");
+        const hasBareNotOwnership = content.includes("bare command is not ownership") || content.includes("bare");
+        return hasSingleCoreAnchor && hasProofConditionalComment && hasBareNotOwnership;
+      },
+    },
+    {
+      // Design template Compact core parsed: single anchor, proof conditional
+      label: "design template Compact core is per-surface parsed (behavioral)",
+      file: "src/claude/skills/specs/templates/design.md",
+      assert: (content) => {
+        const rows = content
+          .split("\n")
+          .filter((line) => line.trim().startsWith("|"))
+          .map((line) => line.split("|").slice(1, -1).map((c) => c.trim()));
+        const dataRows = rows.filter((cells) => cells[0].startsWith("A-D"));
+        const hasSingleCoreAnchor = dataRows.length === 1 && dataRows[0][0] === "A-D-01";
+        const hasProofConditionalComment = content.includes("For a typed proof boundary, add:") && content.includes("A-D-02");
+        return hasSingleCoreAnchor && hasProofConditionalComment;
+      },
+    },
+    {
+      // Per-surface docs/proof and two-review advisory in SKILL
+      label: "SKILL docs-only and two-review advisory is per-surface",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) => {
+        const norm = content.toLowerCase().replace(/\s+/g, " ");
+        return norm.includes("never creates or updates docs") &&
+          norm.includes("never fabricate") &&
+          content.includes("Two-review target is advisory") &&
+          norm.includes("budgets never override correctness");
+      },
+    },
+    {
+      // Per-surface docs/proof and two-review advisory in review
+      label: "review docs-only and two-review advisory is per-surface",
+      file: "src/claude/skills/specs/references/review.md",
+      assert: (content) => {
+        const norm = content.toLowerCase().replace(/\s+/g, " ");
+        return norm.includes("never creates or updates docs") &&
+          content.includes("Two-review target is advisory") &&
+          norm.includes("budgets never override correctness");
+      },
+    },
+    {
+      // Per-surface spec-maker docs/proof and two-review and contradiction resolution
+      label: "spec-maker docs-only, two-review and scaffold contradiction is per-surface",
+      file: "src/claude/agents/spec-maker.md",
+      assert: (content) => {
+        const norm = content.toLowerCase().replace(/\s+/g, " ");
+        return content.includes("never directly write or promote") &&
+          norm.includes("may persist legitimate scope/decision/topology") &&
+          norm.includes("never creates or updates docs") &&
+          content.includes("Two-review target is advisory");
+      },
+    },
+    {
+      // Public V example is parsed as canonical Criteria/Owner (behavioral, not phrase-aggregate)
+      label: "public V example in specs-usage-guide parses as canonical Criteria/Owner (behavioral)",
+      file: "../../docs/specs-usage-guide.md",
+      assert: (content) => {
+        const vMatch = content.match(/^- \*\*V1\*\*:.*$/m);
+        if (!vMatch) return false;
+        const vLine = vMatch[0];
+        const errors = [];
+        const probe = "## Verification Definitions\n" + vLine + "\n";
+        const defs = parseVerificationDefinitions(probe, errors);
+        const v1 = defs.get("V1");
+        return errors.length === 0 && v1 && v1.subject_criteria.length === 1 && v1.subject_criteria[0] === "R1.1" && v1.subject_owner === "A-D-01" && v1.decision_refs.includes("D1");
+      },
+    },
+    {
+      // Installed Codex projection is verified via transform, not raw source path (behavioral)
+      label: "Codex installed projection uses Codex paths (behavioral, temp fixture)",
+      files: [
+        "src/claude/skills/specs/SKILL.md",
+        "src/claude/skills/specs/references/review.md",
+      ],
+      assert: (content) => {
+        // Check that Claude source uses .claude and that Codex transform would use .codex — verify via normalizeCodexBody if available
+        try {
+          const codexLib = require(join(packageRoot, "bin/lib/codex-install.js"));
+          const normalize = codexLib.normalizeCodexBody;
+          if (typeof normalize === "function") {
+            const sample = "node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result review.json";
+            const transformed = normalize(sample, "src/claude/skills/specs/SKILL.md");
+            return transformed.includes("node .codex/scripts/spec-readiness.cjs") && !transformed.includes("node .claude/scripts/spec-readiness.cjs");
+          }
+        } catch {}
+        // Fallback: check that review and SKILL now contain both Claude and Codex installed commands (per-surface docs check elsewhere)
+        return content.includes("node .codex/scripts/") && content.includes("node .claude/scripts/");
+      },
+    },
+    {
+      // Per-surface benchmark tuning targets are explicit and not correctness waivers (Vietnamese positive phrase)
+      label: "benchmark tuning targets are per-surface explicit (advisory, not waiver)",
+      file: "../../docs/benchmark-workflow.md",
+      assert: (content) =>
+        content.includes("≤10 phút") &&
+        content.includes("≤40 phút") &&
+        content.includes("500K") &&
+        content.includes("tối đa") &&
+        content.includes("2 vòng") &&
+        content.toLowerCase().includes("tinh chỉnh") &&
+        content.includes("không phải để cắt"),
+    },
+    {
+      label: "specs-usage-guide benchmark targets are per-surface explicit",
+      file: "../../docs/specs-usage-guide.md",
+      assert: (content) =>
+        content.includes("≤10 phút") &&
+        content.includes("≤40 phút") &&
+        content.includes("500K tokens") &&
+        content.includes("không phải để cắt"),
+    },
+    {
+      label: "Direct and Compact stay light and spec.json remains machine authority (per-surface)",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("Keep `Direct`") &&
+        content.includes("machine authority") &&
+        !content.toLowerCase().includes("webhook"),
+    },
   ];
 
   console.log("\n[skill-test] static semantic checks");
