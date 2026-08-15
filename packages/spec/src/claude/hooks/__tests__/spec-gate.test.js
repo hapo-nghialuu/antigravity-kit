@@ -581,9 +581,9 @@ test('empty or malformed Claude hook payload fails closed', () => {
   }
 });
 
-test('Critical completion ignores worker-writable proof strings and remains blocked', () => {
+test('explicit Strict completion ignores worker-writable proof strings and remains blocked', () => {
   const dir = makeFixture({
-    workflowPolicy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } }),
+    workflowPolicy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' }),
   });
   try {
     const specPath = path.join(dir, 'specs', FEATURE, 'spec.json');

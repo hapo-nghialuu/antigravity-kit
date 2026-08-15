@@ -239,7 +239,8 @@ function designFixture21() {
 }
 
 function createSpec(root, options = {}) {
-  const specDir = path.join(root, options.name || 'spec');
+  const featureName = options.name || 'spec';
+  const specDir = path.join(root, 'specs', featureName);
   const taskPath = 'tasks/task-R1-01-one.md';
   write(
     path.join(specDir, 'requirements.md'),
@@ -253,7 +254,7 @@ function createSpec(root, options = {}) {
   write(path.join(root, 'test/one.test.js'), "'use strict';\n// Separate proof artifact for fixture validation.\n");
   write(path.join(specDir, 'spec.json'), JSON.stringify({
     schema_version: '2.0',
-    feature_name: 'fixture',
+    feature_name: featureName,
     created_at: '2026-08-11T00:00:00+07:00',
     updated_at: '2026-08-11T00:05:00+07:00',
     language: 'en',
@@ -848,7 +849,7 @@ test('validator requires a strict persisted workflow-policy snapshot and never f
       ['malformed', (state) => { state.workflow_policy = { ...policy, proof_obligations: { needsExecutionProof: true } }; }, /proof_obligations must be an array/],
       ['extra-field', (state) => { state.workflow_policy = { ...policy, extra: true }; }, /workflow_policy fields must be exactly/],
       ['lane-mismatch', (state) => { state.workflow_policy = { ...policy, lane: 'Critical', automatic_lane: 'Critical' }; }, /lane is not the derived compatibility lane|automatic_lane is not the derived compatibility lane/],
-      ['risk-mismatch', (state) => { state.workflow_policy = { ...policy, risks: ['auth'] }; }, /assurance_level must be at least Strict/],
+      ['risk-mismatch', (state) => { state.workflow_policy = { ...policy, risks: ['auth'] }; }, /assurance_level must be at least Elevated/],
       ['obligation-mismatch', (state) => { state.workflow_policy = { ...policy, proof_obligations: ['needsInspection', 'needsExecutionProof'], actor_needs: [{ capability: 'inspection', independence: 'same-session' }, { capability: 'execution-proof', independence: 'same-session' }] }; }, /proof_obligations do not match assurance_level and risks/],
     ];
     for (const [name, mutate, expected] of cases) {
@@ -1139,6 +1140,36 @@ test('fresh scaffold rolls back authority rejection and injected partial writes 
   }
 });
 
+test('installed Codex scaffold rejects a symlinked template parent before creating a spec', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-scaffold-template-symlink-'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-template-outside-'));
+  try {
+    const codexRoot = path.join(root, '.codex');
+    copyCodexRuntime(codexRoot, ['scripts/spec-scaffold.cjs']);
+    write(
+      path.join(codexRoot, 'hooks/completion-authority-check.cjs'),
+      'module.exports = { observePolicyBaseline() { return { ok: true }; } };\n',
+    );
+    write(path.join(codexRoot, 'hooks/completion-authority-state.cjs'), 'module.exports = {};\n');
+    fs.cpSync(path.join(ROOT, 'src/claude/skills/specs/templates'), outside, { recursive: true });
+    const templatesParent = path.join(root, '.agents/skills/specs');
+    fs.mkdirSync(templatesParent, { recursive: true });
+    fs.symlinkSync(outside, path.join(templatesParent, 'templates'));
+
+    const result = run(
+      path.join(codexRoot, 'scripts/spec-scaffold.cjs'),
+      ['template-parent-escape', '--lane', 'Standard'],
+      root,
+    );
+    assert.equal(result.status, 2, output(result));
+    assert.match(output(result), /template check failed|symlink component rejected/i);
+    assert.equal(fs.existsSync(path.join(root, 'specs/template-parent-escape')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }
+});
+
 test('tasks-only is idempotent for an identical task request and preserves the snapshot bytes', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-scaffold-idempotent-'));
   try {
@@ -1182,7 +1213,7 @@ test('tasks-only is idempotent for an identical task request and preserves the s
   }
 });
 
-test('tasks-only consumes the policy snapshot and escalates Standard auth monotonically', () => {
+test('tasks-only consumes the policy snapshot and escalates auth to Elevated monotonically', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-scaffold-tasks-only-policy-'));
   try {
     const specDir = createLegacyTasklessSpec20(root, 'existing', POLICY.workflowPolicySnapshot({ riskSignals: {} }));
@@ -1198,7 +1229,8 @@ test('tasks-only consumes the policy snapshot and escalates Standard auth monoto
     assert.match(output(escalated), /2 new task stub\(s\)/);
     assert.doesNotMatch(output(escalated), /research\.md created/);
     const first = JSON.parse(fs.readFileSync(path.join(specDir, 'spec.json'), 'utf8'));
-    assert.equal(POLICY.readWorkflowPolicySnapshot(first).lane, 'Critical');
+    assert.equal(POLICY.readWorkflowPolicySnapshot(first).lane, 'Standard');
+    assert.equal(POLICY.readWorkflowPolicySnapshot(first).assurance_level, 'Elevated');
     assert.deepEqual(first.workflow_policy.risks, ['auth']);
     assert.equal(POLICY.readWorkflowPolicySnapshot(first).artifact_profile, 'bounded');
     assert.equal(POLICY.readWorkflowPolicySnapshot(first).proof_obligations.includes('needsResearchGrounding'), false);
@@ -1222,7 +1254,7 @@ test('tasks-only consumes the policy snapshot and escalates Standard auth monoto
       },
     }]);
     const rejectedLane = run(SCAFFOLD, [
-      'existing', '--tasks', 'R1-03-invalid', '--lane', 'Standard', '--tasks-only',
+      'existing', '--tasks', 'R1-03-invalid', '--lane', 'Critical', '--tasks-only',
       '--boundaries', rejectedBoundaries,
     ], root);
     assert.equal(rejectedLane.status, 2, output(rejectedLane));
@@ -1244,7 +1276,7 @@ test('scaffold emits minimal 2.1 artifacts without default research or reports c
       'design.md', 'requirements.md', 'spec.json',
     ]);
 
-    const strict = run(SCAFFOLD, ['strict-taskless', '--risks', 'auth'], root);
+    const strict = run(SCAFFOLD, ['strict-taskless', '--risks', 'auth', '--assurance-level', 'Strict'], root);
     assert.equal(strict.status, 0, output(strict));
     const strictDir = path.join(root, 'specs', 'strict-taskless');
     const strictSpec = JSON.parse(fs.readFileSync(path.join(strictDir, 'spec.json'), 'utf8'));
@@ -1261,7 +1293,7 @@ test('scaffold emits minimal 2.1 artifacts without default research or reports c
 test('strict validator requires numeric IDs, rejects phantom mappings, and grounds research content', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-validator-strict-grounding-'));
   try {
-    const strictPolicy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+    const strictPolicy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' });
     const noIds = createSpec(root, {
       name: 'no-numeric-ids',
       requirements: '# Requirements\n\nThe behavior has no numeric identifier.\n',
@@ -1455,7 +1487,7 @@ test('all ready non-Direct specs require semantic design and coherent authoring 
 
   try {
     const critical = readyFixture('critical-generic-design', (state, specDir) => {
-      state.workflow_policy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+      state.workflow_policy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' });
       state.timestamps = lifecycleTimestamps({ research: true });
       write(path.join(specDir, 'design.md'), '# Design\n\n## Architecture\n\nThe implementation boundary is defined and appropriate.\n');
     });
@@ -1464,7 +1496,7 @@ test('all ready non-Direct specs require semantic design and coherent authoring 
     assert.match(output(result), /design\.md: Critical readiness requires a grounded path\/code identifier/);
 
     const strictAuthoring = readyFixture('critical-one-task-authoring', (state, specDir) => {
-      state.workflow_policy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+      state.workflow_policy = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' });
       state.timestamps = lifecycleTimestamps({ research: true });
       write(path.join(specDir, 'design.md'), criticalNoObligationDesign());
     });
@@ -1540,7 +1572,7 @@ test('spec-ready excludes execution receipts while preserving Strict review stat
       task: task({ related: '`src/pending-only.js` | Read' }),
       design: criticalNoObligationDesign(),
       spec: {
-        workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } }),
+        workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' }),
         ready_for_implementation: true,
         approvals: {
           requirements: { generated: true, agent_validated: true, user_approved: true },
@@ -1615,16 +1647,23 @@ test('Specs v2 scaffold keeps planning artifacts independent from assurance and 
     const standardValidation = run(VALIDATOR, [standardDir], ROOT);
     assert.equal(standardValidation.status, 0, output(standardValidation));
 
-    const critical = run(SCAFFOLD, ['critical-risk', '--risks', 'auth'], root);
-    assert.equal(critical.status, 0, output(critical));
-    const criticalTaskless = JSON.parse(fs.readFileSync(path.join(root, 'specs/critical-risk/spec.json'), 'utf8'));
-    assert.equal(criticalTaskless.workflow_policy.planning_depth, 'Compact');
-    assert.equal(criticalTaskless.workflow_policy.assurance_level, 'Strict');
-    assert.deepEqual(criticalTaskless.coordination, { boundaries: [] });
-    assert.equal(fs.existsSync(path.join(root, 'specs/critical-risk/research.md')), false);
-    assert.equal(criticalTaskless.validation.semantic_review.status, 'not-run');
+    const elevated = run(SCAFFOLD, ['elevated-risk', '--risks', 'auth'], root);
+    assert.equal(elevated.status, 0, output(elevated));
+    const elevatedTaskless = JSON.parse(fs.readFileSync(path.join(root, 'specs/elevated-risk/spec.json'), 'utf8'));
+    assert.equal(elevatedTaskless.workflow_policy.planning_depth, 'Compact');
+    assert.equal(elevatedTaskless.workflow_policy.assurance_level, 'Elevated');
+    assert.equal(elevatedTaskless.workflow_policy.classified_minimum.assurance_level, 'Elevated');
+    assert.deepEqual(elevatedTaskless.coordination, { boundaries: [] });
+    assert.equal(fs.existsSync(path.join(root, 'specs/elevated-risk/research.md')), false);
+    assert.equal(elevatedTaskless.validation.semantic_review.status, 'not-run');
+    assert.equal(elevatedTaskless.authoring.tasks, 'absent');
 
-    assert.equal(criticalTaskless.authoring.tasks, 'absent');
+    const strict = run(SCAFFOLD, ['strict-opt-in', '--risks', 'auth', '--assurance-level', 'Strict'], root);
+    assert.equal(strict.status, 0, output(strict));
+    const strictTaskless = JSON.parse(fs.readFileSync(path.join(root, 'specs/strict-opt-in/spec.json'), 'utf8'));
+    assert.equal(strictTaskless.workflow_policy.assurance_level, 'Strict');
+    assert.equal(strictTaskless.workflow_policy.classified_minimum.assurance_level, 'Elevated');
+    assert.equal(strictTaskless.authoring.tasks, 'absent');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

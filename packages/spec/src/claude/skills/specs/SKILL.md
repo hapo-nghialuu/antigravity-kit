@@ -25,7 +25,10 @@ and reviewers never directly write or promote those authority fields; any later
 semantic Markdown edit invalidates the bound round-trip result.
 
 ```bash
+# Claude Code
 node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
+# Codex
+node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
 ```
 
 `review.json` has exactly `reviewed_criteria` and `counterexamples`. The command
@@ -44,6 +47,12 @@ Persist `planning_depth`, `assurance_level`, `classified_minimum`, normalized
 raise assurance without creating artifacts; decomposition may raise planning
 depth without inventing risk. Reclassify before persistence. A persisted
 same-feature baseline is monotonic and never contaminates another feature.
+
+Any non-empty normalized risk raises the automatic assurance floor from Routine
+to Elevated. Strict is opt-in: select it only when the user or project policy
+explicitly requires independent audit, or after the user confirms a concrete,
+scope-specific audit need. A keyword, risk severity, Full depth, or model
+preference never selects Strict by itself.
 
 Canonical lifecycle is exactly `in_progress`, `paused`, `blocked`, `done`.
 Legacy aliases are read compatibility only. `ready_for_implementation` means
@@ -133,6 +142,7 @@ Load research guidance only when the artifact router selected research.
   migration sections.
 - Define each implementation-significant contract once and reference its stable
   `D`/`I`/`C` ID.
+- For retention/lifecycle and API contracts, follow `rules/design-principles.md` (clock anchor/source/timezone/precision/comparator/inclusivity/boundary + wrong-clock/boundary counterexample; method/route/auth/headers/schema/response/error/idempotency).
 - Keep exactly one parser-visible `## Verification Definitions` section. Each
   single-line V definition starts with `Criteria ...; Owner ...;` and traces
   exact decision refs, method,
@@ -146,12 +156,10 @@ Load research guidance only when the artifact router selected research.
 
 Load `rules/tasks-generation.md` and `templates/task.md` only when at least one
 typed topology trigger exists. Size, risk labels, and tradition alone do not
-create tasks.
+create tasks. Keep `Direct`/`Compact` light: do not coerce a task when no typed
+boundary exists, and never invent a task to justify structure.
 
-Each task has exactly seven H2 sections: Outcome, Scope, Anchors and Ownership,
-Changes, Acceptance, Dependencies, and Verification Plan. The only ownership
-table is `ID | Type | Target | Role | Access | Action`. Planned verification is
-not execution evidence.
+Each task has exactly seven H2 sections: Outcome, Scope, Anchors and Ownership, Changes, Acceptance, Dependencies, and Verification Plan. The only ownership table is `ID | Type | Target | Role | Access | Action`. Planned verification is not execution evidence. Every executable task must own a concrete test file/artifact anchor (write create/modify) or share proof via a typed proof boundary; bare npm test is not ownership.
 
 Typed `coordination.boundaries` entries (`ownership`, `dependency`,
 `transition`, `proof`, `parallel`) are the sole topology authority. Legacy
@@ -167,23 +175,21 @@ not create files, repeat prose, or replace typed edges.
 
 ## Review and readiness
 
-Load `references/review.md`. Review the whole graph and inventory every blocker;
-presentation may be concise, but finding count is never capped. Each `RN.M`
-receives a concrete counterexample mapped to real `D`/`I`/`C` and `V` refs.
+Load `references/review.md`. Review the whole graph and inventory every blocker; presentation may be concise, but finding count is never capped. Each `RN.M` receives a concrete counterexample mapped to real `D`/`I`/`C` and `V` refs. For any retention/lifecycle rule, include a counterexample where the wrong clock (for example creation time instead of terminal/state-transition) would violate the policy.
 
-Routine and Elevated have no reviewer ceremony. Strict requires an independent,
-allowlisted reviewer capability observed by the host hook. The author cannot
-self-attest Strict. This is an honest-agent guardrail, not host-attested evidence
-or a security boundary.
+Routine and Elevated have no reviewer ceremony. Strict requires an independent, allowlisted reviewer capability observed by the host hook. The author cannot self-attest Strict. If that host event is unavailable, pause once with the exact capability blocker; do not retry reviewer loops, self-attest, downgrade, or simulate the event. This is an honest-agent guardrail, not host-attested evidence or a security boundary. Two-review target is advisory: after two failed semantic rounds, pause for unresolved product/security/architecture uncertainty or repeated non-convergence; one bounded mechanical correction without weakening gates is allowed; budgets never override correctness.
 
 For Strict, the reviewer binds its host-observed event to the read-only candidate
-digest from `node .claude/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest`;
+digest from `node .claude/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest` (Claude Code) or `node .codex/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest` (Codex);
 finalization then verifies that current observation.
 
 Run final-byte validation and grounding for every durable spec:
 
 ```bash
+# Claude Code
 node .claude/scripts/validate-spec-output.cjs specs/<feature>
+# Codex
+node .codex/scripts/validate-spec-output.cjs specs/<feature>
 ```
 
 Exit 0 proves only implemented structural/grounding checks. It does not prove
@@ -196,8 +202,9 @@ semantic review coverage is exact, and every deterministic gate passes. The
 author must not write this authority conclusion directly. This flag is technical
 artifact readiness only.
 Specs never invokes or auto-chains into Develop; only a fresh explicit user
-invocation of Develop starts implementation. On failure, keep lifecycle state
-unfinished and report the exact blocker.
+invocation of Develop starts implementation. Specs-only never creates or
+updates docs; record doc impact as a brief recommendation and leave creation or
+update to the docs workflow. Never fabricate execution proof. On failure, keep lifecycle state unfinished and report the exact blocker.
 
 ## Platform acceptance and handoff
 

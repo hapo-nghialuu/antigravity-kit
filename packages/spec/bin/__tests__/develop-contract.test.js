@@ -329,16 +329,28 @@ test('lane classifier selects Direct for explicit reversible low-risk work', () 
   assert.equal(policy.proof_obligations.includes('needsDurableTaskState'), false);
 });
 
-test('lane classifier forces Critical for named high-risk signals', () => {
+test('lane classifier raises named risks to Elevated without inventing independent-audit authority', () => {
   const result = POLICY.classifyLane({
     reversible: true,
     riskSignals: { auth: true, migration: true, publicContract: true },
   });
-  assert.equal(result.lane, 'Critical');
+  assert.equal(result.lane, 'Standard');
+  assert.equal(result.assuranceLevel, 'Elevated');
+  assert.equal(result.automaticAssuranceLevel, 'Elevated');
   assert.deepEqual(result.risks, ['auth', 'migration', 'publicContract']);
-  assert.deepEqual(POLICY.delegationPlan({ lane: 'Critical' }).proof_obligations, [
-    'needsInspection', 'needsExecutionProof', 'needsIndependentAudit',
+  assert.deepEqual(POLICY.lanePolicy(result).proof_obligations, [
+    'needsInspection', 'needsExecutionProof',
   ]);
+
+  const strict = POLICY.classifyLane({
+    riskSignals: { auth: true },
+    assurance_level: 'Strict',
+  });
+  assert.equal(strict.lane, 'Critical');
+  assert.equal(strict.automaticLane, 'Standard');
+  assert.equal(strict.assuranceLevel, 'Strict');
+  assert.equal(strict.automaticAssuranceLevel, 'Elevated');
+  assert.ok(POLICY.lanePolicy(strict).proof_obligations.includes('needsIndependentAudit'));
 });
 
 test('P1 persists the minimal v2.1 policy and derives compatibility views', () => {
@@ -392,28 +404,34 @@ test('P1 persists the minimal v2.1 policy and derives compatibility views', () =
 test('P1 workflow-policy validation is semantic and explicit workflow_policy values never reclassify', () => {
   const direct = POLICY.workflowPolicySnapshot({ reversible: true, lowRisk: true, isolated: true });
   const standardUnknown = POLICY.escalateWorkflowPolicy(direct, { risks: ['unclassified-risk'] });
-  const criticalAuth = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
-  const escalatedCritical = POLICY.escalateWorkflowPolicy(direct, { risks: ['auth'] });
+  const elevatedAuth = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+  const escalatedElevated = POLICY.escalateWorkflowPolicy(direct, { risks: ['auth'] });
 
-  for (const legitimate of [direct, standardUnknown, criticalAuth, escalatedCritical]) {
+  for (const legitimate of [direct, standardUnknown, elevatedAuth, escalatedElevated]) {
     assert.equal(POLICY.validateWorkflowPolicySnapshot(legitimate).valid, true);
   }
-  assert.equal(escalatedCritical.lane, 'Critical');
-  assert.equal(escalatedCritical.automatic_lane, 'Critical');
-  assert.equal(escalatedCritical.planning_depth, 'None');
-  assert.equal(escalatedCritical.assurance_level, 'Strict');
+  assert.equal(escalatedElevated.lane, 'Standard');
+  assert.equal(escalatedElevated.automatic_lane, 'Standard');
+  assert.equal(escalatedElevated.planning_depth, 'None');
+  assert.equal(escalatedElevated.assurance_level, 'Elevated');
 
   const forgedDirectAuth = { ...direct, risks: ['auth'] };
   const forgedDirectUnknown = { ...direct, risks: ['unclassified-risk'] };
   const forgedStandardAuth = { ...standardUnknown, risks: ['auth'] };
-  for (const forged of [forgedDirectAuth, forgedDirectUnknown, forgedStandardAuth]) {
+  for (const forged of [forgedDirectAuth, forgedDirectUnknown]) {
     const result = POLICY.validateWorkflowPolicySnapshot(forged);
     assert.equal(result.valid, false);
     assert.match(result.errors.join('; '), /at least (Elevated|Strict)/);
   }
+  assert.equal(
+    POLICY.validateWorkflowPolicySnapshot(forgedStandardAuth).valid,
+    true,
+    'changing one normalized risk to another does not invent a higher assurance minimum',
+  );
   for (const riskAlias of ['Auth', 'authentication', 'public_contract']) {
     const escalated = POLICY.escalateWorkflowPolicy(direct, { risks: [riskAlias] });
-    assert.equal(escalated.lane, 'Critical', `${riskAlias} must classify as Critical`);
+    assert.equal(escalated.lane, 'Standard', `${riskAlias} must classify as Elevated`);
+    assert.equal(escalated.assurance_level, 'Elevated');
     assert.equal(POLICY.validateWorkflowPolicySnapshot({ ...direct, risks: [riskAlias] }).valid, false);
   }
   assert.throws(() => POLICY.assertWorkflowPolicySnapshot(forgedDirectAuth), /Invalid workflow policy snapshot/);
@@ -481,14 +499,20 @@ test('P1 workflow policy escalation is monotonic across all newly classified ris
   assert.equal(standard.risks.includes('new-standard-risk'), true);
   assert.deepEqual(standard.proof_obligations, ['needsInspection', 'needsExecutionProof']);
 
-  const ambiguityCritical = POLICY.escalateWorkflowPolicy(direct, { riskSignals: { ambiguity: true } });
-  assert.equal(ambiguityCritical.lane, 'Critical', 'every classified Critical risk must escalate to Critical');
+  const ambiguityElevated = POLICY.escalateWorkflowPolicy(direct, { riskSignals: { ambiguity: true } });
+  assert.equal(ambiguityElevated.lane, 'Standard', 'risk discovery must require inspection without inventing an audit');
+  assert.equal(ambiguityElevated.assurance_level, 'Elevated');
 
-  const critical = POLICY.escalateWorkflowPolicy(standard, { risks: ['auth'] });
+  const criticalSeverity = POLICY.escalateWorkflowPolicy(direct, { risks: ['payment'], riskLevel: 'critical' });
+  assert.equal(criticalSeverity.assurance_level, 'Elevated', 'severity labels must not create independent-audit authority');
+  assert.equal(criticalSeverity.proof_obligations.includes('needsIndependentAudit'), false);
+
+  const critical = POLICY.escalateWorkflowPolicy(standard, { risks: ['auth'], assurance_level: 'Strict' });
   assert.equal(critical.lane, 'Critical');
   assert.equal(critical.artifact_profile, 'targeted');
   assert.equal(critical.planning_depth, 'None');
   assert.equal(critical.assurance_level, 'Strict');
+  assert.equal(critical.automatic_assurance_level, 'Elevated');
   assert.equal(critical.proof_obligations.includes('needsIndependentAudit'), true);
   assert.equal(critical.proof_obligations.includes('needsResearchGrounding'), false);
 
@@ -736,7 +760,7 @@ test('canonical verdict adapter handles completion and unfinished decisions', ()
 
 test('completion decision requires canonical execution receipt and every workflow obligation', () => {
   const receipt = canonicalReceipt();
-  const critical = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } });
+  const critical = POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' });
   const audit = {
     schema_version: '1',
     reviewer_session_id: 'review-session-1',
@@ -1386,7 +1410,7 @@ test('runtime provenance derives exact Git evidence, CLI context, and stale/forg
   }
 });
 
-test('lane traces - Direct, Standard, Critical classification, override, state mutation and completion', () => {
+test('lane traces - Direct, Standard, explicit Strict classification, override, state mutation and completion', () => {
   // Direct: isolated reversible low-risk
   const direct = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1 });
   assert.equal(direct.lane, 'Direct');
@@ -1399,8 +1423,11 @@ test('lane traces - Direct, Standard, Critical classification, override, state m
   assert.equal(standard.lane, 'Standard');
   assert.deepEqual(POLICY.lanePolicy(standard).proof_obligations, ['needsExecutionProof']);
   assert.equal(POLICY.lanePolicy(standard).shipPoint, 'feature');
-  // Critical: auth signal
-  const critical = POLICY.classifyLane({ riskSignals: { auth: true }, taskCount: 1 });
+  // Risk alone is Elevated; Critical requires an explicit Strict assurance choice.
+  const elevated = POLICY.classifyLane({ riskSignals: { auth: true }, taskCount: 1 });
+  assert.equal(elevated.lane, 'Standard');
+  assert.deepEqual(POLICY.lanePolicy(elevated).proof_obligations, ['needsInspection', 'needsExecutionProof']);
+  const critical = POLICY.classifyLane({ riskSignals: { auth: true }, assurance_level: 'Strict', taskCount: 1 });
   assert.equal(critical.lane, 'Critical');
   assert.ok(critical.risks.includes('auth'));
   assert.deepEqual(POLICY.lanePolicy(critical).proof_obligations, ['needsInspection', 'needsExecutionProof', 'needsIndependentAudit']);
@@ -2470,7 +2497,7 @@ test('P0 regression: placeholder, explicit failure, artifact and lanePolicy forg
   assert.throws(() => { 'use strict'; trusted.lane = 'Direct'; }, /read only|Cannot assign|TypeError/);
   const paymentTrusted = POLICY.classifyLane({ riskSignals: { payment: true } });
   const forgedCopy = { ...paymentTrusted, lane: 'Direct' };
-  assert.equal(POLICY.lanePolicy(forgedCopy).lane, 'Critical', 'compatibility lane is derived from authoritative axes');
+  assert.equal(POLICY.lanePolicy(forgedCopy).lane, 'Standard', 'compatibility lane is derived from authoritative axes');
 });
 
 test('P0 regression: symlink spec/task containment and malformed spec handling', () => {

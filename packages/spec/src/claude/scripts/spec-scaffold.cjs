@@ -28,18 +28,36 @@ const path = require('path');
 const crypto = require('crypto');
 const POLICY = require('./workflow-policy.cjs');
 const SEMANTIC = require('./spec-semantic-model.cjs');
+const PATH_SAFETY = require('../hooks/lib/runtime-path-safety.cjs');
 
 const TEMPLATES = path.join(__dirname, '..', 'skills', 'specs', 'templates');
+
+function resolveTemplatePath(name) {
+  const adapterRoot = path.resolve(__dirname, '..');
+  const projectRoot = path.resolve(adapterRoot, '..');
+  const candidates = [
+    { file: path.join(TEMPLATES, name), root: adapterRoot },
+    // Packed Codex: <project>/.codex/scripts/spec-scaffold.cjs -> <project>/.agents/skills/specs/templates
+    {
+      file: path.resolve(__dirname, '..', '..', '.agents', 'skills', 'specs', 'templates', name),
+      root: projectRoot,
+    },
+  ];
+  for (const candidate of candidates) {
+    try {
+      return PATH_SAFETY.canonicalRegularFile(candidate.root, candidate.file, 'spec template');
+    } catch (e) {
+      if (e.code !== 'ENOENT' && !/cannot be inspected \(ENOENT\)/.test(e.message)) {
+        throw new Error(`template check failed: ${e.message} (${candidate.file})`);
+      }
+      continue;
+    }
+  }
+  throw new Error(`template not found: ${name} (checked ${candidates.map((item) => item.file).join(', ')})`);
+}
 const TASK_ID_RE = /^R(\d+)-(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)$/;
 const TASK_PATH_RE = /^tasks\/task-(R\d+-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*)\.md$/;
 const FEATURE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const TASK_TRIGGER_VALUES = new Set([
-  'distinct_ownership',
-  'real_dependency',
-  'durable_transition',
-  'separate_proof',
-  'parallel_coordination',
-]);
 const EXECUTION_CLOSURE_BLOCK_RE = /<!-- EXECUTION_CLOSURE_START -->[\s\S]*?<!-- EXECUTION_CLOSURE_END -->\n?/g;
 const REGISTRY_KEYS = [
   'id',
@@ -105,7 +123,15 @@ function observeInstalledPolicyBaseline({ args, specDir, spec }) {
   const statePath = path.join(adapterDir, 'hooks', 'completion-authority-state.cjs');
   const checkPath = path.join(adapterDir, 'hooks', 'completion-authority-check.cjs');
   if (![statePath, checkPath].every((filePath) => {
-    try { return fs.statSync(filePath).isFile(); } catch { return false; }
+    try {
+      const stat = fs.lstatSync(filePath);
+      if (!stat.isFile() || stat.isSymbolicLink()) return false;
+      const real = fs.realpathSync(filePath);
+      const realDir = fs.realpathSync(path.dirname(filePath));
+      const rel = path.relative(realDir, real);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) return false;
+      return true;
+    } catch { return false; }
   })) return;
   let installedRoot;
   let scaffoldCwd;
@@ -125,8 +151,17 @@ function observeInstalledPolicyBaseline({ args, specDir, spec }) {
   let check;
   let runtime = {};
   try {
-    STATE = require(statePath);
-    check = require(checkPath);
+    const realStatePath = fs.realpathSync(statePath);
+    const realCheckPath = fs.realpathSync(checkPath);
+    // Ensure real paths are still inside adapterDir's realpath (no symlink escape)
+    const realAdapterDir = fs.realpathSync(adapterDir);
+    const relState = path.relative(realAdapterDir, realStatePath);
+    const relCheck = path.relative(realAdapterDir, realCheckPath);
+    if (relState.startsWith('..') || path.isAbsolute(relState) || relCheck.startsWith('..') || path.isAbsolute(relCheck)) {
+      throw new Error('scaffold authority path escapes adapter');
+    }
+    STATE = require(realStatePath);
+    check = require(realCheckPath);
     const runtimePath = path.join(installedRoot, adapterName, 'runtime.json');
     if (fs.existsSync(runtimePath)) runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
   } catch (error) {
@@ -198,7 +233,7 @@ function parseArgs(argv) {
 }
 
 function readTemplate(name) {
-  const p = path.join(TEMPLATES, name);
+  const p = resolveTemplatePath(name);
   if (!fs.existsSync(p)) {
     failPrecondition(`template not found: ${p}`);
   }
@@ -639,42 +674,6 @@ function parseRiskNames(raw) {
     .map((risk) => risk.trim().toLowerCase())
     .filter(Boolean)
     .map((risk) => aliases.get(risk) || risk))];
-}
-
-function parseTaskTriggers(raw) {
-  if (raw === null || raw === undefined) return [];
-  if (typeof raw !== 'string' || raw.trim() === '') {
-    failPrecondition('--task-triggers requires a non-empty comma-list');
-  }
-  const triggers = raw.split(',').map((value) => value.trim()).filter(Boolean);
-  if (new Set(triggers).size !== triggers.length) {
-    failPrecondition('--task-triggers must not contain duplicates');
-  }
-  for (const trigger of triggers) {
-    if (!TASK_TRIGGER_VALUES.has(trigger)) {
-      failPrecondition(`--task-triggers contains unknown trigger "${trigger}"`);
-    }
-  }
-  return triggers;
-}
-
-function derivedTaskTriggers(args, dependencyDeclarations, artifactDeclarations) {
-  const triggers = new Set(parseTaskTriggers(args.taskTriggers));
-  if (args.coordination) triggers.add('parallel_coordination');
-  if ([...dependencyDeclarations.values()].some((dependencies) => dependencies.length > 0)) {
-    triggers.add('real_dependency');
-  }
-  if (artifactDeclarations.size > 0) triggers.add('separate_proof');
-  return [...triggers].sort();
-}
-
-function validateDistinctOwnershipTaskCount(taskTriggers, taskFiles) {
-  if (taskTriggers.includes('distinct_ownership') && taskFiles.length < 2) {
-    failPrecondition(
-      'distinct_ownership requires at least 2 tasks; a single task must use a truthful ' +
-      'separate_proof artifact or durable_transition phase instead',
-    );
-  }
 }
 
 function nowIso() {

@@ -12,10 +12,11 @@
 
 ## Anchors and Ownership
 
+<!-- Compact core: one owned anchor is enough; proof artifact/owner exists only for a typed proof boundary (see Verification Plan). -->
 | ID | Type | Target | Role | Access | Action |
 |---|---|---|---|---|---|
 | A-R{{REQ_NUMBER}}-{{SEQ}}-01 | file | `{{exact/path/to/file}}` | owner | write | modify |
-| A-R{{REQ_NUMBER}}-{{SEQ}}-02 | command | `{{exact project command}}` | verifier | read | read |
+<!-- For a typed proof boundary, add: | A-R{{REQ_NUMBER}}-{{SEQ}}-02 | file | `{{exact/path/to/test-file}}` | proof | write | create | and set Task role accordingly; otherwise omit. Every executable task must own a concrete test file/artifact anchor or share proof via that typed boundary; bare command is not ownership. -->
 
 ## Changes
 
@@ -35,6 +36,7 @@
 
 ## Verification Plan
 
+<!-- Ownership invariant: a bare npm test command without a concrete file/artifact anchor is not ownership; shared proof must use a typed proof boundary. -->
 - **Verification ref:** {{V reference whose structured subject/proof owner matches this task}}
 - **Task role:** {{subject | verifier}}
 - **Command:** `{{Exact project command}}`
@@ -42,4 +44,4 @@
 - **Negative path:** {{Contract-preserving failure check}}
 - **Reachability:** `{{Real entrypoint/caller or generated artifact}}`
 
-<!-- The table above is the only task anchor/ownership table. Access read requires Action read. Access write requires create, modify, or delete. Targets are exact; globs and parent-directory claims are invalid. A verifier must not repeat the subject's Acceptance criterion. -->
+<!-- The table above is the only task anchor/ownership table. Access read requires Action read. Access write requires create, modify, or delete. Targets are exact; globs and parent-directory claims are invalid. A verifier must not repeat the subject's Acceptance criterion. Specs-only never creates or updates docs and never fabricates execution proof; record doc impact as a brief recommendation only. -->

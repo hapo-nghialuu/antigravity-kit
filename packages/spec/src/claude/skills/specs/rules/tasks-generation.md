@@ -142,6 +142,12 @@ Declare exactly `Verification ref: Vn` and `Task role: subject` or `Task role:
 verifier`. The V definition lives once in `design.md` using the canonical
 single-line bold-ID syntax. The task references it and does not copy its body.
 
+Every executable implementation task must declare concrete test ownership: at
+least one `file` or `artifact` anchor with `write` `create` or `modify` that is
+the focused test, or share proof through a typed `proof` boundary whose
+verifier owns the separate proof artifact. A generic `npm test` string alone
+is not ownership; shared proof without a typed boundary is not ownership.
+
 Access/action reachability is deterministic:
 
 | Access | Allowed Action | Grounding meaning |

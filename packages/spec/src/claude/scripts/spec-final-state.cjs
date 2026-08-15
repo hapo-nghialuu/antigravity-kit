@@ -101,7 +101,7 @@ function validateCanonicalFinalState({ policy, projectRoot, candidate, dependenc
   if (digest !== review.semantic_digest) return { ok: false, reason: 'canonical semantic digest is stale for the current final-state artifacts' };
   if (policy.readWorkflowPolicySnapshot(candidate.spec).assurance_level === 'Strict') {
     const observed = apis.semanticAuthority.verifyAttestation(projectRoot, candidate.specFile, candidate.featureName, digest);
-    if (!observed?.ok) return { ok: false, reason: `Strict semantic authority requires an allowlisted host-hook-observed SubagentStop event (${observed?.reason || 'observation unavailable'})` };
+    if (!observed?.ok) return { ok: false, reason: `Strict semantic authority requires an allowlisted host-hook-observed reviewer PASS event (${observed?.reason || 'observation unavailable'})` };
   }
   return { ok: true, legacy: false, semanticDigest: digest };
 }

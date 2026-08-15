@@ -16,7 +16,7 @@
 | ID | Type | Target | Role | Access | Action |
 |---|---|---|---|---|---|
 | A-D-01 | file | `{{path/to/existing-or-planned-file}}` | {{owner / consumer / entrypoint / proof / constraint}} | {{read / write}} | {{read / create / modify / delete}} |
-| A-D-02 | artifact | `{{path/to/proof-artifact}}` | proof evidence owner | write | create |
+<!-- For a typed proof boundary, add: | A-D-02 | artifact | `{{path/to/proof-artifact}}` | proof evidence owner | write | create | -->
 
 ## Decisions and Invariants
 
@@ -27,7 +27,7 @@
 - **Decision:** {{Canonical behavior or boundary}}
 - **Rejects ambiguity:** {{Alternative interpretation implementers must not choose}}
 - **Negative path:** {{Failure/error behavior when relevant}}
-- **Anchors:** A-D-01, A-D-02
+- **Anchors:** A-D-01
 
 ### I1 — {{Invariant name}}
 
@@ -35,7 +35,7 @@
 
 ### Named Contracts (conditional)
 
-<!-- Define each implementation-significant contract once. Tasks reference IDs and never copy bodies. -->
+<!-- Define each implementation-significant contract once. Tasks reference IDs and never copy bodies. For any public, replay, or operator API contract, include method, route, auth, required headers, request schema, success response, error semantics, and idempotency/concurrency behavior. -->
 
 #### C1 — {{Contract name}}
 
@@ -63,7 +63,7 @@ label on the same line; do not replace this with a table or a V heading.
 
 ## Data and Consistency (Full, conditional)
 
-{{Ownership, schema, constraints, concurrency, lifecycle, or idempotency.}}
+{{Ownership, schema, constraints, concurrency, lifecycle, or idempotency. For any retention/lifecycle policy, state clock anchor, clock source, timezone/precision, cutoff comparator/inclusivity, enforcement boundary, and a wrong-clock/boundary counterexample.}}
 
 ## Errors and Recovery (Full, conditional)
 

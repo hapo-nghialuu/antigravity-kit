@@ -2447,7 +2447,7 @@ function validateSemanticReview(specDir, spec, context, subCriteriaIds, designTe
         spec.feature_name,
         review.reviewed_artifact_digest,
       );
-      if (!attestation.ok) errors.push(`spec.json.validation.semantic_review: Strict assurance requires matching host SubagentStop PASS attestation (${attestation.reason})`);
+      if (!attestation.ok) errors.push(`spec.json.validation.semantic_review: Strict assurance requires matching host-observed reviewer PASS attestation (${attestation.reason})`);
     } catch (error) {
       errors.push(`spec.json.validation.semantic_review: Strict assurance attestation is unavailable (${error.message})`);
     }
@@ -2781,7 +2781,7 @@ function validateSemanticReview21(specDir, spec, criteria, designIds, verificati
       const authority = require('../hooks/semantic-review-authority.cjs');
       const root = canonicalProjectRoot(specDir);
       const attestation = authority.verifyAttestation(root, path.join(specDir, 'spec.json'), spec.feature_name, review.semantic_digest);
-      if (!attestation.ok) errors.push(`spec.json.validation.semantic_review: Strict readiness requires matching allowlisted host SubagentStop PASS attestation (${attestation.reason})`);
+      if (!attestation.ok) errors.push(`spec.json.validation.semantic_review: Strict readiness requires matching allowlisted host-observed reviewer PASS attestation (${attestation.reason})`);
     } catch (error) {
       errors.push(`spec.json.validation.semantic_review: Strict readiness attestation is unavailable (${error.message})`);
     }

@@ -62,6 +62,11 @@ Check both directions:
   `ID | Type | Target | Role | Access | Action` table;
 - typed `coordination.boundaries` own topology; legacy trigger fields, priority
   markers, related-file lists, and prose own nothing;
+- every executable implementation task owns a concrete test file or artifact
+  anchor or shares proof through a typed `proof` boundary; a bare `npm test`
+  string without such an anchor is not ownership;
+- specs-only never creates or updates docs and never fabricates execution
+  proof; doc impact is a brief recommendation at most;
 - no task, phase, research note, or review finding expands `scope_lock`;
 - optional phases exist only as compact `spec.json` groups for a complex Full
   task graph and never repeat prose.
@@ -80,14 +85,17 @@ make two competent implementers choose different behavior. Use relevant lenses:
 - dependency unavailable, timeout, partial success, retry, or duplicate event;
 - conflicting state, ordering, concurrency, restart, rollback, or migration;
 - boundary bypass, data disclosure, retention, or authorization confusion;
+- wrong clock anchor/source/timezone/precision or cutoff comparator/inclusivity or enforcement boundary for a retention/lifecycle rule (for example creation time or UTC vs local or `>` vs `>=` mismatch) that would retain or delete the wrong records;
+- partial public, replay, or operator API contract (missing method, route, auth, headers, request or response schema, error semantics, or idempotency and concurrency behavior);
 - orphaned route/component/worker/artifact with no runtime reachability;
 - task consumer beginning before its contract/schema/transition owner;
-- verification command passing while the user-visible behavior is wrong.
+- verification command passing while the user-visible behavior is wrong;
+- an executable task with only a generic test command and no owned test file or typed proof verifier.
 
 A counterexample passes only when requirements or design already choose the
 behavior and the verification plan can distinguish the correct result. Do not
 invent a product decision during review; unresolved choices require a user
-decision.
+decision. Two-review target is advisory: after two failed semantic rounds, pause for unresolved product/security/architecture uncertainty or repeated non-convergence; one clearly bounded mechanical correction without weakening gates is allowed; budgets never override correctness. Specs-only never creates or updates docs and never fabricates execution proof; record doc impact as a brief recommendation only.
 
 ## Assurance depth
 
@@ -96,6 +104,12 @@ decision.
 | Routine | Same-session graph check and relevant counterexamples; no reviewer ceremony. |
 | Elevated | Same-session targeted adversarial review; no reviewer ceremony. |
 | Strict | Full red-team plus a host-hook-observed event from an allowlisted reviewer capability. |
+
+Risk presence sets the automatic minimum to Elevated. Strict is opt-in only
+for an explicit user/project independent-audit requirement or a user-confirmed,
+scope-specific audit decision. Never select it from a keyword, severity label,
+Full depth, or reviewer availability. If the required host event is unavailable,
+pause once and report the capability blocker; do not retry loops or downgrade.
 
 Strict red-team lenses are Security Adversary, Failure Mode Analyst, Assumption
 Destroyer, and Scope & Complexity Critic. Findings without a concrete physical
@@ -133,7 +147,10 @@ checkbox checked state do not stale review; requirement, design, research, task
 prose, dependency, artifact, or coordination changes do.
 
 ```bash
+# Claude Code
 node .claude/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
+# Codex (installed projection — verify, not raw .claude path)
+node .codex/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
 ```
 
 The machine-recorded state binds the returned digest, exact reviewed `RN.M`
@@ -154,8 +171,12 @@ exactly one line:
 CAFEKIT_SEMANTIC_REVIEW_ATTESTATION {"feature_name":"<feature>","spec_file":"specs/<feature>/spec.json","semantic_digest":"sha256:<digest>","verdict":"PASS"}
 ```
 
-The SubagentStop hook recomputes the digest and stores a MAC-protected record
-outside the project, bound to canonical project/spec/feature identity.
+The `SubagentStop` hook recomputes the digest and stores a MAC-protected record
+outside the project, bound to canonical project/spec/feature identity. Codex
+must use its event-capable thread-spawn path for this Strict gate. Its legacy
+internal multi-agent path does not expose the child completion message through
+a supported hook event, so it stays not-ready; never derive authority from a
+parent summary or a spawn-only `PostToolUse` event.
 Do not add reviewer identity or independence claims to `semantic_review`.
 This is a host-hook-observed honest-agent guardrail. It is not host-attested
 evidence and not a security boundary against another process running as the
@@ -165,13 +186,19 @@ After the Strict observation (or immediately for Routine/Elevated), invoke the
 only supported atomic promotion path:
 
 ```bash
+# Claude Code
 node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
+# Codex (installed projection — verify, not raw .claude path)
+node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
 ```
 
 Run normal validation only after the installed finalizer records that state:
 
 ```bash
+# Claude Code
 node .claude/scripts/validate-spec-output.cjs specs/<feature>
+# Codex (installed projection)
+node .codex/scripts/validate-spec-output.cjs specs/<feature>
 ```
 
 Run the runtime-provided grounding command for every durable spec. It

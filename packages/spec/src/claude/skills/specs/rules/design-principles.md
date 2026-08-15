@@ -75,6 +75,11 @@ event shape, persistence/schema, deletion/retention, generated artifacts,
 runtime entrypoints, or recovery behavior. Do not invent contract ceremony for
 local details that cannot drift across a boundary.
 
+For any public, replay, or operator surface contract, specify method, route,
+auth, required headers, request schema, success response, error semantics, and
+idempotency/concurrency behavior in one place; a partial contract is not a
+contract.
+
 ## Decision quality
 
 Record a decision only when another reasonable implementation would behave
@@ -92,7 +97,7 @@ intentional.
 ## Conditional detail
 
 - Flow: include only for branching, asynchronous, or multi-party behavior.
-- Data: include only when shape, ownership, consistency, or lifecycle changes.
+- Data: include only when shape, ownership, consistency, or lifecycle changes. Any retention/lifecycle policy must state clock anchor, clock source, timezone/precision, cutoff comparator/inclusivity, enforcement boundary, and a wrong-clock/boundary counterexample; domain-generic.
 - Error/recovery: include concrete triggers, responses, retry/rollback, and
   terminal states only when relevant.
 - Security/privacy: include trust boundary, authorization, sensitive data, and

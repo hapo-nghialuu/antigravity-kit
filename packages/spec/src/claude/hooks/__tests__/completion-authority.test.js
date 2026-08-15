@@ -63,7 +63,7 @@ function prepare(root, { lane = 'Standard', status = 'in_progress', phase = 'clo
   const featureDir = path.join(root, 'specs', feature);
   fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
   const policyInput = lane === 'Critical'
-    ? { riskSignals: { auth: true } }
+    ? { riskSignals: { auth: true }, assurance_level: 'Strict' }
     : lane === 'Direct'
       ? { reversible: true, lowRisk: true, isolated: true }
       : { riskSignals: {} };
@@ -135,6 +135,12 @@ function adapter(kind, root) {
   copyClaudeTestRuntime(path.join(ROOT, '..'), path.join(root, '.codex'));
   const hooks = path.join(root, '.codex/hooks');
   fs.cpSync(CODEX_HOOKS, hooks, { recursive: true });
+  for (const helper of ['privacy-command-analysis.cjs', 'runtime-path-safety.cjs']) {
+    fs.copyFileSync(
+      path.join(ROOT, 'claude/hooks/lib', helper),
+      path.join(hooks, 'lib', helper),
+    );
+  }
   return {
     root,
     hook: path.join(hooks, 'completion-authority.cjs'),
@@ -843,7 +849,7 @@ test('canonical final-state decision rejects every stale mutation class before e
     candidate.spec.workflow_policy = POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Full', assurance_level: 'Strict' });
     assert.match(
       AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies }).reason,
-      /host-hook-observed SubagentStop/,
+      /host-hook-observed reviewer PASS/,
     );
     state.observed = true;
     assert.equal(AUTHORITY_CHECK.validateCanonicalFinalState({ policy: POLICY, projectRoot: root, candidate, dependencies }).ok, true);

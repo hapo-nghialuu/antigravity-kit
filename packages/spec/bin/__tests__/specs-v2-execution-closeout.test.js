@@ -210,6 +210,7 @@ function prepare(root, { taskless = false, specStatus = 'in_progress', taskStatu
 function installGate(root, kind) {
   const runtimeDir = path.join(root, kind === 'claude' ? '.claude' : '.codex');
   fs.mkdirSync(path.join(runtimeDir, 'hooks'), { recursive: true });
+  fs.mkdirSync(path.join(runtimeDir, 'hooks', 'lib'), { recursive: true });
   fs.mkdirSync(path.join(runtimeDir, 'scripts'), { recursive: true });
   for (const name of [
     'workflow-policy.cjs', 'provenance.cjs', 'spec-resolver.cjs', 'spec-receipt.cjs',
@@ -225,6 +226,12 @@ function installGate(root, kind) {
   } else {
     fs.cpSync(path.join(ROOT, 'src/codex/hooks'), path.join(runtimeDir, 'hooks'), { recursive: true });
   }
+  // The real installer materializes this canonical helper for both adapters.
+  // Keep this narrow runtime fixture faithful to the same dependency closure.
+  fs.copyFileSync(
+    path.join(ROOT, 'src/claude/hooks/lib/runtime-path-safety.cjs'),
+    path.join(runtimeDir, 'hooks/lib/runtime-path-safety.cjs'),
+  );
   return path.join(runtimeDir, 'hooks/spec-gate.cjs');
 }
 
@@ -397,8 +404,8 @@ test('v2 floor merge keeps axes independent, planning controls artifact profile,
     const merged = checker.mergePolicyFloor(policy, floor, current);
     assert.equal(merged.planning_depth, 'Full');
     assert.equal(merged.artifact_profile, 'strict');
-    assert.equal(merged.automatic_assurance_level, 'Strict');
-    assert.equal(merged.assurance_level, 'Strict');
+    assert.equal(merged.automatic_assurance_level, 'Elevated');
+    assert.equal(merged.assurance_level, 'Elevated');
     assert.ok(merged.proof_obligations.includes('needsExecutionProof'));
   }
 });

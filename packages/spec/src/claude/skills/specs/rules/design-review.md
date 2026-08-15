@@ -44,8 +44,11 @@ observations are optional and never displace a blocker.
 Routine and Elevated require semantic review but no reviewer ceremony. Strict
 requires an independent allowlisted reviewer capability observed by the host
 hook. An author, task marker, receipt text, or claimed role cannot self-attest
-that capability. Deterministic validation checks implemented structure and
-grounding; it never replaces this semantic judgment.
+that capability. Risk alone has an Elevated floor; Strict is opt-in only for an
+explicit user/project audit requirement or a user-confirmed, scope-specific
+audit decision. If the host event is unavailable, pause once rather than retry,
+downgrade, or simulate authority. Deterministic validation checks implemented
+structure and grounding; it never replaces this semantic judgment.
 
 Readiness stays false until the complete blocker inventory is resolved and all
 required machine gates pass. Review does not claim implementation execution,

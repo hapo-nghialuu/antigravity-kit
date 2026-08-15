@@ -78,20 +78,6 @@ const ACTOR_NEEDS_BY_OBLIGATION = Object.freeze({
 });
 const ACTOR_CAPABILITIES = new Set(Object.values(ACTOR_NEEDS_BY_OBLIGATION).map((need) => need.capability));
 const ACTOR_INDEPENDENCE = new Set(['same-session', 'independent']);
-const CRITICAL_RISKS = new Set([
-  'reversibility',
-  'destructive',
-  'auth',
-  'payment',
-  'privacy',
-  'data',
-  'schema',
-  'migration',
-  'publicContract',
-  'crossRuntime',
-  'ambiguity',
-  'rollback',
-]);
 const LANE_RISK_KEYS = Object.freeze({
   reversibility: ['reversible', 'reversibility', 'irreversible', 'non-reversible'],
   destructive: ['destructive', 'deletion', 'delete', 'destroy'],
@@ -591,8 +577,6 @@ function inferredPlanningDepth(input, taskCount) {
 
 function minimumAssuranceForRisks(risks = []) {
   const listed = Array.isArray(risks) ? risks : [];
-  const classified = classifyRiskSignals({ risks: listed });
-  if (Object.entries(classified).some(([risk, active]) => active && CRITICAL_RISKS.has(risk))) return 'Strict';
   return listed.length > 0 ? 'Elevated' : 'Routine';
 }
 
@@ -1081,16 +1065,17 @@ const persistWorkflowPolicy = persistWorkflowPolicySnapshot;
 const createWorkflowPolicySnapshot = workflowPolicySnapshot;
 
 function candidateAssuranceForRisks(input, risks) {
-  const explicitLevel = String(input?.riskLevel || input?.risk_level || input?.level || '').toLowerCase();
-  const explicitLevelValue = ['critical', 'high', 'deep', 'strict'].includes(explicitLevel)
-    ? 'Strict'
-    : ['standard', 'medium'].includes(explicitLevel)
-      ? 'Elevated'
-      : null;
+  // A risk severity label is evidence for inspection, not independent-audit
+  // authority. Strict is selected only through the explicit assurance axis.
+  const explicitRiskLevel = String(input?.riskLevel || input?.risk_level || input?.level || '').toLowerCase();
+  const riskLevelAssurance = ['standard', 'medium', 'high', 'critical', 'deep'].includes(explicitRiskLevel)
+    ? 'Elevated'
+    : null;
   const riskLevel = minimumAssuranceForRisks(risks);
-  if (explicitLevelValue === null && riskLevel === 'Routine') return null;
-  if (explicitLevelValue === null) return riskLevel;
-  return ASSURANCE_LEVELS[Math.max(ASSURANCE_LEVELS.indexOf(explicitLevelValue), ASSURANCE_LEVELS.indexOf(riskLevel))];
+  const candidates = [riskLevelAssurance, riskLevel]
+    .filter((level) => level !== null && level !== undefined);
+  if (candidates.length === 0 || candidates.every((level) => level === 'Routine')) return null;
+  return ASSURANCE_LEVELS[Math.max(...candidates.map((level) => ASSURANCE_LEVELS.indexOf(level)))];
 }
 
 function escalateWorkflowPolicy(policyOrSpec, riskInput = {}) {
@@ -1109,16 +1094,27 @@ function escalateWorkflowPolicy(policyOrSpec, riskInput = {}) {
     ...explicitRisks,
   ])];
   const risks = [...new Set([...current.risks, ...newRisks])];
-  if (newRisks.every((risk) => current.risks.includes(risk))) return current;
+  const requestedAssurance = riskInput?.assurance_level ?? riskInput?.assuranceLevel;
+  if (requestedAssurance !== undefined && requestedAssurance !== null) {
+    assertAssuranceLevel(requestedAssurance);
+  }
+  const hasNewRisk = newRisks.some((risk) => !current.risks.includes(risk));
+  const hasRiskLevel = ['standard', 'medium', 'high', 'critical', 'deep'].includes(
+    String(riskInput?.riskLevel || riskInput?.risk_level || riskInput?.level || '').toLowerCase(),
+  );
+  const raisesRequestedAssurance = requestedAssurance
+    && ASSURANCE_LEVELS.indexOf(requestedAssurance) > ASSURANCE_LEVELS.indexOf(current.assurance_level);
+  if (!hasNewRisk && !hasRiskLevel && !raisesRequestedAssurance) return current;
   const candidate = candidateAssuranceForRisks(riskInput, risks);
-  if (!candidate) return current;
+  if (!candidate && !raisesRequestedAssurance) return current;
   const automaticAssuranceLevel = ASSURANCE_LEVELS[Math.max(
     ASSURANCE_LEVELS.indexOf(current.automatic_assurance_level),
-    ASSURANCE_LEVELS.indexOf(candidate),
+    ASSURANCE_LEVELS.indexOf(candidate || 'Routine'),
   )];
   const assuranceLevel = ASSURANCE_LEVELS[Math.max(
     ASSURANCE_LEVELS.indexOf(current.assurance_level),
     ASSURANCE_LEVELS.indexOf(automaticAssuranceLevel),
+    ASSURANCE_LEVELS.indexOf(requestedAssurance || 'Routine'),
   )];
   const axes = {
     planningDepth: current.planning_depth,
