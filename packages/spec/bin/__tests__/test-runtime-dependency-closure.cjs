@@ -61,9 +61,10 @@ function relativeRequires(sourceFile) {
   if (/\brequire\s*\(\s*path\.(?:join|resolve)\s*\(\s*__dirname\b/.test(source)) {
     throw new Error(`dynamic local require is not allowed: ${sourceFile}`);
   }
-  const localBindings = new Set([...source.matchAll(
-    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"])(\.\.?\/[^'"]*)\2/g,
-  )].map((match) => match[1]));
+  const localBindings = new Set();
+  for (const match of source.matchAll(
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:String\s*\(\s*)?(['"])(\.\.?\/[^'"]*)\2\s*\)?/g,
+  )) localBindings.add(match[1]);
   const requests = new Set();
   for (const match of source.matchAll(/\brequire\s*\(\s*([^()\r\n]+?)\s*\)/g)) {
     const expression = match[1].trim();
@@ -75,7 +76,6 @@ function relativeRequires(sourceFile) {
     const identifier = expression.match(/^[A-Za-z_$][\w$]*$/)?.[0];
     const visiblyLocal = /^(['"])(\.\.?\/)/.test(expression)
       || /^`\.\.?\//.test(expression)
-      || /\bpath\.(?:join|resolve)\s*\(\s*__dirname\b/.test(expression)
       || (identifier && localBindings.has(identifier));
     if (visiblyLocal) throw new Error(`dynamic local require is not allowed: ${sourceFile}`);
   }
@@ -173,6 +173,7 @@ if (require.main === module) {
     for (const body of [
       "const target = './dependency.cjs';\nrequire(target);\n",
       "const path = require('node:path');\nrequire(path.join(__dirname, 'dependency.cjs'));\n",
+      "const request = String('./dependency.cjs');\nrequire(request);\n",
     ]) {
       fs.writeFileSync(path.join(source, 'entry.cjs'), body);
       assert.throws(copy, /dynamic local require/);

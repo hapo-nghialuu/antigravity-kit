@@ -467,7 +467,7 @@ function requirementsProjection({ proof = false } = {}) {
 
 ### Requirement 1: Installed behavior
 
-- **R1.1**: The installed entry command shall return status enabled; invalid input shall return status rejected.${proof ? '\n- **R1.2**: The installed verifier shall prove the observed entry behavior through its grounded evidence boundary.' : ''}
+- **R1.1**: The CommonJS entrypoint \`src/entry.js\` shall return an object containing only status \`enabled\` when its sole \`valid\` argument is the boolean \`true\`; it shall return an object containing only status \`rejected\` for \`false\`, a missing argument, or any non-boolean value.${proof ? '\n- **R1.2**: The installed verifier shall prove the observed entry behavior through its grounded evidence boundary.' : ''}
 `;
 }
 
@@ -486,20 +486,22 @@ function typedAnchorTable(rows) {
 }
 
 function designProjection({
-  expected = 'exit 0 and status enabled for valid input',
+  expected = 'exit 0; boolean true returns the exact enabled object; false, undefined, null, `"true"`, 1, and an object return the exact rejected object',
   taskful = false,
 } = {}) {
   const anchors = typedAnchorTable([{
-    id: 'A-D-01', type: 'file', target: 'src/design-boundary.js',
-    role: 'existing design boundary for the entrypoint', access: 'read', action: 'read',
+    id: 'A-D-01', type: 'file', target: taskful ? 'src/design-boundary.js' : 'src/entry.js',
+    role: taskful ? 'existing design boundary for the entrypoint' : 'existing runtime entrypoint and contract owner',
+    access: 'read', action: 'read',
   }]);
+  const reachabilityAnchors = taskful ? 'A-R1-01-01, A-R1-02-02' : 'A-D-01';
   return `# Design
 
 ## Boundary
 
-- **Owns:** \`src/entry.js\` returns the installed behavior state.
-- **Reads:** The input discriminator.
-- **Writes/exposes:** A status result through the entrypoint.
+- **Owns:** The exact return contract of the CommonJS function exported by \`src/entry.js\`.
+- **Reads:** One \`valid\` argument; only the boolean \`true\` is valid.
+- **Writes/exposes:** Exactly one status field whose value is \`enabled\` or \`rejected\`.
 - **Outside boundary:** Unrelated runtime behavior.
 
 ## Typed Anchors
@@ -510,25 +512,25 @@ ${anchors}
 
 ### D1 — Installed result decision
 
-- **Decision:** Valid input returns enabled and invalid input returns rejected.
-- **Rejects ambiguity:** Invalid input never falls through to enabled.
-- **Negative path:** Missing discriminator returns rejected.
+- **Decision:** \`valid === true\` returns an object containing only status \`enabled\`; every other value returns an object containing only status \`rejected\`.
+- **Rejects ambiguity:** Truthy non-booleans such as \`"true"\` never count as valid.
+- **Negative path:** \`false\`, \`undefined\`, \`null\`, strings, numbers, and objects return rejected.
 - **Anchors:** A-D-01
 
 ### I1 — Rejection invariant
 
-Invalid input never returns enabled.
+Any input other than the boolean \`true\` never returns enabled.
 
 ### C1 — Result contract
 
 - **Owner:** A-D-01
-- **Consumers:** installed semantic validation
-- **Shape/behavior:** The result contains status enabled or rejected.
-- **Compatibility:** The two status values remain stable.
+- **Consumers:** \`test/entry.test.js\` and callers of the CommonJS export.
+- **Shape/behavior:** The result is an object with exactly one \`status\` field set to \`enabled\` or \`rejected\`.
+- **Compatibility:** The strict boolean discriminator, exact object shape, and two status values remain stable.
 
 ## Verification Definitions
 
-- **V1**: Criteria R1.1; Owner ${taskful ? 'R1-01' : 'A-D-01'}; ${taskful ? 'Proof criteria R1.2; Proof owner R1-02; Evidence anchor A-R1-02-02; ' : ''}Decision refs D1, I1, C1; Method command \`node --test test/entry.test.js\`; Expected ${expected}; Negative/failure invalid input returns rejected without publishing proof; Reachability/grounding entrypoint \`src/entry.js\` via A-D-01${taskful ? ', A-R1-02-02' : ''}.
+- **V1**: Criteria R1.1; Owner ${taskful ? 'R1-01' : 'A-D-01'}; ${taskful ? 'Proof criteria R1.2; Proof owner R1-02; Evidence anchor A-R1-02-02; ' : ''}Decision refs D1, I1, C1; Method command \`node --test test/entry.test.js\`; Expected ${expected}; Negative/failure \`false\`, missing input, \`null\`, and truthy non-booleans all return the exact rejected object; Reachability/grounding entrypoint \`src/entry.js\` via ${reachabilityAnchors}.
 `;
 }
 
@@ -556,9 +558,19 @@ function completeSemanticReview(paths, root, fixture, counterexamples) {
 function createTasklessFixture(paths, root, feature, options = {}) {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   fs.mkdirSync(path.join(root, 'test'), { recursive: true });
-  fs.writeFileSync(path.join(root, 'src', 'entry.js'), 'module.exports = (valid) => ({ status: valid ? "enabled" : "rejected" });\n');
+  fs.writeFileSync(path.join(root, 'src', 'entry.js'), 'module.exports = (valid) => ({ status: valid === true ? "enabled" : "rejected" });\n');
   fs.writeFileSync(path.join(root, 'src', 'design-boundary.js'), 'module.exports = { entry: "src/entry.js" };\n');
-  fs.writeFileSync(path.join(root, 'test', 'entry.test.js'), 'require("node:test")("entry", () => {});\n');
+  fs.writeFileSync(path.join(root, 'test', 'entry.test.js'), `const test = require('node:test');
+const assert = require('node:assert/strict');
+const entry = require('../src/entry.js');
+
+test('entry accepts only the boolean true discriminator', () => {
+  assert.deepEqual(entry(true), { status: 'enabled' });
+  for (const invalid of [false, undefined, null, 'true', 1, {}]) {
+    assert.deepEqual(entry(invalid), { status: 'rejected' });
+  }
+});
+`);
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
   const fixture = materializeSpecState(paths, root, feature, options);
   fs.writeFileSync(path.join(fixture.featureDir, 'requirements.md'), requirementsProjection());
@@ -730,27 +742,43 @@ process.stdout.write(JSON.stringify({ explicit: explicit && explicit.featureName
   assert.ok(resolution.candidates.length >= 2);
 }
 
-function assertStrictHostHookGuardrail(paths, root, fixture) {
+function assertStrictSimulatedHandlerGuardrail(paths, root, fixture) {
+  // Simulated SubagentStop handler chain — NOT a live Codex host E2E.
+  // This exercises the installed hook's handler logic via direct spawn,
+  // not a real Codex binary dispatching SubagentStop. For live host,
+  // see the opt-in CAFEKIT_CODEX_HOST_E2E test below.
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-strict-home-'));
   const code = `
 const authority = require(process.argv[1]); const readiness = require(process.argv[2]); const root = process.argv[3]; const feature = process.argv[4]; const digest = process.argv[5]; const review = JSON.parse(process.argv[6]);
 const spec_file = 'specs/' + feature + '/spec.json';
 const marker = authority.MARKER + JSON.stringify({ feature_name: feature, spec_file, semantic_digest: digest, verdict: 'PASS' });
 const before = authority.verifyAttestation(root, spec_file, feature, digest);
-const forged = authority.recordFromSubagentStop({ cwd: root, hook_event_name: 'SubagentStop', session_id: 'self-session', agent_id: 'self', agent_type: 'spec-maker', last_assistant_message: marker });
+const {spawnSync} = require('child_process');
+const authorityPath = process.argv[1];
+function handlerInvoke(payload) {
+  return spawnSync(process.execPath, [authorityPath], {cwd: root, input: JSON.stringify(payload), encoding:'utf8', env: {...process.env, HOME: process.env.HOME, USERPROFILE: process.env.HOME, PROJECT_ROOT: root}});
+}
+const forgedPayload = {cwd: root, hook_event_name: 'SubagentStop', session_id: 'self-session', agent_id: 'self', agent_type: 'spec-maker', last_assistant_message: marker};
+const forgedRes = handlerInvoke(forgedPayload);
 const afterForged = authority.verifyAttestation(root, spec_file, feature, digest);
-const observed = authority.recordFromSubagentStop({ cwd: root, hook_event_name: 'SubagentStop', session_id: 'host-session', agent_id: 'reviewer-1', agent_type: 'code-auditor', last_assistant_message: marker });
+const observedPayload = {cwd: root, hook_event_name: 'SubagentStop', session_id: 'host-session', agent_id: 'reviewer-1', agent_type: 'code-auditor', last_assistant_message: marker};
+const observedRes = handlerInvoke(observedPayload);
 const afterObserved = authority.verifyAttestation(root, spec_file, feature, digest);
 const finalized = readiness.finalizeReadiness({ specDir: require('path').join(root, 'specs', feature), projectRoot: root, reviewResult: review });
-process.stdout.write(JSON.stringify({ before: before.ok, forged: forged.recorded, afterForged: afterForged.ok, observed: observed.recorded, afterObserved: afterObserved.ok, ready: finalized.spec.ready_for_implementation }));`;
+process.stdout.write(JSON.stringify({ before: before.ok, forged: afterForged.ok, afterForged: afterForged.ok, observed: afterObserved.ok, afterObserved: afterObserved.ok, ready: finalized.spec.ready_for_implementation, forgedStderr: forgedRes.stderr.trim(), observedStderr: observedRes.stderr.trim() }));`;
   const result = spawnSync(process.execPath, ['-e', code, paths.semanticAuthority, paths.readiness, root, fixture.state.feature_name, fixture.digest, JSON.stringify(fixture.reviewResult)], {
     cwd: root, encoding: 'utf8', env: { ...process.env, HOME: home, PROJECT_ROOT: root },
   });
   fs.rmSync(home, { recursive: true, force: true });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.deepEqual(JSON.parse(result.stdout), {
-    before: false, forged: false, afterForged: false, observed: true, afterObserved: true, ready: true,
-  });
+  const out = JSON.parse(result.stdout);
+  // Simulated handler: forged self-attestation via spec-maker must NOT create observation, code-auditor must.
+  assert.equal(out.before, false, 'strict attestation must be missing before simulated handler observation');
+  assert.equal(out.afterForged, false, 'forged self-attestation must NOT create simulated handler observation');
+  assert.equal(out.afterObserved, true, 'code-auditor simulated handler must create observation');
+  assert.equal(out.ready, true, 'SPEC_READY after simulated handler observation');
+  assert.ok(out.forgedStderr.includes('rejected') || out.forgedStderr === '', 'forged handler invoke should be rejected or silent but not create observation');
+  assert.equal(out.observedStderr, '', 'code-auditor simulated handler observation should be silent');
 }
 
 function assertStaleDigestMutations(paths, root, taskless, taskBearing) {
@@ -872,7 +900,7 @@ test('packed Claude and Codex installs execute semantic kernel behavior without 
       const strict = createTasklessFixture(paths, project, 'strict-installed', { strict: true });
       const taskBearing = createTaskFixture(paths, project, 'tasks-installed');
       assertInstalledResolution(paths, project, platform, 'strict-installed');
-      assertStrictHostHookGuardrail(paths, project, strict);
+      assertStrictSimulatedHandlerGuardrail(paths, project, strict);
       assertStaleDigestMutations(paths, project, taskless, taskBearing);
       runInstalled(paths.validator, [taskless.featureDir], project);
       runInstalled(paths.validator, [taskBearing.featureDir], project);
@@ -907,5 +935,155 @@ test('packed Claude and Codex installs self-contain runtime provenance and fail 
     }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packed Codex live host E2E via codex binary (opt-in)', async (t) => {
+  if (process.env.CAFEKIT_CODEX_HOST_E2E !== '1') {
+    t.skip('opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-live-codex-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  const cafekitHome = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-live-home-'));
+  const originalHome = process.env.HOME;
+  const originalUserProfile = process.env.USERPROFILE;
+  const originalCodexHome = process.env.CODEX_HOME;
+  // Preserve original home for Codex auth (without inspecting contents)
+  const authHome = originalCodexHome || (originalHome ? path.join(originalHome, '.codex') : null);
+  let project;
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    project = path.join(root, 'codex-live');
+    const installer = installPacked(tarball, project, runtimeClosure);
+    runInstaller(installer, project, ['codex'], null);
+    const paths = installedSemanticPaths(project, 'codex');
+    const fixture = createTasklessFixture(paths, project, 'live-strict', { strict: true });
+    initializeGit(project);
+    // Verify via child process to keep CafeKit state isolated without mutating global env
+    const verifyViaChild = (digest) => {
+      const script = 'const a=require(process.argv[1]); console.log(JSON.stringify(a.verifyAttestation(process.argv[2],process.argv[3],process.argv[4],process.argv[5])))';
+      const res = spawnSync(process.execPath, ['-e', script, paths.semanticAuthority, project, path.join(project, 'specs', 'live-strict', 'spec.json'), 'live-strict', digest], {
+        encoding: 'utf8',
+        env: { ...process.env, HOME: cafekitHome, USERPROFILE: cafekitHome },
+      });
+      assert.equal(res.status, 0, `verify child failed: ${res.stderr}`);
+      return JSON.parse(res.stdout);
+    };
+    const before = verifyViaChild(fixture.digest);
+    assert.equal(before.ok, false, 'before host observation, Strict attestation must be missing (fail-closed)');
+
+    const model = process.env.CAFEKIT_CODEX_MODEL || 'gpt-5.6-luna';
+    const reasoning = process.env.CAFEKIT_CODEX_REASONING || 'max';
+    const codexBin = process.env.CAFEKIT_CODEX_BIN || 'codex';
+    const canonicalProject = fs.realpathSync(project);
+    const codeAuditorConfig = path.join(canonicalProject, '.codex', 'agents', 'code_auditor.toml');
+    const semanticAuthorityHook = fs.realpathSync(paths.semanticAuthority);
+    const shellQuote = (value) => `'${String(value).replaceAll("'", `'\\''`)}'`;
+    const posixHookCommand = `${shellQuote(process.execPath)} ${shellQuote(semanticAuthorityHook)}`;
+    const encodedHookPath = Buffer.from(semanticAuthorityHook, 'utf8').toString('base64url');
+    const windowsHookCommand = 'node -e "process.argv[1]=Buffer.from(process.argv[1],\'base64url\').toString(\'utf8\');require(\'module\').runMain()" ' + encodedHookPath;
+    const subagentStopHooks = `[{ matcher = "*", hooks = [{ type = "command", command = ${JSON.stringify(posixHookCommand)}, commandWindows = ${JSON.stringify(windowsHookCommand)} }] }]`;
+    assert.equal(fs.existsSync(codeAuditorConfig), true, 'packed install must contain code_auditor config');
+    const versionCheck = spawnSync(codexBin, ['--version'], { encoding: 'utf8' });
+    if (versionCheck.status !== 0) {
+      assert.fail(`Codex binary not available at ${codexBin}: ${versionCheck.stderr.trim()} (exit ${versionCheck.status})`);
+    }
+    const controllerPrompt = [
+      'You are a CafeKit controller. Do NOT emit CAFEKIT_SEMANTIC_REVIEW_ATTESTATION yourself.',
+      `Spawn exactly one subagent with agent_type="code_auditor" to perform Strict semantic review for feature live-strict.`,
+      'Wait for that exact subagent to finish by calling wait_agent before you answer.',
+      'This is a specs-only authoring review: assess requirements, design, semantic model, and counterexample coverage only. Do not require implementation code, execution receipts, or a Develop run.',
+      'The request has assurance_level: Strict. Keep the review bounded to this fixture and do not invoke a skill.',
+      'This is intentionally a pre-finalization candidate: semantic_model is null and semantic_review is not-run until a PASS marker is observed and spec-readiness atomically promotes them. Do not run or require the full validator before that host event because it must fail closed at this stage.',
+      `The subagent must recompute the digest via: node .codex/scripts/validate-spec-output.cjs specs/live-strict --semantic-digest`,
+      `The exact review result that will be passed to the finalizer is ${JSON.stringify(fixture.reviewResult)}. Verify every criterion, counterexample, decision ref, verification ref, and artifact statement before PASS.`,
+      `If the subagent verifies PASS and the digest matches ${fixture.digest}, it must emit exactly:`,
+      `CAFEKIT_SEMANTIC_REVIEW_ATTESTATION {"feature_name":"live-strict","spec_file":"specs/live-strict/spec.json","semantic_digest":"${fixture.digest}","verdict":"PASS"}`,
+      'No other marker. After the subagent, do not add any marker.',
+    ].join(' ');
+
+    const execArgs = [
+      'exec',
+      '-m', model,
+      '-c', `model_reasoning_effort=${reasoning}`,
+      // Project agents are intentionally skipped until a user trusts the repo.
+      // This disposable E2E must not mutate global trust, so register the
+      // packed profile explicitly for this process. Static packed tests cover
+      // the normal trusted-project auto-discovery path and file schema.
+      '-c', 'agents.code_auditor.description="CafeKit Strict semantic reviewer"',
+      '-c', `agents.code_auditor.config_file=${JSON.stringify(codeAuditorConfig)}`,
+      // Isolate this E2E from the user's config/hooks while retaining auth.
+      // The process-scoped hook executes the packed entrypoint directly.
+      '--ignore-user-config',
+      // Only thread-spawned Codex subagents emit the supported SubagentStop
+      // event. The legacy internal path emits spawn PostToolUse but no
+      // hook-observable completion payload and must remain fail-closed.
+      '--enable', 'multi_agent_v2',
+      '-c', 'features.hooks=true',
+      '-c', `hooks.SubagentStop=${subagentStopHooks}`,
+      '-s', 'read-only',
+      '--dangerously-bypass-hook-trust',
+      '--ephemeral',
+      '-C', canonicalProject,
+      controllerPrompt,
+    ];
+    const codexResult = spawnSync(codexBin, execArgs, {
+      cwd: project,
+      encoding: 'utf8',
+      timeout: 600000,
+      maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, HOME: cafekitHome, USERPROFILE: cafekitHome, ...(authHome ? { CODEX_HOME: authHome } : {}) },
+    });
+    if (codexResult.status !== 0) {
+      const cliOutput = `${codexResult.stderr.trim()}\n${codexResult.stdout.trim()}`.trim();
+      const processState = [
+        `status=${codexResult.status}`,
+        `signal=${codexResult.signal || 'none'}`,
+        codexResult.error ? `spawn_error=${codexResult.error.code || codexResult.error.message}` : null,
+      ].filter(Boolean).join(', ');
+      const isEnvAuth = /authentication|unauthorized|credential|not logged in|login required|CODEX_HOME|not.*found|ENOENT/i.test(cliOutput);
+      if (isEnvAuth) {
+        assert.fail(`Live Codex host failed due to CLI/environment (${processState}): ${cliOutput.slice(0, 1600)}`);
+      }
+      assert.fail(`Live Codex host exec failed (${processState}): ${cliOutput.slice(0, 1600)}`);
+    }
+    // Verify via public authority API only (no HOME inspection) via child process
+    const after = verifyViaChild(fixture.digest);
+    const liveTrace = `${codexResult.stderr || ''}\n${codexResult.stdout || ''}`.trim();
+    assert.equal(
+      after.ok,
+      true,
+      `host observation must exist after Codex reviewer completion event (got ${after.reason})\n` +
+      `Codex trace tail:\n${liveTrace.slice(-6000)}`,
+    );
+    assert.equal(after.record.reviewer_agent_type, 'code_auditor', 'observation must be from code_auditor');
+    const reviewFile = path.join(project, 'specs', 'live-strict', '.live-review.json');
+    fs.writeFileSync(reviewFile, JSON.stringify(fixture.reviewResult));
+    const readinessResult = spawnSync(process.execPath, [paths.readiness, path.join(project, 'specs', 'live-strict'), '--review-result', reviewFile], {
+      cwd: project,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: cafekitHome },
+    });
+    fs.unlinkSync(reviewFile);
+    assert.equal(readinessResult.status, 0, `readiness should succeed after host observation: ${readinessResult.stderr.trim()}`);
+    assert.match(readinessResult.stdout, /SPEC_READY/);
+    const specAfter = JSON.parse(fs.readFileSync(path.join(project, 'specs', 'live-strict', 'spec.json'), 'utf8'));
+    assert.equal(specAfter.ready_for_implementation, true, 'SPEC_READY after live host observation');
+  } finally {
+    // Restore exact environment on all paths
+    if (originalHome !== undefined) process.env.HOME = originalHome; else delete process.env.HOME;
+    if (originalUserProfile !== undefined) process.env.USERPROFILE = originalUserProfile; else delete process.env.USERPROFILE;
+    if (originalCodexHome !== undefined) process.env.CODEX_HOME = originalCodexHome; else delete process.env.CODEX_HOME;
+    // Clear require cache for authority to avoid polluting other tests
+    try {
+      const tmpPaths = path.join(root || os.tmpdir(), 'codex-live', '.codex', 'hooks', 'semantic-review-authority.cjs');
+      delete require.cache[require.resolve(tmpPaths)];
+    } catch {}
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(cafekitHome, { recursive: true, force: true });
   }
 });

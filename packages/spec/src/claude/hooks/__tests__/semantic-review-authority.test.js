@@ -21,6 +21,25 @@ function fixture(base, name) {
   return { root, specDir, specFile: path.join(specDir, 'spec.json') };
 }
 
+function installSemanticRuntime(target, runtime) {
+  const runtimeRoot = path.join(target.root, runtime === 'claude' ? '.claude' : '.codex');
+  const hooks = path.join(runtimeRoot, 'hooks');
+  const scripts = path.join(runtimeRoot, 'scripts');
+  fs.mkdirSync(path.join(hooks, 'lib'), { recursive: true });
+  fs.cpSync(path.join(PACKAGE_ROOT, 'src/claude/scripts'), scripts, { recursive: true });
+  for (const name of ['semantic-review-authority.cjs', 'completion-authority-state.cjs']) {
+    fs.copyFileSync(path.join(PACKAGE_ROOT, `src/${runtime}/hooks`, name), path.join(hooks, name));
+  }
+  fs.copyFileSync(
+    path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/runtime-path-safety.cjs'),
+    path.join(hooks, 'lib/runtime-path-safety.cjs'),
+  );
+  return {
+    hook: path.join(hooks, 'semantic-review-authority.cjs'),
+    validator: path.join(scripts, 'validate-spec-output.cjs'),
+  };
+}
+
 function envFor(root, home) {
   return { ...process.env, HOME: home, USERPROFILE: home, PROJECT_ROOT: root };
 }
@@ -149,4 +168,90 @@ test('SubagentStop markers and claimed capabilities cannot turn a non-reviewer i
       assert.equal(verify(hook, target, home, current).ok, true);
     } finally { fs.rmSync(base, { recursive: true, force: true }); }
   }
+});
+
+test('canonicalizes and contains the validator before semantic digest spawn', () => {
+  for (const runtime of ['claude', 'codex']) {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), `cafekit-semantic-validator-${runtime}-`));
+    try {
+      const target = fixture(base, 'project');
+      const installed = installSemanticRuntime(target, runtime);
+      const digestValue = digest(target, path.join(base, 'digest-home'));
+      const validHome = path.join(base, 'valid-home');
+      const valid = runHook(installed.hook, target, validHome, claim(target, digestValue));
+      assert.equal(valid.status, 0);
+      assert.equal(valid.stderr, '', `${runtime} contained validator should be accepted`);
+      assert.equal(verify(installed.hook, target, validHome, digestValue).ok, true);
+
+      const outsideValidator = path.join(base, 'outside-validator.cjs');
+      fs.copyFileSync(VALIDATOR, outsideValidator);
+      fs.rmSync(installed.validator);
+      fs.symlinkSync(outsideValidator, installed.validator);
+      const escapedHome = path.join(base, 'escaped-home');
+      const escaped = runHook(installed.hook, target, escapedHome, claim(target, digestValue));
+      assert.equal(escaped.status, 0);
+      assert.match(escaped.stderr, /semantic validator|escapes|rejected/i, `${runtime} validator escape must be rejected`);
+      assert.equal(verify(installed.hook, target, escapedHome, digestValue).ok, false);
+
+      fs.rmSync(installed.validator);
+      fs.copyFileSync(VALIDATOR, installed.validator);
+      const dependency = path.join(path.dirname(installed.validator), 'workflow-policy.cjs');
+      const outsideDependency = path.join(base, 'outside-workflow-policy.cjs');
+      fs.copyFileSync(dependency, outsideDependency);
+      fs.rmSync(dependency);
+      fs.symlinkSync(outsideDependency, dependency);
+      const dependencyHome = path.join(base, 'dependency-home');
+      const dependencyEscape = runHook(installed.hook, target, dependencyHome, claim(target, digestValue));
+      assert.equal(dependencyEscape.status, 0);
+      assert.match(dependencyEscape.stderr, /dependency|symlink|rejected/i, `${runtime} transitive dependency escape must be rejected`);
+      assert.equal(verify(installed.hook, target, dependencyHome, digestValue).ok, false);
+
+      fs.rmSync(dependency);
+      fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs'), dependency);
+      const runtimeRoot = path.dirname(path.dirname(installed.hook));
+      const outsideRuntime = path.join(base, `outside-${runtime}`);
+      fs.renameSync(runtimeRoot, outsideRuntime);
+      fs.symlinkSync(outsideRuntime, runtimeRoot);
+      const rootHome = path.join(base, 'root-home');
+      const rootEscape = runHook(installed.hook, target, rootHome, claim(target, digestValue));
+      assert.equal(rootEscape.status, 0);
+      assert.match(rootEscape.stderr, /symlink|identity|rejected/i, `${runtime} adapter-root symlink must be rejected`);
+      assert.equal(verify(installed.hook, target, rootHome, digestValue).ok, false);
+    } finally { fs.rmSync(base, { recursive: true, force: true }); }
+  }
+});
+
+test('rejects scratch/spec.json and traversal feature identities', () => {
+  for (const hook of HOOKS) {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-semantic-scratch-'));
+    try {
+      const target = fixture(base, 'project');
+      const home = path.join(base, 'home');
+      const current = digest(target, home);
+      const badScratch = claim(target, current, { spec_file: 'scratch/spec.json' });
+      const resScratch = runHook(hook, target, home, badScratch);
+      assert.match(resScratch.stderr, /rejected|spec identity/);
+      assert.equal(verify(hook, target, home, current).ok, false, 'scratch identity should not create observation');
+
+      const traversal = `CAFEKIT_SEMANTIC_REVIEW_ATTESTATION ${JSON.stringify({ feature_name: '../evil', spec_file: 'specs/../evil/spec.json', semantic_digest: current, verdict: 'PASS' })}`;
+      const resTraversal = runHook(hook, target, home, traversal);
+      assert.match(resTraversal.stderr, /rejected|malformed/);
+      assert.equal(verify(hook, target, home, current).ok, false);
+
+      const slash = claim(target, current, { feature_name: 'evil/traversal' });
+      const resSlash = runHook(hook, target, home, slash);
+      assert.match(resSlash.stderr, /rejected|malformed/);
+    } finally { fs.rmSync(base, { recursive: true, force: true }); }
+  }
+});
+
+test('code-auditor agent ships Strict conditional marker contract', () => {
+  const agentPath = path.join(PACKAGE_ROOT, 'src/claude/agents/code-auditor.md');
+  const content = fs.readFileSync(agentPath, 'utf8');
+  assert.match(content, /Strict Semantic Review Attestation/);
+  assert.match(content, /CAFEKIT_SEMANTIC_REVIEW_ATTESTATION/);
+  assert.match(content, /Emit only for `Strict`/);
+  assert.match(content, /specs\/<feature>\/spec\.json/);
+  assert.match(content, /MAC-protected host-hook observation/);
+  assert.doesNotMatch(content, /host-signed|proves causal/);
 });

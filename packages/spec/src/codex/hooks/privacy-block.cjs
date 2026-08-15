@@ -12,6 +12,10 @@ const {
   getHookContext,
   readPayload
 } = require('./lib/hook-context.cjs');
+const {
+  DYNAMIC_READ_PATH,
+  commandAccess,
+} = require('./lib/privacy-command-analysis.cjs');
 
 const RESTRICTED = [
   /^\.env(?:[.\[*?{]|$)/i,
@@ -28,7 +32,13 @@ const RESTRICTED = [
   /\.keystore$/i,
   /\.jks$/i,
   /auth\.json$/i,
-  /token(s)?\.json$/i
+  /token(s)?\.json$/i,
+  /\.cafekit/i,
+  /hmac\.key/i,
+  /completion-authority/i,
+  /session-state/i,
+  /hook-log/i,
+  /sessions/i
 ];
 
 const EXEMPT = [/\.env\.(example|sample|template|test)$/i];
@@ -48,6 +58,7 @@ function isSafe(filePath) {
 }
 
 function isSensitive(filePath) {
+  if (filePath === DYNAMIC_READ_PATH) return true;
   return matchesAny(filePath, RESTRICTED);
 }
 
@@ -60,17 +71,59 @@ function resolveTarget(filePath, cwd) {
   }
 }
 
-function extractCommandPaths(command) {
-  const paths = new Set();
-  for (const token of String(command).split(/[\s|;&<>"']+/).filter(Boolean)) {
-    const cleaned = token.replace(/^["'()`]+|["'(),:]+$/g, '');
-    for (const candidate of cleaned.split('=')) {
-      const value = candidate.replace(/^["'()`]+|["'(),:]+$/g, '');
-      if (value && (isSensitive(value) || isSafe(value))) paths.add(value);
+/**
+ * When realpath fails, check whether the requested path is a symlink (or chain)
+ * whose lexical target is sensitive. Dangling link to protected target -> true (fail-closed deny);
+ * dangling benign link or link to allowed example/template -> false (allow).
+ * Limit hops to avoid loops; malformed/looping -> fail closed.
+ * TOCTOU note: check and use are not atomic; target could be swapped between this check and the actual read.
+ * This is a best-effort guardrail, not an arbitrary-shell security boundary. For strong isolation use OS sandbox.
+ */
+function isSymlinkToSensitive(filePath, cwd) {
+  try {
+    const requested = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+    let current = requested;
+    let hops = 0;
+    const MAX_HOPS = 8;
+    while (hops < MAX_HOPS) {
+      let stat;
+      try {
+        stat = fs.lstatSync(current);
+      } catch {
+        return false;
+      }
+      if (!stat.isSymbolicLink()) return false;
+      let linkTarget;
+      try {
+        linkTarget = fs.readlinkSync(current);
+      } catch {
+        return true;
+      }
+      if (isSensitive(linkTarget) && !isSafe(linkTarget)) return true;
+      if (isSafe(linkTarget)) return false;
+      const next = path.isAbsolute(linkTarget) ? linkTarget : path.resolve(path.dirname(current), linkTarget);
+      if (next === current) return true;
+      try {
+        const real = fs.realpathSync(next);
+        if (isSensitive(real) && !isSafe(real)) return true;
+        if (isSafe(real)) return false;
+        return false;
+      } catch {
+        current = next;
+        hops += 1;
+        continue;
+      }
     }
+    return true;
+  } catch {
+    return true;
   }
-  return [...paths];
 }
+
+  function extractCommandPaths(command) {
+    const access = commandAccess(command);
+    return access.dynamic ? [...access.paths, DYNAMIC_READ_PATH] : access.paths;
+  }
 
 function extractPatchPaths(patch) {
   return [...String(patch).matchAll(
@@ -126,6 +179,8 @@ function sensitiveRequest(filePath, cwd) {
   if (target) {
     if (isSensitive(target) && !isSafe(target)) return true;
     if (isSafe(target)) return false;
+  } else {
+    if (isSymlinkToSensitive(filePath, cwd)) return true;
   }
   return !isSafe(filePath) && isSensitive(filePath);
 }
@@ -152,7 +207,8 @@ try {
   if (runtime.privacyBlock === false) process.exit(0);
 
   const filePaths = sensitivePaths(data.tool_name || '', data.tool_input || {}, sessionCwd);
-  if (filePaths.length === 0) process.exit(0);
+  const effectivePaths = filePaths;
+  if (effectivePaths.length === 0) process.exit(0);
   if (!data.session_id) {
     deny(
       'Sensitive file access denied because this hook invocation had no Codex session ID. ' +
@@ -164,7 +220,7 @@ try {
     projectRoot,
     sessionCwd,
     sessionId: data.session_id,
-    filePaths,
+    filePaths: effectivePaths,
     toolName: data.tool_name
   };
   if (consumeToken(tokenInput)) process.exit(0);

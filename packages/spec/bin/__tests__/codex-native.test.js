@@ -641,6 +641,7 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
     assert.match(launched.stdout, /Session startup\./);
     assert.match(launched.stdout, /CafeKit project root:/);
     assert.equal(fs.existsSync(shadowMarker), false);
+    assert.match(session.commandWindows, /require\('module'\)\.runMain\(\)/, 'Windows launcher must execute hook main');
   });
 });
 
@@ -869,5 +870,38 @@ test('Codex install on top of existing Claude installation preserves content and
     // Assert CLAUDE.md is unchanged
     const claudeMd = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
     assert.equal(claudeMd, claudeMdContent, 'CLAUDE.md should be unchanged');
+  });
+});
+
+test('Codex installed code_auditor contains Strict conditional marker', () => {
+  inTempProject((root) => {
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const toml = fs.readFileSync(path.join(root, '.codex', 'agents', 'code_auditor.toml'), 'utf8');
+    assert.match(toml, /Strict Semantic Review Attestation/);
+    assert.match(toml, /CAFEKIT_SEMANTIC_REVIEW_ATTESTATION/);
+    assert.match(toml, /MAC-protected host-hook observation/);
+    assert.doesNotMatch(toml, /host-signed/);
+    assert.match(toml, /specs\/<feature>\/spec\.json/);
+  });
+});
+
+test('Codex scaffold resolver rejects symlink template', () => {
+  inTempProject((root) => {
+    const result = install(root);
+    assert.equal(result.status, 0);
+    const template = path.join(root, '.agents', 'skills', 'specs', 'templates', 'task.md');
+    const target = path.join(root, 'outside.md');
+    fs.writeFileSync(target, 'evil');
+    const original = fs.readFileSync(template);
+    fs.unlinkSync(template);
+    fs.symlinkSync(target, template);
+    const scaffold = path.join(root, '.codex', 'scripts', 'spec-scaffold.cjs');
+    const out = spawnSync(process.execPath, [scaffold, 'symlink-test', '--tasks', 'R1-01-foo,R1-02-bar', '--boundaries', '[{"id":"B-OWN","type":"ownership","tasks":["R1-01","R1-02"],"write_sets":{"R1-01":["src/a.js"],"R1-02":["src/b.js"]}}]'], { cwd: root, encoding: 'utf8' });
+    // Should fail because template is symlink and resolver rejects it
+    assert.notEqual(out.status, 0, 'scaffold should reject symlink template');
+    assert.match(`${out.stdout}\n${out.stderr}`, /template not found|symlink/i);
+    fs.unlinkSync(template);
+    fs.writeFileSync(template, original);
   });
 });

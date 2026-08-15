@@ -63,7 +63,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write|Read|Glob|Grep|mcp__.*",
+        "matcher": "Bash|exec_command|apply_patch|Edit|Write|Read|Glob|Grep|mcp__.*|shell",
         "hooks": [
           {
             "type": "command",

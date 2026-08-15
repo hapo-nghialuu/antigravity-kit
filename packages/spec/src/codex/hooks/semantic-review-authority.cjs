@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const STATE = require('./completion-authority-state.cjs');
+const PATH_SAFETY = require('./lib/runtime-path-safety.cjs');
 
 const SCHEMA_VERSION = 1;
 const MARKER = 'CAFEKIT_SEMANTIC_REVIEW_ATTESTATION ';
@@ -17,20 +18,26 @@ function exactKeys(value, fields) { return plain(value) && JSON.stringify(Object
 function inside(root, target) { const relative = path.relative(root, target); return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative); }
 
 function projectRoot(payload = {}) {
+  const installedRoot = path.resolve(__dirname, '..', '..');
+  if (fs.existsSync(path.join(installedRoot, '.codex', 'hooks', path.basename(__filename)))) {
+    try { return STATE.canonicalProjectRoot(installedRoot); } catch {}
+  }
   for (const candidate of [process.env.CLAUDE_PROJECT_DIR, process.env.PROJECT_ROOT]) {
     if (typeof candidate === 'string' && candidate.trim()) { try { return STATE.canonicalProjectRoot(candidate); } catch { /* continue */ } }
   }
-  const installedRoot = path.resolve(__dirname, '..', '..');
-  if (fs.existsSync(path.join(installedRoot, '.codex', 'hooks', path.basename(__filename)))) return STATE.canonicalProjectRoot(installedRoot);
   const cwd = typeof payload.cwd === 'string' && payload.cwd.trim() ? payload.cwd : process.cwd();
   return STATE.canonicalProjectRoot(cwd);
 }
 
 function identityFor(root, specFile, featureName) {
+  if (typeof featureName !== 'string' || !featureName.trim() || featureName.includes('/') || featureName.includes('\\') || featureName === '.' || featureName === '..' || featureName.includes('..')) throw new Error('feature identity is malformed');
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(featureName)) throw new Error('feature identity is malformed');
   const canonicalRoot = STATE.canonicalProjectRoot(root);
   const canonicalSpec = fs.realpathSync(path.resolve(specFile));
   if (!inside(canonicalRoot, canonicalSpec) || path.basename(canonicalSpec) !== 'spec.json') throw new Error('spec identity escapes the project');
-  if (typeof featureName !== 'string' || !featureName.trim()) throw new Error('feature identity is malformed');
+  const relative = path.relative(canonicalRoot, canonicalSpec);
+  const expected = path.join('specs', featureName, 'spec.json');
+  if (relative !== expected) throw new Error(`spec identity must be ${expected}, not ${relative}`);
   const spec = JSON.parse(fs.readFileSync(canonicalSpec, 'utf8'));
   if (spec.feature_name !== featureName) throw new Error('feature identity does not match spec.json');
   return { project_root: canonicalRoot, spec_file: canonicalSpec, feature_name: featureName };
@@ -51,11 +58,29 @@ function parseClaim(message) {
   return claim;
 }
 
+function validatorFor(root) {
+  const installedRoot = path.join(root, '.codex');
+  const installedHook = path.join(installedRoot, 'hooks', path.basename(__filename));
+  if (fs.existsSync(installedHook)) {
+    const canonicalHook = PATH_SAFETY.canonicalRegularFile(root, installedHook, 'installed semantic hook');
+    if (canonicalHook !== fs.realpathSync(__filename)) throw new Error('installed semantic hook identity is invalid');
+    const validator = path.join(installedRoot, 'scripts', 'validate-spec-output.cjs');
+    PATH_SAFETY.verifyCommonJsClosure(installedRoot, validator);
+    return PATH_SAFETY.canonicalRegularFile(installedRoot, validator, 'semantic validator');
+  }
+
+  const sourceRuntime = path.resolve(__dirname, '..', '..', 'claude');
+  const sourceRoot = path.resolve(sourceRuntime, '..');
+  if (path.basename(sourceRuntime) !== 'claude' || path.basename(sourceRoot) !== 'src') {
+    throw new Error('semantic validator runtime root is not recognized');
+  }
+  const validator = path.join(sourceRuntime, 'scripts', 'validate-spec-output.cjs');
+  PATH_SAFETY.verifyCommonJsClosure(sourceRoot, validator);
+  return PATH_SAFETY.canonicalRegularFile(sourceRoot, validator, 'semantic validator');
+}
+
 function currentDigest(root, specFile) {
-  const installedValidator = path.join(__dirname, '..', 'scripts', 'validate-spec-output.cjs');
-  const validator = fs.existsSync(installedValidator)
-    ? installedValidator
-    : path.resolve(__dirname, '..', '..', 'claude', 'scripts', 'validate-spec-output.cjs');
+  const validator = validatorFor(root);
   const result = spawnSync(process.execPath, [validator, path.dirname(specFile), '--semantic-digest'], { cwd: root, encoding: 'utf8' });
   const digest = result.stdout.trim();
   if (result.status !== 0 || !SHA256_RE.test(digest)) throw new Error(`semantic digest could not be recomputed (${result.stderr.trim() || `exit ${result.status}`})`);
@@ -98,6 +123,8 @@ function verifyAttestation(root, specFile, featureName, semanticDigest) {
 if (require.main === module) {
   try { const raw = fs.readFileSync(0, 'utf8').trim(); if (raw) recordFromSubagentStop(JSON.parse(raw)); }
   catch (error) { process.stderr.write(`CafeKit semantic review SubagentStop claim rejected: ${error.message}\n`); }
+  // Codex SubagentStop requires valid JSON on stdout for every exit-0 hook.
+  process.stdout.write('{}\n');
 }
 
 module.exports = { MARKER, REVIEWER_ROLE_ALLOWLIST, recordFromSubagentStop, verifyAttestation, identityFor, recordPath };

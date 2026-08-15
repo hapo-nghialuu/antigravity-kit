@@ -3,11 +3,30 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const PATH_SAFETY = require('./runtime-path-safety.cjs');
 
 const TTL_MS = 5 * 60 * 1000;
 const APPROVAL_PREFIX = 'APPROVE CAFEKIT PRIVACY ';
 function stateDir(projectRoot) {
   return path.join(projectRoot, '.codex', 'hooks', '.privacy');
+}
+function secureStateDir(projectRoot, create = false) {
+  const root = PATH_SAFETY.canonicalDirectory(projectRoot, 'privacy project root');
+  const hooks = path.join(root, '.codex', 'hooks');
+  try { PATH_SAFETY.assertComponentPath(root, hooks); }
+  catch (error) {
+    if (!create && error.code === 'ENOENT') return null;
+    throw error;
+  }
+  const dir = path.join(hooks, '.privacy');
+  if (create && !fs.existsSync(dir)) fs.mkdirSync(dir, { mode: 0o700 });
+  try { PATH_SAFETY.assertComponentPath(root, dir); }
+  catch (error) {
+    if (!create && error.code === 'ENOENT') return null;
+    throw error;
+  }
+  if (!fs.lstatSync(dir).isDirectory()) throw new Error('privacy state must be a regular directory');
+  return dir;
 }
 function hash(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -44,16 +63,16 @@ function displayNames(filePaths) {
     : `${names.slice(0, 3).join(', ')} (+${names.length - 3} more)`;
 }
 
-function atomicWrite(file, payload) {
-  const dir = path.dirname(file);
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+function atomicWrite(dir, file, payload) {
+  PATH_SAFETY.assertComponentPath(dir, path.dirname(file));
   const temp = `${file}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`;
   fs.writeFileSync(temp, `${JSON.stringify(payload)}\n`, { encoding: 'utf8', mode: 0o600 });
   fs.renameSync(temp, file);
 }
 
-function readJson(file) {
+function readJson(dir, file) {
   try {
+    PATH_SAFETY.assertComponentPath(dir, file);
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
     return null;
@@ -61,12 +80,12 @@ function readJson(file) {
 }
 
 function cleanup(projectRoot, now = Date.now()) {
-  const dir = stateDir(projectRoot);
-  if (!fs.existsSync(dir)) return;
+  const dir = secureStateDir(projectRoot);
+  if (!dir) return;
   for (const name of fs.readdirSync(dir)) {
     if (!/^(pending|token)-[a-f0-9]+\.json$/.test(name)) continue;
     const file = path.join(dir, name);
-    const record = readJson(file);
+    const record = readJson(dir, file);
     if (!record || Number(record.expiresAt) <= now) {
       try {
         fs.unlinkSync(file);
@@ -78,9 +97,9 @@ function cleanup(projectRoot, now = Date.now()) {
 }
 
 function clearState(projectRoot) {
-  const dir = stateDir(projectRoot);
   try {
-    if (!fs.existsSync(dir)) return;
+    const dir = secureStateDir(projectRoot);
+    if (!dir) return;
     for (const name of fs.readdirSync(dir)) {
       if (/^(pending|token)-[a-f0-9]+\.json$/.test(name)) {
         try { fs.unlinkSync(path.join(dir, name)); } catch { /* concurrently consumed */ }
@@ -113,7 +132,8 @@ function createPending({
     toolName: String(toolName || ''),
     expiresAt: Date.now() + TTL_MS
   };
-  atomicWrite(path.join(stateDir(projectRoot), `pending-${requestId}.json`), record);
+  const dir = secureStateDir(projectRoot, true);
+  atomicWrite(dir, path.join(dir, `pending-${requestId}.json`), record);
   return record;
 }
 
@@ -122,8 +142,10 @@ function approvePending({ projectRoot, sessionId, requestId }) {
   if (!sessionId) return { ok: false, reason: 'session' };
   if (!/^[a-f0-9]{24}$/.test(requestId)) return { ok: false, reason: 'invalid' };
 
-  const pendingFile = path.join(stateDir(projectRoot), `pending-${requestId}.json`);
-  const record = readJson(pendingFile);
+  const dir = secureStateDir(projectRoot);
+  if (!dir) return { ok: false, reason: 'missing' };
+  const pendingFile = path.join(dir, `pending-${requestId}.json`);
+  const record = readJson(dir, pendingFile);
   if (!record) return { ok: false, reason: 'missing' };
   if (record.sessionId !== String(sessionId || '')) return { ok: false, reason: 'session' };
   if (Number(record.expiresAt) <= Date.now()) return { ok: false, reason: 'expired' };
@@ -134,7 +156,7 @@ function approvePending({ projectRoot, sessionId, requestId }) {
     return { ok: false, reason: 'consumed' };
   }
 
-  atomicWrite(path.join(stateDir(projectRoot), `token-${requestId}.json`), {
+  atomicWrite(dir, path.join(dir, `token-${requestId}.json`), {
     version: 2,
     requestId,
     sessionId: record.sessionId,
@@ -155,8 +177,8 @@ function consumeToken({
 }) {
   cleanup(projectRoot);
   if (!sessionId) return false;
-  const dir = stateDir(projectRoot);
-  if (!fs.existsSync(dir)) return false;
+  const dir = secureStateDir(projectRoot);
+  if (!dir) return false;
   const paths = requestPaths(filePaths, filePath);
   if (paths.length === 0) return false;
   const expectedPaths = requestPathKeys(paths, sessionCwd);
@@ -164,7 +186,7 @@ function consumeToken({
   for (const name of fs.readdirSync(dir)) {
     if (!/^token-[a-f0-9]{24}\.json$/.test(name)) continue;
     const tokenFile = path.join(dir, name);
-    const token = readJson(tokenFile);
+    const token = readJson(dir, tokenFile);
     if (
       !token ||
       token.sessionId !== String(sessionId || '') ||

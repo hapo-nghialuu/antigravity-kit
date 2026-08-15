@@ -5,7 +5,18 @@ const fs = require('fs');
 const path = require('path');
 
 // Installed layout: <project>/.codex/hooks/lib/hook-context.cjs
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
+// Canonicalize installed project root via realpath where available; lexical fallback keeps source-tree tests working.
+// This ensures a symlink project root (e.g., /tmp/link -> /real/project) is resolved to its real location,
+// keeping assertConfiguredSpecsPath and state paths consistent with resolveSessionCwd's realpath.
+// Installed-root authority stays PROJECT_ROOT (now canonical); do not change without updating state/approval paths.
+const PROJECT_ROOT = (() => {
+  const lexical = path.resolve(__dirname, '..', '..', '..');
+  try {
+    return fs.realpathSync(lexical);
+  } catch {
+    return lexical;
+  }
+})();
 
 function readPayload() {
   const raw = fs.readFileSync(0, 'utf8').trim();
@@ -104,7 +115,10 @@ function atomicWrite(file, content, mode = 0o600) {
 
 function logCrash(hook, error) {
   try {
-    const dir = path.join(PROJECT_ROOT, '.codex', 'hooks', '.logs');
+    const isSourceTree = PROJECT_ROOT.includes(`${path.sep}packages${path.sep}spec${path.sep}src`);
+    const dir = isSourceTree
+      ? path.join(require('os').tmpdir(), 'cafekit-hook-logs', 'codex', hook)
+      : path.join(PROJECT_ROOT, '.codex', 'hooks', '.logs');
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(
       path.join(dir, 'hook-log.jsonl'),

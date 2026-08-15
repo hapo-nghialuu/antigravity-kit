@@ -80,6 +80,14 @@ function inHookFixture(run, options = {}) {
   const hooks = path.join(root, '.codex', 'hooks');
   try {
     fs.cpSync(CODEX_HOOKS, hooks, { recursive: true });
+    fs.copyFileSync(
+      path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/privacy-command-analysis.cjs'),
+      path.join(hooks, 'lib/privacy-command-analysis.cjs'),
+    );
+    fs.copyFileSync(
+      path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/runtime-path-safety.cjs'),
+      path.join(hooks, 'lib/runtime-path-safety.cjs'),
+    );
     fs.mkdirSync(path.join(root, '.codex', 'scripts'), { recursive: true });
     if (options.policy !== 'missing') {
       if (options.policy === 'malformed') {
@@ -164,6 +172,14 @@ test('Codex privacy approval is exact, session-bound, and one-time', () => {
       prompt
     });
     assert.match(wrongSession.stdout, /rejected/);
+
+    const padded = runHook(approve, nested, {
+      cwd: nested,
+      session_id: 'session-a',
+      hook_event_name: 'UserPromptSubmit',
+      prompt: ` ${prompt}\n`
+    });
+    assert.equal(padded.stdout, '', 'whitespace-padded prompt must not issue a token');
 
     const approved = runHook(approve, nested, {
       cwd: nested,
@@ -407,7 +423,7 @@ test('empty or forged Codex hook authority fails closed', () => {
   });
 });
 
-test('Critical Codex completion ignores worker-writable proof strings and remains blocked', () => {
+test('explicit Strict Codex completion ignores worker-writable proof strings and remains blocked', () => {
   inHookFixture((root, hooks) => {
     const feature = path.join(root, 'specs', 'auth');
     const taskPath = 'tasks/task.md';
@@ -416,7 +432,7 @@ test('Critical Codex completion ignores worker-writable proof strings and remain
       status: 'in_progress',
       current_phase: 'closeout',
       feature_name: 'auth',
-      workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true } }),
+      workflow_policy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' }),
       proofs: {
         needsInspection: 'inspection completed',
         needsIndependentAudit: 'PASS',
@@ -891,4 +907,338 @@ test('Codex adapter enforces declared task artifact SHA-256 with missing, invali
       }
     });
   }
+});
+
+test('Codex privacy denies obfuscated and session paths, allows benign', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    const denied = [
+      { command: "cat .e''nv", tool: 'exec_command' },
+      { command: "cat .codex/sessions/test.json", tool: 'exec_command' },
+      { command: "cat $HOME/.cafekit/completion-authority/hmac.key", tool: 'exec_command' },
+      { command: "cat .codex/sessions/abc.json", tool: 'Bash' },
+      { command: "python3 -c \"open('.env').read()\"", tool: 'exec_command' },
+      { command: "node -e \"fs.readFileSync('.env')\"", tool: 'Bash' },
+      { command: "bash -c 'cat .e''nv'", tool: 'exec_command' },
+      { command: "echo ok; cat .env", tool: 'Bash' },
+    ];
+    for (const { command, tool } of denied) {
+      const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
+      assert.equal(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision, 'deny', command);
+    }
+    const allowed = [
+      { command: "echo hello", tool: 'exec_command' },
+      { command: "cat README.md", tool: 'exec_command' },
+      { command: "cat src/app.js", tool: 'Bash' },
+    ];
+    for (const { command, tool } of allowed) {
+      const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
+      assert.equal(res.stdout, '', command);
+    }
+  });
+});
+
+test('Codex privacy denies active read expansion, preserves literal dollars and safe controls', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    const denied = [
+      { command: "cat $FILE", tool: 'Bash' },
+      { command: 'cat "$FILE"', tool: 'exec_command' },
+      { command: "cat ${FILE}", tool: 'Bash' },
+      { command: "cat $1", tool: 'exec_command' },
+      { command: "cat $(echo .env)", tool: 'Bash' },
+      { command: "cat `echo .env`", tool: 'Bash' },
+      { command: "head $SECRET", tool: 'exec_command' },
+      { command: "tail ${MY_FILE}", tool: 'Bash' },
+      { command: "cat README.md $EXTRA", tool: 'Bash' },
+      { command: "head README.md $UNRELATED", tool: 'exec_command' },
+      { command: "echo ok; cat README.md $FILE", tool: 'Bash' },
+      { command: "cat README.md | head $FILE", tool: 'exec_command' },
+      { command: "bash -c 'cat $FILE'", tool: 'Bash' },
+      { command: "echo $(cat $FILE)", tool: 'exec_command' },
+      { command: 'cat README.md "$(printf safe)"', tool: 'Bash' },
+      { command: 'cat README.md *', tool: 'Bash' },
+      { command: 'cat README.md ~/README.md', tool: 'exec_command' },
+      { command: 'cat README.md {README.md,LICENSE}', tool: 'Bash' },
+      { command: 'cat .e\\\nnv', tool: 'Bash' },
+      { command: "cat $'\\x2e\\x65\\x6e\\x76'", tool: 'exec_command' },
+      { command: 'env -u UNUSED cat "$FILE"', tool: 'Bash' },
+      { command: 'timeout 1 cat "$FILE"', tool: 'exec_command' },
+      { command: 'nice -n 10 cat "$FILE"', tool: 'Bash' },
+      { command: "eval 'cat \"$FILE\"'", tool: 'exec_command' },
+      { command: "find . -exec sh -c 'cat \"$FILE\"' \\;", tool: 'Bash' },
+      { command: 'source "$FILE"', tool: 'exec_command' },
+      { command: 'xargs -a "$LIST" cat', tool: 'Bash' },
+      { command: 'python3 -c \'open(os.environ["FILE"]).read()\'', tool: 'exec_command' },
+      { command: 'node -e \'fs.readFileSync(process.env.FILE)\'', tool: 'Bash' },
+      { command: 'cat < "$FILE"', tool: 'exec_command' },
+    ];
+    for (const { command, tool } of denied) {
+      const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
+      assert.equal(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision, 'deny', `should deny ${command}`);
+    }
+    const allowed = [
+      { command: "echo $VAR", tool: 'exec_command' },
+      { command: 'echo "$HOME"', tool: 'Bash' },
+      { command: "git status", tool: 'exec_command' },
+      { command: "git status $VAR", tool: 'Bash' },
+      { command: "cat README.md", tool: 'exec_command' },
+      { command: "cat .env.example", tool: 'Bash' },
+      { command: "cat .env.sample", tool: 'Bash' },
+      { command: "cat .env.template", tool: 'exec_command' },
+      { command: "cat .env.test", tool: 'Bash' },
+      { command: "cat '$FILE'", tool: 'exec_command' },
+      { command: "cat '$HOME/README.md'", tool: 'Bash' },
+      { command: "cat README.md '$EXTRA'", tool: 'exec_command' },
+      { command: "echo '$(cat $FILE)'", tool: 'Bash' },
+      { command: 'echo .envoy', tool: 'exec_command' },
+      { command: 'echo not.env', tool: 'Bash' },
+      { command: 'echo .env', tool: 'exec_command' },
+      { command: "printf '%s\\n' .env", tool: 'Bash' },
+      { command: 'git status sessions.md', tool: 'exec_command' },
+      { command: 'python3 -c "print(os.environ[\'HOME\'])"', tool: 'Bash' },
+      { command: 'head -n "$COUNT" README.md', tool: 'exec_command' },
+      { command: 'grep .env README.md', tool: 'Bash' },
+      { command: "sed -n '/.env/p' README.md", tool: 'exec_command' },
+    ];
+    for (const { command, tool } of allowed) {
+      const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
+      assert.equal(res.stdout, '', `should allow ${command}`);
+    }
+    const assignmentOnly = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat README.md' } });
+    assert.equal(assignmentOnly.stdout, '');
+    const assignmentRead = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat "$FILE"' } });
+    assert.equal(JSON.parse(assignmentRead.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  });
+});
+
+test('Claude and Codex privacy lexers agree on literals, delimiters, and quote expansion', () => {
+  inHookFixture((root, hooks) => {
+    const claude = path.join(PACKAGE_ROOT, 'src/claude/hooks/privacy-block.cjs');
+    const codex = path.join(hooks, 'privacy-block.cjs');
+    const vectors = [
+      ["cat .e''nv", true],
+      ["python3 -c \"open('.env').read()\"", true],
+      ['cat README.md $FILE', true],
+      ['echo ok; cat README.md $FILE', true],
+      ["cat '$FILE'", false],
+      ["echo '$(cat $FILE)'", false],
+      ["cat README.md '*'", false],
+      ["cat README.md '~'", false],
+      ["cat README.md '{README.md,LICENSE}'", false],
+      ['cat .env.example', false],
+      ['echo .envoy', false],
+      ['cat .e\\\nnv', true],
+      ["cat $'\\x2e\\x65\\x6e\\x76'", true],
+      ['env -u UNUSED cat "$FILE"', true],
+      ['timeout 1 cat "$FILE"', true],
+      ["eval 'cat \"$FILE\"'", true],
+      ["find . -exec sh -c 'cat \"$FILE\"' \\;", true],
+      ['source "$FILE"', true],
+      ['xargs -a "$LIST" cat', true],
+      ['python3 -c \'open(os.environ["FILE"]).read()\'', true],
+      ['echo .env', false],
+      ["printf '%s\\n' .env", false],
+      ['git status sessions.md', false],
+      ['python3 -c "print(os.environ[\'HOME\'])"', false],
+    ];
+    for (const [command, blocked] of vectors) {
+      const payload = { cwd: root, hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command } };
+      const stateDir = path.join(hooks, '.privacy');
+      const pendingCount = () => fs.existsSync(stateDir)
+        ? fs.readdirSync(stateDir).filter((name) => name.startsWith('pending-')).length
+        : 0;
+      const beforePending = pendingCount();
+      const claudeResult = runHook(claude, root, payload);
+      const codexResult = runHook(codex, root, { ...payload, session_id: `parity-${command}` });
+      const claudeOutput = claudeResult.stdout.trim() ? JSON.parse(claudeResult.stdout) : null;
+      const codexOutput = codexResult.stdout.trim() ? JSON.parse(codexResult.stdout) : null;
+      assert.equal(claudeOutput?.hookSpecificOutput?.permissionDecision || null, blocked ? 'ask' : null, `Claude parity vector: ${command}`);
+      assert.equal(codexOutput?.hookSpecificOutput?.permissionDecision || null, blocked ? 'deny' : null, `Codex parity vector: ${command}`);
+      if (blocked) {
+        assert.equal(claudeOutput.hookSpecificOutput.hookEventName, 'PreToolUse');
+        assert.equal(codexOutput.hookSpecificOutput.hookEventName, 'PreToolUse');
+        assert.ok(claudeOutput.hookSpecificOutput.permissionDecisionReason);
+        assert.ok(codexOutput.hookSpecificOutput.permissionDecisionReason);
+      }
+      assert.equal(pendingCount() - beforePending, blocked ? 1 : 0, `Codex approval-state side effect: ${command}`);
+    }
+  });
+});
+
+test('Codex privacy handles dangling symlink to protected target (and allows benign/example)', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    // Create .env and dangling link
+    const env = path.join(root, '.env');
+    fs.writeFileSync(env, 'SECRET=1');
+    const link = path.join(root, 'innocent.txt');
+    fs.symlinkSync(env, link);
+    fs.unlinkSync(env);
+    const denied = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: link } });
+    assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny', 'dangling to .env must deny');
+
+    // Dangling benign
+    const benign = path.join(root, 'benign.txt');
+    fs.writeFileSync(benign, 'hi');
+    const dangling = path.join(root, 'dangling.txt');
+    fs.symlinkSync(benign, dangling);
+    fs.unlinkSync(benign);
+    const allowed1 = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: dangling } });
+    assert.equal(allowed1.stdout, '', 'dangling benign should allow');
+
+    // Dangling to .env.example
+    const example = path.join(root, '.env.example');
+    fs.writeFileSync(example, 'EXAMPLE=1');
+    const linkExample = path.join(root, 'link-example.txt');
+    fs.symlinkSync(example, linkExample);
+    fs.unlinkSync(example);
+    const allowed2 = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: linkExample } });
+    assert.equal(allowed2.stdout, '', 'dangling to .env.example should allow');
+
+    // Real link to allowed example remains allowed
+    fs.writeFileSync(example, 'EXAMPLE=1');
+    const realLink = path.join(root, 'real-example.txt');
+    if (fs.existsSync(realLink)) fs.unlinkSync(realLink);
+    // remove previous dangling if exists
+    try { fs.unlinkSync(linkExample); } catch {}
+    fs.symlinkSync(example, realLink);
+    const allowed3 = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: realLink } });
+    assert.equal(allowed3.stdout, '', 'real link to .env.example should allow');
+
+    // Looping symlink fails closed
+    const a = path.join(root, 'loop-a');
+    const b = path.join(root, 'loop-b');
+    try { fs.unlinkSync(a); } catch {}
+    try { fs.unlinkSync(b); } catch {}
+    fs.symlinkSync(b, a);
+    fs.symlinkSync(a, b);
+    const looped = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: a } });
+    assert.equal(JSON.parse(looped.stdout).hookSpecificOutput.permissionDecision, 'deny', 'looping symlink should deny');
+  });
+});
+
+test('Codex privacy apply_patch with temp fixtures respects sensitive vs safe', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    const safePatch = '*** Begin Patch\n*** Update File: README.md\n+hi\n*** End Patch\n';
+    const safeRes = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'apply_patch', tool_input: { patch: safePatch } });
+    assert.equal(safeRes.stdout, '', 'safe patch should allow');
+    const sensitivePatch = '*** Begin Patch\n*** Update File: .env\n+SECRET=x\n*** End Patch\n';
+    const denied = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'apply_patch', tool_input: { patch: sensitivePatch } });
+    assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  });
+});
+
+test('Codex hook-context canonicalizes symlink project root (regression)', () => {
+  inHookFixture((root, hooks) => {
+    const hookContextPath = path.join(hooks, 'lib', 'hook-context.cjs');
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-symroot-'));
+    try {
+      const linkRoot = path.join(outside, 'link-project');
+      fs.symlinkSync(root, linkRoot);
+      // Require the installed hook-context via the symlink path to see PROJECT_ROOT canonicalization
+      const linkedContext = require(path.join(linkRoot, '.codex', 'hooks', 'lib', 'hook-context.cjs'));
+      const realRoot = fs.realpathSync(root);
+      assert.equal(linkedContext.PROJECT_ROOT, realRoot, 'PROJECT_ROOT should be canonicalized via realpath');
+      // getHookContext should still work with cwd inside symlink root
+      const payload = { cwd: linkRoot, session_id: 's1' };
+      const ctx = linkedContext.getHookContext(payload);
+      assert.equal(ctx.projectRoot, realRoot);
+      assert.ok(ctx.sessionCwd, 'sessionCwd should be resolved');
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+      // Clear require cache for the symlink context to avoid polluting other tests
+      Object.keys(require.cache).forEach((k) => { if (k.includes('link-project')) delete require.cache[k]; });
+    }
+  });
+});
+
+test('Codex resolver and state reject symlink escape', () => {
+  inHookFixture((root, hooks) => {
+    const specUtils = require(path.join(hooks, 'lib', 'spec-utils.cjs'));
+    const resolverPath = path.join(root, '.codex', 'scripts', 'spec-resolver.cjs');
+    const linkTarget = path.join(root, 'external.js');
+    fs.writeFileSync(linkTarget, 'module.exports = {}');
+    const original = fs.readFileSync(resolverPath);
+    fs.unlinkSync(resolverPath);
+    fs.symlinkSync(linkTarget, resolverPath);
+    assert.throws(() => specUtils.specsDirectory(root, {}), /symlink|rejected/i);
+    fs.unlinkSync(resolverPath);
+    fs.writeFileSync(resolverPath, original);
+    const scripts = path.dirname(resolverPath);
+    const outsideScripts = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-scripts-outside-'));
+    try {
+      fs.cpSync(scripts, outsideScripts, { recursive: true });
+      fs.rmSync(scripts, { recursive: true, force: true });
+      fs.symlinkSync(outsideScripts, scripts);
+      assert.throws(() => specUtils.specsDirectory(root, {}), /symlink|trusted root|rejected/i);
+    } finally {
+      try { fs.unlinkSync(scripts); } catch {}
+      fs.mkdirSync(scripts, { recursive: true });
+      fs.copyFileSync(
+        path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'),
+        path.join(scripts, 'spec-resolver.cjs'),
+      );
+      fs.rmSync(outsideScripts, { recursive: true, force: true });
+    }
+    // State dir symlink escape: create symlink for session-state dir
+    const stateStore = require(path.join(hooks, 'lib', 'state-store.cjs'));
+    const sessionId = 'sess-symlink';
+    const dir = stateStore.stateDir(root, sessionId);
+    fs.mkdirSync(path.dirname(dir), { recursive: true });
+    // Create a symlink that points outside project
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'outside-'));
+    try {
+      if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+      fs.symlinkSync(outside, dir);
+      // withStateLock should handle symlink safely (no crash, no write outside)
+      const ok = stateStore.withStateLock(root, sessionId, () => {});
+      assert.equal(typeof ok, 'boolean');
+    } finally {
+      try { fs.unlinkSync(dir); } catch {}
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
+test('Codex privacy state rejects a symlinked state directory without external writes', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-privacy-outside-'));
+    const state = path.join(hooks, '.privacy');
+    try {
+      fs.symlinkSync(outside, state);
+      const result = runHook(block, root, {
+        cwd: root,
+        session_id: 'state-symlink',
+        hook_event_name: 'PreToolUse',
+        tool_name: 'Read',
+        tool_input: { file_path: path.join(root, '.env') },
+      });
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.hookSpecificOutput.permissionDecision, 'deny');
+      assert.match(output.hookSpecificOutput.permissionDecisionReason, /could not be evaluated safely/i);
+      assert.deepEqual(fs.readdirSync(outside), []);
+    } finally {
+      try { fs.unlinkSync(state); } catch {}
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
+test('Claude and Codex fail closed consistently for malformed cwd payloads', () => {
+  inHookFixture((root, hooks) => {
+    const payload = {
+      cwd: 123,
+      session_id: 'malformed-cwd',
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Read',
+      tool_input: { file_path: path.join(root, '.env') },
+    };
+    const claude = runHook(path.join(PACKAGE_ROOT, 'src/claude/hooks/privacy-block.cjs'), root, payload);
+    const codex = runHook(path.join(hooks, 'privacy-block.cjs'), root, payload);
+    assert.equal(JSON.parse(claude.stdout).hookSpecificOutput.permissionDecision, 'ask');
+    assert.equal(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  });
 });

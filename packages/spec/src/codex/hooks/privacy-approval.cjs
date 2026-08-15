@@ -24,7 +24,7 @@ try {
   const data = readPayload();
   if (!data) process.exit(0);
   const { projectRoot } = getHookContext(data);
-  const prompt = String(data.prompt || '').trim();
+  const prompt = String(data.prompt || '');
   cleanup(projectRoot);
 
   if (!prompt.startsWith(APPROVAL_PREFIX)) process.exit(0);

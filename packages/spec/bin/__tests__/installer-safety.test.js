@@ -23,6 +23,7 @@ const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
 const { upsertManagedCodexBlock, normalizeCodexBody } = require('../lib/codex-install');
 const { copyRecursive } = require('../lib/copy-utils');
 const { createTracker, sha256 } = require('../lib/manifest');
+const { copyManagedTree } = require('../lib/managed-writer');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
@@ -669,6 +670,44 @@ test('managed targets and snapshots reject project symlink traversal', () => {
       () => backup.snapshot(['.agents'], '20260729-symlink-test'),
       /Refusing to follow symlinked managed path/
     );
+  });
+});
+
+test('managed tree copy rejects source and destination symlink traversal before writes', () => {
+  inTempProject((root) => {
+    const source = path.join(root, 'source');
+    const outsideSource = path.join(root, 'outside-source.txt');
+    const destination = path.join('.codex', 'payload');
+    fs.mkdirSync(source);
+    fs.writeFileSync(outsideSource, 'outside');
+    fs.symlinkSync(outsideSource, path.join(source, 'linked.txt'));
+    const ctx = {
+      dryRun: false,
+      options: { forceOverwrite: false },
+      ownership: {},
+      results: { preservedFiles: [] },
+    };
+    const copy = () => copyManagedTree({
+      src: source,
+      dest: destination,
+      platformFolder: '.codex',
+      ctx,
+      tracker: null,
+    });
+    assert.throws(copy, /source tree cannot contain symlinks/i);
+    assert.equal(fs.existsSync(destination), false);
+
+    fs.rmSync(path.join(source, 'linked.txt'));
+    fs.writeFileSync(path.join(source, 'safe.txt'), 'safe');
+    const outsideDestination = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-managed-outside-'));
+    try {
+      fs.symlinkSync(outsideDestination, path.join(root, '.codex'));
+      assert.throws(copy, /Refusing to follow symlinked managed path/);
+      assert.deepEqual(fs.readdirSync(outsideDestination), []);
+    } finally {
+      fs.rmSync(path.join(root, '.codex'), { force: true });
+      fs.rmSync(outsideDestination, { recursive: true, force: true });
+    }
   });
 });
 

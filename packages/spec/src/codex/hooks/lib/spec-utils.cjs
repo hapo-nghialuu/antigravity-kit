@@ -2,26 +2,77 @@
 
 const fs = require('fs');
 const path = require('path');
+const PATH_SAFETY = require('./runtime-path-safety.cjs');
+
+// Save original fs methods at load time to avoid being affected by test monkey patches
+// that simulate runtime canonicalization failures for spec paths. Resolver discovery
+// must use these originals, while spec resolution uses the (possibly patched) fs.
+const originalLstatSync = fs.lstatSync;
 
 // Installed Codex hooks use .codex/scripts; source tests use the Claude-side
 // source path. If an installed resolver exists but is malformed, do not fall
 // back to another copy: the shared authority is unavailable.
 const RESOLVER_CANDIDATES = [
-  path.join(__dirname, '../../scripts/spec-resolver.cjs'),
-  path.join(__dirname, '../../../claude/scripts/spec-resolver.cjs'),
+  {
+    file: path.join(__dirname, '../../scripts/spec-resolver.cjs'),
+    root: path.resolve(__dirname, '../..'),
+  },
+  {
+    file: path.join(__dirname, '../../../claude/scripts/spec-resolver.cjs'),
+    root: path.resolve(__dirname, '../../..'),
+  },
 ];
 
-function sharedResolver() {
-  const candidate = RESOLVER_CANDIDATES.find((file) => fs.existsSync(file)) || RESOLVER_CANDIDATES[0];
+function canonicalRealpath(candidate) {
   try {
-    const resolver = require(candidate);
+    return PATH_SAFETY.canonicalRegularFile(candidate.root, candidate.file, 'shared spec resolver');
+  } catch (error) {
+    throw new Error(`${error.message} (${candidate.file})`);
+  }
+}
+
+function findCandidate() {
+  // Fail closed if preferred installed resolver exists but is invalid; never silently fall back to source.
+  const primary = RESOLVER_CANDIDATES[0];
+  let primaryExists = false;
+  try {
+    originalLstatSync(primary.file);
+    primaryExists = true;
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw new Error(`resolver check failed: ${e.message} (${primary.file})`);
+  }
+  if (primaryExists) {
+    canonicalRealpath(primary);
+    return primary;
+  }
+  const secondary = RESOLVER_CANDIDATES[1];
+  let secondaryExists = false;
+  try {
+    originalLstatSync(secondary.file);
+    secondaryExists = true;
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw new Error(`resolver check failed: ${e.message} (${secondary.file})`);
+  }
+  if (secondaryExists) {
+    canonicalRealpath(secondary);
+    return secondary;
+  }
+  return null;
+}
+
+function sharedResolver() {
+  const candidate = findCandidate() || RESOLVER_CANDIDATES[0];
+  try {
+    // Use canonical realpath for require to avoid symlink hijack
+    const realCandidate = canonicalRealpath(candidate);
+    const resolver = require(realCandidate);
     if (typeof resolver?.resolveActiveSpec !== 'function') {
       throw new Error('shared spec resolver has no resolveActiveSpec function');
     }
     return resolver;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${message} (${candidate})`);
+    throw new Error(`${message} (${candidate.file})`);
   }
 }
 
