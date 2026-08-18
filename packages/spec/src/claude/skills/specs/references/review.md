@@ -137,8 +137,20 @@ fix. Scope or product decisions require explicit user approval before editing.
 ## Deterministic and grounding gates
 
 Finalize requirements, design, optional research, task files, and canonical
-`spec.json` topology first. Compute the candidate digest read-only, then provide
-a review JSON object with exactly `reviewed_criteria` and `counterexamples`. The
+`spec.json` topology first. Every required authoring stage (`requirements`,
+`design`, and, when present, `research`/`tasks`) must already read `validated`
+via a fresh run of `spec-authoring-validation.cjs` — the sole atomic writer of
+that transition and its C16 `AuthoringValidationReceipt` — before the digest
+below is computed; a `validated` reading with no matching fresh receipt digest
+is treated as `draft` everywhere it is read. Compute the candidate digest
+read-only, then provide a review JSON object with exactly `verdict`,
+`findings`, `unresolved_decisions`, `graph_coverage`, `reviewed_criteria`,
+`counterexamples`, and `reviewer_evidence` — the frozen C2 fields the reviewer
+itself supplies. `lifecycle_disposition` and `repair_round` are never authored
+in this JSON: the finalizer derives both (repair_round is the C13 `attempt_index`
+for the current review_epoch; lifecycle_disposition is CONTINUE unless a
+non-PASS at the epoch's third attempt forces BLOCKED) and appends the completed
+receipt to the durable, append-only `semantic_review_history` lineage. The
 author must not fabricate or directly write authority state.
 
 The digest projects task registry semantics as `id`, `dependencies`, and optional

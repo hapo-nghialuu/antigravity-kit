@@ -13,6 +13,30 @@ const workflowPolicy = require(join(packageRoot, "src/claude/scripts/workflow-po
 const { parseVerificationDefinitions } = require(
   join(packageRoot, "src/claude/scripts/spec-ground.cjs"),
 );
+const semanticFirewallDiscovery = require(
+  join(packageRoot, "scripts/semantic-firewall-test-discovery.cjs"),
+);
+// C2 SemanticReviewReceipt's exact field-list authority (R1-01, frozen) lives
+// once in the validator; import it rather than maintaining a second literal.
+const { C2_FIELDS } = require(
+  join(packageRoot, "src/claude/scripts/validate-spec-output.cjs"),
+);
+
+// Repeatable `--require-semantic-test <basename>` flags (D12): each named
+// basename must be discovered under bin/__tests__ and must itself pass in
+// isolation, or the whole run fails nonzero.
+function parseRequiredSemanticTests(argv) {
+  const required = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--require-semantic-test") {
+      const value = argv[index + 1];
+      if (!value) throw new Error("--require-semantic-test requires a basename argument");
+      required.push(value);
+      index += 1;
+    }
+  }
+  return required;
+}
 
 async function listFiles(directory, predicate) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -444,8 +468,8 @@ async function runSpecs21ContractTests() {
     fail("coordination.boundaries must be the initial topology authority");
   }
   const semanticReviewKeys = Object.keys(stateTemplate.validation?.semantic_review || {}).sort();
-  if (semanticReviewKeys.join(",") !== "counterexamples,reviewed_criteria,semantic_digest,status") {
-    fail("semantic review template fields drifted from schema 2.1");
+  if (semanticReviewKeys.join(",") !== [...C2_FIELDS].sort().join(",")) {
+    fail("semantic review template fields drifted from the C2 canonical field-list authority");
   }
 
   const instructionFiles = [
@@ -2874,11 +2898,13 @@ async function runWave1InstructionFixtureTests() {
   }
 }
 async function main() {
-  if (process.argv.slice(2).includes("--static-only")) {
+  const argv = process.argv.slice(2);
+  if (argv.includes("--static-only")) {
     const totalTests = await runStaticSemanticTests();
     console.log(`\n[skill-test] PASS: ${totalTests} focused static tests executed`);
     return;
   }
+  const requiredSemanticTests = parseRequiredSemanticTests(argv);
   const chromeTestsDir = join(
     packageRoot,
     "src/claude/skills/chrome-devtools/scripts/__tests__",
@@ -2938,6 +2964,35 @@ async function main() {
       parseCount: parsePythonUnittestCount,
     },
   ];
+
+  // D12: every required `*.semantic-firewall.test.js` basename must already
+  // be discovered under bin/__tests__ (sorted basenames, sole discovery
+  // authority: semantic-firewall-test-discovery.cjs) -- missing/undiscovered
+  // fails immediately, before any suite runs. Each required basename is then
+  // run and verified in isolation, exactly like every other suite above:
+  // not executed (0 tests) or a failing exit code both fail the whole run.
+  if (requiredSemanticTests.length > 0) {
+    const discovery = semanticFirewallDiscovery.assertRequiredSemanticTests(
+      installerTestsDir,
+      requiredSemanticTests,
+    );
+    if (!discovery.ok) {
+      for (const basename of discovery.missing) {
+        console.error(`[FAIL] required semantic-firewall test not discovered: ${basename}`);
+      }
+      process.exit(1);
+    }
+    for (const basename of requiredSemanticTests) {
+      testSuites.push({
+        label: `semantic-firewall required test: ${basename}`,
+        command: process.execPath,
+        args: ["--test", join(installerTestsDir, basename)],
+        expectedFiles: 1,
+        parseCount: parseNodeTestCount,
+        summarize: parseNodeTestSummary,
+      });
+    }
+  }
 
   const missingSuites = testSuites.filter((suite) => suite.expectedFiles === 0);
   if (missingSuites.length > 0) {

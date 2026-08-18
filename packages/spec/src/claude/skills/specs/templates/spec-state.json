@@ -25,9 +25,21 @@
     "semantic_review": {
       "status": "not-run",
       "semantic_digest": null,
+      "verdict": null,
+      "lifecycle_disposition": null,
+      "findings": [],
+      "unresolved_decisions": [],
+      "graph_coverage": [],
+      "repair_round": 0,
       "reviewed_criteria": [],
-      "counterexamples": []
-    }
+      "counterexamples": [],
+      "reviewer_evidence": null
+    },
+    "semantic_review_history": {
+      "lineage_id": "{{LINEAGE_ID}}",
+      "entries": []
+    },
+    "authoring_validation": null
   },
   "semantic_model": null,
   "ready_for_implementation": false,

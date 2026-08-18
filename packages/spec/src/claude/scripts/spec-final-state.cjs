@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const SEMANTIC = require('./spec-semantic-model.cjs');
 
 const SHA256_RE = /^sha256:[a-f0-9]{64}$/;
 
@@ -47,6 +48,49 @@ function validatorApi(validatorPath) {
     throw new Error('canonical validator must export validateSpec and computeSemanticDigest21 CommonJS APIs');
   }
   return imported;
+}
+
+function stableDigest(value) {
+  return `sha256:${crypto.createHash('sha256').update(SEMANTIC.stableJson(value), 'utf8').digest('hex')}`;
+}
+
+function validateTerminalSemanticReview(spec, semanticDigest) {
+  const review = spec.validation?.semantic_review;
+  if (!plain(review) || review.status !== 'completed') {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires a completed semantic review receipt' };
+  }
+  if (review.verdict !== 'PASS' || review.lifecycle_disposition !== 'CONTINUE') {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires semantic review PASS CONTINUE' };
+  }
+  if (!Array.isArray(review.findings) || !Array.isArray(review.unresolved_decisions)) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires canonical semantic review findings and decisions' };
+  }
+  const blockingCount = review.findings.filter((finding) => finding?.blocking === true).length
+    + review.unresolved_decisions.filter((decision) => decision?.blocking === true).length;
+  if (blockingCount !== 0) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires zero blocking findings or decisions' };
+  }
+
+  const entries = spec.validation?.semantic_review_history?.entries;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires a latest semantic review history entry' };
+  }
+  const latest = entries[entries.length - 1];
+  if (latest?.verdict !== 'PASS'
+    || latest?.lifecycle_disposition !== 'CONTINUE'
+    || latest?.blocking_count !== 0) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires latest history PASS CONTINUE with blocking_count 0' };
+  }
+  if (latest.semantic_digest !== semanticDigest || latest.semantic_digest !== review.semantic_digest) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires latest history and receipt semantic_digest to match' };
+  }
+  if (!Number.isInteger(review.repair_round) || review.repair_round !== latest.attempt_index) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires receipt repair_round to equal latest history attempt_index' };
+  }
+  if (latest.review_receipt_digest !== stableDigest(review)) {
+    return { ok: false, reason: 'canonical schema 2.1 final state requires latest history review_receipt_digest to match the canonical receipt' };
+  }
+  return { ok: true };
 }
 
 function isDurableCloseout(spec) {
@@ -99,6 +143,8 @@ function validateCanonicalFinalState({ policy, projectRoot, candidate, dependenc
     return { ok: false, reason: `canonical semantic digest could not be recomputed (${error.message})` };
   }
   if (digest !== review.semantic_digest) return { ok: false, reason: 'canonical semantic digest is stale for the current final-state artifacts' };
+  const terminalReview = validateTerminalSemanticReview(candidate.spec, digest);
+  if (!terminalReview.ok) return { ok: false, reason: terminalReview.reason };
   if (policy.readWorkflowPolicySnapshot(candidate.spec).assurance_level === 'Strict') {
     const observed = apis.semanticAuthority.verifyAttestation(projectRoot, candidate.specFile, candidate.featureName, digest);
     if (!observed?.ok) return { ok: false, reason: `Strict semantic authority requires an allowlisted host-hook-observed reviewer PASS event (${observed?.reason || 'observation unavailable'})` };

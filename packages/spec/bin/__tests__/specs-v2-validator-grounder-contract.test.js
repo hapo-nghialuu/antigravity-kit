@@ -11,6 +11,27 @@ const PACKAGE_ROOT = path.resolve(__dirname, '../..');
 const SCAFFOLD = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-scaffold.cjs');
 const VALIDATOR = path.join(PACKAGE_ROOT, 'src/claude/scripts/validate-spec-output.cjs');
 const GROUNDER = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-ground.cjs');
+const AUTHORING_VALIDATOR = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-authoring-validation.cjs');
+
+// C2 SemanticReviewReceipt (R1-01, frozen): a minimal but exact-shape completed
+// receipt for fixtures that need `ready_for_implementation` true.
+function completedSemanticReview({ reviewedCriteria, counterexamples }) {
+  return {
+    status: 'completed',
+    semantic_digest: null,
+    verdict: 'PASS',
+    lifecycle_disposition: 'CONTINUE',
+    findings: [],
+    unresolved_decisions: [],
+    graph_coverage: [
+      'criterion_local', 'cross_criterion', 'runtime_path', 'assumption_provenance', 'compatibility_migration',
+    ].map((surface) => ({ surface, covered: true, notes: 'Fixture coverage for structural contract test.' })),
+    repair_round: 0,
+    reviewed_criteria: reviewedCriteria,
+    counterexamples,
+    reviewer_evidence: { assurance: 'Routine', summary: 'Fixture reviewer evidence for structural contract test.' },
+  };
+}
 
 function exec(root, script, args) {
   return spawnSync(process.execPath, [script, ...args], { cwd: root, encoding: 'utf8' });
@@ -115,15 +136,17 @@ The transition moves rejected input to failure and valid input to enabled; recov
   const promoted = exec(root, SCAFFOLD, ['feature', '--sync-semantic-model']);
   assert.equal(promoted.status, 0, output(promoted));
   const specPath = path.join(specDir, 'spec.json');
+  if (!ready) return { root, specDir, specPath };
+  // C16/D13: only spec-authoring-validation.cjs may flip authoring.* to
+  // validated and write the matching receipt (I21/R3.9) — run the real
+  // coordinator instead of hand-writing those fields.
+  const coordinated = exec(root, AUTHORING_VALIDATOR, [specDir]);
+  assert.equal(coordinated.status, 0, output(coordinated));
   const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
-  if (ready) {
-    spec.authoring.requirements = 'validated';
-    spec.authoring.design = 'validated';
-    spec.authoring.tasks = 'validated';
-    spec.validation.status = 'completed';
-    spec.validation.semantic_review.status = 'completed';
-    spec.validation.semantic_review.reviewed_criteria = ['R1.1', 'R1.2'];
-    spec.validation.semantic_review.counterexamples = [{
+  spec.validation.status = 'completed';
+  spec.validation.semantic_review = completedSemanticReview({
+    reviewedCriteria: ['R1.1', 'R1.2'],
+    counterexamples: [{
       criterion: 'R1.1', case_kind: 'failure',
       scenario: 'The service receives an invalid input object without the required discriminator.',
       expected: 'The service returns rejected state and never emits enabled true.',
@@ -133,13 +156,13 @@ The transition moves rejected input to failure and valid input to enabled; recov
       scenario: 'The implementation reports enabled state without producing the verifier-owned artifact.',
       expected: 'Verification fails because the separate proof artifact is absent.',
       decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
-    }];
-    fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
-    const digest = exec(root, VALIDATOR, [specDir, '--semantic-digest']);
-    assert.equal(digest.status, 0, output(digest));
-    spec.validation.semantic_review.semantic_digest = digest.stdout.trim();
-    spec.ready_for_implementation = true;
-  }
+    }],
+  });
+  fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
+  const digest = exec(root, VALIDATOR, [specDir, '--semantic-digest']);
+  assert.equal(digest.status, 0, output(digest));
+  spec.validation.semantic_review.semantic_digest = digest.stdout.trim();
+  spec.ready_for_implementation = true;
   fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
   return { root, specDir, specPath };
 }
@@ -155,9 +178,18 @@ function refreshSemanticDigest(fixture) {
   const previous = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
   const promoted = exec(fixture.root, SCAFFOLD, ['feature', '--sync-semantic-model']);
   assert.equal(promoted.status, 0, output(promoted));
+  // C16/D13: authoring.* and its receipt are never hand-restored — only
+  // spec-authoring-validation.cjs may write them (I21). Re-run it best-effort
+  // over the current (possibly just-edited) bytes; a fixture that
+  // deliberately broke grounding/validation after the initial ready fixture
+  // leaves authoring at scaffold's own draft reset instead, which is fine —
+  // the caller is exercising a different failure, not readiness itself.
+  const wasValidated = ['requirements', 'design', 'research', 'tasks']
+    .some((field) => previous.authoring[field] === 'validated');
+  if (wasValidated) exec(fixture.root, AUTHORING_VALIDATOR, [fixture.specDir]);
   const state = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
-  state.authoring = previous.authoring;
-  state.validation = previous.validation;
+  state.validation.status = previous.validation.status;
+  state.validation.semantic_review = previous.validation.semantic_review;
   state.validation.semantic_review.semantic_digest = null;
   state.ready_for_implementation = false;
   fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
@@ -212,30 +244,41 @@ function makeTasklessReadyFixture() {
   delete state.task_files;
   delete state.task_registry;
   state.coordination = { boundaries: [] };
-  state.authoring.requirements = 'validated';
-  state.authoring.design = 'validated';
+  // Dropping task topology requires the taskless authoring state exactly:
+  // scaffold's closed-world check refuses task_files/task_registry omission
+  // paired with anything but authoring.tasks = 'absent'.
   state.authoring.tasks = 'absent';
-  state.validation.status = 'completed';
-  state.validation.semantic_review.status = 'completed';
-  state.validation.semantic_review.reviewed_criteria = ['R1.1', 'R1.2'];
-  state.validation.semantic_review.counterexamples = [{
-    criterion: 'R1.1', case_kind: 'failure',
-    scenario: 'The service receives invalid input without the required discriminator.',
-    expected: 'The service returns rejected state and never emits enabled true.',
-    decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
-  }, {
-    criterion: 'R1.2', case_kind: 'adversarial',
-    scenario: 'The subject reports success without producing the design-owned proof artifact.',
-    expected: 'Verification fails because the separate taskless proof evidence is absent.',
-    decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
-  }];
   fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
   const promoted = exec(fixture.root, SCAFFOLD, ['feature', '--sync-semantic-model']);
   assert.equal(promoted.status, 0, output(promoted));
-  refreshSemanticDigest(fixture);
-  const promotedState = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
-  promotedState.ready_for_implementation = true;
-  fs.writeFileSync(fixture.specPath, `${JSON.stringify(promotedState, null, 2)}\n`);
+  // C16/D13: only spec-authoring-validation.cjs may flip authoring.* to
+  // validated and write the matching receipt (I21/R3.9) — run the real
+  // coordinator instead of hand-writing those fields.
+  const coordinated = exec(fixture.root, AUTHORING_VALIDATOR, [fixture.specDir]);
+  assert.equal(coordinated.status, 0, output(coordinated));
+  const validatedState = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+  validatedState.validation.status = 'completed';
+  validatedState.validation.semantic_review = completedSemanticReview({
+    reviewedCriteria: ['R1.1', 'R1.2'],
+    counterexamples: [{
+      criterion: 'R1.1', case_kind: 'failure',
+      scenario: 'The service receives invalid input without the required discriminator.',
+      expected: 'The service returns rejected state and never emits enabled true.',
+      decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+    }, {
+      criterion: 'R1.2', case_kind: 'adversarial',
+      scenario: 'The subject reports success without producing the design-owned proof artifact.',
+      expected: 'Verification fails because the separate taskless proof evidence is absent.',
+      decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+    }],
+  });
+  fs.writeFileSync(fixture.specPath, `${JSON.stringify(validatedState, null, 2)}\n`);
+  const digest = exec(fixture.root, VALIDATOR, [fixture.specDir, '--semantic-digest']);
+  assert.equal(digest.status, 0, output(digest));
+  const readyState = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+  readyState.validation.semantic_review.semantic_digest = digest.stdout.trim();
+  readyState.ready_for_implementation = true;
+  fs.writeFileSync(fixture.specPath, `${JSON.stringify(readyState, null, 2)}\n`);
   return fixture;
 }
 
@@ -519,17 +562,46 @@ test('research authoring is an exact pointer-file state machine and participates
     } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
   }
 
-  const fixture = makeFixture({ ready: true });
+  // Production lifecycle order (I15/R3.7): research is added and left draft
+  // BEFORE readiness exists, the coordinator proves it clean, and only then
+  // does the semantic reviewer compute a digest and the finalizer promote —
+  // never the reverse. Start from the plain (not yet ready) fixture so the
+  // coordinator never has to run against an already-completed, now-stale
+  // review (that ordering is out of the coordinator's own contract).
+  const fixture = makeFixture();
   try {
     const state = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
-    state.authoring.research = 'validated';
     state.research = 'research.md';
+    state.authoring.research = 'draft';
     fs.writeFileSync(path.join(fixture.specDir, 'research.md'), canonicalResearch21());
     fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+    // C16/D13: only spec-authoring-validation.cjs may flip authoring.research
+    // (and every other non-absent stage) to validated and write the matching
+    // receipt (I21/R3.9).
+    const coordinated = exec(fixture.root, AUTHORING_VALIDATOR, [fixture.specDir]);
+    assert.equal(coordinated.status, 0, output(coordinated));
+    const validated = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    validated.validation.status = 'completed';
+    validated.validation.semantic_review = completedSemanticReview({
+      reviewedCriteria: ['R1.1', 'R1.2'],
+      counterexamples: [{
+        criterion: 'R1.1', case_kind: 'failure',
+        scenario: 'The service receives an invalid input object without the required discriminator.',
+        expected: 'The service returns rejected state and never emits enabled true.',
+        decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+      }, {
+        criterion: 'R1.2', case_kind: 'adversarial',
+        scenario: 'The implementation reports enabled state without producing the verifier-owned artifact.',
+        expected: 'Verification fails because the separate proof artifact is absent.',
+        decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
+      }],
+    });
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(validated, null, 2)}\n`);
     const digest = exec(fixture.root, VALIDATOR, [fixture.specDir, '--semantic-digest']);
     assert.equal(digest.status, 0, output(digest));
-    state.validation.semantic_review.semantic_digest = digest.stdout.trim();
-    fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+    validated.validation.semantic_review.semantic_digest = digest.stdout.trim();
+    validated.ready_for_implementation = true;
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(validated, null, 2)}\n`);
     assert.equal(exec(fixture.root, VALIDATOR, [fixture.specDir]).status, 0);
     fs.appendFileSync(path.join(fixture.specDir, 'research.md'), '\nA second grounded conclusion changes the authored research artifact.\n');
     const stale = exec(fixture.root, VALIDATOR, [fixture.specDir]);
@@ -677,10 +749,118 @@ test('typed boundaries require exact non-empty resource maps and participation b
   } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
 });
 
+test('same-target writers cannot hide outside declared coordination pairs', () => {
+  const fixture = makeFixture();
+  try {
+    const thirdPath = 'tasks/task-R1-03-shadow.md';
+    const state = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    fs.writeFileSync(
+      path.join(fixture.specDir, thirdPath),
+      task('R1-03', 'Shadow writer', 'src/entry.js', 'modify', 'none', '', 'subject'),
+    );
+    state.task_files.push(thirdPath);
+    state.task_registry[thirdPath] = {
+      ...state.task_registry['tasks/task-R1-01-entry.md'],
+      id: 'R1-03',
+      title: 'Shadow writer',
+      dependencies: [],
+    };
+    state.coordination.boundaries.push({
+      id: 'B-OWN-SHADOW',
+      type: 'ownership',
+      tasks: ['R1-02', 'R1-03'],
+      write_sets: {
+        'R1-02': ['src/service.js', 'artifacts/R1-02.json'],
+        'R1-03': ['src/entry.js', 'artifacts/R1-03.json'],
+      },
+    });
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+
+    const result = exec(fixture.root, VALIDATOR, [fixture.specDir]);
+    assert.equal(result.status, 1, output(result));
+    assert.match(
+      output(result),
+      /R1-01 and R1-03 both hold a write anchor for src\/entry\.js with no dependency boundary connecting them/,
+    );
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test('schema 2.1 grounding follows actual readiness and task execution phase', () => {
+  const fixture = makeFixture();
+  try {
+    const state = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    const taskPath = 'tasks/task-R1-01-entry.md';
+    state.task_registry[taskPath] = {
+      ...state.task_registry[taskPath],
+      status: 'blocked',
+      blocker: 'Waiting for a concrete external prerequisite.',
+      last_updated_at: '2026-08-17T00:00:00Z',
+    };
+    fs.writeFileSync(
+      path.join(fixture.specDir, taskPath),
+      fs.readFileSync(path.join(fixture.specDir, taskPath), 'utf8').replace('**Status:** pending', '**Status:** blocked'),
+    );
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+    const blocked = exec(fixture.root, VALIDATOR, [fixture.specDir]);
+    assert.equal(blocked.status, 0, output(blocked));
+
+    state.task_registry[taskPath] = {
+      ...state.task_registry[taskPath],
+      status: 'in_progress',
+      blocker: null,
+      started_at: '2026-08-17T00:00:00Z',
+      last_updated_at: '2026-08-17T00:00:00Z',
+    };
+    fs.writeFileSync(
+      path.join(fixture.specDir, taskPath),
+      fs.readFileSync(path.join(fixture.specDir, taskPath), 'utf8').replace('**Status:** blocked', '**Status:** in_progress'),
+    );
+    fs.writeFileSync(path.join(fixture.root, 'artifacts/R1-01.json'), '{}\n');
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+    const materialized = exec(fixture.root, GROUNDER, [fixture.specDir, '--root', fixture.root]);
+    assert.equal(materialized.status, 0, output(materialized));
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
+test('schema 2.1 grounding permits a missing planned read only through its direct create dependency', () => {
+  const fixture = makeFixture();
+  try {
+    const producerPath = path.join(fixture.specDir, 'tasks/task-R1-01-entry.md');
+    const consumerPath = path.join(fixture.specDir, 'tasks/task-R1-02-verify.md');
+    fs.writeFileSync(producerPath, fs.readFileSync(producerPath, 'utf8').replace(
+      '| A-R1-01-02 | artifact | `artifacts/R1-01.json` | verifier | write | create |',
+      '| A-R1-01-02 | artifact | `artifacts/R1-01.json` | verifier | write | create |\n| A-R1-01-03 | file | `artifacts/planned-output.json` | owner | write | create |',
+    ));
+    fs.writeFileSync(consumerPath, fs.readFileSync(consumerPath, 'utf8').replace(
+      '| A-R1-02-02 | artifact | `artifacts/R1-02.json` | verifier | write | create |',
+      '| A-R1-02-02 | artifact | `artifacts/R1-02.json` | verifier | write | create |\n| A-R1-02-03 | file | `artifacts/planned-output.json` | consumer | read | read |',
+    ).replace('- none\n\n## Verification Plan', '- tasks/task-R1-01-entry.md\n\n## Verification Plan'));
+    const state = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    state.coordination.boundaries[0].write_sets['R1-01'].push('artifacts/planned-output.json');
+    state.coordination.boundaries.push({
+      id: 'B-PLANNED-READ', type: 'dependency', producer: 'R1-01', consumer: 'R1-02',
+      deliverable: 'artifacts/planned-output.json',
+    });
+    state.task_registry['tasks/task-R1-02-verify.md'].dependencies = ['tasks/task-R1-01-entry.md'];
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(state, null, 2)}\n`);
+    const synced = exec(fixture.root, SCAFFOLD, ['feature', '--sync-semantic-model']);
+    assert.equal(synced.status, 0, output(synced));
+    const grounded = exec(fixture.root, GROUNDER, [fixture.specDir, '--root', fixture.root]);
+    assert.equal(grounded.status, 0, output(grounded));
+
+    const withoutDependency = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
+    withoutDependency.task_registry['tasks/task-R1-02-verify.md'].dependencies = [];
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(withoutDependency, null, 2)}\n`);
+    const refused = exec(fixture.root, GROUNDER, [fixture.specDir, '--root', fixture.root]);
+    assert.equal(refused.status, 1, output(refused));
+    assert.match(output(refused), /read target not found.*artifacts\/planned-output\.json/);
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
 test('schema 2.1 rejects unknown and dead machine fields outside the explicit adapter', () => {
   const cases = [
     ['top-level', (state) => { state.dead_machine_field = true; }, /dead_machine_field: unknown or legacy field is not canonical in closed schema 2\.1/],
-    ['validation', (state) => { state.validation.legacy_digest = 'inert'; }, /validation: fields must be exactly status, semantic_review/],
+    ['validation', (state) => { state.validation.legacy_digest = 'inert'; }, /validation: fields must be exactly status, semantic_review, semantic_review_history, authoring_validation/],
     ['scope-lock', (state) => { state.scope_lock.legacy_mode = true; }, /scope_lock: fields must be exactly/],
   ];
   for (const [name, mutate, expected] of cases) {

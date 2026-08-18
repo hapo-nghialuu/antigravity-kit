@@ -1,6 +1,6 @@
 {
   "name": "@haposoft/cafekit",
-  "version": "0.16.0-rc.3",
+  "version": "0.16.0-rc.4",
   "description": "Native spec-driven workflows for Claude Code, Codex CLI, and OpenCode. Bundles CafeKit skills, runtime hooks, agents, and installer scaffolding.",
   "author": "Haposoft <nghialt@haposoft.com>",
   "license": "MIT",
@@ -12,7 +12,10 @@
     "test": "node scripts/run-skill-self-tests.mjs",
     "test:package": "node --test bin/__tests__/package-inventory.test.js",
     "test:secrets": "node --test bin/__tests__/secret-scanner.test.js",
-    "test:policy": "node --test bin/__tests__/develop-contract.test.js"
+    "test:policy": "node --test bin/__tests__/develop-contract.test.js",
+    "release:freeze": "node scripts/benchmark-workflow.mjs freeze",
+    "prepack": "node scripts/release-preflight.mjs",
+    "prepublishOnly": "node scripts/release-preflight.mjs"
   },
   "files": [
     "bin",

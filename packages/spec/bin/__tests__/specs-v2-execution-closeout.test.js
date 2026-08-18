@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -14,6 +15,8 @@ const PROVENANCE = require(path.join(SCRIPTS, 'provenance.cjs'));
 const RECEIPT = require(path.join(SCRIPTS, 'spec-receipt.cjs'));
 const SCAFFOLD = path.join(SCRIPTS, 'spec-scaffold.cjs');
 const VALIDATOR = path.join(SCRIPTS, 'validate-spec-output.cjs');
+const AUTHORING_VALIDATION = path.join(SCRIPTS, 'spec-authoring-validation.cjs');
+const RUNTIME_CLOSURE = require('./test-runtime-dependency-closure.cjs');
 const SEMANTIC_MODEL = require(path.join(SCRIPTS, 'spec-semantic-model.cjs'));
 const CLAUDE_CHECK = require(path.join(ROOT, 'src/claude/hooks/completion-authority-check.cjs'));
 const CODEX_CHECK = require(path.join(ROOT, 'src/codex/hooks/completion-authority-check.cjs'));
@@ -143,12 +146,41 @@ Only a validated and grounded current digest reaches closeout.
 R1.1 and R1.2 are verified by V1 against D1, I1, and C1.
 `);
   const specPath = path.join(featureDir, 'spec.json');
+  const seed = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+  const seedProjection = SEMANTIC_MODEL.modelFromMarkdown(featureDir, seed);
+  assert.deepEqual(seedProjection.errors, []);
+  seed.semantic_model = seedProjection.model;
+  fs.writeFileSync(specPath, `${JSON.stringify(seed, null, 2)}\n`);
+  // I21: only the C16 coordinator may set an authoring stage to `validated`,
+  // and only together with the digest receipt that proves it fresh. The fixture
+  // runs the real command instead of hand-authoring the enum.
+  const authored = spawnSync(
+    process.execPath,
+    [AUTHORING_VALIDATION, featureDir, '--root', root],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(authored.status, 0, `${authored.stdout}\n${authored.stderr}`);
   const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
-  spec.authoring.requirements = 'validated';
-  spec.authoring.design = 'validated';
+  assert.equal(spec.authoring.requirements, 'validated');
+  assert.equal(spec.authoring.design, 'validated');
   spec.validation.status = 'completed';
   spec.validation.semantic_review = {
-    status: 'completed', semantic_digest: null, reviewed_criteria: ['R1.1', 'R1.2'],
+    status: 'completed',
+    semantic_digest: null,
+    verdict: 'PASS',
+    lifecycle_disposition: 'CONTINUE',
+    findings: [],
+    unresolved_decisions: [],
+    graph_coverage: [
+      'criterion_local', 'cross_criterion', 'runtime_path',
+      'assumption_provenance', 'compatibility_migration',
+    ].map((surface) => ({ surface, covered: true, notes: `${surface} reviewed for the closeout fixture.` })),
+    repair_round: 0,
+    reviewer_evidence: {
+      assurance: 'Routine',
+      summary: 'Closeout fixture reviewer confirmed both criteria against the grounded final-state boundary.',
+    },
+    reviewed_criteria: ['R1.1', 'R1.2'],
     counterexamples: [{
       criterion: 'R1.1', case_kind: 'failure',
       scenario: 'A requirements artifact changes after the reviewed digest was recorded.',
@@ -161,13 +193,24 @@ R1.1 and R1.2 are verified by V1 against D1, I1, and C1.
       decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
     }],
   };
-  const projection = SEMANTIC_MODEL.modelFromMarkdown(featureDir, spec);
-  assert.deepEqual(projection.errors, []);
-  spec.semantic_model = projection.model;
   fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
   const digest = spawnSync(process.execPath, [VALIDATOR, featureDir, '--semantic-digest'], { cwd: root, encoding: 'utf8' });
   assert.equal(digest.status, 0, `${digest.stdout}\n${digest.stderr}`);
   spec.validation.semantic_review.semantic_digest = digest.stdout.trim();
+  // C13: a completed receipt is only terminal when the durable history records
+  // it. The entry binds the same semantic digest, the receipt's own canonical
+  // digest, and the attempt index the receipt reports as repair_round.
+  spec.validation.semantic_review_history.entries = [{
+    sequence: 0,
+    semantic_digest: spec.validation.semantic_review.semantic_digest,
+    review_receipt_digest: `sha256:${crypto.createHash('sha256')
+      .update(SEMANTIC_MODEL.stableJson(spec.validation.semantic_review), 'utf8').digest('hex')}`,
+    verdict: 'PASS',
+    lifecycle_disposition: 'CONTINUE',
+    blocking_count: 0,
+    attempt_index: spec.validation.semantic_review.repair_round,
+    review_epoch: 0,
+  }];
   spec.ready_for_implementation = true;
   spec.status = specStatus === 'complete' ? 'done' : specStatus;
   delete spec.current_phase;
@@ -212,12 +255,16 @@ function installGate(root, kind) {
   fs.mkdirSync(path.join(runtimeDir, 'hooks'), { recursive: true });
   fs.mkdirSync(path.join(runtimeDir, 'hooks', 'lib'), { recursive: true });
   fs.mkdirSync(path.join(runtimeDir, 'scripts'), { recursive: true });
-  for (const name of [
-    'workflow-policy.cjs', 'provenance.cjs', 'spec-resolver.cjs', 'spec-receipt.cjs',
-    'validate-spec-output.cjs', 'spec-ground.cjs', 'spec-semantic-model.cjs', 'spec-final-state.cjs',
-  ]) {
-    fs.copyFileSync(path.join(SCRIPTS, name), path.join(runtimeDir, 'scripts', name));
-  }
+  // Copy the real transitive require closure rather than a hand-listed subset.
+  // A hand-listed subset silently rots the moment one of these entrypoints
+  // gains a new local dependency: the fixture keeps building, and the gate only
+  // fails later with a bare MODULE_NOT_FOUND from inside the installed runtime.
+  RUNTIME_CLOSURE.copyClaudeTestRuntime(ROOT, runtimeDir, [
+    'scripts/workflow-policy.cjs', 'scripts/provenance.cjs', 'scripts/spec-resolver.cjs',
+    'scripts/spec-receipt.cjs', 'scripts/validate-spec-output.cjs', 'scripts/spec-ground.cjs',
+    'scripts/spec-semantic-model.cjs', 'scripts/spec-final-state.cjs',
+    'hooks/lib/runtime-path-safety.cjs',
+  ]);
   if (kind === 'claude') {
     for (const name of [
       'spec-gate.cjs', 'completion-authority-check.cjs', 'completion-authority-state.cjs',

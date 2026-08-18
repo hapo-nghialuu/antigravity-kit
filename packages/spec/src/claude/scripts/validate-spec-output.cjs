@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const POLICY = require('./workflow-policy.cjs');
 const SEMANTIC = require('./spec-semantic-model.cjs');
+const AUTHORING_DIGEST = require('./spec-authoring-digest.cjs');
 const {
   canonicalProjectRoot,
   groundSpec,
@@ -73,6 +74,41 @@ const SPEC_21_REQUIRED_FIELDS = Object.freeze([
   'ready_for_implementation', 'workflow_policy',
 ]);
 const SPEC_21_OPTIONAL_FIELDS = Object.freeze(['research', 'task_files', 'task_registry', 'decisions']);
+
+// C2 SemanticReviewReceipt (R1-01, frozen) — separate reviewer verdict from
+// lifecycle_disposition; repair_round is the finalizer-derived C13 attempt_index.
+// This is the sole canonical field-list authority for C2's exact key set;
+// every other consumer (e.g. run-skill-self-tests.mjs's template contract
+// check) imports this constant rather than maintaining its own literal copy.
+const C2_FIELDS = Object.freeze([
+  'status', 'semantic_digest', 'verdict', 'lifecycle_disposition', 'findings',
+  'unresolved_decisions', 'graph_coverage', 'repair_round', 'reviewed_criteria',
+  'counterexamples', 'reviewer_evidence',
+]);
+const C2_VERDICTS = new Set(['PASS', 'FAIL']);
+const C2_LIFECYCLE_DISPOSITIONS = new Set(['CONTINUE', 'BLOCKED']);
+const C2_FINDING_FIELDS = ['id', 'severity', 'location', 'summary', 'blocking', 'disposition'];
+const C2_FINDING_SEVERITIES = new Set(['Critical', 'High', 'Medium', 'Low']);
+const C2_FINDING_DISPOSITIONS = new Set(['open', 'accepted', 'mitigated']);
+const C2_UNRESOLVED_DECISION_FIELDS = ['id', 'summary', 'blocking'];
+const C2_GRAPH_COVERAGE_FIELDS = ['surface', 'covered', 'notes'];
+const C2_GRAPH_COVERAGE_SURFACES = [
+  'criterion_local', 'cross_criterion', 'runtime_path', 'assumption_provenance', 'compatibility_migration',
+];
+const C2_REVIEWER_EVIDENCE_FIELDS = ['assurance', 'summary'];
+const C2_REVIEWER_EVIDENCE_ASSURANCES = new Set(['Routine', 'Elevated', 'Strict']);
+// C13 SemanticReviewHistory (R1-01, frozen) — durable, append-only, whole-lineage-deduped.
+const C13_HISTORY_FIELDS = ['lineage_id', 'entries'];
+const C13_ENTRY_FIELDS = [
+  'sequence', 'semantic_digest', 'review_receipt_digest', 'verdict',
+  'lifecycle_disposition', 'blocking_count', 'attempt_index', 'review_epoch',
+];
+// C16 AuthoringValidationReceipt (R1-01, frozen) — sole freshness evidence for
+// an authoring stage's `validated` reading (I20); computed via the shared,
+// R0-01-owned spec-authoring-digest.cjs primitive (never reimplemented here).
+const C16_FIELDS = ['schema_version', 'requirements', 'design', 'research', 'tasks'];
+const C16_STAGE_FIELDS = ['digest', 'validated_at'];
+const VALIDATION_21_FIELDS = ['status', 'semantic_review', 'semantic_review_history', 'authoring_validation'];
 
 function usage() {
   console.error('Usage: node .claude/scripts/validate-spec-output.cjs specs/<feature> [--semantic-digest]');
@@ -2551,7 +2587,7 @@ function hasConcreteTaskProse(section) {
   ));
 }
 
-function validateTask21(taskPath, content, entry, errors) {
+function validateTask21(taskPath, content, entry, specReady, errors) {
   for (const section of TASK_21_SECTIONS) {
     if (headingCount(content, section) !== 1) errors.push(`${taskPath}: requires exactly one ## ${section} section`);
   }
@@ -2561,7 +2597,7 @@ function validateTask21(taskPath, content, entry, errors) {
   }
   validateTaskIdentity(taskPath, content, entry, errors);
   validateTaskDependencyHeader(taskPath, content, entry, true, errors);
-  validateTaskStatusHeader(taskPath, content, entry, true, errors);
+  validateTaskStatusHeader(taskPath, content, entry, specReady, errors);
   validateVerificationPlan(taskPath, content, errors);
   validateTaskPlaceholders(taskPath, content, errors, []);
   const outcome = extractSection(content, 'Outcome') || '';
@@ -2702,17 +2738,94 @@ function computeSemanticDigest21(specDir, spec) {
   return { errors, digest: semanticDigest21(specDir, digestSpec, taskFiles) };
 }
 
+function validateSemanticReviewFindings(review, errors) {
+  if (!Array.isArray(review.findings)) {
+    errors.push('spec.json.validation.semantic_review.findings: must be an array');
+    return;
+  }
+  const findingIds = new Set();
+  for (const [index, finding] of review.findings.entries()) {
+    const label = `semantic_review.findings[${index}]`;
+    if (!isPlainObject(finding) || Object.keys(finding).sort().join(',') !== [...C2_FINDING_FIELDS].sort().join(',')) {
+      errors.push(`${label}: fields must be exactly ${C2_FINDING_FIELDS.join(', ')}`); continue;
+    }
+    if (typeof finding.id !== 'string' || finding.id === '' || findingIds.has(finding.id)) errors.push(`${label}.id: must be a unique non-empty string`);
+    findingIds.add(finding.id);
+    if (!C2_FINDING_SEVERITIES.has(finding.severity)) errors.push(`${label}.severity: must be Critical, High, Medium, or Low`);
+    if (typeof finding.location !== 'string' || finding.location.trim() === '') errors.push(`${label}.location: must be a non-empty string`);
+    if (!concreteSemanticReviewText(finding.summary)) errors.push(`${label}.summary: must be concrete with minimum length 8`);
+    if (typeof finding.blocking !== 'boolean') errors.push(`${label}.blocking: must be boolean`);
+    if (!C2_FINDING_DISPOSITIONS.has(finding.disposition)) errors.push(`${label}.disposition: must be open, accepted, or mitigated`);
+  }
+}
+
+function validateSemanticReviewUnresolvedDecisions(review, errors) {
+  if (!Array.isArray(review.unresolved_decisions)) {
+    errors.push('spec.json.validation.semantic_review.unresolved_decisions: must be an array');
+    return;
+  }
+  const decisionIds = new Set();
+  for (const [index, decision] of review.unresolved_decisions.entries()) {
+    const label = `semantic_review.unresolved_decisions[${index}]`;
+    if (!isPlainObject(decision) || Object.keys(decision).sort().join(',') !== [...C2_UNRESOLVED_DECISION_FIELDS].sort().join(',')) {
+      errors.push(`${label}: fields must be exactly ${C2_UNRESOLVED_DECISION_FIELDS.join(', ')}`); continue;
+    }
+    if (typeof decision.id !== 'string' || decision.id === '' || decisionIds.has(decision.id)) errors.push(`${label}.id: must be a unique non-empty string`);
+    decisionIds.add(decision.id);
+    if (!concreteSemanticReviewText(decision.summary)) errors.push(`${label}.summary: must be concrete with minimum length 8`);
+    if (typeof decision.blocking !== 'boolean') errors.push(`${label}.blocking: must be boolean`);
+  }
+}
+
+function validateSemanticReviewGraphCoverage(review, errors) {
+  if (!Array.isArray(review.graph_coverage)) {
+    errors.push('spec.json.validation.semantic_review.graph_coverage: must be an array');
+    return;
+  }
+  const coveredSurfaces = new Set();
+  for (const [index, coverage] of review.graph_coverage.entries()) {
+    const label = `semantic_review.graph_coverage[${index}]`;
+    if (!isPlainObject(coverage) || Object.keys(coverage).sort().join(',') !== [...C2_GRAPH_COVERAGE_FIELDS].sort().join(',')) {
+      errors.push(`${label}: fields must be exactly ${C2_GRAPH_COVERAGE_FIELDS.join(', ')}`); continue;
+    }
+    if (!C2_GRAPH_COVERAGE_SURFACES.includes(coverage.surface)) errors.push(`${label}.surface: must be a canonical graph coverage surface`);
+    else coveredSurfaces.add(coverage.surface);
+    if (typeof coverage.covered !== 'boolean') errors.push(`${label}.covered: must be boolean`);
+    if (typeof coverage.notes !== 'string') errors.push(`${label}.notes: must be a string`);
+  }
+  for (const surface of C2_GRAPH_COVERAGE_SURFACES) if (!coveredSurfaces.has(surface)) {
+    errors.push(`spec.json.validation.semantic_review.graph_coverage: missing required surface ${surface}`);
+  }
+}
+
+function validateSemanticReviewerEvidence(review, errors) {
+  if (review.reviewer_evidence === null) return;
+  if (!isPlainObject(review.reviewer_evidence)
+    || Object.keys(review.reviewer_evidence).sort().join(',') !== [...C2_REVIEWER_EVIDENCE_FIELDS].sort().join(',')) {
+    errors.push(`spec.json.validation.semantic_review.reviewer_evidence: fields must be exactly ${C2_REVIEWER_EVIDENCE_FIELDS.join(', ')} or null`);
+    return;
+  }
+  if (!C2_REVIEWER_EVIDENCE_ASSURANCES.has(review.reviewer_evidence.assurance)) {
+    errors.push('spec.json.validation.semantic_review.reviewer_evidence.assurance: must be Routine, Elevated, or Strict');
+  }
+  if (!concreteSemanticReviewText(review.reviewer_evidence.summary)) {
+    errors.push('spec.json.validation.semantic_review.reviewer_evidence.summary: must be concrete with minimum length 8');
+  }
+}
+
 function validateSemanticReview21(specDir, spec, criteria, designIds, verificationDefs, errors) {
   const review = spec.validation?.semantic_review;
-  const fields = ['status', 'semantic_digest', 'reviewed_criteria', 'counterexamples'];
-  if (!isPlainObject(review) || Object.keys(review).sort().join(',') !== fields.sort().join(',')) {
-    errors.push(`spec.json.validation.semantic_review: schema 2.1 fields must be exactly ${fields.join(', ')}`);
+  if (!isPlainObject(review) || Object.keys(review).sort().join(',') !== [...C2_FIELDS].sort().join(',')) {
+    errors.push(`spec.json.validation.semantic_review: schema 2.1 fields must be exactly ${C2_FIELDS.join(', ')}`);
     return;
   }
   if (!['not-run', 'completed'].includes(review.status)) errors.push('spec.json.validation.semantic_review.status: must be not-run or completed');
   if (review.status === 'not-run') {
-    if (review.semantic_digest !== null || review.reviewed_criteria?.length || review.counterexamples?.length) {
-      errors.push('spec.json.validation.semantic_review: not-run receipt must be empty');
+    if (review.semantic_digest !== null || review.verdict !== null || review.lifecycle_disposition !== null
+      || review.reviewer_evidence !== null || review.repair_round !== 0
+      || review.findings?.length || review.unresolved_decisions?.length
+      || review.graph_coverage?.length || review.reviewed_criteria?.length || review.counterexamples?.length) {
+      errors.push('spec.json.validation.semantic_review: not-run receipt must keep verdict, lifecycle_disposition, and reviewer_evidence null, repair_round 0, and every array empty');
     }
     if (spec.ready_for_implementation === true) errors.push('spec.json.ready_for_implementation: requires completed semantic review');
     return;
@@ -2723,6 +2836,18 @@ function validateSemanticReview21(specDir, spec, criteria, designIds, verificati
   } else if (review.semantic_digest !== computed.digest) {
     errors.push('spec.json.validation.semantic_review.semantic_digest: stale for current authoring, policy, topology, or research');
   }
+  if (typeof review.semantic_digest !== 'string' || !SHA256_RE.test(review.semantic_digest)) {
+    errors.push('spec.json.validation.semantic_review.semantic_digest: must be sha256:<64 lowercase hex> when completed');
+  }
+  if (!C2_VERDICTS.has(review.verdict)) errors.push('spec.json.validation.semantic_review.verdict: must be PASS or FAIL when completed');
+  if (!C2_LIFECYCLE_DISPOSITIONS.has(review.lifecycle_disposition)) errors.push('spec.json.validation.semantic_review.lifecycle_disposition: must be CONTINUE or BLOCKED when completed');
+  if (!Number.isInteger(review.repair_round) || review.repair_round < 0 || review.repair_round > 2) {
+    errors.push('spec.json.validation.semantic_review.repair_round: must be an integer 0..2 when completed');
+  }
+  validateSemanticReviewFindings(review, errors);
+  validateSemanticReviewUnresolvedDecisions(review, errors);
+  validateSemanticReviewGraphCoverage(review, errors);
+  validateSemanticReviewerEvidence(review, errors);
   if (!Array.isArray(review.reviewed_criteria) || new Set(review.reviewed_criteria).size !== review.reviewed_criteria.length) {
     errors.push('spec.json.validation.semantic_review.reviewed_criteria: must be a unique array');
   } else {
@@ -2784,6 +2909,91 @@ function validateSemanticReview21(specDir, spec, criteria, designIds, verificati
       if (!attestation.ok) errors.push(`spec.json.validation.semantic_review: Strict readiness requires matching allowlisted host-observed reviewer PASS attestation (${attestation.reason})`);
     } catch (error) {
       errors.push(`spec.json.validation.semantic_review: Strict readiness attestation is unavailable (${error.message})`);
+    }
+  }
+}
+
+function computeLineageId(featureName, createdAt) {
+  return `sha256:${crypto.createHash('sha256').update(SEMANTIC.stableJson({ feature_name: featureName, created_at: createdAt })).digest('hex')}`;
+}
+
+// C13 SemanticReviewHistory: structural completeness, types, nullability,
+// enums, cardinality, and whole-lineage digest dedupe only — never semantic
+// judgment of the epoch/attempt-index derivation itself (that is the R1-02
+// finalizer's own write-time responsibility, see C3/D4).
+function validateSemanticReviewHistory21(spec, errors) {
+  const history = spec.validation?.semantic_review_history;
+  if (!isPlainObject(history) || Object.keys(history).sort().join(',') !== [...C13_HISTORY_FIELDS].sort().join(',')) {
+    errors.push(`spec.json.validation.semantic_review_history: fields must be exactly ${C13_HISTORY_FIELDS.join(', ')}`);
+    return;
+  }
+  const expectedLineageId = computeLineageId(spec.feature_name, spec.created_at);
+  if (history.lineage_id !== expectedLineageId) {
+    errors.push('spec.json.validation.semantic_review_history.lineage_id: must be sha256 of feature_name and created_at; callers never set it directly');
+  }
+  if (!Array.isArray(history.entries)) {
+    errors.push('spec.json.validation.semantic_review_history.entries: must be an array');
+    return;
+  }
+  const digestsSeen = new Set();
+  for (const [index, entry] of history.entries.entries()) {
+    const label = `semantic_review_history.entries[${index}]`;
+    if (!isPlainObject(entry) || Object.keys(entry).sort().join(',') !== [...C13_ENTRY_FIELDS].sort().join(',')) {
+      errors.push(`${label}: fields must be exactly ${C13_ENTRY_FIELDS.join(', ')}`); continue;
+    }
+    if (entry.sequence !== index) errors.push(`${label}.sequence: must start at 0 and increase by exactly 1 per real append`);
+    if (typeof entry.semantic_digest !== 'string' || !SHA256_RE.test(entry.semantic_digest)) errors.push(`${label}.semantic_digest: must be sha256:<64 lowercase hex>`);
+    if (typeof entry.review_receipt_digest !== 'string' || !SHA256_RE.test(entry.review_receipt_digest)) {
+      errors.push(`${label}.review_receipt_digest: must be sha256:<64 lowercase hex>`);
+    } else if (digestsSeen.has(entry.review_receipt_digest)) {
+      errors.push(`${label}.review_receipt_digest: replays an existing entry's digest anywhere in the lineage; a replay must not be appended twice`);
+    } else digestsSeen.add(entry.review_receipt_digest);
+    if (!C2_VERDICTS.has(entry.verdict)) errors.push(`${label}.verdict: must be PASS or FAIL`);
+    if (!C2_LIFECYCLE_DISPOSITIONS.has(entry.lifecycle_disposition)) errors.push(`${label}.lifecycle_disposition: must be CONTINUE or BLOCKED`);
+    if (!Number.isInteger(entry.blocking_count) || entry.blocking_count < 0) errors.push(`${label}.blocking_count: must be a non-negative integer`);
+    if (!Number.isInteger(entry.attempt_index) || entry.attempt_index < 0 || entry.attempt_index > 2) errors.push(`${label}.attempt_index: must be an integer 0..2`);
+    if (!Number.isInteger(entry.review_epoch) || entry.review_epoch < 0) errors.push(`${label}.review_epoch: must be a non-negative integer`);
+  }
+}
+
+// C16 AuthoringValidationReceipt: structural completeness plus the fail-closed
+// freshness check (I20/R3.8) — an authoring.<field> reading `validated`
+// without a matching fresh digest is a hard structural failure here, not a
+// silent downgrade to draft.
+function validateAuthoringValidation21(specDir, spec, errors) {
+  const receipt = spec.validation?.authoring_validation;
+  if (receipt !== null) {
+    if (!isPlainObject(receipt) || Object.keys(receipt).sort().join(',') !== [...C16_FIELDS].sort().join(',')) {
+      errors.push(`spec.json.validation.authoring_validation: fields must be exactly ${C16_FIELDS.join(', ')} or null`);
+      return;
+    }
+    if (receipt.schema_version !== '1') errors.push('spec.json.validation.authoring_validation.schema_version: must be exactly "1"');
+    for (const stage of ['requirements', 'design', 'research', 'tasks']) {
+      const label = `spec.json.validation.authoring_validation.${stage}`;
+      const entry = receipt[stage];
+      if (!isPlainObject(entry) || Object.keys(entry).sort().join(',') !== [...C16_STAGE_FIELDS].sort().join(',')) {
+        errors.push(`${label}: fields must be exactly ${C16_STAGE_FIELDS.join(', ')}`); continue;
+      }
+      const sentinel = stage === 'research' ? AUTHORING_DIGEST.RESEARCH_ABSENT_DIGEST
+        : stage === 'tasks' ? AUTHORING_DIGEST.TASKS_ABSENT_DIGEST : null;
+      const digestValid = typeof entry.digest === 'string'
+        && (SHA256_RE.test(entry.digest) || (sentinel !== null && entry.digest === sentinel));
+      if (!digestValid) errors.push(`${label}.digest: must be sha256:<64 lowercase hex>${sentinel ? ` or ${sentinel}` : ''}`);
+      if (!isIsoTimestamp(entry.validated_at)) errors.push(`${label}.validated_at: must be an ISO timestamp`);
+    }
+  }
+  let freshness;
+  try {
+    freshness = AUTHORING_DIGEST.assertAuthoringFresh({
+      specDir, authoring: spec.authoring, receipt, fields: ['requirements', 'design', 'research', 'tasks'],
+    });
+  } catch (error) {
+    errors.push(`spec.json.validation.authoring_validation: cannot recompute current authoring digests (${error.message})`);
+    return;
+  }
+  for (const field of ['requirements', 'design', 'research', 'tasks']) {
+    if (spec.authoring?.[field] === 'validated' && !freshness[field]?.fresh) {
+      errors.push(`spec.json.authoring.${field}: reads validated but validation.authoring_validation is absent, missing this field's entry, or digest-mismatched against current bytes (I20/C16)`);
     }
   }
 }
@@ -3026,6 +3236,36 @@ function validateBoundaries21(spec, taskFiles, registry, anchorsByTask, criteria
       }
     }
   }
+  // D10/I7/R8.3: global ownership-contention scan. Candidate pairs are derived
+  // directly from the complete anchorsByTask write-anchor projection — every
+  // task's every write anchor — never only from declared write_sets or from
+  // iterating already-declared boundaries. Any single existing dependency
+  // boundary between a pair covers every target that pair shares, regardless
+  // of which target it names as its own deliverable; a same-target write pair
+  // with no dependency boundary at all (even one never named in any boundary)
+  // is exactly the defect this scan exists to catch.
+  const connectedPairs = new Set(dependencyEdges.map(([producer, consumer]) => [producer, consumer].sort().join('\0')));
+  const writersByTarget = new Map();
+  for (const taskPath of taskFiles) {
+    const taskId = registry[taskPath]?.id;
+    if (!taskId) continue;
+    for (const anchor of anchorsByTask.get(taskPath) || []) {
+      if (anchor.access !== 'write') continue;
+      if (!writersByTarget.has(anchor.target)) writersByTarget.set(anchor.target, new Set());
+      writersByTarget.get(anchor.target).add(taskId);
+    }
+  }
+  const flaggedContentionPairs = new Set();
+  for (const [target, writers] of writersByTarget) {
+    const writerIds = [...writers].sort();
+    for (let left = 0; left < writerIds.length; left += 1) for (let right = left + 1; right < writerIds.length; right += 1) {
+      const a = writerIds[left]; const b = writerIds[right];
+      const pairKey = [a, b].sort().join('\0');
+      if (connectedPairs.has(pairKey) || flaggedContentionPairs.has(pairKey)) continue;
+      flaggedContentionPairs.add(pairKey);
+      errors.push(`spec.json.coordination.boundaries: ${a} and ${b} both hold a write anchor for ${target} with no dependency boundary connecting them`);
+    }
+  }
   const participation = new Map([...taskIds].map((taskId) => [taskId, 0]));
   for (const boundary of spec.coordination.boundaries) {
     for (const taskId of new Set(boundaryParticipants(boundary))) if (participation.has(taskId)) {
@@ -3161,8 +3401,8 @@ function validateSpec21(specDir, canonicalSpecDir, spec, errors, warnings) {
     if (spec.scope_lock.expansion_policy !== 'requires-user-approval') errors.push('spec.json.scope_lock.expansion_policy: must be requires-user-approval');
   }
   if (isPlainObject(spec.validation)
-    && Object.keys(spec.validation).sort().join(',') !== 'semantic_review,status') {
-    errors.push('spec.json.validation: fields must be exactly status, semantic_review');
+    && Object.keys(spec.validation).sort().join(',') !== [...VALIDATION_21_FIELDS].sort().join(',')) {
+    errors.push(`spec.json.validation: fields must be exactly ${VALIDATION_21_FIELDS.join(', ')}`);
   }
   const taskFiles = listTaskFiles(specDir, canonicalSpecDir, errors);
   validateCoreMachineState(spec, taskFiles, errors, { schema21: true });
@@ -3206,7 +3446,13 @@ function validateSpec21(specDir, canonicalSpecDir, spec, errors, warnings) {
   const taskContents = new Map();
   for (const taskPath of taskFiles) {
     const content = fs.readFileSync(path.join(specDir, taskPath), 'utf8');
-    const task = validateTask21(taskPath, content, spec.task_registry?.[taskPath], errors);
+    const task = validateTask21(
+      taskPath,
+      content,
+      spec.task_registry?.[taskPath],
+      spec.ready_for_implementation === true,
+      errors,
+    );
     taskContents.set(taskPath, content);
     anchorsByTask.set(taskPath, task.anchors);
     criteriaByTask.set(taskPath, task.criteria);
@@ -3241,6 +3487,8 @@ function validateSpec21(specDir, canonicalSpecDir, spec, errors, warnings) {
     designText, verificationDefinitions, errors,
   );
   validateSemanticReview21(specDir, spec, criteria, designIds, verificationDefinitions, errors);
+  validateSemanticReviewHistory21(spec, errors);
+  validateAuthoringValidation21(specDir, spec, errors);
   if (spec.ready_for_implementation === true) {
     for (const artifact of ['requirements', 'design']) if (spec.authoring?.[artifact] !== 'validated') errors.push(`spec.json.authoring.${artifact}: readiness requires validated`);
     if (taskFiles.length > 0 && spec.authoring?.tasks !== 'validated') errors.push('spec.json.authoring.tasks: readiness requires validated task projection');
@@ -3685,5 +3933,9 @@ function main() {
 }
 
 module.exports = { validateSpec, computeSemanticDigest21 };
+Object.defineProperty(module.exports, 'C2_FIELDS', {
+  value: C2_FIELDS,
+  enumerable: false,
+});
 
 if (require.main === module) main();

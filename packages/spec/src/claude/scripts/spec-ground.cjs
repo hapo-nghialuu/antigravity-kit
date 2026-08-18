@@ -343,7 +343,11 @@ function intendedAction(anchor) {
   return anchor.schema21 ? anchor.action : legacyIntendedAction(anchor);
 }
 
-function groundPathTarget(anchor, root, createdTargets, errors) {
+function createTargetMayAlreadyExist(anchor) {
+  return anchor.schema21 && ['in_progress', 'done'].includes(anchor.taskStatus);
+}
+
+function groundPathTarget(anchor, root, createdTargets, plannedDependencyReads, errors) {
   const prefix = `${anchor.label}: ${anchor.id || anchor.type}`;
   const inspected = inspectPath(root, anchor.target);
   if (!inspected.valid) {
@@ -355,9 +359,11 @@ function groundPathTarget(anchor, root, createdTargets, errors) {
     const parent = inspectPath(root, path.dirname(anchor.target));
     if (!parent.valid || !parent.exists || !parent.stat.isDirectory()) {
       errors.push(`${prefix}: create target parent is not grounded for ${anchor.target}`);
-    } else if (inspected.exists) errors.push(`${prefix}: create target already exists: ${anchor.target}`);
+    } else if (inspected.exists && !createTargetMayAlreadyExist(anchor)) {
+      errors.push(`${prefix}: create target already exists: ${anchor.target}`);
+    }
     else createdTargets.add(anchor.target);
-  } else if (!inspected.exists && !createdTargets.has(anchor.target)) {
+  } else if (!inspected.exists && !plannedDependencyReads.has(`${anchor.label}\0${anchor.target}`)) {
     errors.push(`${prefix}: ${action} target not found in work tree: ${anchor.target}`);
   }
 }
@@ -421,10 +427,12 @@ function groundCommand(anchor, root, scripts, errors, warnings) {
   void warnings;
 }
 
-function groundAnchor(anchor, root, scripts, bodies, createdTargets, reachableAnchors, errors, warnings) {
+function groundAnchor(anchor, root, scripts, bodies, createdTargets, plannedDependencyReads, reachableAnchors, errors, warnings) {
   const prefix = `${anchor.label}: ${anchor.id || anchor.type}`;
   if (!ANCHOR_TYPES.has(anchor.type)) return;
-  if (anchor.type === 'file' || anchor.type === 'artifact') return groundPathTarget(anchor, root, createdTargets, errors);
+  if (anchor.type === 'file' || anchor.type === 'artifact') {
+    return groundPathTarget(anchor, root, createdTargets, plannedDependencyReads, errors);
+  }
   if (anchor.type === 'symbol') {
     const parts = symbolParts(anchor.target);
     if (!parts) {
@@ -441,7 +449,9 @@ function groundAnchor(anchor, root, scripts, bodies, createdTargets, reachableAn
     const body = fs.readFileSync(inspected.target, 'utf8');
     const escaped = parts.symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const exists = new RegExp(`(?:^|[^A-Za-z0-9_$])${escaped}(?:$|[^A-Za-z0-9_$])`, 'm').test(body);
-    if (intendedAction(anchor) === 'create' && exists) errors.push(`${prefix}: create symbol already exists: ${anchor.target}`);
+    if (intendedAction(anchor) === 'create' && exists && !createTargetMayAlreadyExist(anchor)) {
+      errors.push(`${prefix}: create symbol already exists: ${anchor.target}`);
+    }
     else if (intendedAction(anchor) !== 'create' && !exists) {
       errors.push(`${prefix}: symbol ${parts.symbol} not found in containing file ${parts.file}`);
     }
@@ -452,7 +462,9 @@ function groundAnchor(anchor, root, scripts, bodies, createdTargets, reachableAn
     const exists = semanticTargetExists(anchor, bodies);
     if (intendedAction(anchor) === 'create' && !reachableAnchors.has(anchor.id)) {
       errors.push(`${prefix}: create ${anchor.type} requires repository entrypoint registration reachability`);
-    } else if (intendedAction(anchor) === 'create' && exists) errors.push(`${prefix}: create ${anchor.type} already exists: ${anchor.target}`);
+    } else if (intendedAction(anchor) === 'create' && exists && !createTargetMayAlreadyExist(anchor)) {
+      errors.push(`${prefix}: create ${anchor.type} already exists: ${anchor.target}`);
+    }
     else if (intendedAction(anchor) !== 'create' && !exists) errors.push(`${prefix}: ${anchor.type} target is not semantically reachable: ${anchor.target}`);
     return;
   }
@@ -521,10 +533,20 @@ function groundSpec({ specDir: inputSpecDir, root: inputRoot = null, spec: input
       if (SEMANTIC.stableJson(spec.semantic_model) !== SEMANTIC.stableJson(projection.model)) {
         errors.push('spec.json: semantic_model differs from authored Markdown projection; rerun spec-readiness with the current semantic review result');
       }
-      const labelByTask = new Map(Object.entries(spec.task_registry || {}).map(([taskPath, entry]) => [entry?.id, taskPath]));
+      const taskById = new Map(Object.entries(spec.task_registry || {}).map(([taskPath, entry]) => [entry?.id, {
+        path: taskPath,
+        status: entry?.status,
+      }]));
       anchors = (spec.semantic_model.anchors || []).map((anchor) => {
         const taskId = anchor.id.match(/^A-(R\d+-\d{2})-/)?.[1];
-        return { ...anchor, label: taskId ? (labelByTask.get(taskId) || taskId) : 'design.md', design: !taskId, schema21: true };
+        const task = taskId ? taskById.get(taskId) : null;
+        return {
+          ...anchor,
+          label: task?.path || taskId || 'design.md',
+          taskStatus: task?.status || null,
+          design: !taskId,
+          schema21: true,
+        };
       });
       verificationDefinitions = new Map((spec.semantic_model.verification_definitions || []).map((definition) => [definition.id, definition]));
     }
@@ -558,6 +580,20 @@ function groundSpec({ specDir: inputSpecDir, root: inputRoot = null, spec: input
   const scripts = packageScripts(root);
   const bodies = sourceBodies(root, [specDir]);
   const createdTargets = new Set();
+  const plannedDependencyReads = new Set();
+  if (is21) {
+    const creatorsByTarget = new Map();
+    for (const anchor of anchors) if (!anchor.design && intendedAction(anchor) === 'create') {
+      if (!creatorsByTarget.has(anchor.target)) creatorsByTarget.set(anchor.target, []);
+      creatorsByTarget.get(anchor.target).push(anchor.label);
+    }
+    for (const anchor of anchors) if (!anchor.design && intendedAction(anchor) === 'read') {
+      const dependencies = spec.task_registry?.[anchor.label]?.dependencies || [];
+      if ((creatorsByTarget.get(anchor.target) || []).some((producer) => producer === anchor.label || dependencies.includes(producer))) {
+        plannedDependencyReads.add(`${anchor.label}\0${anchor.target}`);
+      }
+    }
+  }
   const reachableAnchors = new Set();
   if (is21) for (const definition of verificationDefinitions.values()) {
     const entrypoint = inspectPath(root, definition.reachability?.entrypoint);
@@ -574,7 +610,7 @@ function groundSpec({ specDir: inputSpecDir, root: inputRoot = null, spec: input
     }
   }
   if (isV2) for (const anchor of anchors) {
-    groundAnchor(anchor, root, scripts, bodies, createdTargets, reachableAnchors, errors, warnings);
+    groundAnchor(anchor, root, scripts, bodies, createdTargets, plannedDependencyReads, reachableAnchors, errors, warnings);
   }
   else groundLegacy(anchors, spec?.task_registry, root, errors);
   return { errors, warnings, checked: anchors.length, specDir, root };

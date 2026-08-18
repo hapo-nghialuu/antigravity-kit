@@ -11,6 +11,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const VALIDATOR = path.join(ROOT, 'src/claude/scripts/validate-spec-output.cjs');
 const GROUNDING = path.join(ROOT, 'src/claude/scripts/spec-ground.cjs');
 const SCAFFOLD = path.join(ROOT, 'src/claude/scripts/spec-scaffold.cjs');
+const AUTHORING_VALIDATION = path.join(ROOT, 'src/claude/scripts/spec-authoring-validation.cjs');
 const RESOLVER = path.join(ROOT, 'src/claude/scripts/spec-resolver.cjs');
 const POLICY = require(path.join(ROOT, 'src/claude/scripts/workflow-policy.cjs'));
 const SPEC_RESOLVER = require(RESOLVER);
@@ -483,19 +484,36 @@ The transition records success, failure, and recovery states.
     path.dirname(path.dirname(specDir)),
   );
   assert.equal(promoted.status, 0, output(promoted));
+  // I21: `validated` is never hand-authored here. The real C16 coordinator is
+  // the only writer, and it flips the enums only after its own clean
+  // validator+grounder pass, writing the matching digest receipt in the same
+  // atomic replace. Routing the fixture through it keeps this helper honest and
+  // exercises the production path end to end.
+  const authored = run(AUTHORING_VALIDATION, [specDir, '--root', fixtureRoot], fixtureRoot);
+  assert.equal(authored.status, 0, output(authored));
   state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-  state.authoring.requirements = 'validated';
-  state.authoring.design = 'validated';
-  state.authoring.tasks = state.task_files?.length ? 'validated' : 'absent';
+  assert.equal(state.authoring.requirements, 'validated');
+  assert.equal(state.authoring.design, 'validated');
   state.validation.status = 'completed';
   state.validation.semantic_review = {
-    status: 'completed', semantic_digest: null, reviewed_criteria: criteria,
+    status: 'completed', semantic_digest: null, verdict: 'PASS', lifecycle_disposition: 'CONTINUE',
+    findings: [], unresolved_decisions: [],
+    graph_coverage: [
+      'criterion_local', 'cross_criterion', 'runtime_path',
+      'assumption_provenance', 'compatibility_migration',
+    ].map((surface) => ({ surface, covered: true, notes: `${surface} reviewed against the fixture topology.` })),
+    repair_round: 0,
+    reviewed_criteria: criteria,
     counterexamples: criteria.map((criterion, index) => ({
       criterion, case_kind: index % 2 === 0 ? 'failure' : 'adversarial',
       scenario: `Task ${index + 1} receives a distinct malformed status payload at its declared boundary.`,
       expected: `Task ${index + 1} rejects that payload without publishing its distinct success outcome.`,
       decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
     })),
+    reviewer_evidence: {
+      assurance: 'Routine',
+      summary: 'Fixture reviewer confirmed every criterion, counterexample, and reachability anchor.',
+    },
   };
   write(statePath, JSON.stringify(state, null, 2));
   state.validation.semantic_review.semantic_digest = semanticDigest(specDir);
@@ -3108,4 +3126,85 @@ test('benchmark validate handles empty and invalid evidence as not-ready/invalid
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('D12: semantic-firewall test discovery finds R0-01\'s required basenames in the real checkout', () => {
+  const DISCOVERY = require(path.join(ROOT, 'scripts/semantic-firewall-test-discovery.cjs'));
+  const testsDir = path.join(ROOT, 'bin/__tests__');
+  const discovered = DISCOVERY.discoverSemanticFirewallTests(testsDir);
+  assert.ok(discovered.includes('change-firewall.semantic-firewall.test.js'), 'change-firewall.semantic-firewall.test.js must be discovered');
+  assert.ok(discovered.includes('release-preflight.semantic-firewall.test.js'), 'release-preflight.semantic-firewall.test.js must be discovered');
+  assert.deepEqual(discovered, [...discovered].sort(), 'discovery must return sorted basenames');
+
+  const requiredOk = DISCOVERY.assertRequiredSemanticTests(testsDir, [
+    'change-firewall.semantic-firewall.test.js',
+    'release-preflight.semantic-firewall.test.js',
+  ]);
+  assert.equal(requiredOk.ok, true);
+  assert.deepEqual(requiredOk.missing, []);
+
+  const requiredMissing = DISCOVERY.assertRequiredSemanticTests(testsDir, ['does-not-exist.semantic-firewall.test.js']);
+  assert.equal(requiredMissing.ok, false);
+  assert.deepEqual(requiredMissing.missing, ['does-not-exist.semantic-firewall.test.js']);
+});
+
+test('D12: run-skill-self-tests.mjs sentinel exits nonzero immediately when a required semantic-firewall basename is missing', () => {
+  const RUNNER = path.join(ROOT, 'scripts/run-skill-self-tests.mjs');
+  const result = spawnSync(process.execPath, [
+    RUNNER, '--require-semantic-test', 'does-not-exist.semantic-firewall.test.js',
+  ], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}${result.stderr}`, /required semantic-firewall test not discovered: does-not-exist\.semantic-firewall\.test\.js/);
+});
+
+test('R0-01 owned change-firewall contract surface (D1/C15) is reachable: every named export and owned anchor target exists', () => {
+  const CHANGE_FIREWALL = require(path.join(ROOT, 'src/claude/scripts/change-firewall.cjs'));
+  const requiredExports = [
+    'loadBaselineAuthority', 'assertBaselineUsable', 'bootstrapBaseline', 'advanceBaseline',
+    'deriveProtectedChangedPaths', 'computeProtectedTreeDigest', 'computeProposalDigest',
+    'computeCandidateDigest', 'assertHotspotChangeAllowed', 'createFreezeManifest',
+    'verifyFreezeManifest', 'invalidateFreeze', 'NO_CHANGE_ATTESTATION_DIGEST',
+    'loadFailureLedger', 'assertFailureLedgerUsable', 'openFailure', 'classifyFailure',
+    'reclassifyFailure', 'resolveFailure', 'computeFailureLedgerDigest', 'deriveFailureState',
+    'NO_FAILURES_ATTESTATION_DIGEST', 'createChangeFirewall', 'assertLegacyBridgeArtifact',
+  ];
+  for (const name of requiredExports) {
+    assert.ok(Object.prototype.hasOwnProperty.call(CHANGE_FIREWALL, name), `change-firewall.cjs must export ${name}`);
+  }
+
+  const ownedAnchorTargets = [
+    'src/claude/scripts/change-firewall.cjs',
+    'src/claude/scripts/spec-authoring-digest.cjs',
+    'benchmarks/change-proposal.schema.json',
+    'benchmarks/change-firewall-freeze.schema.json',
+    'benchmarks/release-baseline.schema.json',
+    'benchmarks/migration-manifest.json',
+    'benchmarks/bootstrap-attestation.schema.json',
+    'benchmarks/benchmark-failure-ledger.schema.json',
+    'scripts/release-preflight.mjs',
+    'scripts/benchmark-workflow.mjs',
+    'scripts/semantic-firewall-test-discovery.cjs',
+    'scripts/run-skill-self-tests.mjs',
+    'bin/__tests__/change-firewall.semantic-firewall.test.js',
+    'bin/__tests__/release-preflight.semantic-firewall.test.js',
+    'package.json',
+    '.gitignore',
+  ];
+  for (const relative of ownedAnchorTargets) {
+    assert.ok(fs.existsSync(path.join(ROOT, relative)), `owned anchor target must exist: ${relative}`);
+  }
+});
+
+test('D11/R1.14: the legacy-bridge precondition artifact is reachable and change-firewall.cjs asserts its exact schema', () => {
+  const CHANGE_FIREWALL = require(path.join(ROOT, 'src/claude/scripts/change-firewall.cjs'));
+  // The bridge artifact lives under the monorepo root's specs/ (change-firewall.cjs
+  // resolves its own production root the same way, via git from its own file
+  // location) -- ROOT here is packages/spec, one level below that root.
+  const MONOREPO_ROOT = path.resolve(ROOT, '..', '..');
+  const bridgePath = path.join(MONOREPO_ROOT, 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json');
+  assert.ok(fs.existsSync(bridgePath), 'the legacy-bridge artifact must exist before any R0-01 change-firewall assertion runs');
+  const parsed = CHANGE_FIREWALL.assertLegacyBridgeArtifact();
+  assert.equal(parsed.schema_version, '1');
+  assert.equal(parsed.verdict, 'PASS');
+  assert.equal(parsed.blocking_count, 0);
 });

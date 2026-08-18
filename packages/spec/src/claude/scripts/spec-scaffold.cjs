@@ -28,6 +28,7 @@ const path = require('path');
 const crypto = require('crypto');
 const POLICY = require('./workflow-policy.cjs');
 const SEMANTIC = require('./spec-semantic-model.cjs');
+const AUTHORING_DIGEST = require('./spec-authoring-digest.cjs');
 const PATH_SAFETY = require('../hooks/lib/runtime-path-safety.cjs');
 
 const TEMPLATES = path.join(__dirname, '..', 'skills', 'specs', 'templates');
@@ -81,9 +82,29 @@ const CANONICAL_SPEC_FIELDS = new Set([
 ]);
 const SCOPE_LOCK_FIELDS = ['source', 'in_scope', 'out_of_scope', 'expansion_policy'];
 const COORDINATION_FIELDS = new Set(['boundaries', 'phases']);
-const VALIDATION_FIELDS = ['status', 'semantic_review'];
-const SEMANTIC_REVIEW_FIELDS = ['status', 'semantic_digest', 'reviewed_criteria', 'counterexamples'];
-const LEGACY_SEMANTIC_REVIEW_FIELDS = [...SEMANTIC_REVIEW_FIELDS, 'reviewed_artifact_digest'];
+// Schema 2.0 legacy shapes (pre-Specs-v2.1 migration input) are frozen as-is;
+// they never gain the C2/C13/C16 fields below, which are canonical-2.1-only.
+const LEGACY_VALIDATION_FIELDS = ['status', 'semantic_review'];
+const LEGACY_SEMANTIC_REVIEW_FIELDS = ['status', 'semantic_digest', 'reviewed_criteria', 'counterexamples', 'reviewed_artifact_digest'];
+// Canonical schema 2.1 (R1-01, frozen C2/C13/C16).
+const VALIDATION_FIELDS = ['status', 'semantic_review', 'semantic_review_history', 'authoring_validation'];
+const PRE_C2_SEMANTIC_REVIEW_FIELDS = ['status', 'semantic_digest', 'reviewed_criteria', 'counterexamples'];
+const SEMANTIC_REVIEW_FIELDS = [
+  'status', 'semantic_digest', 'verdict', 'lifecycle_disposition', 'findings',
+  'unresolved_decisions', 'graph_coverage', 'repair_round', 'reviewed_criteria',
+  'counterexamples', 'reviewer_evidence',
+];
+const SEMANTIC_REVIEW_FINDING_FIELDS = ['id', 'severity', 'location', 'summary', 'blocking', 'disposition'];
+const SEMANTIC_REVIEW_DECISION_FIELDS = ['id', 'summary', 'blocking'];
+const SEMANTIC_REVIEW_COVERAGE_FIELDS = ['surface', 'covered', 'notes'];
+const SEMANTIC_REVIEW_EVIDENCE_FIELDS = ['assurance', 'summary'];
+const SEMANTIC_REVIEW_HISTORY_FIELDS = ['lineage_id', 'entries'];
+const SEMANTIC_REVIEW_HISTORY_ENTRY_FIELDS = [
+  'sequence', 'semantic_digest', 'review_receipt_digest', 'verdict',
+  'lifecycle_disposition', 'blocking_count', 'attempt_index', 'review_epoch',
+];
+const AUTHORING_VALIDATION_FIELDS = ['schema_version', 'requirements', 'design', 'research', 'tasks'];
+const AUTHORING_VALIDATION_STAGE_FIELDS = ['digest', 'validated_at'];
 const LEGACY_SPEC_FIELDS = [
   ...CANONICAL_SPEC_FIELDS,
   'approvals', 'current_phase', 'override_receipt', 'timestamps',
@@ -278,13 +299,33 @@ function pendingApproval() {
   return 'draft';
 }
 
+// C2 SemanticReviewReceipt (R1-01, frozen): not-run keeps every receipt field
+// null/empty, including the separate verdict and lifecycle_disposition and
+// the finalizer-derived repair_round attempt index.
 function semanticReviewNotRun() {
   return {
     status: 'not-run',
     semantic_digest: null,
+    verdict: null,
+    lifecycle_disposition: null,
+    findings: [],
+    unresolved_decisions: [],
+    graph_coverage: [],
+    repair_round: 0,
     reviewed_criteria: [],
     counterexamples: [],
+    reviewer_evidence: null,
   };
+}
+
+// C13 SemanticReviewHistory (R1-01, frozen): lineage_id is derived once, from
+// the immutable feature_name/created_at pair, and never set by a caller.
+function computeLineageId(featureName, createdAt) {
+  return `sha256:${crypto.createHash('sha256').update(SEMANTIC.stableJson({ feature_name: featureName, created_at: createdAt })).digest('hex')}`;
+}
+
+function semanticReviewHistoryInitial(featureName, createdAt) {
+  return { lineage_id: computeLineageId(featureName, createdAt), entries: [] };
 }
 
 function parseArtifactDeclarations(raw, parsedTasks) {
@@ -716,7 +757,7 @@ function canonicalRegistryFields(entry) {
   return hasOwn(entry, 'artifacts') ? [...REGISTRY_KEYS, 'artifacts'] : REGISTRY_KEYS;
 }
 
-function assertCanonicalSpecInputClosedWorld(spec) {
+function assertCanonicalSpecInputClosedWorld(spec, { allowLegacyReview = false } = {}) {
   if (!isPlainObject(spec) || spec.schema_version !== '2.1') return;
   const topLevel = [...CANONICAL_SPEC_FIELDS].filter((field) => {
     if (field === 'research') return hasOwn(spec, 'research');
@@ -730,10 +771,29 @@ function assertCanonicalSpecInputClosedWorld(spec) {
   const coordinationFields = hasOwn(spec.coordination, 'phases')
     ? [...COORDINATION_FIELDS] : ['boundaries'];
   assertExactKeys(spec.coordination, coordinationFields, 'canonical schema 2.1 coordination');
-  assertExactKeys(spec.validation, VALIDATION_FIELDS, 'canonical schema 2.1 validation');
+  const reviewKeys = isPlainObject(spec.validation?.semantic_review)
+    ? Object.keys(spec.validation.semantic_review).sort().join(',') : '';
+  const legacyReviewFields = reviewKeys === [...LEGACY_SEMANTIC_REVIEW_FIELDS].sort().join(',')
+    ? LEGACY_SEMANTIC_REVIEW_FIELDS
+    : reviewKeys === [...PRE_C2_SEMANTIC_REVIEW_FIELDS].sort().join(',')
+      ? PRE_C2_SEMANTIC_REVIEW_FIELDS : null;
+  const legacyReview = allowLegacyReview
+    && isPlainObject(spec.validation)
+    && Object.keys(spec.validation).sort().join(',') === ['semantic_review', 'status'].sort().join(',')
+    && legacyReviewFields !== null;
+  // semantic_review_history and authoring_validation (C13/C16) are required
+  // going forward, but a pre-existing 2.1 spec authored before this feature's
+  // cutover may not carry them yet; accept their absence here so scaffold can
+  // migrate such a spec forward (normalizeSpec21Candidate forces a fresh reset
+  // whenever either is missing) instead of hard-failing on an old file.
+  const validationFields = legacyReview ? ['status', 'semantic_review'] : [...VALIDATION_FIELDS].filter((field) => {
+    if (field === 'semantic_review_history' || field === 'authoring_validation') return hasOwn(spec.validation, field);
+    return true;
+  });
+  assertExactKeys(spec.validation, validationFields, 'canonical schema 2.1 validation');
   assertExactKeys(
     spec.validation.semantic_review,
-    SEMANTIC_REVIEW_FIELDS,
+    legacyReview ? legacyReviewFields : SEMANTIC_REVIEW_FIELDS,
     'canonical schema 2.1 validation.semantic_review',
   );
   if (Array.isArray(spec.validation.semantic_review?.counterexamples)) {
@@ -743,6 +803,38 @@ function assertCanonicalSpecInputClosedWorld(spec) {
         counterexample,
         fields,
         `canonical schema 2.1 validation.semantic_review.counterexamples[${index}]`,
+      );
+    }
+  }
+  for (const [index, finding] of (spec.validation.semantic_review?.findings || []).entries()) {
+    assertExactKeys(finding, SEMANTIC_REVIEW_FINDING_FIELDS, `canonical schema 2.1 validation.semantic_review.findings[${index}]`);
+  }
+  for (const [index, decision] of (spec.validation.semantic_review?.unresolved_decisions || []).entries()) {
+    assertExactKeys(decision, SEMANTIC_REVIEW_DECISION_FIELDS, `canonical schema 2.1 validation.semantic_review.unresolved_decisions[${index}]`);
+  }
+  for (const [index, coverage] of (spec.validation.semantic_review?.graph_coverage || []).entries()) {
+    assertExactKeys(coverage, SEMANTIC_REVIEW_COVERAGE_FIELDS, `canonical schema 2.1 validation.semantic_review.graph_coverage[${index}]`);
+  }
+  if (!legacyReview && spec.validation.semantic_review?.reviewer_evidence !== null) {
+    assertExactKeys(
+      spec.validation.semantic_review?.reviewer_evidence,
+      SEMANTIC_REVIEW_EVIDENCE_FIELDS,
+      'canonical schema 2.1 validation.semantic_review.reviewer_evidence',
+    );
+  }
+  if (hasOwn(spec.validation, 'semantic_review_history')) {
+    assertExactKeys(spec.validation.semantic_review_history, SEMANTIC_REVIEW_HISTORY_FIELDS, 'canonical schema 2.1 validation.semantic_review_history');
+    for (const [index, entry] of (spec.validation.semantic_review_history?.entries || []).entries()) {
+      assertExactKeys(entry, SEMANTIC_REVIEW_HISTORY_ENTRY_FIELDS, `canonical schema 2.1 validation.semantic_review_history.entries[${index}]`);
+    }
+  }
+  if (hasOwn(spec.validation, 'authoring_validation') && spec.validation.authoring_validation !== null) {
+    assertExactKeys(spec.validation.authoring_validation, AUTHORING_VALIDATION_FIELDS, 'canonical schema 2.1 validation.authoring_validation');
+    for (const stage of ['requirements', 'design', 'research', 'tasks']) {
+      assertExactKeys(
+        spec.validation.authoring_validation?.[stage],
+        AUTHORING_VALIDATION_STAGE_FIELDS,
+        `canonical schema 2.1 validation.authoring_validation.${stage}`,
       );
     }
   }
@@ -790,7 +882,7 @@ function assertLegacyMigrationClosedWorld(spec) {
   rejectUnknownKeys(spec.scope_lock, SCOPE_LOCK_FIELDS, 'schema 2.0 scope_lock');
   rejectUnknownKeys(spec.authoring, AUTHORING_FIELDS, 'schema 2.0 authoring');
   rejectUnknownKeys(spec.coordination, LEGACY_COORDINATION_FIELDS, 'schema 2.0 coordination');
-  rejectUnknownKeys(spec.validation, VALIDATION_FIELDS, 'schema 2.0 validation');
+  rejectUnknownKeys(spec.validation, LEGACY_VALIDATION_FIELDS, 'schema 2.0 validation');
   rejectUnknownKeys(spec.validation?.semantic_review, LEGACY_SEMANTIC_REVIEW_FIELDS, 'schema 2.0 validation.semantic_review');
   for (const [index, counterexample] of (spec.validation?.semantic_review?.counterexamples || []).entries()) {
     rejectUnknownKeys(counterexample, ['criterion', 'case_kind', 'scenario', 'expected', 'decision_refs', 'verification_ref'], `schema 2.0 semantic_review.counterexamples[${index}]`);
@@ -993,11 +1085,36 @@ function validateRegistryEntry(taskPath, entry, declaredSet) {
 }
 
 function semanticReviewShapeValid(review) {
-  return isPlainObject(review)
-    && ['not-run', 'completed'].includes(review.status)
-    && (review.semantic_digest === null || typeof review.semantic_digest === 'string')
-    && Array.isArray(review.reviewed_criteria)
-    && Array.isArray(review.counterexamples);
+  if (!isPlainObject(review) || Object.keys(review).sort().join(',') !== [...SEMANTIC_REVIEW_FIELDS].sort().join(',')) return false;
+  if (!['not-run', 'completed'].includes(review.status)) return false;
+  if (review.semantic_digest !== null && typeof review.semantic_digest !== 'string') return false;
+  if (review.verdict !== null && !['PASS', 'FAIL'].includes(review.verdict)) return false;
+  if (review.lifecycle_disposition !== null && !['CONTINUE', 'BLOCKED'].includes(review.lifecycle_disposition)) return false;
+  if (!Array.isArray(review.findings) || !review.findings.every((finding) => isPlainObject(finding)
+    && Object.keys(finding).sort().join(',') === [...SEMANTIC_REVIEW_FINDING_FIELDS].sort().join(','))) return false;
+  if (!Array.isArray(review.unresolved_decisions) || !review.unresolved_decisions.every((decision) => isPlainObject(decision)
+    && Object.keys(decision).sort().join(',') === [...SEMANTIC_REVIEW_DECISION_FIELDS].sort().join(','))) return false;
+  if (!Array.isArray(review.graph_coverage) || !review.graph_coverage.every((coverage) => isPlainObject(coverage)
+    && Object.keys(coverage).sort().join(',') === [...SEMANTIC_REVIEW_COVERAGE_FIELDS].sort().join(','))) return false;
+  if (!Number.isInteger(review.repair_round) || review.repair_round < 0 || review.repair_round > 2) return false;
+  if (!Array.isArray(review.reviewed_criteria) || !Array.isArray(review.counterexamples)) return false;
+  if (review.reviewer_evidence !== null && (!isPlainObject(review.reviewer_evidence)
+    || Object.keys(review.reviewer_evidence).sort().join(',') !== [...SEMANTIC_REVIEW_EVIDENCE_FIELDS].sort().join(','))) return false;
+  return true;
+}
+
+function semanticReviewHistoryShapeValid(history) {
+  if (!isPlainObject(history) || Object.keys(history).sort().join(',') !== [...SEMANTIC_REVIEW_HISTORY_FIELDS].sort().join(',')) return false;
+  if (typeof history.lineage_id !== 'string') return false;
+  return Array.isArray(history.entries) && history.entries.every((entry) => isPlainObject(entry)
+    && Object.keys(entry).sort().join(',') === [...SEMANTIC_REVIEW_HISTORY_ENTRY_FIELDS].sort().join(','));
+}
+
+function authoringValidationShapeValid(receipt) {
+  if (receipt === null) return true;
+  if (!isPlainObject(receipt) || Object.keys(receipt).sort().join(',') !== [...AUTHORING_VALIDATION_FIELDS].sort().join(',')) return false;
+  return ['requirements', 'design', 'research', 'tasks'].every((stage) => isPlainObject(receipt[stage])
+    && Object.keys(receipt[stage]).sort().join(',') === [...AUTHORING_VALIDATION_STAGE_FIELDS].sort().join(','));
 }
 
 function preflightSpec21Candidate(spec, evidence) {
@@ -1047,7 +1164,9 @@ function preflightSpec21Candidate(spec, evidence) {
     failPrecondition('schema 2.1 candidate coordination.boundaries must be an array');
   }
   if (!isPlainObject(spec.validation) || !VALIDATION_STATUS_VALUES.has(spec.validation.status)
-    || !semanticReviewShapeValid(spec.validation.semantic_review)) {
+    || !semanticReviewShapeValid(spec.validation.semantic_review)
+    || !semanticReviewHistoryShapeValid(spec.validation.semantic_review_history)
+    || !authoringValidationShapeValid(spec.validation.authoring_validation)) {
     failPrecondition('schema 2.1 candidate validation state is invalid');
   }
   if (typeof spec.ready_for_implementation !== 'boolean') failPrecondition('schema 2.1 candidate readiness must be boolean');
@@ -1122,19 +1241,48 @@ function normalizeSpec21Candidate(candidate, evidence) {
       failPrecondition('existing scope_lock canonical fields are invalid');
     }
 
-    const previousAuthoring = isPlainObject(candidate.authoring) ? candidate.authoring : {};
+    // D13/I21/R3.9: spec-scaffold.cjs never *writes* `validated` for any
+    // authoring field — only spec-authoring-validation.cjs's atomic coordinator
+    // may flip a stage to validated, after its own clean validator+grounder
+    // pass. It does, however, carry an existing `validated` reading forward
+    // untouched while that stage's C16 receipt still matches the stage's
+    // current bytes, exactly as it already preserves the C13 history and the
+    // receipt itself below: a still-fresh durable record is not scaffold's to
+    // destroy, and drafting it would force a pointless re-validation. Any
+    // stage whose bytes actually changed no longer matches its receipt and
+    // therefore lands on draft here (and reads as draft everywhere via I20).
+    const receiptForFreshness = authoringValidationShapeValid(candidate.validation?.authoring_validation)
+      ? candidate.validation.authoring_validation
+      : null;
+    // One pass over the current bytes for all four stages; assertAuthoringFresh
+    // already treats a non-`validated` enum as not fresh. Any unreadable
+    // artifact fails closed to draft here, and the per-stage preconditions
+    // below still report the missing file as the real error.
+    let authoringFreshness = null;
+    if (receiptForFreshness !== null && typeof evidence.specDir === 'string') {
+      try {
+        authoringFreshness = AUTHORING_DIGEST.assertAuthoringFresh({
+          specDir: evidence.specDir,
+          authoring: candidate.authoring,
+          receipt: receiptForFreshness,
+          fields: ['requirements', 'design', 'research', 'tasks'],
+        });
+      } catch {
+        authoringFreshness = null;
+      }
+    }
+    const carryForward = (field) => (authoringFreshness?.[field]?.fresh ? 'validated' : 'draft');
     const authoring = {};
     for (const field of ['requirements', 'design']) {
       if (!evidence[`${field}Exists`]) failPrecondition(`physical ${field}.md is required for schema 2.1 migration`);
-      authoring[field] = previousAuthoring[field] === 'validated' ? 'validated' : 'draft';
+      authoring[field] = carryForward(field);
     }
     if (evidence.researchExists) {
       const pointer = isPlainObject(candidate.research) ? candidate.research.path : candidate.research;
       if (pointer !== undefined && pointer !== null && pointer !== 'research.md') {
         failPrecondition('legacy research pointer is ambiguous; expected canonical research.md');
       }
-      authoring.research = previousAuthoring.research === 'validated' && !evidence.researchChanged
-        ? 'validated' : 'draft';
+      authoring.research = carryForward('research');
     } else {
       if (hasOwn(candidate, 'research') && candidate.research !== null) {
         failPrecondition('research pointer exists without a physical research.md artifact');
@@ -1142,8 +1290,7 @@ function normalizeSpec21Candidate(candidate, evidence) {
       authoring.research = 'absent';
     }
     if (evidence.taskFiles.length > 0) {
-      authoring.tasks = previousAuthoring.tasks === 'validated' && !evidence.tasksChanged
-        ? 'validated' : 'draft';
+      authoring.tasks = carryForward('tasks');
     } else {
       authoring.tasks = 'absent';
     }
@@ -1156,10 +1303,35 @@ function normalizeSpec21Candidate(candidate, evidence) {
         if (hasOwn(entry, key)) projectedRegistry[taskPath][key] = cloneJson(entry[key]);
       }
     }
+    // semantic_review_history (C13) and authoring_validation (C16) are durable
+    // records this migration step never wipes on its own: history is
+    // append-only for the life of the spec record (I6 — lineage_id never
+    // resets on an ordinary content edit) and the C16 receipt may only ever be
+    // written by spec-authoring-validation.cjs (I21) — scaffold is not a
+    // writer of either and only seeds a fresh skeleton when a pre-cutover
+    // legacy spec never carried them at all.
+    const historyValid = hasOwn(candidate.validation || {}, 'semantic_review_history')
+      && semanticReviewHistoryShapeValid(candidate.validation.semantic_review_history);
+    const authoringValidationValid = hasOwn(candidate.validation || {}, 'authoring_validation')
+      && authoringValidationShapeValid(candidate.validation.authoring_validation);
     const validationValid = isPlainObject(candidate.validation)
       && VALIDATION_STATUS_VALUES.has(candidate.validation.status)
-      && semanticReviewShapeValid(candidate.validation.semantic_review);
+      && semanticReviewShapeValid(candidate.validation.semantic_review)
+      && historyValid
+      && authoringValidationValid;
     const readinessValid = typeof candidate.ready_for_implementation === 'boolean';
+    const preservedHistory = historyValid
+      ? cloneJson(candidate.validation.semantic_review_history)
+      : semanticReviewHistoryInitial(featureName, candidate.created_at);
+    const preservedAuthoringValidation = authoringValidationValid
+      ? cloneJson(candidate.validation.authoring_validation)
+      : null;
+    const freshValidation = {
+      status: 'not-run',
+      semantic_review: semanticReviewNotRun(),
+      semantic_review_history: preservedHistory,
+      authoring_validation: preservedAuthoringValidation,
+    };
     const next = {
       schema_version: '2.1',
       feature_name: featureName,
@@ -1170,9 +1342,7 @@ function normalizeSpec21Candidate(candidate, evidence) {
       scope_lock: scopeLock,
       authoring,
       coordination: cloneJson(evidence.coordination),
-      validation: validationValid ? cloneJson(candidate.validation) : {
-        status: 'not-run', semantic_review: semanticReviewNotRun(),
-      },
+      validation: validationValid ? cloneJson(candidate.validation) : freshValidation,
       semantic_model: isLegacy ? null : cloneJson(candidate.semantic_model),
       ready_for_implementation: readinessValid ? candidate.ready_for_implementation : false,
       workflow_policy: cloneJson(evidence.workflowPolicy),
@@ -1185,7 +1355,7 @@ function normalizeSpec21Candidate(candidate, evidence) {
       || isLegacy || JSON.stringify(next) !== JSON.stringify(candidate);
     if (semanticChanged || !validationValid || !readinessValid) {
       next.ready_for_implementation = false;
-      next.validation = { status: 'not-run', semantic_review: semanticReviewNotRun() };
+      next.validation = freshValidation;
       next.semantic_model = null;
     }
     const changed = JSON.stringify(next) !== JSON.stringify(candidate);
@@ -1719,6 +1889,7 @@ function scaffoldTasksOnly({ args, specDir, specPath, spec, persistedPolicy, par
   const normalized = normalizeSpec21Candidate(nextSpec, {
     featureName: args.feature,
     timestamp: ts,
+    specDir,
     requirementsExists: fs.existsSync(requirementsPath),
     designExists: fs.existsSync(designPath),
     researchExists: researchExists || researchTemplate !== null,
@@ -1775,11 +1946,16 @@ function syncSemanticModel({ workRoot, args, specDir, ts }) {
   try { spec = JSON.parse(fs.readFileSync(specPath, 'utf8')); }
   catch (error) { failPrecondition(`--sync-semantic-model spec.json is invalid JSON (${error.message})`); }
   if (!isPlainObject(spec) || spec.schema_version !== '2.1') failPrecondition('--sync-semantic-model accepts canonical schema 2.1 only');
-  assertCanonicalSpecInputClosedWorld(spec);
+  assertCanonicalSpecInputClosedWorld(spec, { allowLegacyReview: true });
   const projection = SEMANTIC.modelFromMarkdown(specDir, spec);
   if (projection.errors.length) failPrecondition(`semantic projection is invalid (${projection.errors.join('; ')})`);
   const modelUnchanged = SEMANTIC.stableJson(spec.semantic_model) === SEMANTIC.stableJson(projection.model);
-  if (modelUnchanged) {
+  const lifecycleCanonical = isPlainObject(spec.validation)
+    && Object.keys(spec.validation).sort().join(',') === [...VALIDATION_FIELDS].sort().join(',')
+    && semanticReviewShapeValid(spec.validation.semantic_review)
+    && semanticReviewHistoryShapeValid(spec.validation.semantic_review_history)
+    && authoringValidationShapeValid(spec.validation.authoring_validation);
+  if (modelUnchanged && lifecycleCanonical) {
     console.log(`SEMANTIC_MODEL_UNCHANGED ${path.relative(process.cwd(), specDir) || specDir}`);
     return;
   }
@@ -1787,7 +1963,26 @@ function syncSemanticModel({ workRoot, args, specDir, ts }) {
   next.semantic_model = projection.model;
   next.updated_at = ts;
   next.ready_for_implementation = false;
-  next.validation = { status: 'not-run', semantic_review: semanticReviewNotRun() };
+  if (!lifecycleCanonical) {
+    for (const stage of ['requirements', 'design', 'research', 'tasks']) {
+      if (next.authoring?.[stage] === 'validated') next.authoring[stage] = 'draft';
+    }
+  }
+  // Only the ephemeral semantic_review pointer is invalidated by a projection
+  // resync; semantic_review_history (C13) and authoring_validation (C16) are
+  // durable records this command never writes and must carry forward as-is.
+  next.validation = {
+    status: 'not-run',
+    semantic_review: semanticReviewNotRun(),
+    semantic_review_history: hasOwn(spec.validation, 'semantic_review_history')
+      && semanticReviewHistoryShapeValid(spec.validation.semantic_review_history)
+      ? cloneJson(spec.validation.semantic_review_history)
+      : semanticReviewHistoryInitial(args.feature, spec.created_at),
+    authoring_validation: hasOwn(spec.validation, 'authoring_validation')
+      && authoringValidationShapeValid(spec.validation.authoring_validation)
+      ? cloneJson(spec.validation.authoring_validation)
+      : null,
+  };
   preflightSpec21Candidate(next, {
     featureName: args.feature,
     requirementsExists: fs.existsSync(path.join(specDir, 'requirements.md')),
@@ -1986,6 +2181,8 @@ function main() {
   Object.assign(spec, POLICY.persistWorkflowPolicySnapshot(spec, policyInput));
   spec.validation = isPlainObject(spec.validation) ? spec.validation : {};
   spec.validation.semantic_review = semanticReviewNotRun();
+  spec.validation.semantic_review_history = semanticReviewHistoryInitial(args.feature, ts);
+  spec.validation.authoring_validation = null;
   if (args.research) {
     spec.research = 'research.md';
     spec.authoring.research = 'draft';

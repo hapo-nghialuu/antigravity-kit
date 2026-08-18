@@ -17,6 +17,7 @@ const VALIDATOR = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/validate-s
 const GROUNDER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-ground.cjs'));
 const SEMANTIC_AUTHORITY = require(path.join(PACKAGE_ROOT, 'src/claude/hooks/semantic-review-authority.cjs'));
 const READINESS = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-readiness.cjs'));
+const AUTHORING_VALIDATOR = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-authoring-validation.cjs');
 const { copyClaudeTestRuntime } = require('./test-runtime-dependency-closure.cjs');
 const DEVELOP = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/SKILL.md');
 const SPECS = path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md');
@@ -183,23 +184,38 @@ The result contains the literal deleted state.
 ## Verification Definitions
 - **V1**: Criteria R1.1; Owner A-D-01; Decision refs D1, I1, C1; Method command \`node --test test/entry.test.js\`; Expected exit 0 and the service reports deleted state; Negative/failure a missing record returns not-found without deleted state; Reachability/grounding entrypoint \`src/entry.js\` via A-D-01.
 `);
-  const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
-  spec.authoring.requirements = 'validated';
-  spec.authoring.design = 'validated';
-  fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
+  const semantic = runNode(root, SCAFFOLD, ['ordinary', '--sync-semantic-model']);
+  assert.equal(semantic.status, 0, commandOutput(semantic));
+  const authoring = runNode(root, AUTHORING_VALIDATOR, [specDir]);
+  assert.equal(authoring.status, 0, commandOutput(authoring));
   initFixtureGit(root);
   return { root, specDir, specPath };
 }
 
 function ordinaryReview() {
-  return {
-    reviewed_criteria: ['R1.1'],
-    counterexamples: [{
+  return canonicalPassReview(['R1.1'], [{
       criterion: 'R1.1', case_kind: 'failure',
       scenario: 'Deletion targets a record that does not exist in the current store.',
       expected: 'The service returns not-found and never reports the record as deleted.',
       decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
-    }],
+    }]);
+}
+
+function canonicalPassReview(reviewedCriteria, counterexamples) {
+  return {
+    verdict: 'PASS',
+    findings: [],
+    unresolved_decisions: [],
+    graph_coverage: [
+      'criterion_local', 'cross_criterion', 'runtime_path',
+      'assumption_provenance', 'compatibility_migration',
+    ].map((surface) => ({
+      surface, covered: true,
+      notes: 'The review covers this semantic surface against the canonical model.',
+    })),
+    reviewed_criteria: reviewedCriteria,
+    counterexamples,
+    reviewer_evidence: null,
   };
 }
 
@@ -209,16 +225,12 @@ function promoteCanonicalModel(fixture) {
 }
 
 function makeCanonicalReady(fixture) {
-  const spec = JSON.parse(fs.readFileSync(fixture.specPath, 'utf8'));
-  spec.authoring.requirements = 'validated';
-  spec.authoring.design = 'validated';
-  fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
+  const authoring = runNode(fixture.root, AUTHORING_VALIDATOR, [fixture.specDir]);
+  assert.equal(authoring.status, 0, commandOutput(authoring));
   const result = READINESS.finalizeReadiness({
     specDir: fixture.specDir,
     projectRoot: fixture.root,
-    reviewResult: {
-    reviewed_criteria: ['R1.1', 'R1.2'],
-    counterexamples: [{
+    reviewResult: canonicalPassReview(['R1.1', 'R1.2'], [{
       criterion: 'R1.1', case_kind: 'failure',
       scenario: 'The service receives invalid input without its required discriminator.',
       expected: 'The service returns rejected state and never emits enabled true.',
@@ -228,8 +240,7 @@ function makeCanonicalReady(fixture) {
       scenario: 'The service reports enabled state without producing separate proof evidence.',
       expected: 'Verification fails because the independent proof artifact is absent.',
       decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
-    }],
-    },
+    }]),
   });
   return result.spec;
 }
@@ -875,6 +886,8 @@ test('auto authoring reaches readiness only after promotion, validation, groundi
     assert.ok(validation.errors.some((error) => error.includes('readiness requires validated')));
     assert.ok(validation.errors.some((error) => error.includes('requires completed semantic review')));
 
+    spec.ready_for_implementation = false;
+    fs.writeFileSync(fixture.specPath, `${JSON.stringify(spec, null, 2)}\n`);
     spec = makeCanonicalReady(fixture);
     validation = VALIDATOR.validateSpec(fixture.specDir);
     assert.deepEqual(validation.errors, [], validation.errors.join('\n'));
@@ -1024,6 +1037,31 @@ test('done is a final-state request bound to current semantic model and digest',
     });
     assert.equal(current.ok, true, current.reason);
     assert.equal(current.semanticDigest, spec.validation.semantic_review.semantic_digest);
+
+    const failedReceipt = structuredClone(spec);
+    failedReceipt.validation.semantic_review.verdict = 'FAIL';
+    const receiptMutation = FINAL_STATE.validateCanonicalFinalState({
+      policy: POLICY,
+      projectRoot: fixture.root,
+      candidate: { ...candidate, spec: failedReceipt },
+      dependencies,
+    });
+    assert.equal(receiptMutation.ok, false);
+    assert.match(receiptMutation.reason, /PASS CONTINUE/);
+
+    const mismatchedHistory = structuredClone(spec);
+    const latest = mismatchedHistory.validation.semantic_review_history.entries[
+      mismatchedHistory.validation.semantic_review_history.entries.length - 1
+    ];
+    latest.review_receipt_digest = `sha256:${'0'.repeat(64)}`;
+    const digestMismatch = FINAL_STATE.validateCanonicalFinalState({
+      policy: POLICY,
+      projectRoot: fixture.root,
+      candidate: { ...candidate, spec: mismatchedHistory },
+      dependencies,
+    });
+    assert.equal(digestMismatch.ok, false);
+    assert.match(digestMismatch.reason, /review_receipt_digest|canonical receipt/);
 
     const requirementsPath = path.join(fixture.specDir, 'requirements.md');
     const requirements = fs.readFileSync(requirementsPath, 'utf8');

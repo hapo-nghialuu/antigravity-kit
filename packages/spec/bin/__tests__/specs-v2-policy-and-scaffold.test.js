@@ -32,6 +32,25 @@ function readSpec(root, feature) {
   return JSON.parse(fs.readFileSync(path.join(root, 'specs', feature, 'spec.json'), 'utf8'));
 }
 
+// A canonical 2.1 scaffold always emits the C2 semantic_review shape plus the
+// C13 history and C16 receipt slots. A genuine schema 2.0 record predates all
+// three, so a fixture that simulates legacy migration input must strip them —
+// relabelling schema_version alone produces a record that never existed and
+// trips the 2.0 allowlist before the behavior under test is ever reached.
+function downgradeToLegacy20(spec) {
+  spec.schema_version = '2.0';
+  delete spec.validation.semantic_review_history;
+  delete spec.validation.authoring_validation;
+  const review = spec.validation.semantic_review;
+  spec.validation.semantic_review = {
+    status: review.status,
+    semantic_digest: review.semantic_digest,
+    reviewed_criteria: review.reviewed_criteria,
+    counterexamples: review.counterexamples,
+  };
+  return spec;
+}
+
 function ownershipBoundary() {
   return JSON.stringify([{
     id: 'B-OWN', type: 'ownership', tasks: ['R1-01', 'R1-02'],
@@ -250,8 +269,7 @@ test('durable transaction recovery covers every fresh and replacement rename bou
         ]);
         assert.equal(initial.status, 0, output(initial));
         const specPath = path.join(root, 'specs', feature, 'spec.json');
-        const spec = readSpec(root, feature);
-        spec.schema_version = '2.0';
+        const spec = downgradeToLegacy20(readSpec(root, feature));
         fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
       },
       invoke(root, feature, env) { return runMatchingTasksOnly(root, feature, env); },
@@ -362,23 +380,37 @@ test('tasks-only normalization is table-driven, conservative, and idempotent', (
         ]);
         assert.equal(Object.hasOwn(spec.task_registry['tasks/task-R1-01-one.md'], 'legacy_owner'), false);
         assert.deepEqual(Object.keys(spec.workflow_policy), CANONICAL_POLICY_FIELDS);
+        // The legacy input asserts requirements: 'validated' with no C16 receipt
+        // behind it. Migration downgrades it to draft rather than carrying the
+        // unprovable claim forward: only spec-authoring-validation.cjs may write
+        // `validated`, and only together with a matching digest receipt (I21).
         assert.deepEqual(spec.authoring, {
-          requirements: 'validated', design: 'draft', research: 'absent', tasks: 'draft',
+          requirements: 'draft', design: 'draft', research: 'absent', tasks: 'draft',
         });
         assert.equal(spec.ready_for_implementation, false);
-        assert.deepEqual(spec.validation, {
-          status: 'not-run',
-          semantic_review: {
-            status: 'not-run', semantic_digest: null, reviewed_criteria: [], counterexamples: [],
-          },
+        // A legacy validation block never satisfies the canonical 2.1 shape, so
+        // migration replaces it with the fresh C2 review, a seeded C13 lineage,
+        // and an empty C16 slot — the legacy digest/criteria are not carried
+        // forward as if they had been reviewed under the current contract.
+        assert.deepEqual(Object.keys(spec.validation).sort(), [
+          'authoring_validation', 'semantic_review', 'semantic_review_history', 'status',
+        ]);
+        assert.equal(spec.validation.status, 'not-run');
+        assert.deepEqual(spec.validation.semantic_review, {
+          status: 'not-run', semantic_digest: null, verdict: null, lifecycle_disposition: null,
+          findings: [], unresolved_decisions: [], graph_coverage: [], repair_round: 0,
+          reviewed_criteria: [], counterexamples: [], reviewer_evidence: null,
         });
+        assert.deepEqual(spec.validation.semantic_review_history.entries, []);
+        assert.match(spec.validation.semantic_review_history.lineage_id, /^sha256:[0-9a-f]{64}$/);
+        assert.equal(spec.validation.authoring_validation, null);
       },
     },
     {
       name: 'legacy research pointer and valid done lifecycle',
       research: true,
       mutate(spec) {
-        spec.schema_version = '2.0';
+        downgradeToLegacy20(spec);
         spec.research = { path: 'research.md' };
         delete spec.authoring.research;
         const task = spec.task_registry['tasks/task-R1-01-one.md'];
@@ -402,7 +434,7 @@ test('tasks-only normalization is table-driven, conservative, and idempotent', (
     {
       name: 'legacy nested inert receipt read migration',
       mutate(spec) {
-        spec.schema_version = '2.0';
+        downgradeToLegacy20(spec);
         spec.workflow_policy.override_receipt = null;
       },
       verify(spec) {
@@ -522,6 +554,7 @@ test('tasks-only migration rejects invalid evidence without any write', () => {
     {
       name: 'ambiguous top level inert receipt',
       mutate(root, feature, spec) {
+        downgradeToLegacy20(spec);
         delete spec.schema_version;
         spec.override_receipt = null;
         fs.writeFileSync(path.join(root, 'specs', feature, 'spec.json'), `${JSON.stringify(spec, null, 2)}\n`);
@@ -531,7 +564,7 @@ test('tasks-only migration rejects invalid evidence without any write', () => {
     {
       name: 'legacy top level non inert receipt',
       mutate(root, feature, spec) {
-        spec.schema_version = '2.0';
+        downgradeToLegacy20(spec);
         spec.override_receipt = { issuer: 'unsupported' };
         fs.writeFileSync(path.join(root, 'specs', feature, 'spec.json'), `${JSON.stringify(spec, null, 2)}\n`);
       },
@@ -587,14 +620,16 @@ test('schema 2.0 migration rejects unknown authority fields instead of projectio
       const feature = `legacy-unknown-${name}`;
       assert.equal(run(root, [feature, '--tasks', 'R1-01-one,R1-02-two', '--boundaries', ownershipBoundary()]).status, 0);
       const specPath = path.join(root, 'specs', feature, 'spec.json');
-      const spec = readSpec(root, feature);
-      spec.schema_version = '2.0';
+      const spec = downgradeToLegacy20(readSpec(root, feature));
       mutate(spec);
       fs.writeFileSync(specPath, `${JSON.stringify(spec, null, 2)}\n`);
       const before = readTree(path.dirname(specPath));
       const result = runMatchingTasksOnly(root, feature);
       assert.equal(result.status, 2, `${name}: ${output(result)}`);
-      assert.match(output(result), /unsupported legacy authority field/);
+      // Must name the injected dead_authority field specifically: before the
+      // legacy downgrade above, this matched on the 2.1-only validation records
+      // instead and passed without exercising the mutation under test.
+      assert.match(output(result), /unsupported legacy authority field.*dead_authority/);
       assert.deepEqual(readTree(path.dirname(specPath)), before);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   }

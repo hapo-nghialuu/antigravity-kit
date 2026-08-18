@@ -20,6 +20,8 @@ const REQUIRED_PAYLOAD = [
   'src/claude/scripts/spec-readiness.cjs',
   'src/claude/scripts/spec-semantic-model.cjs',
   'src/claude/scripts/validate-spec-output.cjs',
+  'src/claude/scripts/spec-authoring-validation.cjs',
+  'src/claude/scripts/spec-authoring-digest.cjs',
 ];
 const FORBIDDEN_PAYLOAD = [
   /(^|\/)\.logs(\/|$)/,
@@ -413,7 +415,10 @@ function installedSemanticPaths(root, platform) {
     : path.join(runtimeRoot, 'skills');
   const paths = {
     policy: path.join(runtimeRoot, 'scripts', 'workflow-policy.cjs'),
+    scaffold: path.join(runtimeRoot, 'scripts', 'spec-scaffold.cjs'),
     validator: path.join(runtimeRoot, 'scripts', 'validate-spec-output.cjs'),
+    authoringValidator: path.join(runtimeRoot, 'scripts', 'spec-authoring-validation.cjs'),
+    authoringDigest: path.join(runtimeRoot, 'scripts', 'spec-authoring-digest.cjs'),
     grounder: path.join(runtimeRoot, 'scripts', 'spec-ground.cjs'),
     finalState: path.join(runtimeRoot, 'scripts', 'spec-final-state.cjs'),
     readiness: path.join(runtimeRoot, 'scripts', 'spec-readiness.cjs'),
@@ -443,12 +448,8 @@ function writeJson(target, value) {
 
 function materializeSpecState(paths, root, feature, { strict = false } = {}) {
   const featureDir = path.join(root, 'specs', feature);
-  fs.mkdirSync(featureDir, { recursive: true });
-  const source = fs.readFileSync(paths.stateTemplate, 'utf8')
-    .replaceAll('{{FEATURE_NAME}}', feature)
-    .replaceAll('{{TIMESTAMP}}', '2026-08-14T00:00:00.000Z')
-    .replaceAll('{{PROJECT_DESCRIPTION}}', `${feature} installed semantic fixture`);
-  const state = JSON.parse(source);
+  runInstalled(paths.scaffold, [feature], root);
+  const state = JSON.parse(fs.readFileSync(path.join(featureDir, 'spec.json'), 'utf8'));
   state.scope_lock.in_scope = [`${feature} behavior`];
   state.scope_lock.out_of_scope = ['unrelated behavior'];
   if (strict) {
@@ -535,12 +536,29 @@ Any input other than the boolean \`true\` never returns enabled.
 }
 
 function completeSemanticReview(paths, root, fixture, counterexamples) {
+  // C16/D13: only the installed spec-authoring-validation.cjs coordinator may
+  // flip authoring.* to validated and write the matching receipt (I21/R3.9) —
+  // run it over the fixture's current bytes instead of hand-writing the enum.
+  // Lifecycle order (I15/R3.7): authoring -> coordinator -> semantic review ->
+  // readiness, never the reverse.
+  runInstalled(paths.scaffold, [fixture.state.feature_name, '--sync-semantic-model'], root);
+  runInstalled(paths.authoringValidator, [fixture.featureDir], root);
   const state = JSON.parse(fs.readFileSync(fixture.specFile, 'utf8'));
-  state.authoring.requirements = 'validated';
-  state.authoring.design = 'validated';
-  if (state.authoring.tasks !== 'absent') state.authoring.tasks = 'validated';
-  writeJson(fixture.specFile, state);
-  fixture.reviewResult = { reviewed_criteria: counterexamples.map(({ criterion }) => criterion), counterexamples };
+  fixture.reviewResult = {
+    verdict: 'PASS',
+    findings: [],
+    unresolved_decisions: [],
+    graph_coverage: [
+      'criterion_local', 'cross_criterion', 'runtime_path',
+      'assumption_provenance', 'compatibility_migration',
+    ].map((surface) => ({
+      surface, covered: true,
+      notes: 'The review covers this semantic surface against the canonical model.',
+    })),
+    reviewed_criteria: counterexamples.map(({ criterion }) => criterion),
+    counterexamples,
+    reviewer_evidence: null,
+  };
   if (state.workflow_policy.assurance_level === 'Strict') {
     const digest = runInstalled(paths.validator, [fixture.featureDir, '--semantic-digest'], root).stdout.trim();
     assert.match(digest, /^sha256:[a-f0-9]{64}$/);

@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -14,6 +15,7 @@ const POLICY = require(path.join(ROOT, 'claude/scripts/workflow-policy.cjs'));
 const PROVENANCE = require(path.join(ROOT, 'claude/scripts/provenance.cjs'));
 const AUTHORITY_CHECK = require(path.join(ROOT, 'claude/hooks/completion-authority-check.cjs'));
 const RESOLVER = require(path.join(ROOT, 'claude/scripts/spec-resolver.cjs'));
+const SEMANTIC_MODEL = require(path.join(ROOT, 'claude/scripts/spec-semantic-model.cjs'));
 const { copyClaudeTestRuntime } = require(path.join(ROOT, '../bin/__tests__/test-runtime-dependency-closure.cjs'));
 const FEATURE = 'authority-fixture';
 const TASK = 'tasks/closeout.md';
@@ -810,9 +812,37 @@ test('canonical final-state decision rejects every stale mutation class before e
     fs.mkdirSync(featureDir, { recursive: true });
     const specFile = path.join(featureDir, 'spec.json');
     const digest = `sha256:${'a'.repeat(64)}`;
+    // Canonical terminal shape: a completed C2 receipt that is PASS/CONTINUE
+    // with zero blocking items, plus the C13 history entry that records it and
+    // binds the same semantic digest, the receipt's own canonical digest, and
+    // the attempt index the receipt reports as repair_round.
+    const terminalReview = {
+      status: 'completed', semantic_digest: digest, verdict: 'PASS',
+      lifecycle_disposition: 'CONTINUE', findings: [], unresolved_decisions: [],
+      graph_coverage: [], repair_round: 0, reviewed_criteria: [], counterexamples: [],
+      reviewer_evidence: null,
+    };
     const baseSpec = {
       schema_version: '2.1', feature_name: 'final-state-matrix', ready_for_implementation: true,
-      validation: { status: 'completed', semantic_review: { status: 'completed', semantic_digest: digest } },
+      validation: {
+        status: 'completed',
+        semantic_review: terminalReview,
+        semantic_review_history: {
+          lineage_id: `sha256:${'c'.repeat(64)}`,
+          entries: [{
+            sequence: 0,
+            semantic_digest: digest,
+            review_receipt_digest: `sha256:${crypto.createHash('sha256')
+              .update(SEMANTIC_MODEL.stableJson(terminalReview), 'utf8').digest('hex')}`,
+            verdict: 'PASS',
+            lifecycle_disposition: 'CONTINUE',
+            blocking_count: 0,
+            attempt_index: 0,
+            review_epoch: 0,
+          }],
+        },
+        authoring_validation: null,
+      },
       workflow_policy: POLICY.canonicalWorkflowPolicySnapshot({ planning_depth: 'Compact', assurance_level: 'Routine' }),
     };
     fs.writeFileSync(specFile, JSON.stringify(baseSpec));
