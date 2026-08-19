@@ -80,8 +80,7 @@
   "obsolete": {
     "agents": {
       "claude": ["agents/god-developer.md"],
-      "codex": ["agents/god_developer.toml"],
-      "opencode": ["agents/god-developer.md"]
+      "codex": ["agents/god_developer.toml"]
     },
     "runtimeFiles": [
       "hooks/skill-router.cjs",

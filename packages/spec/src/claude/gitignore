@@ -1,4 +1,4 @@
-# CafeKit local runtime (.claude/ or .opencode/)
+# CafeKit local runtime (.claude/)
 # Also ignored at project root by the installer. This file protects
 # force-adds (`git add -f`) and partial un-ignores of the runtime folder.
 

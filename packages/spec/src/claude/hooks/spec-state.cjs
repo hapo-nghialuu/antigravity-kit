@@ -73,7 +73,7 @@ try {
     if (fs.existsSync(p)) runtime = JSON.parse(fs.readFileSync(p, 'utf8'));
   } catch { /* ignore */ }
 
-  // Reminder toggle — same key the OpenCode spec-state plugin honors.
+  // Reminder toggle.
   // (The Stop completion gate has its own toggle: spec.completion_gate.)
   if (runtime.spec && runtime.spec.tollgate === false) process.exit(0);
 

@@ -67,7 +67,7 @@ try {
 
   // Valve 2: block with an actionable message carrying the exact command.
   // NOTE: deliberately does NOT mention the runtime.json escape hatch — an
-  // OpenCode smoke test proved the model reads the advertised override and
+  // Smoke testing proved the model reads the advertised override and
   // simply disables the guard itself. The hatch stays functional for humans.
   const m = norm.match(/(^|\/)specs\/([^/]+)\/tasks\//);
   const feature = m ? m[2] : '<feature>';
