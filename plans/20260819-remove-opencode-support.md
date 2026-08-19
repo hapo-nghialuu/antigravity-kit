@@ -26,10 +26,10 @@
 
 | # | Task | Owner file chính | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|
-| 01 | Cắt đường cài: registry + installer core + test đi kèm (nguyên tử) | `bin/**`, `scripts/run-skill-self-tests.mjs` | - | pending |
-| 02 | Gỡ nhánh ở hook runtime + skill catalog | `src/claude/**` | 01 | pending |
-| 03 | Xoá source + file/doc riêng của OpenCode | `src/opencode/`, `docs/opencode-*.md` | 01, 02 | pending |
-| 04 | Doc + dependency + changelog | `README.md`, `docs/*.md`, `package.json` | 03 | pending |
+| 01 | Cắt đường cài (nguyên tử) | `bin/**`, `scripts/run-skill-self-tests.mjs` | - | **done** `fe3051a` |
+| 02 | Gỡ nhánh hook runtime + catalog | `src/claude/**` | 01 | **done** `c132f78` |
+| 03 | Xoá source + doc riêng | `src/opencode/`, `docs/opencode-*.md` | 01, 02 | **done** `82198d0` |
+| 04 | Doc + dependency + changelog | `README.md`, `docs/*.md`, `package.json` | 03 | **done** `770a2c9` |
 
 **Ghi chú A2 (ngoại lệ có chủ đích):** Task 01 đụng ~20 file, vượt xa ngưỡng ~5. Lý do: registry, mọi consumer của nó, **và các test/static-check assert sự tồn tại của nó** là một thao tác nguyên tử. Review vòng 1 chứng minh việc tách chúng tạo vùng chết — `installer-safety.test.js:14` require module bị xoá, `run-skill-self-tests.mjs:597-616` assert `context.js` chứa `"id: 'opencode'"`, cả hai `exit(1)` ngay dòng đầu khiến Task 02/03 chạy mù. Gộp lại là cách duy nhất giữ suite xanh sau mỗi task.
 
@@ -161,3 +161,39 @@ Reviewer xác nhận đúng: 37/37 path tồn tại, mọi ref count per-file ch
 Verdict FAIL nhưng khoanh hẹp: kiến trúc/thứ tự/inventory ĐÚNG (9/9 mục verify, 0 file mồ côi, 0 cửa sổ đỏ); lỗi còn lại là 6 con số dòng + 1 acceptance, "không cần vòng 3 — verify được bằng sed". Đã tự kiểm từng con số bằng file thật và áp: fixture `:2024-2217`; static check `:597-616`; root-config check `:710` (giữ 709/711); devDep `:60` + xoá block rỗng; chuyển `opencode-spec-gate.test.js` sang Task 01; bổ sung cạm bẫy `:1334`, `package-inventory:315/316/328`, vùng `:2827-2892`. Hết ngân sách review giấy (B4) — từ đây mọi tranh luận cần bằng chứng runtime.
 
 **Sweep sau sửa (B3):** đọc lại toàn file; delta = {web ra ngoài, bỏ rm .agents/.codex, range 96-118, gộp task, +i18n/package.json/AGENTS.md, inventory 52, acceptance hạ phạm vi}; đã reconcile mục C1, Ngoài phạm vi, bảng Task, cả 4 task. Task cũ đánh số 05 nay là 04. Còn mâu thuẫn: 0.
+
+## Evidence (chạy 2026-08-19)
+
+```
+Task 01:
+$ grep -ri opencode packages/spec/bin/ packages/spec/scripts/ | wc -l          → 0
+$ node packages/spec/bin/install.js --dry-run --platform opencode
+Installation failed: Unknown platform: opencode. Expected: claude, codex
+$ pnpm -C packages/spec test                                                    → exit 0, 691 tests
+(701 → 691: 10 test opencode-only bị xoá đúng chủ đích)
+
+Task 02:
+$ grep -ri opencode packages/spec/src/claude/ | wc -l                           → 0
+$ pnpm -C packages/spec test                                                    → exit 0, 691 tests
+
+Task 03:
+$ ls packages/spec/src/opencode                       → No such file or directory
+$ ls -d .codex .agents packages/spec/.codex           → còn nguyên (runtime thật không bị đụng)
+$ pnpm -C packages/spec test                          → exit 0, 691 tests
+
+Task 04:
+$ grep -c "opencode-ai" pnpm-lock.yaml                → 0 (lockfile đã regen)
+$ pnpm -C packages/spec test                          → exit 0, 691 tests
+$ git grep -lie opencode -- . ':!cafekit-web' ':!plans' ':!pnpm-lock.yaml'
+.gitignore .repomixignore README.md docs/audit-*.md docs/project-changelog.md docs/provenance.md packages/spec/CHANGELOG.md
+→ 7 file, tất cả giữ-có-chủ-đích: ignore rules (Ngoài phạm vi), dòng removal note, lịch sử.
+```
+
+Result: **PASS** — 4/4 task đạt acceptance, suite xanh sau MỖI task (không có cửa sổ đỏ, đúng như plan thiết kế).
+
+### Lệch so với plan (ghi nhận tại sweep)
+1. `docs/provenance.md` plan xếp diện "sửa" nhưng khi đọc, ref duy nhất là **record verification lịch sử** — sửa nó là làm giả biên bản. Quyết định: giữ nguyên, phân loại lại thành doc lịch sử. Acceptance vẫn đạt (câu đó không mô tả OpenCode là platform được hỗ trợ).
+2. Fixture gitignore legacy trong `installer-safety.test.js` thay `.opencode/` bằng `.legacy-runtime/` — giữ nguyên mục đích test (dòng ngoài template được bảo tồn) và test giờ còn đúng nghĩa hơn (dòng chắc chắn không nằm trong template hiện tại).
+3. Root `AGENTS.md` câu ownership-contract render cũ lệch template ("Codex CLI, OpenCode" vs "Claude Code, OpenCode") — sửa root theo đúng template mới trừ OpenCode.
+
+**Sweep cuối (B3):** đọc lại plan sau khi điền evidence; delta = {4 task done, 3 lệch ghi trên}; đối chiếu Ngoài phạm vi (web/`.agents`/`.codex`/ignore-rules) — tất cả được tôn trọng, `git status` sạch. Còn mâu thuẫn: 0.
