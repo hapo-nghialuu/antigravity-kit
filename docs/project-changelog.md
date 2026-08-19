@@ -17,6 +17,9 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Removed
+- **OpenCode support** (2026-08-19): gỡ đường cài, plugin runtime `src/opencode`, dependency, test và tài liệu OpenCode. Bản cuối hỗ trợ OpenCode là 0.16.x. Các entry lịch sử bên dưới giữ nguyên vì ghi lại sự thật đã xảy ra tại thời điểm đó.
+
 ### Changed
 - **Specs v2 semantic authoring contract**: made “a new implementer does not guess product/architecture decisions” the North Star; split durable planning (`None|Compact|Full`) from assurance (`Routine|Elevated|Strict`), with `Direct|Standard|Critical` retained only as compatibility adapters. Compact/Full share a three-file core and add explicit research, topology-driven tasks, or `spec.json` phase groups only when justified; no phase files or mandatory User Story/scenario boilerplate.
 - **Specs v2 proof boundaries**: task plans now stay concise around typed source anchors and a `Verification Plan`; per-task receipts remain separate execution artifacts and `feature-receipt.md` is final closeout only. Structural validation, factual grounding, and whole-spec semantic/counterexample review are distinct gates; no tool exit alone proves semantic correctness.

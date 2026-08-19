@@ -1,6 +1,6 @@
 # CafeKit
 
-> Native spec-driven workflows for Claude Code, Codex CLI, and OpenCode.
+> Native spec-driven workflows for Claude Code and Codex CLI.
 
 ## Quick Install
 
@@ -15,7 +15,7 @@ npx @haposoft/cafekit --platform codex
 ```
 
 The installer records the package version in the selected runtime:
-`.claude/cafekit.json`, `.codex/cafekit.json`, or `.opencode/cafekit.json`.
+`.claude/cafekit.json` or `.codex/cafekit.json`.
 
 ## What It Is
 
@@ -169,15 +169,13 @@ node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result <review.j
 
 Chi tiết chất lượng domain-generic (retention, API, test ownership, docs-only, two-review, benchmark, Direct/Compact, machine authority) xem canonical `src/claude/skills/specs/rules/design-principles.md` và `src/claude/skills/specs/references/review.md` — README chỉ nhắc ngắn.
 
-Claude Code and Codex CLI are the primary Specs v2 acceptance targets. OpenCode
-remains a supported CafeKit runtime; this v2 acceptance focus does not remove or
-broaden that support claim.
+Claude Code and Codex CLI are the primary Specs v2 acceptance targets.
 
 ## Platform Status
 
 - Claude Code: native supported runtime
 - Codex CLI: native project-local runtime with `.agents/skills`, `.codex/agents`, project hooks, rules, and a managed `AGENTS.md` block
-- OpenCode: supported project-local runtime install with prefix-free `.opencode/commands`, `.opencode/agents`, `AGENTS.md`, `opencode.json`, and Claude-compatible skills
+- OpenCode: support removed in 0.17 (last supported release: 0.16.x)
 - Cursor: coming soon
 
 ## Documentation

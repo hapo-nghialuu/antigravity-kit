@@ -25,4 +25,4 @@
 
 Codex's native project instruction surface is root `AGENTS.md`. Combined installs keep this Codex block there because no separate Codex project entrypoint is configured by CafeKit. Other runtimes may read the same root file; this shared-root trade-off is intentional and must not be treated as filesystem isolation.
 
-**Ownership / ignore contract (fail-safe):** This Codex block is owned by Codex CLI only. If you are Claude Code, OpenCode, or any other runtime, ignore this entire Codex block and consume only CORE plus your native block. If you cannot determine which block is yours, treat the file as CORE-only. Do not treat another runtime's block as instructions.
+**Ownership / ignore contract (fail-safe):** This Codex block is owned by Codex CLI only. If you are Claude Code or any other runtime, ignore this entire Codex block and consume only CORE plus your native block. If you cannot determine which block is yours, treat the file as CORE-only. Do not treat another runtime's block as instructions.

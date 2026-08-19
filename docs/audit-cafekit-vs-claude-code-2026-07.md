@@ -3,6 +3,7 @@
 > **Ngày audit:** 2026-07-13 · **Bản audit:** `@haposoft/cafekit` 0.13.2 (branch `dev`, commit `1250304`)
 > **Phương pháp:** duyệt 100% package `packages/spec/` (installer 27 file, 10 hooks + 7 lib, 7 scripts, 30 skills, 13 agents, 8 rules, references, archive, OpenCode port) + tra cứu changelog/docs chính thức Claude Code 02–07/2026 + đối chiếu field test v0.13.0 (`notes/v0.13.0-field-test-post-list-screen.md`).
 > **Phạm vi:** không gồm `cafekit-web/`.
+> **Ghi chú 2026-08-19:** OpenCode đã ngừng được hỗ trợ (gỡ khỏi source sau 0.16.x). Mọi nhắc đến "OpenCode port" trong audit này là lịch sử tại thời điểm audit, không phản ánh trạng thái hiện tại.
 
 ---
 

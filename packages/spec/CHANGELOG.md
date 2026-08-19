@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **OpenCode support**: removed the OpenCode install path, the `src/opencode` plugin runtime, the `@opencode-ai/plugin` dependency, and OpenCode-specific installer branches, tests, and docs. The last release supporting OpenCode is 0.16.x. Historical changelog entries below are kept as-is; a legacy `.opencode/` folder on user machines is left untouched (still gitignored).
+
 ### Changed
 
 - **Specs v2 authoring model**: introduced independent `planning_depth` (`None|Compact|Full`) and `assurance_level` (`Routine|Elevated|Strict`) decisions. `Direct|Standard|Critical` are derived compatibility lanes; `execution_tier` is a legacy read adapter.

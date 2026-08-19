@@ -1,6 +1,6 @@
 # @haposoft/cafekit
 
-> Native spec-driven workflow and runtime bundle for Claude Code, Codex CLI, and OpenCode.
+> Native spec-driven workflow and runtime bundle for Claude Code and Codex CLI.
 
 [![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](https://github.com/haposoft/cafekit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -28,14 +28,6 @@ Codex CLI install support:
 - merges a CafeKit-owned block into root `AGENTS.md`
 - requires no generated `.codex/config.toml` and never changes global trust config
 
-OpenCode install support:
-- installs command wrappers under `.opencode/commands/`
-- installs converted OpenCode agents under `.opencode/agents/`
-- installs CafeKit skills under `.opencode/skills/`
-- installs OpenCode plugin runtime files under `.opencode/plugins/`
-- merges `opencode.json` and root `AGENTS.md`
-- omits the Claude `hapo:` command prefix
-
 ## Install
 
 Run in your project root:
@@ -59,7 +51,7 @@ npx @haposoft/cafekit --platform codex --force-overwrite
 
 Requirements:
 - Node.js 18+
-- Claude Code, Codex CLI, or OpenCode; choose a runtime when prompted or use `--platform`
+- Claude Code or Codex CLI; choose a runtime when prompted or use `--platform`
 
 ## Git ignore policy
 
@@ -75,15 +67,13 @@ plans/*
 .cafekit-backup/
 .cafekit.lock
 .claude/
-.opencode/
 .codex/
 .agents/
 ```
 
 Runtime folders are local — reinstall with `npx @haposoft/cafekit` rather than
-committing them. Inside the runtime, CafeKit also installs `.claude/.gitignore`,
-`.opencode/.gitignore`, or the Codex pair `.codex/.gitignore` +
-`.agents/.gitignore`. These keep secrets, skill dependencies, session state,
+committing them. Inside the runtime, CafeKit also installs `.claude/.gitignore` or the
+Codex pair `.codex/.gitignore` + `.agents/.gitignore`. These keep secrets, skill dependencies, session state,
 and hook logs out of git even if someone partially un-ignores a runtime.
 Teams may deliberately commit runtime files, but should also commit the
 ownership manifest so selective updates share the same baseline.
@@ -141,37 +131,11 @@ without requiring Git and remain stable when a session starts in a subdirectory.
 CafeKit uses Codex's native status and usage UI instead of installing the
 Claude statusline.
 
-OpenCode targets:
-
-```text
-.opencode/
-├── .gitignore
-├── commands/
-├── agents/
-├── skills/
-├── rules/
-├── scripts/
-├── references/
-├── plugins/
-├── cafekit.json
-├── runtime.json
-└── package.json
-
-AGENTS.md
-opencode.json
-```
-
-OpenCode setup also:
-- binds generated commands to matching CafeKit subagents with `agent` + `subtask`
-- configures `permission.skill` and `permission.task`
-- optionally writes `model` to `opencode.json` from `OPENCODE_MODEL`, `OPENCODE_DEFAULT_MODEL`, or installer input
-
 To check the installed CafeKit package version:
 
 ```bash
 cat .claude/cafekit.json
 cat .codex/cafekit.json
-cat .opencode/cafekit.json
 ```
 
 ## Core Skills
@@ -222,17 +186,6 @@ $hapo-specs Build a Google Meet transcript extension with AI summaries
 $hapo-develop meet-transcript-mvp
 $hapo-test meet-transcript-mvp --full
 $hapo-code-review meet-transcript-mvp --pending
-```
-
-OpenCode uses the generated command names without the Claude `hapo:` prefix:
-
-```bash
-/question "Which files define the current CafeKit install/runtime behavior?" --repo
-/brainstorm Explore approaches for a Google Meet transcript extension
-/specs Build a Google Meet transcript extension with AI summaries
-/develop meet-transcript-mvp
-/test --full
-/code-review --pending
 ```
 
 Reconstruct as-is docs from a legacy codebase:
