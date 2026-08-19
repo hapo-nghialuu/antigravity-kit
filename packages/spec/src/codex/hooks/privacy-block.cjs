@@ -12,10 +12,7 @@ const {
   getHookContext,
   readPayload
 } = require('./lib/hook-context.cjs');
-const {
-  DYNAMIC_READ_PATH,
-  commandAccess,
-} = require('./lib/privacy-command-analysis.cjs');
+const { commandAccess } = require('./lib/privacy-command-analysis.cjs');
 
 const RESTRICTED = [
   /^\.env(?:[.\[*?{]|$)/i,
@@ -32,13 +29,7 @@ const RESTRICTED = [
   /\.keystore$/i,
   /\.jks$/i,
   /auth\.json$/i,
-  /token(s)?\.json$/i,
-  /\.cafekit/i,
-  /hmac\.key/i,
-  /completion-authority/i,
-  /session-state/i,
-  /hook-log/i,
-  /sessions/i
+  /token(s)?\.json$/i
 ];
 
 const EXEMPT = [/\.env\.(example|sample|template|test)$/i];
@@ -58,7 +49,6 @@ function isSafe(filePath) {
 }
 
 function isSensitive(filePath) {
-  if (filePath === DYNAMIC_READ_PATH) return true;
   return matchesAny(filePath, RESTRICTED);
 }
 
@@ -120,10 +110,43 @@ function isSymlinkToSensitive(filePath, cwd) {
   }
 }
 
-  function extractCommandPaths(command) {
-    const access = commandAccess(command);
-    return access.dynamic ? [...access.paths, DYNAMIC_READ_PATH] : access.paths;
+function extractCommandPaths(command) {
+  // The analyzer parses the command and returns the operands of every reading
+  // command it recognises, nested shells and `find -exec` included. Treating
+  // every unresolved expansion as sensitive, as this did before, denied
+  // `cat $FILE`, `wc -l *.cjs` and `cat ~/.zshrc` alike -- and every denial here
+  // costs a round trip through a one-shot approval prompt.
+  // A heredoc whose delimiter is quoted (<<'BODY') is inert: the shell expands
+  // nothing inside it, so no word in the body is ever read. The analyzer has no
+  // notion of heredocs and parses the body as shell, so prose that quotes a
+  // command -- a PR body carrying `cat .env` in backticks -- came back as a real
+  // command substitution. Blank those bodies out first. An unquoted delimiter
+  // (<<BODY) does expand, so it is left to the analyzer.
+  const scrubbed = String(command).replace(
+    /(<<-?[ \t]*)(['"])([A-Za-z_]\w*)\2[^\n]*\n[\s\S]*?\n[ \t]*\3\b/g,
+    '$1$2$3$2'
+  );
+
+  const paths = new Set(commandAccess(scrubbed).paths);
+
+  // Two shapes the analyzer cannot return. It drops any word carrying an
+  // expansion, so `~/.ssh/id_rsa` and `certs/*.pem` still have to be matched by
+  // name. And it only walks commands it recognises, so an unknown tool handed a
+  // secret through a file-shaped option, such as
+  // `docker compose --env-file .env`, is invisible to it.
+  const FILE_OPTION = /^--?[\w-]*(?:file|config|key|cert|identity)$/i;
+  const tokens = scrubbed.split(/[\s|;&<>"'()`]+/);
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const shaped = /^~|[*?[{]/.test(token);
+    const optionFed = index > 0 && FILE_OPTION.test(tokens[index - 1]);
+    if (!shaped && !optionFed) continue;
+    const value = token.replace(/^~/, '').replace(/^["'()`]+|["'(),]+$/g, '');
+    if (value && isSensitive(value) && !isSafe(value)) paths.add(value);
   }
+
+  return [...paths];
+}
 
 function extractPatchPaths(patch) {
   return [...String(patch).matchAll(

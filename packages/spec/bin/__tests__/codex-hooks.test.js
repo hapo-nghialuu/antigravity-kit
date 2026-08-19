@@ -909,14 +909,14 @@ test('Codex adapter enforces declared task artifact SHA-256 with missing, invali
   }
 });
 
-test('Codex privacy denies obfuscated and session paths, allows benign', () => {
+test('Codex privacy denies obfuscated secret reads, allows benign and runtime state', () => {
   inHookFixture((root, hooks) => {
     const block = path.join(hooks, 'privacy-block.cjs');
     const denied = [
       { command: "cat .e''nv", tool: 'exec_command' },
-      { command: "cat .codex/sessions/test.json", tool: 'exec_command' },
-      { command: "cat $HOME/.cafekit/completion-authority/hmac.key", tool: 'exec_command' },
-      { command: "cat .codex/sessions/abc.json", tool: 'Bash' },
+      { command: 'cat ~/.cafekit/completion-authority/hmac.key', tool: 'exec_command' },
+      { command: 'cat ~/.ssh/id_rsa', tool: 'Bash' },
+      { command: 'docker compose --env-file .env up', tool: 'exec_command' },
       { command: "python3 -c \"open('.env').read()\"", tool: 'exec_command' },
       { command: "node -e \"fs.readFileSync('.env')\"", tool: 'Bash' },
       { command: "bash -c 'cat .e''nv'", tool: 'exec_command' },
@@ -926,10 +926,18 @@ test('Codex privacy denies obfuscated and session paths, allows benign', () => {
       const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
       assert.equal(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision, 'deny', command);
     }
+    // Runtime state and transcripts are CafeKit's own bookkeeping, not secrets.
+    // Guarding them by substring also matched every source file and doc that
+    // merely spelled `sessions` or `session-state`, so the gate fired on the
+    // repo it was installed in. The one real secret there, hmac.key, is still
+    // covered above by the `.key` rule.
     const allowed = [
       { command: "echo hello", tool: 'exec_command' },
       { command: "cat README.md", tool: 'exec_command' },
       { command: "cat src/app.js", tool: 'Bash' },
+      { command: 'cat .codex/sessions/test.json', tool: 'exec_command' },
+      { command: 'cat .codex/session-state/latest.md', tool: 'Bash' },
+      { command: 'cat docs/sessions-guide.md', tool: 'exec_command' },
     ];
     for (const { command, tool } of allowed) {
       const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
@@ -938,45 +946,27 @@ test('Codex privacy denies obfuscated and session paths, allows benign', () => {
   });
 });
 
-test('Codex privacy denies active read expansion, preserves literal dollars and safe controls', () => {
+test('Codex privacy denies sensitive names it can resolve, allows pure indirection', () => {
   inHookFixture((root, hooks) => {
     const block = path.join(hooks, 'privacy-block.cjs');
     const denied = [
-      { command: "cat $FILE", tool: 'Bash' },
-      { command: 'cat "$FILE"', tool: 'exec_command' },
-      { command: "cat ${FILE}", tool: 'Bash' },
-      { command: "cat $1", tool: 'exec_command' },
-      { command: "cat $(echo .env)", tool: 'Bash' },
-      { command: "cat `echo .env`", tool: 'Bash' },
-      { command: "head $SECRET", tool: 'exec_command' },
-      { command: "tail ${MY_FILE}", tool: 'Bash' },
-      { command: "cat README.md $EXTRA", tool: 'Bash' },
-      { command: "head README.md $UNRELATED", tool: 'exec_command' },
-      { command: "echo ok; cat README.md $FILE", tool: 'Bash' },
-      { command: "cat README.md | head $FILE", tool: 'exec_command' },
-      { command: "bash -c 'cat $FILE'", tool: 'Bash' },
-      { command: "echo $(cat $FILE)", tool: 'exec_command' },
-      { command: 'cat README.md "$(printf safe)"', tool: 'Bash' },
-      { command: 'cat README.md *', tool: 'Bash' },
-      { command: 'cat README.md ~/README.md', tool: 'exec_command' },
-      { command: 'cat README.md {README.md,LICENSE}', tool: 'Bash' },
       { command: 'cat .e\\\nnv', tool: 'Bash' },
       { command: "cat $'\\x2e\\x65\\x6e\\x76'", tool: 'exec_command' },
-      { command: 'env -u UNUSED cat "$FILE"', tool: 'Bash' },
-      { command: 'timeout 1 cat "$FILE"', tool: 'exec_command' },
-      { command: 'nice -n 10 cat "$FILE"', tool: 'Bash' },
-      { command: "eval 'cat \"$FILE\"'", tool: 'exec_command' },
-      { command: "find . -exec sh -c 'cat \"$FILE\"' \\;", tool: 'Bash' },
-      { command: 'source "$FILE"', tool: 'exec_command' },
-      { command: 'xargs -a "$LIST" cat', tool: 'Bash' },
-      { command: 'python3 -c \'open(os.environ["FILE"]).read()\'', tool: 'exec_command' },
-      { command: 'node -e \'fs.readFileSync(process.env.FILE)\'', tool: 'Bash' },
-      { command: 'cat < "$FILE"', tool: 'exec_command' },
+      { command: 'cat .env*', tool: 'Bash' },
+      { command: 'cat certs/*.pem', tool: 'exec_command' },
+      { command: 'cat ~/.aws/credentials', tool: 'Bash' },
+      { command: 'ssh -i ~/.ssh/id_ed25519 host', tool: 'exec_command' },
+      { command: 'curl --config ~/.netrc https://example.com', tool: 'Bash' },
+      { command: 'kubectl --kubeconfig ~/.kube/kubeconfig get pods', tool: 'exec_command' },
+      { command: 'openssl rsa -in server.key', tool: 'Bash' },
     ];
     for (const { command, tool } of denied) {
       const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
       assert.equal(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision, 'deny', `should deny ${command}`);
     }
+    // Accepted gap: the target of `$FILE` is unknowable without running the
+    // shell, and every denial here costs a round trip through a one-shot
+    // approval prompt. `less "$HOME/.env"` is the edge of that decision.
     const allowed = [
       { command: "echo $VAR", tool: 'exec_command' },
       { command: 'echo "$HOME"', tool: 'Bash' },
@@ -995,11 +985,37 @@ test('Codex privacy denies active read expansion, preserves literal dollars and 
       { command: 'echo not.env', tool: 'Bash' },
       { command: 'echo .env', tool: 'exec_command' },
       { command: "printf '%s\\n' .env", tool: 'Bash' },
+      { command: 'git log -- .env', tool: 'Bash' },
       { command: 'git status sessions.md', tool: 'exec_command' },
       { command: 'python3 -c "print(os.environ[\'HOME\'])"', tool: 'Bash' },
       { command: 'head -n "$COUNT" README.md', tool: 'exec_command' },
       { command: 'grep .env README.md', tool: 'Bash' },
       { command: "sed -n '/.env/p' README.md", tool: 'exec_command' },
+      { command: 'cat $FILE', tool: 'Bash' },
+      { command: 'cat "$FILE"', tool: 'exec_command' },
+      { command: 'cat ${FILE}', tool: 'Bash' },
+      { command: 'cat $1', tool: 'exec_command' },
+      { command: 'cat $(echo .env)', tool: 'Bash' },
+      { command: 'cat `echo .env`', tool: 'Bash' },
+      { command: 'head $SECRET', tool: 'exec_command' },
+      { command: 'tail ${MY_FILE}', tool: 'Bash' },
+      { command: 'less "$HOME/.env"', tool: 'Bash' },
+      { command: 'cat README.md $EXTRA', tool: 'Bash' },
+      { command: 'echo ok; cat README.md $FILE', tool: 'Bash' },
+      { command: 'cat README.md | head $FILE', tool: 'exec_command' },
+      { command: "bash -c 'cat $FILE'", tool: 'Bash' },
+      { command: 'cat README.md *', tool: 'Bash' },
+      { command: 'cat ~/.zshrc', tool: 'exec_command' },
+      { command: 'du -sh */', tool: 'Bash' },
+      { command: 'env -u UNUSED cat "$FILE"', tool: 'Bash' },
+      { command: 'timeout 1 cat "$FILE"', tool: 'exec_command' },
+      { command: "eval 'cat \"$FILE\"'", tool: 'exec_command' },
+      { command: "find . -exec sh -c 'cat \"$FILE\"' \\;", tool: 'Bash' },
+      { command: 'source "$FILE"', tool: 'exec_command' },
+      { command: 'xargs -a "$LIST" cat', tool: 'Bash' },
+      { command: 'python3 -c \'open(os.environ["FILE"]).read()\'', tool: 'exec_command' },
+      { command: 'node -e \'fs.readFileSync(process.env.FILE)\'', tool: 'Bash' },
+      { command: 'cat < "$FILE"', tool: 'exec_command' },
     ];
     for (const { command, tool } of allowed) {
       const res = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command } });
@@ -1007,8 +1023,21 @@ test('Codex privacy denies active read expansion, preserves literal dollars and 
     }
     const assignmentOnly = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat README.md' } });
     assert.equal(assignmentOnly.stdout, '');
-    const assignmentRead = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat "$FILE"' } });
+    const assignmentRead = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat .env' } });
     assert.equal(JSON.parse(assignmentRead.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  });
+});
+
+test('Codex privacy reads an inert heredoc body as prose, not shell', () => {
+  inHookFixture((root, hooks) => {
+    const block = path.join(hooks, 'privacy-block.cjs');
+    const inert = "gh pr create --body \"$(cat <<'BODY'\nRun `cat .env` to inspect config\nBODY\n)\"";
+    const allowed = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: inert } });
+    assert.equal(allowed.stdout, '', 'quoted delimiter expands nothing');
+
+    const expanding = 'bash -c "cat <<BODY\n$(cat .env)\nBODY"';
+    const denied = runHook(block, root, { cwd: root, session_id: 's1', hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: expanding } });
+    assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny', 'unquoted delimiter expands');
   });
 });
 
@@ -1019,8 +1048,8 @@ test('Claude and Codex privacy lexers agree on literals, delimiters, and quote e
     const vectors = [
       ["cat .e''nv", true],
       ["python3 -c \"open('.env').read()\"", true],
-      ['cat README.md $FILE', true],
-      ['echo ok; cat README.md $FILE', true],
+      ['cat README.md $FILE', false],
+      ['echo ok; cat README.md $FILE', false],
       ["cat '$FILE'", false],
       ["echo '$(cat $FILE)'", false],
       ["cat README.md '*'", false],
@@ -1030,13 +1059,17 @@ test('Claude and Codex privacy lexers agree on literals, delimiters, and quote e
       ['echo .envoy', false],
       ['cat .e\\\nnv', true],
       ["cat $'\\x2e\\x65\\x6e\\x76'", true],
-      ['env -u UNUSED cat "$FILE"', true],
-      ['timeout 1 cat "$FILE"', true],
-      ["eval 'cat \"$FILE\"'", true],
-      ["find . -exec sh -c 'cat \"$FILE\"' \\;", true],
-      ['source "$FILE"', true],
-      ['xargs -a "$LIST" cat', true],
-      ['python3 -c \'open(os.environ["FILE"]).read()\'', true],
+      ['env -u UNUSED cat "$FILE"', false],
+      ['timeout 1 cat "$FILE"', false],
+      ["eval 'cat \"$FILE\"'", false],
+      ["find . -exec sh -c 'cat \"$FILE\"' \\;", false],
+      ['source "$FILE"', false],
+      ['xargs -a "$LIST" cat', false],
+      ['python3 -c \'open(os.environ["FILE"]).read()\'', false],
+      ['cat ~/.ssh/id_rsa', true],
+      ['docker compose --env-file .env up', true],
+      ['cat ~/.zshrc', false],
+      ['git log -- .env', false],
       ['echo .env', false],
       ["printf '%s\\n' .env", false],
       ['git status sessions.md', false],

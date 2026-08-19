@@ -98,6 +98,9 @@ test('an exempt-looking symlink to .env still asks based on its target', () => {
   }
 });
 
+// A secret named in a read operand the analyzer can resolve, however it is
+// spelled: quoted, concatenated, line-continued, ANSI-C escaped, or reached
+// through a nested shell or inline runtime.
 for (const command of [
   'cat ".env"',
   'cat .env',
@@ -109,17 +112,6 @@ for (const command of [
   "bash -c 'cat .e''nv'",
   'cat .e\\\nnv',
   "cat $'\\x2e\\x65\\x6e\\x76'",
-  'env -u UNUSED cat "$FILE"',
-  'timeout 1 cat "$FILE"',
-  'nice -n 10 cat "$FILE"',
-  "eval 'cat \"$FILE\"'",
-  "find . -exec sh -c 'cat \"$FILE\"' \\;",
-  'source "$FILE"',
-  'xargs -a "$LIST" cat',
-  'python3 -c \'open(os.environ["FILE"]).read()\'',
-  'node -e \'fs.readFileSync(process.env.FILE)\'',
-  'cat < "$FILE"',
-  'cat -n "$FILE"',
 ]) {
   test(`asks natively for Bash sensitive reference: ${command}`, () => {
     const dir = tmpDir();
@@ -134,8 +126,67 @@ for (const command of [
   });
 }
 
-// --- Regression: variable indirection and command substitution (F-01) ---
-// Dynamic expansion in any read operand fails closed. Single-quoted dollars are literal.
+// --- Shapes the command analyzer cannot return ---
+// It drops any word carrying an expansion, and it only walks readers it
+// recognises. A sensitive name still has to be caught when it arrives with a
+// glob or `~`, or when an unknown tool is handed it through a file-shaped
+// option.
+for (const command of [
+  'cat ~/.ssh/id_rsa',
+  'cat ~/.aws/credentials',
+  'cat certs/*.pem',
+  'ssh -i ~/.ssh/id_ed25519 host',
+  'docker compose --env-file .env up',
+  'curl --config ~/.netrc https://example.com',
+  'kubectl --kubeconfig ~/.kube/kubeconfig get pods',
+  'openssl rsa -in server.key',
+  'cat secrets.yaml',
+]) {
+  test(`asks for sensitive name via expansion or file-shaped option: ${command}`, () => {
+    const dir = tmpDir();
+    try {
+      const { code, stdout } = runHook({ tool_name: 'Bash', tool_input: { command } }, dir);
+      assert.strictEqual(code, 0);
+      assert.strictEqual(permissionDecision(stdout), 'ask', `should ask for ${command}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+// --- Naming a secret is not reading one (fix: 740798c) ---
+// The analyzer returns the operands of readers it recognises. A command that
+// only spells a secret's name -- an echo, a grep pattern, a pathspec -- reads
+// nothing, and asking there is the noise that trains people to click through
+// the prompt that matters.
+for (const command of [
+  'echo .env',
+  'echo "update .env"',
+  'echo .envoy',
+  'echo not.env',
+  "printf '%s\\n' .env",
+  'git log -- .env',
+  'git status sessions.md',
+  'grep .env README.md',
+  "sed -n '/.env/p' README.md",
+]) {
+  test(`allows naming a secret without reading it: ${command}`, () => {
+    const dir = tmpDir();
+    try {
+      fs.writeFileSync(path.join(dir, 'README.md'), 'hi');
+      const { stdout } = runHook({ tool_name: 'Bash', tool_input: { command } }, dir);
+      assert.strictEqual(permissionDecision(stdout), null, `should allow ${command}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+// --- Accepted gap: pure indirection ---
+// The target of `$FILE` is unknowable without running the shell. Treating every
+// unresolved expansion as sensitive asked on `cat ~/.zshrc`, `wc -l *.cjs` and
+// `du -sh */` too, so these are allowed by design. `less "$HOME/.env"` is the
+// edge of that decision: a literal secret joined to a variable goes through.
 for (const command of [
   'cat $FILE',
   'cat "$FILE"',
@@ -147,27 +198,57 @@ for (const command of [
   'tail ${MY_FILE}',
   'less "$HOME/.env"',
   'cat README.md $EXTRA',
-  'head README.md $UNRELATED',
   'echo ok; cat README.md $FILE',
   'cat README.md | head $FILE',
   "bash -c 'cat $FILE'",
   'echo $(cat $FILE)',
-  'cat README.md "$(printf safe)"',
-  'cat README.md *',
-  'cat README.md ~/README.md',
-  'cat README.md {README.md,LICENSE}',
+  'env -u UNUSED cat "$FILE"',
+  'timeout 1 cat "$FILE"',
+  'nice -n 10 cat "$FILE"',
+  "eval 'cat \"$FILE\"'",
+  "find . -exec sh -c 'cat \"$FILE\"' \\;",
+  'source "$FILE"',
+  'xargs -a "$LIST" cat',
+  'python3 -c \'open(os.environ["FILE"]).read()\'',
+  'node -e \'fs.readFileSync(process.env.FILE)\'',
+  'cat < "$FILE"',
+  'cat -n "$FILE"',
 ]) {
-  test(`asks for read command with unresolved variable/substitution: ${command}`, () => {
+  test(`allows pure indirection with no sensitive literal: ${command}`, () => {
     const dir = tmpDir();
     try {
+      fs.writeFileSync(path.join(dir, '.env'), 'SECRET=1');
       const { code, stdout } = runHook({ tool_name: 'Bash', tool_input: { command } }, dir);
       assert.strictEqual(code, 0);
-      assert.strictEqual(permissionDecision(stdout), 'ask', `should ask for ${command}`);
+      assert.strictEqual(permissionDecision(stdout), null, `should allow ${command}`);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 }
+
+// --- An inert heredoc body is prose, not shell (fix: e867051) ---
+test('allows a quoted-delimiter heredoc whose body quotes a read command', () => {
+  const dir = tmpDir();
+  try {
+    const command = "gh pr create --body \"$(cat <<'BODY'\nRun `cat .env` to inspect config\nBODY\n)\"";
+    const { stdout } = runHook({ tool_name: 'Bash', tool_input: { command } }, dir);
+    assert.strictEqual(permissionDecision(stdout), null, 'quoted delimiter expands nothing');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('still asks for an unquoted-delimiter heredoc that does expand a read', () => {
+  const dir = tmpDir();
+  try {
+    const command = 'bash -c "cat <<BODY\n$(cat .env)\nBODY"';
+    const { stdout } = runHook({ tool_name: 'Bash', tool_input: { command } }, dir);
+    assert.strictEqual(permissionDecision(stdout), 'ask', 'unquoted delimiter expands');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 for (const command of [
   'echo $VAR',
@@ -186,15 +267,12 @@ for (const command of [
   "cat README.md '~'",
   "cat README.md '{README.md,LICENSE}'",
   "echo '$(cat $FILE)'",
-  'echo .envoy',
-  'echo not.env',
-  'echo .env',
-  "printf '%s\\n' .env",
-  'git status sessions.md',
+  'cat ~/.zshrc',
+  'wc -l README.md',
+  'cat *.md',
+  'du -sh */',
   'python3 -c "print(os.environ[\'HOME\'])"',
   'head -n "$COUNT" README.md',
-  'grep .env README.md',
-  "sed -n '/.env/p' README.md",
 ]) {
   test(`allows harmless dynamic / safe static with extra var: ${command}`, () => {
     const dir = tmpDir();
@@ -210,13 +288,17 @@ for (const command of [
   });
 }
 
-test('assignment alone is harmless but dereferencing it in a read fails closed', () => {
+test('an assignment naming a secret does not ask, with or without a later read', () => {
   const dir = tmpDir();
   try {
     const assigned = runHook({ tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat README.md' } }, dir);
     assert.strictEqual(permissionDecision(assigned.stdout), null);
+    // Pure indirection: the hook cannot resolve $FILE without running the shell.
     const read = runHook({ tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat "$FILE"' } }, dir);
-    assert.strictEqual(permissionDecision(read.stdout), 'ask');
+    assert.strictEqual(permissionDecision(read.stdout), null);
+    // Spelling the target out again does ask.
+    const literal = runHook({ tool_name: 'Bash', tool_input: { command: 'FILE=.env; cat .env' } }, dir);
+    assert.strictEqual(permissionDecision(literal.stdout), 'ask');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
