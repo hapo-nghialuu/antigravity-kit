@@ -1,62 +1,57 @@
-# Specs v2.1 state synchronization
+# Process-first state synchronization
 
-## Authority layers
+## Primary file state
 
-`spec.json` is machine semantic authority. Requirements, design, conditional
-research, and conditional task Markdown are human projections. Host state may
-record authority or integrity, but it never supplies product semantics.
+For new work, `specs/<feature>/plan.md` and its direct-child
+`task-NN-*.md` files are canonical, hand-editable state. Task files stay flat
+beside the plan; indexes and host task views are disposable projections.
 
-Planning depth and assurance level remain independent. The artifact router runs
-before discovery: None persists no spec; Compact and Full persist the bounded
-core; research and tasks remain absent unless their semantic triggers exist.
+Each task has exactly one `Status:` field using `pending`, `in_progress`,
+`paused`, `blocked`, or `done`. The controller is the sole writer of task
+status and proof. A task's final `## Receipt` is its only canonical execution
+proof.
 
-## Canonical lifecycle
+## Surgical synchronization
 
-The feature lifecycle is exactly `in_progress`, `paused`, `blocked`, or `done`.
-Authoring state is independently `draft`, `validated`, or `absent`. Do not emit
-legacy lifecycle aliases in a new 2.1 artifact.
+Before changing state:
 
-Technical readiness is not lifecycle completion. `ready_for_implementation`
-may change only through the installed machine finalization path after every
-routed artifact, projection, semantic review, grounding check, and deterministic
-gate passes. An author must not directly declare readiness, authority, approval,
-review capability, execution proof, or closeout.
+1. read the plan row and the task's Outcome, Acceptance, Dependencies,
+   Verification Plan, Status, and Receipt;
+2. confirm every dependency and owned path at the requested boundary;
+3. edit only the observed Status, concrete blocker, implemented checkbox, or
+   Receipt; and
+4. re-read the file and confirm exactly one Status field and one Receipt
+   section.
 
-## Projection sync
+Starting or resuming changes only Status to `in_progress`. Blocking records a
+specific cause without creating proof. Do not replace a whole packet to make a
+state transition.
 
-After any semantic Markdown edit:
+Set `Status: done` only after the inline Receipt passes the
+`validateCanonicalReceipt` contract: exact command, `Exit: 0`,
+`Verification: PASS`, runtime-derived Base and Head values, and a non-empty
+fenced block of current command output. Missing, stale, contradictory,
+placeholder, copied, failure, or zero-test evidence leaves the task unfinished.
 
-1. invoke the explicit installed machine semantic-sync step to promote `semantic_model`;
-2. regenerate or reconcile every affected Markdown projection;
-3. verify requirements, decisions, anchors, task registry, typed boundaries,
-   and verification refs round-trip without loss; and
-4. rerun the applicable deterministic validation and grounding checks.
+Synchronization never fabricates commands, output, timestamps, completed
+work, reviewer identity, user approval, or product readiness. A passing command
+proves only the boundary it executed.
 
-For Claude Code, the isolated promotion is
-`node .claude/scripts/spec-scaffold.cjs <feature> --sync-semantic-model`.
+## Human gates and workflow ownership
 
-Task Markdown exists only when typed ownership, dependency, transition, proof,
-or parallel topology requires it. Its status and dependencies project the
-matching `task_registry` entry. Its Verification Plan is prospective and never
-contains an execution verdict or proof claim. Topology comes only from typed
-`coordination.boundaries`, never from legacy trigger fields, priority markers,
-related-file lists, or prose.
+- C1 records the user's scope decision before the plan is written.
+- C2 records the user's disposition of deduplicated adversarial findings.
+- Develop starts only after a new explicit user invocation and executes one
+  unblocked task at a time.
+- Sync changes only observed file state and never starts implementation.
+- C3 occurs after current receipts and limitations are shown; the user decides
+  whether the requested feature is complete.
 
-## Lifecycle updates
+## Legacy compatibility
 
-- Starting or continuing authored work keeps the feature `in_progress`.
-- A deliberate resumable stop uses `paused` with the exact remaining decision.
-- An external or semantic blocker uses `blocked` with a concrete cause.
-- Task state changes update `task_registry` and the matching task projection
-  together, but only from observed work and verification.
-- Feature `done` is reserved for final-state authority after implementation
-  closeout; authoring or readiness cannot produce it.
-
-State synchronization never fabricates commands, PASS results, timestamps,
-receipts, completed work, reviewer identity, or user approval. When execution
-evidence is absent, preserve the unfinished state and report the missing proof.
-Never hand-author the `semantic_model` shape or treat an unsynchronized Markdown
-edit as machine authority.
-
-Claude-native plan/task state may mirror physical state when available, but it
-is never a substitute for `spec.json` or authority to advance the lifecycle.
+Existing packets containing `spec.json`, nested `tasks/task-R*.md`, or other
+legacy kernel artifacts stay on their installed adapters. Preserve their
+`task_registry`, `semantic_model`, `planning_depth`, lane,
+`execution_tier`, typed topology, separate receipts, and feature closeout
+contract. Do not migrate that machine authority or storage shape while syncing
+an unrelated process-first packet.

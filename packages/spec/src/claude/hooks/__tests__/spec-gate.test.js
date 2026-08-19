@@ -78,6 +78,40 @@ function bindFixtureReceipt(dir, value) {
   return value.replaceAll(VALID_BASE, context.base).replaceAll(VALID_HEAD, context.head);
 }
 
+function workflowRuntimeContext(dir) {
+  return PROVENANCE.deriveRuntimeContext({
+    projectRoot: dir,
+    specsRoot: path.join(dir, 'specs'),
+    specFile: path.join(dir, 'specs', FEATURE, 'plan.md'),
+    featureName: FEATURE,
+    runtimeSession: 'test',
+  });
+}
+
+function makeWorkflowFixture(receiptLines = [], plannedCommand = 'node --test') {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  fs.mkdirSync(featureDir, { recursive: true });
+  fs.writeFileSync(path.join(featureDir, 'plan.md'), '# Demo plan\n');
+  const context = workflowRuntimeContext(dir);
+  const task = [
+    '# Task 01: demo',
+    '',
+    'Status: done',
+    '',
+    '## Verification Plan',
+    '',
+    `- Command: ${plannedCommand}`,
+    '',
+    ...receiptLines,
+    '',
+  ].join('\n')
+    .replaceAll(VALID_BASE, context.base)
+    .replaceAll(VALID_HEAD, context.head);
+  fs.writeFileSync(path.join(featureDir, 'task-01-demo.md'), task);
+  return dir;
+}
+
 function installFeatureReceipt(dir, featureName = FEATURE, session = 'test') {
   const featureDir = path.join(dir, 'specs', featureName);
   const specFile = path.join(featureDir, 'spec.json');
@@ -1238,6 +1272,134 @@ test('30. phantom vectors via gate evidence must block with verification_state (
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     const { stdout } = runHook({}, dir);
     assert.strictEqual(stdout, '', `positive control should not block: ${v}`);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('31. process-v3 done task without inline Receipt blocks', () => {
+  const dir = makeWorkflowFixture();
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'missing process-v3 receipt should block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /missing_receipt/);
+    assert.match(body.reason, /## Receipt/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('32. process-v3 requires Receipt heading and runtime-bound provenance', () => {
+  const legacyHeading = makeWorkflowFixture([
+    '## Evidence', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', 'pass', '```',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, legacyHeading).stdout);
+    assert.ok(body, 'legacy Evidence heading must not satisfy process-v3 receipt');
+    assert.match(body.reason, /missing_receipt/);
+  } finally {
+    fs.rmSync(legacyHeading, { recursive: true, force: true });
+  }
+
+  const stale = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_BASE}`, '```text', 'pass', '```',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, stale).stdout);
+    assert.ok(body, 'stale process-v3 provenance should block');
+    assert.match(body.reason, /provenance/);
+  } finally {
+    fs.rmSync(stale, { recursive: true, force: true });
+  }
+});
+
+test('33. process-v3 done task with canonical inline Receipt passes', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.strictEqual(result.stdout, '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('34. process-v3 Receipt command must match the exact Verification Plan command', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: true', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ true', 'pass: 1', '```',
+  ], 'pnpm test');
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'a substituted receipt command must block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /command_identity/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('35. process-v3 Stop ignores a completed packet when one packet remains active', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    const activeDir = path.join(dir, 'specs', 'active');
+    fs.mkdirSync(activeDir, { recursive: true });
+    fs.writeFileSync(path.join(activeDir, 'plan.md'), '# Active plan\n');
+    fs.writeFileSync(path.join(activeDir, 'task-01-active.md'), [
+      '# Task 01: active', '', 'Status: pending', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+    ].join('\n'));
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.strictEqual(result.stdout, '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('36. process-v3 Stop accepts two completed packets with valid Receipts', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    const otherDir = path.join(dir, 'specs', 'other');
+    fs.mkdirSync(otherDir, { recursive: true });
+    fs.writeFileSync(path.join(otherDir, 'plan.md'), '# Other plan\n');
+    const context = PROVENANCE.deriveRuntimeContext({
+      projectRoot: dir,
+      specsRoot: path.join(dir, 'specs'),
+      specFile: path.join(otherDir, 'plan.md'),
+      featureName: 'other',
+      runtimeSession: 'test',
+    });
+    fs.writeFileSync(path.join(otherDir, 'task-01-other.md'), [
+      '# Task 01: other', '', 'Status: done', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`,
+      '```text', '$ node --test', 'pass: 1', '```', '',
+    ].join('\n'));
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.strictEqual(result.stdout, '');
+  } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

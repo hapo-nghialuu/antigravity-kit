@@ -69,6 +69,22 @@ function checkReceiptDetails(featureDir, taskPath, task, runtimeContext) {
   if (!policy) return { failures: ['shared_validator'], status: 'missing' };
   return receiptHelper().checkTaskReceipt(featureDir, taskPath, task, runtimeContext, policy);
 }
+function checkWorkflowReceiptDetails(featureDir, taskPath, runtimeContext) {
+  const policy = getSharedPolicy();
+  const receipt = receiptHelper();
+  if (!policy || typeof receipt.checkWorkflowTaskReceipt !== 'function') {
+    return { failures: ['shared_validator'], status: 'missing' };
+  }
+  return receipt.checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy);
+}
+function checkWorkflowReceiptSet(candidates, projectRoot, runtimeSession) {
+  const policy = getSharedPolicy();
+  const receipt = receiptHelper();
+  if (!policy || typeof receipt.checkWorkflowReceiptSet !== 'function') {
+    return { failures: [{ featureName: '<set>', taskPath: '<set>', failures: ['shared_validator'] }] };
+  }
+  return receipt.checkWorkflowReceiptSet(candidates, projectRoot, runtimeSession, policy);
+}
 function checkReceipt(featureDir, taskPath, task, runtimeContext) {
   const map = {
     unsafe_path: 'a', missing_receipt: 'b', task_status: 'a', completed_at: 'd',
@@ -91,6 +107,8 @@ module.exports = {
   checkFeatureReceipt,
   checkReceipt,
   checkReceiptDetails,
+  checkWorkflowReceiptDetails,
+  checkWorkflowReceiptSet,
   evidenceBody,
   getSharedPolicy,
   getSharedValidate,

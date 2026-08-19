@@ -87,7 +87,22 @@
       "hooks/lib/skill-router-routes.cjs",
       "scripts/browser-tool.cjs",
       "skills/generate-graph",
-      "skills/impact-analysis"
+      "skills/impact-analysis",
+      "skills/specs/references/archive-workflow.md",
+      "skills/specs/references/ask-user-question-gates.md",
+      "skills/specs/references/codebase-analysis.md",
+      "skills/specs/references/cross-spec-dependency.md",
+      "skills/specs/references/research-strategy.md",
+      "skills/specs/references/scope-inquiry.md",
+      "skills/specs/references/translation-mirror.md",
+      "skills/specs/rules/design-discovery-full.md",
+      "skills/specs/rules/design-discovery-light.md",
+      "skills/specs/rules/design-principles.md",
+      "skills/specs/rules/design-review.md",
+      "skills/specs/rules/ears-format.md",
+      "skills/specs/rules/phase-decision-matrix.md",
+      "skills/specs/rules/task-scoring-rubric.md",
+      "skills/specs/rules/tasks-generation.md"
     ],
     "settingsHookCommandSubstrings": [
       "hooks/skill-router.cjs"

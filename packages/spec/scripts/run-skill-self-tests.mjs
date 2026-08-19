@@ -162,76 +162,74 @@ function markdownTableUnderHeading(content, heading) {
   return rows;
 }
 
+function outsideLegacySections(content) {
+  const kept = [];
+  let legacyDepth = null;
+  for (const line of String(content || "").split("\n")) {
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (heading) {
+      const depth = heading[1].length;
+      const isLegacy = /\blegacy\b/i.test(heading[2]);
+      if (legacyDepth !== null && depth <= legacyDepth) legacyDepth = null;
+      if (isLegacy) legacyDepth = depth;
+    }
+    if (legacyDepth === null) kept.push(line);
+  }
+  return kept.join("\n");
+}
+
 function authoringInstructionIssues(sources) {
   const issues = [];
   const skill = sources.get("skill") || "";
-  const canonicalCorpus = [
-    "skill", "allRules", "reviewReference", "specMaker", "claudeState",
-    "codexState", "claudeRuntime", "codexRuntime",
-  ].map((key) => sources.get(key) || "").join("\n");
-  const routerRows = markdownTableUnderHeading(skill, "Artifact router");
-  const header = routerRows[0] || [];
-  const records = new Map(routerRows.slice(1).map((cells) => [
-    (cells[0] || "").replaceAll("`", ""),
-    Object.fromEntries(header.map((name, index) => [name, cells[index] || ""])),
-  ]));
-  const none = records.get("None");
-  const compact = records.get("Compact");
-  const full = records.get("Full");
-  if (!none || none["Durable core"] !== "none"
-    || none["Research route"] !== "absent" || none["Task route"] !== "absent") {
-    issues.push("router-none-is-not-ephemeral");
+  const review = sources.get("reviewReference") || "";
+  const templates = sources.get("templatesReference") || "";
+  const specMaker = sources.get("specMaker") || "";
+  const primaryKeys = [
+    "skill", "reviewReference", "templatesReference", "specMaker", "develop", "sync",
+    "claudeState", "codexState", "claudeRuntime", "codexRuntime", "commonRuntime",
+  ];
+  const primaryCorpus = primaryKeys
+    .map((key) => outsideLegacySections(sources.get(key) || ""))
+    .join("\n");
+
+  if (!/^name:\s*hapo:specs\s*$/m.test(skill)
+    || !/^description:\s*\S.+$/m.test(skill)
+    || !/^argument-hint:\s*["']?<feature-description>["']?\s*$/m.test(skill)) {
+    issues.push("specs-frontmatter-drift");
   }
-  for (const [name, record] of [["Compact", compact], ["Full", full]]) {
-    if (!record
-      || !["spec.json", "requirements.md", "design.md"].every((artifact) => (
-        record["Durable core"].includes(`\`${artifact}\``)
-      ))) {
-      issues.push(`router-${name.toLowerCase()}-core-drift`);
-    }
-    if (!record?.["Research route"].includes("research trigger")) {
-      issues.push(`router-${name.toLowerCase()}-defaults-research`);
-    }
-    if (!record?.["Task route"].includes("typed topology trigger")) {
-      issues.push(`router-${name.toLowerCase()}-defaults-tasks`);
+  for (const gate of ["C1", "C2", "C3"]) {
+    if (!skill.includes(gate)) issues.push(`missing-human-gate-${gate.toLowerCase()}`);
+  }
+  for (const [key, content] of [["skill", skill], ["templates", templates]]) {
+    if (!content.includes("specs/<feature>/") || !content.includes("plan.md")
+      || !/task-(?:NN|\d{2})-(?:\*|<slug>)\.md/.test(content)) {
+      issues.push(`${key}-flat-layout-drift`);
     }
   }
-
-  const discovery = `${sources.get("discoveryLight") || ""}\n${sources.get("discoveryFull") || ""}`;
-  if (/\balways search\b|\bcomprehensive research\b|\bcapture all findings\b/i.test(discovery)) {
-    issues.push("discovery-defaults-research");
+  if (/(?:specs\/<feature>\/)?tasks\/task-|plans\/<[^>]+>/.test(primaryCorpus)) {
+    issues.push("primary-layout-is-not-flat-specs-feature");
   }
-  const review = `${sources.get("reviewRule") || ""}\n${sources.get("reviewReference") || ""}`;
-  if (/(?:limit|maximum|at most|top|≤|<=)\s*(?:to\s*)?3\b/i.test(review)) {
-    issues.push("review-finding-cap");
+  if (!/path:line/.test(review) || !/cap[\s\S]{0,80}\b15\b/i.test(review)
+    || !/two[^\n]*rounds/i.test(review) || !/consistency sweep/i.test(review)) {
+    issues.push("review-evidence-or-stop-drift");
   }
-  if (!/For every `RN\.M`/.test(review) || !/inventory (?:size|every blocker)/i.test(review)) {
-    issues.push("review-incomplete-criterion-coverage");
+  for (const token of [
+    "Verification: PASS", "Command:", "Exit: 0", "Base:", "Head:", "```text",
+  ]) {
+    if (!templates.includes(token)) issues.push(`receipt-template-missing-${token.replace(/\W+/g, "-")}`);
   }
-  if (/\balways search\b|\bcomprehensive research\b|\bcapture all findings\b/i.test(canonicalCorpus)) {
-    issues.push("canonical-corpus-defaults-research");
+  if (!templates.includes("Twelve edge-case dimensions")
+    || !templates.includes("EARS sentence patterns")
+    || !templates.includes("Criteria")
+    || !templates.includes("Tasks")) {
+    issues.push("template-traceability-or-edge-cases-drift");
   }
-  if (/(?:limit|maximum|at most|top|≤|<=)\s*(?:to\s*)?3\s+(?:blockers?|findings?|issues?)/i.test(canonicalCorpus)) {
-    issues.push("canonical-corpus-review-cap");
-  }
-
-  const lifecycle = ["claudeState", "codexState", "claudeRuntime", "codexRuntime"]
-    .map((key) => sources.get(key) || "").join("\n");
-  if (/\bcurrent_phase\b/.test(lifecycle)) issues.push("canonical-current-phase-alias");
-  if (/\bcurrent_phase\b/.test(canonicalCorpus)) issues.push("canonical-corpus-current-phase-alias");
-  for (const state of ["in_progress", "paused", "blocked", "done"]) {
-    if (!lifecycle.includes(`\`${state}\``)) issues.push(`lifecycle-missing-${state}`);
+  if (!/Do not start Develop|does not authorize work/i.test(specMaker)) {
+    issues.push("spec-maker-auto-dispatches-develop");
   }
 
-  const taskAuthoring = ["taskRules", "taskScoring", "phaseRules", "specMaker"]
-    .map((key) => sources.get(key) || "").join("\n");
-  if (/^##\s+Evidence\s*$/m.test(taskAuthoring)) issues.push("task-embedded-evidence");
-  if (/\(P\)/.test(taskAuthoring)) issues.push("task-priority-marker");
-  if (/^##\s+Evidence\s*$/m.test(canonicalCorpus)) issues.push("canonical-corpus-embedded-evidence");
-  if (/\(P\)/.test(canonicalCorpus)) issues.push("canonical-corpus-priority-marker");
-  if (/\btask_triggers\b|^##\s+Related Files\s*$/m.test(canonicalCorpus)) {
-    issues.push("canonical-corpus-legacy-topology-authority");
-  }
+  const forbiddenV21 = /semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i;
+  if (forbiddenV21.test(primaryCorpus)) issues.push("v21-vocabulary-outside-legacy");
 
   const codexProjection = `${sources.get("codexState") || ""}\n${sources.get("codexRuntime") || ""}`;
   for (const claudeOnlyTool of [
@@ -240,59 +238,39 @@ function authoringInstructionIssues(sources) {
   ]) {
     if (codexProjection.includes(claudeOnlyTool)) issues.push(`codex-claude-tool-${claudeOnlyTool}`);
   }
-  if ((sources.get("semanticAuthority") || "").includes("requires explicit promoted machine semantic authority")) {
-    for (const key of ["skill", "specMaker", "claudeState", "codexState", "claudeRuntime", "codexRuntime"]) {
-      const projection = sources.get(key) || "";
-      if (!projection.includes("semantic_model")
-        || !/explicit installed\s+machine semantic-sync step/.test(projection)
-        || !/round-trip/.test(projection)) {
-        issues.push(`semantic-model-promotion-drift-${key}`);
-      }
-    }
-  }
   return issues;
 }
 
 async function runAuthoringInstructionContractTests(fail) {
-  const ruleRoot = join(packageRoot, "src/claude/skills/specs/rules");
   const load = (relativePath) => readFile(join(packageRoot, relativePath), "utf8");
   const sources = new Map(await Promise.all([
     ["skill", "src/claude/skills/specs/SKILL.md"],
-    ["discoveryLight", "src/claude/skills/specs/rules/design-discovery-light.md"],
-    ["discoveryFull", "src/claude/skills/specs/rules/design-discovery-full.md"],
-    ["reviewRule", "src/claude/skills/specs/rules/design-review.md"],
     ["reviewReference", "src/claude/skills/specs/references/review.md"],
-    ["taskRules", "src/claude/skills/specs/rules/tasks-generation.md"],
-    ["taskScoring", "src/claude/skills/specs/rules/task-scoring-rubric.md"],
-    ["phaseRules", "src/claude/skills/specs/rules/phase-decision-matrix.md"],
+    ["templatesReference", "src/claude/skills/specs/references/templates.md"],
     ["specMaker", "src/claude/agents/spec-maker.md"],
+    ["develop", "src/claude/skills/develop/SKILL.md"],
+    ["sync", "src/claude/skills/sync/SKILL.md"],
     ["claudeState", "src/claude/rules/state-sync.md"],
     ["codexState", "src/codex/rules/state-sync.md"],
     ["claudeRuntime", "src/claude/CLAUDE.md"],
     ["codexRuntime", "src/codex/AGENTS.md"],
-    ["semanticAuthority", "src/claude/scripts/validate-spec-output.cjs"],
+    ["commonRuntime", "src/common/AGENTS.md"],
   ].map(async ([key, relativePath]) => [key, await load(relativePath)])));
 
-  const allRuleFiles = await listFiles(ruleRoot, (name) => name.endsWith(".md"));
-  sources.set("allRules", (await Promise.all(allRuleFiles.map((file) => readFile(file, "utf8")))).join("\n"));
   const issues = authoringInstructionIssues(sources);
   if (issues.length > 0) fail(`canonical instruction lint failed: ${issues.join(", ")}`);
 
   const mutations = [
-    ["default research", "discoveryLight", (value) => `${value}\nAlways search before design.`],
-    ["review cap", "reviewRule", (value) => `${value}\nLimit to 3 blockers.`],
-    ["phase alias", "codexState", (value) => `${value}\nSet current_phase after authoring.`],
-    ["embedded task evidence", "taskRules", (value) => `${value}\n## Evidence\nPASS`],
-    ["task priority marker", "taskRules", (value) => `${value}\nUse (P) for parallel work.`],
-    ["Codex Claude-tool vocabulary", "codexState", (value) => `${value}\nCall TaskUpdate.`],
-    ["Compact default research route", "skill", (value) => value.replace(
-      "| `Compact` | `spec.json`, `requirements.md`, `design.md` | only on a research trigger |",
-      "| `Compact` | `spec.json`, `requirements.md`, `design.md` | create research by default |",
-    )],
-    ["implicit semantic-model promotion", "codexState", (value) => value.replace(
-      /explicit installed\s+machine semantic-sync step/,
-      "implicit author sync",
-    )],
+    ["old specs flags", "skill", (value) => value.replace("<feature-description>", "[--status]")],
+    ["missing C2 gate", "skill", (value) => value.replaceAll("C2", "D2")],
+    ["nested task layout", "templatesReference", (value) => `Use specs/<feature>/tasks/task-01.md.\n${value}`],
+    ["missing evidence citations", "reviewReference", (value) => value.replaceAll("path:line", "citation")],
+    ["missing receipt verification", "templatesReference", (value) => value.replaceAll("Verification: PASS", "Verification: MAYBE")],
+    ["v2.1 authority outside Legacy", "claudeState", (value) => `task_registry is machine authority.\n${value}`],
+    ["Codex Claude-tool vocabulary", "codexState", (value) => `Call TaskUpdate.\n${value}`],
+    ["spec-maker auto dispatch", "specMaker", (value) => value
+      .replaceAll("does not authorize work", "authorizes work")
+      .replaceAll("Do not start Develop", "Start Develop")],
   ];
   for (const [label, key, mutate] of mutations) {
     const mutated = new Map(sources);
@@ -301,8 +279,8 @@ async function runAuthoringInstructionContractTests(fail) {
       fail(`instruction lint accepted ${label} mutation`);
     }
   }
-  console.log("✔ Specs v2.1 artifact router is parsed before discovery defaults");
-  console.log("✔ Specs v2.1 lifecycle, review inventory, and task topology survive mutations");
+  console.log("✔ Specs v3 flat layout, C1-C3 gates, review, and receipt contracts survive mutations");
+  console.log("✔ Specs v2.1 vocabulary is isolated under hierarchical Legacy sections");
   console.log("✔ Claude-to-Codex projection rejects Claude-only tool vocabulary");
   return 8;
 }
@@ -475,16 +453,15 @@ async function runSpecs21ContractTests() {
   const instructionFiles = [
     "src/claude/skills/specs/SKILL.md",
     "src/claude/skills/specs/references/review.md",
-    "src/claude/skills/specs/rules/tasks-generation.md",
+    "src/claude/skills/specs/references/templates.md",
     "src/claude/agents/spec-maker.md",
   ];
   const instructionText = (await Promise.all(instructionFiles.map((file) => (
     readFile(join(packageRoot, file), "utf8")
   )))).join("\n");
   for (const token of [
-    "spec.json", "machine authority", "coordination.boundaries", "case_kind",
-    "decision_refs", "verification_ref", "allowlisted reviewer capability",
-    "draft", "validated", "absent",
+    "specs/<feature>/", "plan.md", "task-NN-", "C1", "C2", "C3",
+    "path:line", "Verification: PASS", "Base:", "Head:",
   ]) {
     if (!instructionText.includes(token)) fail(`instruction model is missing ${token}`);
   }
@@ -496,8 +473,7 @@ async function runSpecs21ContractTests() {
     "src/claude/agents/spec-maker.md",
     "src/claude/skills/specs/SKILL.md",
     "src/claude/skills/specs/references/review.md",
-    "src/claude/skills/specs/rules/design-principles.md",
-    "src/claude/skills/specs/rules/tasks-generation.md",
+    "src/claude/skills/specs/references/templates.md",
     "src/claude/skills/specs/templates/design.md",
     "src/claude/skills/specs/templates/task.md",
     "src/claude/skills/develop/SKILL.md",
@@ -561,20 +537,22 @@ async function runStaticSemanticTests() {
 
   const checks = [
     {
-      label: "hapo:specs hard output contract forbids wrong artifacts",
+      label: "hapo:specs hard output contract requires the flat packet",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        content.includes("## Artifact profiles") &&
-        content.includes("Forbidden authoring artifacts include `init.json`, `spec-state.json`,") &&
-        content.includes("`hydration.md`, `phase-*.md`, and shorthand task filenames."),
+        content.includes("## Primary output layout") &&
+        content.includes("specs/<feature>/") &&
+        content.includes("Task files are flat beside `plan.md`") &&
+        content.includes("Do not create a nested task directory"),
     },
     {
-      label: "spec-maker artifact contract forbids init and hydration artifacts",
+      label: "spec-maker emits only the flat planning packet",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) =>
-        content.includes("## Artifact Contract (MANDATORY)") &&
-        content.includes("Never write `init.json`, `spec-state.json`, `hydration.md`, phase files") &&
-        content.includes("no pointer, file, template load, researcher, web search, or placeholder"),
+        content.includes("### 3. Author the flat packet") &&
+        content.includes("specs/<feature>/plan.md") &&
+        content.includes("Do not create implementation files, receipts, approval records") &&
+        content.includes("Leave every new\ntask `Status: pending`"),
     },
     {
       label: "installer syncs spec-state template and drops init template",
@@ -665,29 +643,33 @@ async function runStaticSemanticTests() {
         content.includes("function hasPattern"),
     },
     {
-      label: "hapo:specs handoff block points to hapo:develop",
-      file: "src/claude/skills/specs/SKILL.md",
+      label: "hapo:specs and spec-maker never auto-dispatch Develop",
+      files: [
+        "src/claude/skills/specs/SKILL.md",
+        "src/claude/agents/spec-maker.md",
+      ],
       assert: (content) =>
-        content.includes("Claude Code: `/hapo:develop <feature>`") &&
-        content.includes("Codex: `$hapo-develop <feature>`"),
+        content.includes("does not authorize work") &&
+        content.includes("Do not start Develop") &&
+        !content.includes("ready_for_implementation"),
     },
     {
-      label: "hapo:specs keeps technical readiness separate from explicit Develop authority",
+      label: "hapo:specs frontmatter exposes only feature-description input",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        !/\/work\b/.test(content) &&
-        !content.includes("After successful explicit approval, use the native handoff") &&
-        /This flag is technical\s+artifact readiness only/.test(content) &&
-        content.includes("Specs never invokes or auto-chains into") &&
-        /only a fresh explicit user\s+invocation of Develop starts implementation/.test(content) &&
-        content.includes("report the optional handoff without invoking it") &&
-        /`--auto` may\s+set technical readiness after every gate passes, but must stop in Specs/.test(content) &&
-        content.includes("stop in Specs"),
+        /^name:\s*hapo:specs$/m.test(content) &&
+        /^description:\s*\S.+$/m.test(content) &&
+        /^argument-hint:\s*["']<feature-description>["']$/m.test(content) &&
+        !/--(?:status|validate|archive)/.test(content),
     },
     {
-      label: "spec-maker forbids legacy work handoff",
+      label: "spec-maker emits a flat packet and stops at handoff",
       file: "src/claude/agents/spec-maker.md",
-      assert: (content) => content.includes("Never suggest `/work`"),
+      assert: (content) =>
+        content.includes("specs/<feature>/plan.md") &&
+        content.includes("task-01-<slug>.md") &&
+        content.includes("Leave every new\ntask `Status: pending`") &&
+        content.includes("Do not start Develop"),
     },
     {
       label: "hapo:question skill answers questions with repo-first evidence",
@@ -723,36 +705,22 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes('"question"'),
     },
     {
-      label: "hapo:specs review keeps readiness technical and failure handoff blocked",
+      label: "hapo:specs review requires evidence, fresh context, and bounded findings",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
-        !content.includes("until the user explicitly approves") &&
-        content.includes("readiness means technical artifact readiness, not permission to implement") &&
-        /preserve unfinished lifecycle\s+state/.test(content) &&
-        content.includes("do not suggest implementation handoff"),
+        content.includes("path:line") &&
+        content.includes("fresh-context") &&
+        /cap[\s\S]{0,80}\b15\b/i.test(content) &&
+        /two[^\n]*rounds/i.test(content),
     },
     {
-      label: "hapo:specs validate hard-gates on deterministic validator",
+      label: "hapo:specs review gives C2 ownership to the user and sweeps every edit",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
-        content.includes("## Deterministic and grounding gates") &&
-        content.includes("node .claude/scripts/validate-spec-output.cjs specs/<feature>") &&
-        content.includes("Non-zero blocks readiness") &&
-        /Exit 0\s+does not override a broken consistency edge/.test(content),
-    },
-    {
-      label: "hapo:specs validate guardrail blocks develop handoff on validator failure",
-      file: "src/claude/skills/specs/SKILL.md",
-      assert: (content) =>
-        /On failure, keep lifecycle state\s+unfinished and report the exact blocker/.test(content),
-    },
-    {
-      label: "hapo:specs validate enforces canonical task identity",
-      file: "src/claude/skills/specs/references/review.md",
-      assert: (content) =>
-        content.includes("`A-R{requirement}-{sequence}-NN` namespace") &&
-        content.includes("one canonical `**Status:**` header") &&
-        content.includes("task_registry[path].status"),
+        content.includes("accept, reject, or revise") &&
+        content.includes("Do not apply findings before that") &&
+        content.includes("consistency sweep") &&
+        content.includes("Reread every file"),
     },
     {
       label: "hapo:specs requirements template has no SDD phase marker",
@@ -760,21 +728,24 @@ async function runStaticSemanticTests() {
       assert: (content) => !content.includes("/sdd:"),
     },
     {
-      label: "hapo:specs feature-description flow continues past init",
+      label: "hapo:specs flow is gated C1-C3 and process-first",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        content.includes("Author requirements, then design, then conditional research/tasks") &&
-        !content.includes("For `--auto` or an early stop, keep `ready_for_implementation=false`") &&
-        /`--auto` may\s+set technical readiness after every gate passes, but must stop in Specs/.test(content) &&
-        content.includes("stop in Specs"),
+        ["C1", "C2", "C3"].every((gate) => content.includes(gate)) &&
+        content.includes("specs/<feature>/") &&
+        /task-(?:NN|\d{2})-(?:\*|<slug>)\.md/.test(content) &&
+        content.includes("## Receipt") &&
+        !content.includes("--auto"),
     },
     {
       label: "parallel-waves reference keeps single-writer, fallback, cap, and cherry-pick recipe",
       file: "src/claude/skills/develop/references/parallel-waves.md",
       assert: (content) =>
-        content.includes("single writer") &&
-        content.includes("sequential fallback") &&
-        content.includes("wave cap") &&
+        content.includes("one state writer") &&
+        content.includes("fall back to the sequential loop") &&
+        content.includes("Clamp `--parallel N` to 1..5") &&
+        content.includes("base_sha") &&
+        content.includes("commit_range") &&
         content.includes("git cherry-pick"),
     },
     {
@@ -801,11 +772,12 @@ async function runStaticSemanticTests() {
         content.includes("never more than 5"),
     },
     {
-      label: "quality-gate carries worktree working-directory note and COLLAPSE isolation",
-      file: "src/claude/skills/develop/references/quality-gate.md",
+      label: "parallel waves isolate worktrees and retain blocked recovery state",
+      file: "src/claude/skills/develop/references/parallel-waves.md",
       assert: (content) =>
-        content.includes("Working directory (parallel mode)") &&
-        content.includes("does not cancel other in-flight"),
+        content.includes("isolated worktree") &&
+        content.includes("keeps its identifiable worktree and branch") &&
+        content.includes("Never\nforce-delete"),
     },
     {
       label: "runtime template documents develop.parallel escape hatch",
@@ -813,61 +785,36 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes('"develop"') && content.includes('"parallel": true'),
     },
     {
-      label: "hapo:specs task rules require planned runtime reachability",
-      file: "src/claude/skills/specs/rules/tasks-generation.md",
+      label: "hapo:specs templates trace acceptance criteria to flat tasks and proof",
+      file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
-        content.includes("## Task shape") &&
-        content.includes("**Scope**") &&
-        content.includes("**Anchors and Ownership**") &&
-        content.includes("**Verification Plan**") &&
-        content.includes("ID | Type | Target | Role | Access |") &&
-        content.includes("real entrypoint/caller for runtime-facing work") &&
-        content.includes("execution owns actual runtime proof"),
+        content.includes("| ID | EARS criterion | Proof |") &&
+        content.includes("| # | Task | Criteria | Primary ownership | Dependencies | Status |") &&
+        content.includes("task-NN-<slug>.md") &&
+        content.includes("## Verification Plan"),
     },
     {
-      label: "hapo:specs separates planning axes and conditional artifacts",
+      label: "hapo:specs templates carry EARS, Example Mapping, and edge-case saturation",
+      file: "src/claude/skills/specs/references/templates.md",
+      assert: (content) =>
+        content.includes("EARS sentence patterns") &&
+        content.includes("Event-driven") &&
+        content.includes("Example Mapping rule") &&
+        content.includes("Twelve edge-case dimensions") &&
+        content.includes("Quality and saturation checks"),
+    },
+    {
+      label: "hapo:specs keeps human decisions at exactly the three named gates",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        content.includes("## Canonical authoring contract") &&
-        content.includes("## Artifact router") &&
-        content.includes("`planning_depth`") &&
-        content.includes("`assurance_level`") &&
-        content.includes("only on a research trigger") &&
-        content.includes("only on a typed topology trigger") &&
-        /Requirement count, size,\s+planning depth, assurance level, risk label, architectural layers, and habit do\s+not trigger tasks/.test(content),
+        content.includes("C1 — Scope") &&
+        content.includes("C2 — Findings") &&
+        content.includes("C3 — Done") &&
+        content.includes("Ask once at each gate") &&
+        content.includes("Do not ask for routine implementation choices"),
     },
     {
-      label: "hapo:specs ask-user gate matrix protects user-owned decisions",
-      file: "src/claude/skills/specs/references/ask-user-question-gates.md",
-      assert: (content) =>
-        content.includes("# AskUserQuestion Gate Matrix") &&
-        content.includes("`repository_fact`: investigate and ground") &&
-        content.includes("Do not ask the user to supply a discoverable fact") &&
-        content.includes("`reversible_assumption`: choose the simplest engineering option") &&
-        content.includes("bounded reversal boundary") &&
-        content.includes("`user_owned`: HOLD and ASK") &&
-        content.includes("product, scope, security, data, or") &&
-        content.includes("Every unresolved `user_owned` entry blocks readiness") &&
-        content.includes("Do not mark\n  `ready_for_implementation = true`") &&
-        !/\| Architecture tie \|[^\n]*\| Yes \|/.test(content) &&
-        !/\| Evidence gap \|[^\n]*\| Yes \|/.test(content),
-    },
-    {
-      label: "hapo:specs keeps task structure conditional and scoring advisory",
-      files: [
-        "src/claude/skills/specs/rules/phase-decision-matrix.md",
-        "src/claude/skills/specs/rules/task-scoring-rubric.md",
-        "src/claude/skills/specs/rules/tasks-generation.md",
-      ],
-      assert: (content) =>
-        content.includes("Tasks and phases are conditional structure") &&
-        content.includes("Create a task only when at least one boundary is real") &&
-        content.includes("Task Scoring Rubric (optional advisory)") &&
-        content.includes("it never changes Direct/Standard/Critical") &&
-        /Full depth\s+does not activate the gate by itself/.test(content),
-    },
-    {
-      label: "hapo:specs task template uses the Specs v2.1 plan contract",
+      label: "legacy kernel task template keeps the Specs v2.1 plan contract",
       file: "src/claude/skills/specs/templates/task.md",
       assert: (content) =>
         content.includes("**Status:** pending") &&
@@ -881,16 +828,6 @@ async function runStaticSemanticTests() {
         content.includes("## Verification Plan") &&
         !content.includes("## Evidence") &&
         !content.includes("## Completion Criteria"),
-    },
-    {
-      label: "hapo:specs loads task authoring only after the v2 task gate",
-      file: "src/claude/skills/specs/SKILL.md",
-      assert: (content) =>
-        content.includes("Load `rules/tasks-generation.md` and `templates/task.md` only when") &&
-        content.includes("typed topology trigger exists") &&
-        content.includes("Task triggers are typed ownership, dependency, transition, proof, or parallel") &&
-        content.includes("Each task has exactly seven H2 sections") &&
-        content.includes("Typed `coordination.boundaries` entries"),
     },
     {
       label: "spec validator enforces Specs v2.1 task-plan sections",
@@ -911,57 +848,55 @@ async function runStaticSemanticTests() {
         content.includes("validation.status is not completed"),
     },
     {
-      label: "hapo:specs readiness runs structural and grounding gates",
-      file: "src/claude/skills/specs/SKILL.md",
+      label: "hapo:specs inline receipt is executable and provenance-bound",
+      file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
-        content.includes("validate-spec-output.cjs") &&
-        content.includes("Run final-byte validation and grounding for every durable spec") &&
-        !content.includes("Run grounding for task-bearing or otherwise anchor-grounded profiles") &&
-        content.includes("Exit 0 proves only implemented structural/grounding checks") &&
-        content.includes("node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>") &&
-        /explicit installed\s+machine semantic-sync step/.test(content) &&
-        content.includes("The installed atomic finalizer may set `ready_for_implementation = true`") &&
-        content.includes("Authors\nand reviewers never directly write or promote those authority fields"),
+        content.includes("## Canonical inline Receipt") &&
+        content.includes("Verification: PASS") &&
+        content.includes("Command:") &&
+        content.includes("Exit: 0") &&
+        content.includes("Base:") &&
+        content.includes("Head:") &&
+        content.includes("```text"),
     },
     {
-      label: "spec-maker separates planned verification from execution authority",
+      label: "spec-maker separates planning from implementation and proof",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) =>
-        content.includes("validate-spec-output.cjs") &&
-        /Planned verification is not\s+execution evidence/.test(content) &&
-        content.includes("author never fabricates or directly writes that conclusion") &&
-        content.includes("Exit 0 proves only implemented deterministic checks") &&
-        content.includes("Technical readiness differs from closeout"),
+        content.includes("it is not an implementation") &&
+        content.includes("does not authorize work") &&
+        content.includes("Do not create implementation files, receipts") &&
+        content.includes("Do not start Develop"),
     },
     {
-      label: "hapo:develop scouts every task and enforces scope fidelity",
+      label: "hapo:develop scouts reachability and enforces task scope",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
-        content.includes("<SCOPE-FIDELITY>") &&
-        content.includes("Scout depth follows assurance") &&
-        content.includes("Final Integration Scout"),
+        content.includes("### 1. Scout") &&
+        content.includes("Trace entrypoints, callers, dependents") &&
+        content.includes("Honor Scope, Ownership, Acceptance, and Dependencies") &&
+        content.includes("feature-level integration"),
     },
     {
       label: "hapo:develop supports explicit flash mode",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("[--flash]") &&
-        content.includes("### 3. Flash Mode") &&
-        content.toLowerCase().includes("skip dedicated test suites") &&
+        content.includes("### Flash (`--flash`)") &&
+        content.toLowerCase().includes("skip dedicated tests") &&
         content.includes("FLASH_UNVERIFIED") &&
         content.includes("awaiting /hapo:test <feature>") &&
-        content.includes("never claim `Test PASS`"),
+        content.includes("do not unblock dependents"),
     },
     {
       label: "hapo:develop makes implementation notes opt-in",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
-        content.includes("implementation-notes.html") &&
         content.includes("--notes` is opt-in") &&
         !content.includes("--no-notes") &&
         content.includes("references/implementation-notes-template.html") &&
-        content.includes("scope-escape") &&
-        content.includes("loaded only with `--notes`"),
+        content.includes("scope exceptions") &&
+        content.includes("Never create it by default"),
     },
     {
       label: "hapo:develop implementation notes template is self-contained and block-based",
@@ -979,43 +914,41 @@ async function runStaticSemanticTests() {
         !content.includes("http://"),
     },
     {
-      label: "hapo:develop quality gate separates spec compliance and code quality",
+      label: "hapo:develop quality gate separates proof, review, and closeout owners",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
-        content.includes("Spec compliance review") &&
-        content.includes("Correctness and security review") &&
-        content.includes("Reachability Failure"),
+        content.includes("Test owner") &&
+        content.includes("Review owner") &&
+        content.includes("Closeout owner") &&
+        content.includes("reachability failure"),
     },
     {
       label: "hapo:develop quality gate has flash bypass semantics",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
-        content.includes("## Flash Gate (`--flash`)") &&
+        content.includes("## Flash gate") &&
         content.includes("Tests: skipped by user request") &&
         content.includes("Evidence: FLASH_UNVERIFIED") &&
-        content.includes("Do not report `Test PASS`") &&
-        content.includes("preflight=<pass|skipped>"),
+        content.includes("does not write a PASS receipt") &&
+        content.includes("sync-finalize"),
     },
     {
-      label: "P2 lane, lifecycle, and proof ownership contracts stay explicit",
+      label: "process-first Develop and Sync keep proof ownership explicit with isolated Legacy vocabulary",
       files: [
-        "src/claude/skills/specs/SKILL.md",
         "src/claude/skills/develop/SKILL.md",
-        "src/claude/skills/test/SKILL.md",
-        "src/claude/skills/code-review/SKILL.md",
+        "src/claude/skills/sync/SKILL.md",
         "src/claude/skills/develop/references/quality-gate.md",
       ],
-      assert: (content) =>
-        content.includes("Direct") &&
-        content.includes("Standard") &&
-        content.includes("Critical") &&
-        content.includes("execution_tier") &&
-        content.includes("read-only") &&
+      assert: (content) => {
+        const primary = outsideLegacySections(content);
+        return content.includes("inline `## Receipt`") &&
+          content.includes("Test owner") &&
+          content.includes("Review owner") &&
+          content.includes("Closeout owner") &&
+          content.includes("Status: done") &&
         content.includes("PASS_WITH_WARNINGS") &&
-        content.includes("canonical execution receipt") &&
-        content.includes("PENDING") &&
-        content.includes("Audit: PASS") &&
-        /(?:does not create or claim|never creates or claims)\s+execution proof/.test(content),
+          !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(primary);
+      },
     },
     {
       label: "inspect uses only internal Explore discovery",
@@ -1027,13 +960,13 @@ async function runStaticSemanticTests() {
         !content.includes("`ext`"),
     },
     {
-      label: "quality gate uses severity verdict instead of numeric score",
+      label: "quality gate uses shared verdicts instead of numeric scores",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
-        /no\s+blocking Medium finding/i.test(content) &&
-        content.includes("Finding count never selects review depth") &&
-        !content.includes("at most one Medium") &&
-        !content.includes("9.5"),
+        content.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED") &&
+        content.includes("Only literal PASS") &&
+        content.includes("Review depth follows risk") &&
+        !/\b(?:9\.5|score\s*[><=])\b/.test(content),
     },
     {
       label: "inspect runtime config has no legacy Gemini model key",
@@ -1177,30 +1110,28 @@ async function runStaticSemanticTests() {
         content.includes("Do not write \"user selected\""),
     },
     {
-      label: "Claude runtime template exposes Specs v2 truth",
+      label: "Claude runtime template exposes process-first Specs truth",
       file: "src/claude/CLAUDE.md",
       assert: (content) =>
-        content.includes("planning_depth") &&
-        content.includes("assurance_level") &&
-        content.includes("Anchors and Ownership") &&
-        content.includes("coordination.boundaries") &&
-        content.includes("structural checks only") &&
         content.includes("## Claude Code runtime") &&
-        (content.match(/Specs v2 keeps `planning_depth`/g) || []).length === 1 &&
-        (content.match(/Validator exit 0 proves implemented structural checks only/g) || []).length === 1,
+        content.includes("/hapo:specs") &&
+        content.includes("specs/<feature>/plan.md") &&
+        content.includes("task-NN-*.md") &&
+        content.includes("inline `## Receipt`") &&
+        content.includes("### Legacy Specs compatibility") &&
+        !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(outsideLegacySections(content)),
     },
     {
-      label: "Codex runtime template exposes Specs v2 truth",
+      label: "Codex runtime template exposes process-first Specs truth",
       file: "src/codex/AGENTS.md",
       assert: (content) =>
-        content.includes("planning_depth") &&
-        content.includes("assurance_level") &&
-        content.includes("Anchors and Ownership") &&
-        content.includes("coordination.boundaries") &&
-        content.includes("structural checks only") &&
         content.includes("## Codex runtime") &&
-        (content.match(/Specs v2 keeps `planning_depth`/g) || []).length === 1 &&
-        (content.match(/Validator exit 0 proves implemented structural checks only/g) || []).length === 1,
+        content.includes("$hapo-specs") &&
+        content.includes("specs/<feature>/plan.md") &&
+        content.includes("task-NN-*.md") &&
+        content.includes("inline `## Receipt`") &&
+        content.includes("### Legacy Specs compatibility") &&
+        !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(outsideLegacySections(content)),
     },
     {
       label: "Claude wrapper keeps runtime delta without template Language or Addressing",
@@ -1243,13 +1174,15 @@ async function runStaticSemanticTests() {
         !/slice\(\s*0\s*,\s*12\s*\)/.test(content),
     },
     {
-      label: "shared resolver keeps explicit target and no first-match behavior",
-      files: ["src/claude/scripts/spec-resolver.cjs", "src/claude/skills/specs/SKILL.md"],
+      label: "shared resolver keeps explicit target and fail-closed ambiguity",
+      file: "src/claude/scripts/spec-resolver.cjs",
       assert: (content) =>
         content.includes("extractExplicitTarget") &&
-        content.includes("multiple active specs") &&
+        content.includes("'multiple_active'") &&
         content.includes("guess from the first active directory") &&
-        content.includes("Ambiguous active candidates fail closed"),
+        content.includes("Provide explicit feature") &&
+        content.includes("if (active.length === 1) return active[0]") &&
+        content.includes("candidates: active.map"),
     },
     {
       label: "rules hooks stay silent when runtime.json is absent",
@@ -1465,6 +1398,31 @@ async function runStaticSemanticTests() {
       assert: (content) => content.trimEnd().split("\n").length >= 140 && content.trimEnd().split("\n").length <= 200,
     },
     {
+      label: "hapo:specs complete shipped bundle stays at or below 750 lines",
+      files: [
+        "src/claude/skills/specs/SKILL.md",
+        "src/claude/skills/specs/references/review.md",
+        "src/claude/skills/specs/references/templates.md",
+        "src/claude/skills/specs/templates/design.md",
+        "src/claude/skills/specs/templates/requirements-init.md",
+        "src/claude/skills/specs/templates/requirements.md",
+        "src/claude/skills/specs/templates/research.md",
+        "src/claude/skills/specs/templates/spec-state.json",
+        "src/claude/skills/specs/templates/task.md",
+      ],
+      assert: (content) => content.trimEnd().split("\n").length - 8 <= 750,
+    },
+    {
+      label: "process-first Develop and Sync core stays at or below 400 lines",
+      files: [
+        "src/claude/skills/develop/SKILL.md",
+        "src/claude/skills/develop/references/parallel-waves.md",
+        "src/claude/skills/sync/SKILL.md",
+        "src/claude/skills/sync/references/sync-protocols.md",
+      ],
+      assert: (content) => content.trimEnd().split("\n").length - 3 <= 400,
+    },
+    {
       label: "docs-sync.cjs has no shouting banners",
       file: "src/claude/hooks/docs-sync.cjs",
       assert: (content) =>
@@ -1492,39 +1450,31 @@ async function runStaticSemanticTests() {
         content.includes("colors.shouldUseColor"),
     },
     {
-      // Per-surface authoring-contract: canonical retention/API in design-principles (not aggregate, not webhook-hardcoded)
-      label: "design-principles canonical retention/API is per-surface and domain-generic",
-      file: "src/claude/skills/specs/rules/design-principles.md",
+      label: "templates expose all five EARS forms and measurable wording",
+      file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
-        content.includes("clock anchor") &&
-        content.includes("clock source") &&
-        content.includes("timezone/precision") &&
-        content.includes("comparator/inclusivity") &&
-        content.includes("enforcement boundary") &&
-        content.includes("wrong-clock") &&
-        content.includes("method, route") &&
-        content.includes("idempotency") &&
-        !content.toLowerCase().includes("webhook"),
+        ["Ubiquitous", "Event-driven", "State-driven", "Unwanted behavior", "Optional feature"]
+          .every((token) => content.includes(token)) &&
+        content.includes("measurable threshold or observation"),
     },
     {
-      // Per-surface short reminder in SKILL (canonical is design-principles)
-      label: "SKILL routes retention/API to canonical design-principles (per-surface)",
-      file: "src/claude/skills/specs/SKILL.md",
-      assert: (content) =>
-        content.includes("For retention/lifecycle and API contracts, follow `rules/design-principles.md`") &&
-        content.includes("clock anchor/source/timezone") &&
-        content.includes("method/route/auth") &&
-        !content.toLowerCase().includes("webhook"),
+      label: "templates map ambiguous rules through examples instead of guesses",
+      file: "src/claude/skills/specs/references/templates.md",
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("When the expected outcome is uncertain, write a question") &&
+          normalized.includes("two or three examples") &&
+          normalized.includes("zero executed tests") &&
+          normalized.includes("earlier session");
+      },
     },
     {
-      // Per-surface retention lens in review
-      label: "review retention lens is per-surface and domain-generic",
+      label: "review contract keeps evidence-backed saturation and runtime-only third round",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
-        content.includes("clock anchor/source/timezone/precision") &&
-        content.includes("cutoff comparator/inclusivity") &&
-        content.includes("wrong clock") &&
-        !content.toLowerCase().includes("webhook"),
+        content.includes("Review saturation") &&
+        content.includes("Round three requires runtime evidence") &&
+        content.includes("larger useful set means the plan should be split"),
     },
     {
       // Behavioral: structured projection — task template Compact core has one anchor, proof conditional (parsed, not phrase-aggregate)
@@ -1559,54 +1509,47 @@ async function runStaticSemanticTests() {
       },
     },
     {
-      // Per-surface docs/proof and two-review advisory in SKILL
-      label: "SKILL docs-only and two-review advisory is per-surface",
+      label: "Specs skill keeps scope and proof boundaries explicit",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) => {
         const norm = content.toLowerCase().replace(/\s+/g, " ");
-        return norm.includes("never creates or updates docs") &&
-          norm.includes("never fabricate") &&
-          content.includes("Two-review target is advisory") &&
-          norm.includes("budgets never override correctness");
+        return norm.includes("one or two files") &&
+          norm.includes("do not create a plan merely because this skill was mentioned") &&
+          norm.includes("placeholder or remembered output is not evidence") &&
+          content.includes("Two pre-code review rounds maximum");
       },
     },
     {
-      // Per-surface docs/proof and two-review advisory in review
-      label: "review docs-only and two-review advisory is per-surface",
+      label: "review keeps user decisions and the bounded paper stop",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) => {
         const norm = content.toLowerCase().replace(/\s+/g, " ");
-        return norm.includes("never creates or updates docs") &&
-          content.includes("Two-review target is advisory") &&
-          norm.includes("budgets never override correctness");
+        return norm.includes("the user chooses accept, reject, or revise") &&
+          norm.includes("do not apply findings before that decision") &&
+          norm.includes("allow at most two review-and-repair rounds") &&
+          norm.includes("round three requires runtime evidence");
       },
     },
     {
-      // Per-surface spec-maker docs/proof and two-review and contradiction resolution
-      label: "spec-maker docs-only, two-review and scaffold contradiction is per-surface",
+      label: "spec-maker keeps planning separate from dispatch and proof",
       file: "src/claude/agents/spec-maker.md",
       assert: (content) => {
         const norm = content.toLowerCase().replace(/\s+/g, " ");
-        return content.includes("never directly write or promote") &&
-          norm.includes("may persist legitimate scope/decision/topology") &&
-          norm.includes("never creates or updates docs") &&
-          content.includes("Two-review target is advisory");
+        return norm.includes("it is not an implementation and does not authorize work") &&
+          norm.includes("do not create implementation files, receipts") &&
+          norm.includes("do not start develop") &&
+          norm.includes("leave every new task `status: pending`");
       },
     },
     {
-      // Public V example is parsed as canonical Criteria/Owner (behavioral, not phrase-aggregate)
-      label: "public V example in specs-usage-guide parses as canonical Criteria/Owner (behavioral)",
+      label: "specs-usage-guide documents the flat packet and canonical inline receipt",
       file: "../../docs/specs-usage-guide.md",
-      assert: (content) => {
-        const vMatch = content.match(/^- \*\*V1\*\*:.*$/m);
-        if (!vMatch) return false;
-        const vLine = vMatch[0];
-        const errors = [];
-        const probe = "## Verification Definitions\n" + vLine + "\n";
-        const defs = parseVerificationDefinitions(probe, errors);
-        const v1 = defs.get("V1");
-        return errors.length === 0 && v1 && v1.subject_criteria.length === 1 && v1.subject_criteria[0] === "R1.1" && v1.subject_owner === "A-D-01" && v1.decision_refs.includes("D1");
-      },
+      assert: (content) =>
+        content.includes("specs/<feature>/plan.md") &&
+        content.includes("task-NN-<slug>.md") &&
+        ["C1 — Scope", "C2 — Findings", "C3 — Done"].every((gate) => content.includes(gate)) &&
+        ["Verification: PASS", "Command:", "Exit: 0", "Base:", "Head:"]
+          .every((field) => content.includes(field)),
     },
     {
       // Installed Codex projection is verified via transform, not raw source path (behavioral)
@@ -1621,13 +1564,12 @@ async function runStaticSemanticTests() {
           const codexLib = require(join(packageRoot, "bin/lib/codex-install.js"));
           const normalize = codexLib.normalizeCodexBody;
           if (typeof normalize === "function") {
-            const sample = "node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result review.json";
-            const transformed = normalize(sample, "src/claude/skills/specs/SKILL.md");
-            return transformed.includes("node .codex/scripts/spec-readiness.cjs") && !transformed.includes("node .claude/scripts/spec-readiness.cjs");
+            const sample = "/hapo:develop <feature> --parallel";
+            const transformed = normalize(sample, "src/claude/skills/develop/SKILL.md");
+            return transformed.includes("$hapo-develop <feature> --parallel") && !transformed.includes("/hapo:develop");
           }
         } catch {}
-        // Fallback: check that review and SKILL now contain both Claude and Codex installed commands (per-surface docs check elsewhere)
-        return content.includes("node .codex/scripts/") && content.includes("node .claude/scripts/");
+        return false;
       },
     },
     {
@@ -1644,21 +1586,21 @@ async function runStaticSemanticTests() {
         content.includes("không phải để cắt"),
     },
     {
-      label: "specs-usage-guide benchmark targets are per-surface explicit",
+      label: "specs-usage-guide teaches Develop and Sync without leaking v2.1 vocabulary",
       file: "../../docs/specs-usage-guide.md",
       assert: (content) =>
-        content.includes("≤10 phút") &&
-        content.includes("≤40 phút") &&
-        content.includes("500K tokens") &&
-        content.includes("không phải để cắt"),
+        content.includes("## Develop và Sync") &&
+        content.includes("sync-finalize") &&
+        content.includes("## Legacy compatibility") &&
+        !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(outsideLegacySections(content)),
     },
     {
-      label: "Direct and Compact stay light and spec.json remains machine authority (per-surface)",
+      label: "Specs primary flow is file-first while legacy kernel remains isolated",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        content.includes("Keep `Direct`") &&
-        content.includes("machine authority") &&
-        !content.toLowerCase().includes("webhook"),
+        content.includes("Files are state") &&
+        content.includes("## Legacy compatibility") &&
+        !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(outsideLegacySections(content)),
     },
   ];
 
@@ -2350,7 +2292,8 @@ async function runWave1InstructionFixtureTests() {
     const required = [skillPath, "macOS/Linux", "Windows"];
     if (includeCore) {
       required.push(
-        "For Specs v2.1, treat `spec.json` as machine authority and Markdown as human projections.",
+        "For process-first Specs, `plan.md` and flat `task-NN-*.md` files are",
+        "keeps canonical execution proof in its final inline `## Receipt`",
         "NO_TESTS",
         "0 tests + exit 0",
       );
@@ -2368,7 +2311,8 @@ async function runWave1InstructionFixtureTests() {
     const content = await readFile(join(root, "AGENTS.md"), "utf8");
     for (const text of [
       "Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.",
-      "For Specs v2.1, treat `spec.json` as machine authority and Markdown as human projections.",
+      "For process-first Specs, `plan.md` and flat `task-NN-*.md` files are",
+      "Specs uses three user decisions: C1 for scope, C2 for adversarial findings,",
       "When a hook blocks an action, that is an instruction boundary — do not work around it.",
       "Verification comes from the project's hooks and validators, not from spawning more agents.",
       "NO_TESTS",
@@ -2536,7 +2480,7 @@ async function runWave1InstructionFixtureTests() {
     ]) {
       if (counts(agentsBefore, marker) !== 1) fail(`combined install has duplicate/missing ${label} marker`);
     }
-    if (counts(agentsBefore, "For Specs v2.1, treat `spec.json` as machine authority") !== 1) {
+    if (counts(agentsBefore, "For process-first Specs, `plan.md` and flat `task-NN-\\*.md` files are") !== 1) {
       fail("shared core duplicated in combined install");
     }
     if (counts(agentsBefore, "cafekit:lang") !== 1) fail("combined install must have one managed language marker");
@@ -2567,7 +2511,7 @@ async function runWave1InstructionFixtureTests() {
     const claudeAfter = await readFile(join(combined, "CLAUDE.md"), "utf8");
     if (agentsAfter !== agentsBefore) fail("combined second install changed AGENTS.md bytes");
     if (claudeAfter !== claudeBefore) fail("combined second install changed CLAUDE.md bytes");
-    if (counts(agentsAfter, "For Specs v2.1, treat `spec.json` as machine authority") !== 1) {
+    if (counts(agentsAfter, "For process-first Specs, `plan.md` and flat `task-NN-\\*.md` files are") !== 1) {
       fail("combined rerun duplicated shared core");
     }
     if (counts(agentsAfter, "cafekit:lang") !== 1) fail("combined rerun duplicated managed language marker");

@@ -66,6 +66,24 @@ function evidenceBody(text, policy = {}) {
   return lines.slice(start, end).join('\n');
 }
 
+function workflowReceiptBody(text, policy = {}) {
+  const lines = String(text || '').split('\n');
+  const starts = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (/^##\s+Receipt\s*$/.test(lines[index])) starts.push(index + 1);
+  }
+  if (starts.length !== 1) return null;
+
+  const start = starts[0];
+  let end = lines.length;
+  for (let index = start; index < lines.length; index += 1) {
+    const heading = lines[index].match(/^(#{1,6})\s+/);
+    const tap = typeof policy.isTapMetadataHeading === 'function' && policy.isTapMetadataHeading(lines[index]);
+    if (heading && heading[1].length <= 2 && !tap) { end = index; break; }
+  }
+  return lines.slice(start, end).join('\n');
+}
+
 function fieldValues(body, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const matcher = new RegExp(`^\\s*${escaped}\\s*:\\s*(.*?)\\s*$`, 'i');
@@ -74,6 +92,57 @@ function fieldValues(body, name) {
 
 function concrete(value) {
   return typeof value === 'string' && value.trim() !== '' && !/^(?:N\/A|NONE|PENDING|TBD|UNKNOWN|\{\{.*\}\})$/i.test(value.trim());
+}
+
+function normalizedCommand(value) {
+  if (typeof value !== 'string') return null;
+  let command = value.trim();
+  if (/^`[^`\r\n]+`$/.test(command)) command = command.slice(1, -1).trim();
+  if (!concrete(command) || /^<[^>]+>$/.test(command)) return null;
+  return command;
+}
+
+function workflowVerificationCommand(taskText) {
+  const sections = [];
+  let current = null;
+  let fence = null;
+  for (const line of String(taskText || '').split('\n')) {
+    const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (marker) {
+      const kind = marker[1][0];
+      if (fence === null) fence = kind;
+      else if (fence === kind) fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    if (fence === null && /^##\s+Verification Plan\s*$/.test(line)) {
+      current = [];
+      sections.push(current);
+      continue;
+    }
+    if (fence === null && current && /^#{1,2}\s+/.test(line)) {
+      current = null;
+      continue;
+    }
+    if (current) current.push(line);
+  }
+  if (sections.length !== 1) return null;
+  const commands = sections[0]
+    .map((line) => line.match(/^\s*-\s+(?:\*\*Command\*\*|Command)\s*:\s*(.*?)\s*$/i))
+    .filter(Boolean)
+    .map((match) => normalizedCommand(match[1]));
+  return commands.length === 1 ? commands[0] : null;
+}
+
+function workflowCommandFailures(taskText, body) {
+  const planned = workflowVerificationCommand(taskText);
+  const actualValues = [
+    ...fieldValues(body, 'Command'),
+    ...fieldValues(body, 'Commands'),
+  ].map(normalizedCommand);
+  return planned && actualValues.length === 1 && actualValues[0] === planned
+    ? []
+    : ['command_identity'];
 }
 
 function plannedField(taskText, name) {
@@ -149,6 +218,67 @@ function checkTaskReceipt(featureDir, taskPath, task, runtimeContext, policy) {
   return { ...proof, failures: [...new Set(failures)] };
 }
 
+function checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy) {
+  const safeTaskPath = typeof taskPath === 'string' && /^task-[A-Za-z0-9][A-Za-z0-9._-]*\.md$/.test(taskPath);
+  if (!safeTaskPath) return { status: 'unsafe', taskPath, failures: ['unsafe_path'] };
+  const taskFile = safeRead(featureDir, taskPath);
+  if (taskFile.status !== 'ok') {
+    return { ...taskFile, taskPath, failures: [taskFile.status === 'unsafe' ? 'unsafe_path' : 'missing_receipt'] };
+  }
+
+  const taskText = taskFile.bytes.toString('utf8');
+  const statusLines = [...taskText.matchAll(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/gim)];
+  const body = workflowReceiptBody(taskText, policy);
+  const failures = [];
+  if (statusLines.length !== 1 || statusLines[0][1].toLowerCase().replaceAll('-', '_') !== 'done') {
+    failures.push('task_status');
+  }
+  if (body === null) {
+    failures.push('missing_receipt');
+  } else {
+    const options = typeof policy?.receiptValidatorOptions === 'function'
+      ? policy.receiptValidatorOptions({}, { runtimeContext, requireProvenanceBinding: true })
+      : { requireProvenanceBinding: true };
+    failures.push(...canonicalFailures(body, {}, runtimeContext, policy));
+    failures.push(...workflowCommandFailures(taskText, body));
+    if (!/```[^\n]*\n[\s\S]*?\S[\s\S]*?\n```/m.test(body)) failures.push('command_output');
+    if (!options.expectedProvenance) failures.push('provenance');
+  }
+  return {
+    status: failures.length === 0 ? 'ok' : 'invalid',
+    source: 'inline',
+    body,
+    receiptBytes: body === null ? null : Buffer.from(body),
+    taskFile,
+    taskText,
+    taskPath,
+    failures: [...new Set(failures)],
+  };
+}
+
+function checkWorkflowReceiptSet(candidates, projectRoot, runtimeSession, policy) {
+  const failures = [];
+  for (const candidate of Array.isArray(candidates) ? candidates : []) {
+    const runtimeContext = policy.deriveRuntimeContext({
+      projectRoot,
+      specsRoot: candidate.specsDir,
+      specFile: candidate.stateFile || candidate.planFile,
+      featureName: candidate.featureName,
+      runtimeSession,
+    });
+    const doneTasks = Object.keys(candidate.taskRegistry || {}).filter((taskPath) => (
+      candidate.taskRegistry[taskPath]?.status === 'done'
+    ));
+    for (const taskPath of doneTasks) {
+      const proof = checkWorkflowTaskReceipt(candidate.featureDir, taskPath, runtimeContext, policy);
+      if (proof.failures.length > 0) {
+        failures.push({ featureName: candidate.featureName, taskPath, failures: proof.failures });
+      }
+    }
+  }
+  return { failures };
+}
+
 function checkFeatureReceipt(featureDir, runtimeContext, policy) {
   const receipt = safeRead(featureDir, 'feature-receipt.md');
   if (receipt.status !== 'ok') return { status: receipt.status, failures: [receipt.status === 'unsafe' ? 'unsafe_path' : 'missing_receipt'] };
@@ -159,4 +289,14 @@ function checkFeatureReceipt(featureDir, runtimeContext, policy) {
   return { status: 'ok', source: 'feature', body, receiptBytes: receipt.bytes, receiptFile: receipt, failures: [...new Set(failures)] };
 }
 
-module.exports = { canonicalTaskReceiptPath, checkFeatureReceipt, checkTaskReceipt, evidenceBody, readTaskProof, safeRead };
+module.exports = {
+  canonicalTaskReceiptPath,
+  checkFeatureReceipt,
+  checkTaskReceipt,
+  checkWorkflowReceiptSet,
+  checkWorkflowTaskReceipt,
+  evidenceBody,
+  readTaskProof,
+  safeRead,
+  workflowReceiptBody,
+};

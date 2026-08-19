@@ -317,7 +317,8 @@ function assertCombinedInstructionIsolation(root) {
   assert.match(core, /runtime-neutral/i);
   assert.match(core, /fail-safe/i);
   assert.match(codexBlock, /owned by Codex/i);
-  assert.match(codexBlock, /ignore this entire Codex block/i);
+  assert.match(codexBlock, /If you are Claude Code or any other runtime, ignore this entire Codex block/i);
+  assert.doesNotMatch(codexBlock, /If you are Codex CLI or any other runtime, ignore this entire Codex block/i);
   assert.doesNotMatch(core, /\$hapo-|hapo:/i);
   assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT CODEX /);
 }
@@ -858,7 +859,9 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
           assertInstalledScripts(project, platform);
           assertTransforms(project, platform);
         }
-        if (matrixCase.platforms.length === 3) assertCombinedInstructionIsolation(project);
+        if (matrixCase.platforms.includes('claude') && matrixCase.platforms.includes('codex')) {
+          assertCombinedInstructionIsolation(project);
+        }
         if (matrixCase.rerun) {
           fs.appendFileSync(path.join(project, 'AGENTS.md'), '\n## User matrix note\nKeep this exact.\n');
           fs.appendFileSync(path.join(project, 'CLAUDE.md'), '\n## User Claude matrix note\nKeep this exact.\n');

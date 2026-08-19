@@ -7,7 +7,6 @@ const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
 const { copyRulesDirectory } = require('./claude-runtime');
 const {
-  normalizeCodexBody,
   managedRange,
   upsertManagedCodexBlock
 } = require('../lib/codex-install');
@@ -138,7 +137,10 @@ function installManagedAgentsMd(ctx) {
     ctx.results.errors++;
     return;
   }
-  const block = normalizeCodexBody(fs.readFileSync(runtimeSource, 'utf8'));
+  // This template is already Codex-native. Running it through the generic
+  // Claude-to-Codex converter corrupts intentional cross-runtime wording such
+  // as the fail-safe instruction for Claude Code to ignore this block.
+  const block = fs.readFileSync(runtimeSource, 'utf8');
   const next = upsertManagedCodexBlock(existing, block);
   const action = !exists ? 'created' : next === existing ? 'unchanged' : 'updated';
 

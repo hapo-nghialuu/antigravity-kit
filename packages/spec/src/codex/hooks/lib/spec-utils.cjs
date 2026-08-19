@@ -100,6 +100,29 @@ function resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath) 
   });
 }
 
+function resolveWorkflowCandidate(projectRoot, runtime, explicitFeature, explicitPath) {
+  const resolver = sharedResolver();
+  if (typeof resolver.resolveWorkflowCandidate !== 'function') {
+    return resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath);
+  }
+  if (projectRoot && typeof projectRoot === 'object') {
+    return resolver.resolveWorkflowCandidate(projectRoot);
+  }
+  return resolver.resolveWorkflowCandidate({
+    projectRoot,
+    runtime,
+    explicitFeature,
+    explicitPath,
+  });
+}
+
+function refineWorkflowGateResolution(resolved) {
+  const resolver = sharedResolver();
+  return typeof resolver.refineWorkflowGateResolution === 'function'
+    ? resolver.refineWorkflowGateResolution(resolved)
+    : resolved;
+}
+
 function findActiveSpec(projectRoot, runtime) {
   const resolved = resolveActiveSpec(projectRoot, runtime);
   if (!resolved) return null;
@@ -122,6 +145,8 @@ module.exports = {
   findAllActiveSpecs,
   findAllSpecCandidates,
   resolveActiveSpec,
+  resolveWorkflowCandidate,
+  refineWorkflowGateResolution,
   specsDirectory,
   taskStatusMap,
 };

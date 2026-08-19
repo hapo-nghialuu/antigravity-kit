@@ -3,7 +3,14 @@
 ## Shared CafeKit instructions
 
 - Deliver exactly what was asked. Do not expand, polish, or add optional work beyond the request. Match existing code style and structure.
-- For Specs v2.1, treat `spec.json` as machine authority and Markdown as human projections. Keep task status and plan synchronized with `task_registry`; derive ownership, dependencies, transitions, proof, and parallelism only from typed `coordination.boundaries`. Never invent proof, readiness, approval, or audit state.
+- For process-first Specs, `plan.md` and flat `task-NN-*.md` files are
+  canonical, hand-editable state. Each task has exactly one `Status:` field and
+  keeps canonical execution proof in its final inline `## Receipt`.
+- Specs uses three user decisions: C1 for scope, C2 for adversarial findings,
+  and C3 for completion. Planning never starts implementation; implementation
+  requires a new explicit user invocation.
+- Synchronize only observed task state with surgical edits. Never invent proof,
+  readiness, approval, review independence, or completed work.
 - `NO_TESTS` and `0 tests + exit 0` do not pass when the task requires automated tests.
 - When a hook blocks an action, that is an instruction boundary — do not work around it.
 - Use conventional commits. Do not add AI attribution unless requested.

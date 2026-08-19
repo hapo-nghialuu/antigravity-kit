@@ -17,10 +17,17 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Fixed
+- **Codex managed-block ownership** (2026-08-20): native `src/codex/AGENTS.md` is installed verbatim so its foreign-runtime ignore clause cannot be inverted by the generic Claude-to-Codex converter; fresh and rerun installer tests now assert the exact actor on both sides of the boundary.
+- **Process-v3 Stop proof binding** (2026-08-20): Claude and Codex now require each inline Receipt command to match the task's exact Verification Plan command. A single unfinished packet wins over completed history, while an all-completed packet set is revalidated without a permanent `multiple_persisted` Stop lock.
+
 ### Removed
 - **OpenCode support** (2026-08-19): gỡ đường cài, plugin runtime `src/opencode`, dependency, test và tài liệu OpenCode. Bản cuối hỗ trợ OpenCode là 0.16.x. Các entry lịch sử bên dưới giữ nguyên vì ghi lại sự thật đã xảy ra tại thời điểm đó.
 
 ### Changed
+- **Specs process-first v3 swap** (2026-08-19): tài liệu `hapo:specs` chuyển sang packet phẳng `specs/<feature>/plan.md` + `task-NN-<slug>.md`, dùng C1/C2/C3 và inline `## Receipt` làm đường chính; legacy adapter chỉ còn là nhánh tương thích.
+- **Archived semantic spec** (2026-08-19): `specs/cafekit-semantic-eval-firewall` được chuyển vào `specs/archive/` như tư liệu lịch sử.
+- **Claude prune follow-up** (2026-08-19): bản cài Claude prune các file payload spec cũ bằng migration manifest. Known limitation: bản upgrade của Codex vẫn còn 15 file mồ côi từ bundle cũ, nhưng fresh install đi đúng inventory mong đợi.
 - **Specs v2 semantic authoring contract**: made “a new implementer does not guess product/architecture decisions” the North Star; split durable planning (`None|Compact|Full`) from assurance (`Routine|Elevated|Strict`), with `Direct|Standard|Critical` retained only as compatibility adapters. Compact/Full share a three-file core and add explicit research, topology-driven tasks, or `spec.json` phase groups only when justified; no phase files or mandatory User Story/scenario boilerplate.
 - **Specs v2 proof boundaries**: task plans now stay concise around typed source anchors and a `Verification Plan`; per-task receipts remain separate execution artifacts and `feature-receipt.md` is final closeout only. Structural validation, factual grounding, and whole-spec semantic/counterexample review are distinct gates; no tool exit alone proves semantic correctness.
 - **Specs v2 platform and benchmark scope**: Claude Code and Codex are the primary v2 acceptance targets without removing broader OpenCode support. Benchmark guidance requires both v2 axes plus the legacy lane, while documenting that current `b1.v1` source still validates lane only and has no implemented axis-schema migration.

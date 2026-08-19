@@ -1,51 +1,44 @@
 # Capability dispatch patterns
 
-This reference is optional. Load it only when the persisted lane requires
-independent capability work. Role names are runtime configuration, not workflow
-policy: resolve them from the installed catalog instead of hardcoding an actor
-name or a sequence in a skill.
+Load this optional reference only when a task benefits from independent
+inspection, implementation, verification, review, or docs capability. Runtime
+role names are configuration, not workflow policy.
 
-## Dispatch contract
+## Dispatch packet
 
-Every dispatch prompt includes:
+Every dispatch includes:
 
-- Work context: the git root of the primary files;
-- Reports path: `<work-context>/plans/reports/`;
-- Plans path: `<work-context>/plans/`;
-- exact task/scope and owned files;
-- lane snapshot, risk/blast-radius obligations, and stop conditions;
-- required output, evidence, and status.
+- work context and reports/plans paths;
+- exact task outcome, scope, acceptance, and dependencies;
+- owned read/write paths and explicit exclusions;
+- risk, blast radius, stop conditions, and required evidence;
+- expected status and handoff format.
 
-Use a capability request such as:
-
-```text
-dispatch(capability="inspection|implementation|verification|review|docs",
-  work_context="<root>",
-  scope="<task or feature>",
-  owned_files=["<paths>"],
-  obligations=["<persisted obligations>"],
-  output="<required packet and evidence>")
-```
-
-The runtime may map a capability to a local role. That mapping must not change
-the lane, add ceremony, or become a new persisted policy field.
+Use one capability per concrete responsibility. The runtime may map it to an
+available local role, but that mapping cannot add scope or weaken proof.
 
 ## Independence and ownership
 
-- Inspection may report entrypoints and blast radius but does not edit source.
-- Implementation edits only the active task scope and does not sync state.
-- Verification is the sole producer of canonical execution proof.
-- Review consumes proof and reports correctness/security/spec findings only.
-- Documentation work is invoked only after a real docs-impact decision.
+- Inspection traces entrypoints and risks without editing source.
+- Implementation edits only granted paths and does not write task state.
+- Verification is the sole producer of executable proof.
+- Review consumes proof and reports findings without claiming execution.
+- Documentation starts only after a real docs-impact decision.
+- The controller alone writes Status and inline Receipt.
 
-Specific-task mode ends after one task. Full-feature mode may continue only
-after the closeout owner synchronizes the current task and finds another
-unblocked task. A capability result marked `PENDING`, `BLOCKED`, or lacking
-provenance cannot be converted into PASS by the controller.
+A specific-task invocation ends after that task. Full-feature execution may
+continue only after the current task is synchronized and the next dependency
+set is recomputed.
 
 ## Safe fallback
 
-If the required capability or isolated workspace is unavailable, keep the
-workflow in `BLOCKED` or run the permitted main-session check. Do not substitute
-a model, profile, or actor silently, and do not claim an independent result
-without an actually independent execution.
+If a required capability or isolated workspace is unavailable, record BLOCKED
+or run only a permitted main-session check. Never silently substitute an actor
+for an independence requirement. A PENDING, BLOCKED, or provenance-free result
+cannot be normalized to PASS.
+
+## Legacy workflow compatibility
+
+When the selected packet is legacy, include its persisted lane snapshot and
+obligations in the dispatch, but do not let workers edit that state or infer an
+independent result from a role label.

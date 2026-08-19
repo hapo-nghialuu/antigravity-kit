@@ -49,11 +49,11 @@
 
 | # | Task | Tiêu chí | Owner chính | Phụ thuộc | Trạng thái |
 |---|---|---|---|---|---|
-| 01 | Thay bundle skill specs + spec-maker agent (xoá 15 file cũ) | R2 | `src/claude/skills/specs/**`, `src/claude/agents/spec-maker.md` | - | pending |
-| 02 | Viết lại develop/sync theo quy trình mới (2 chế độ) | R7 | `skills/develop/SKILL.md`, `parallel-waves.md`, `skills/sync/SKILL.md`, `sync-protocols.md` | 01 | pending |
-| 03 | Dạy lại test bám nội dung (specs + develop/sync) | R2, R3 | `scripts/run-skill-self-tests.mjs`, `bin/__tests__/*` (nặng nhất: `develop-contract.test.js` 2.878 dòng) | 01, 02 | pending |
-| 04 | Đồng bộ luật nhà + docs + agents phụ | R4 | `src/claude/CLAUDE.md`, `src/claude/rules/*`, `src/codex/rules/state-sync.md`, `src/{codex,common}/AGENTS.md`, README/docs, `project-manager.md` | 01, 02 | pending |
-| 05 | 2 done-gate layout mới + migration-manifest + archive spec cũ + cài lại + dogfood | R1, R5, R6 | `src/claude/hooks/spec-gate.cjs`, `src/codex/hooks/spec-gate.cjs`, `spec-resolver.cjs`, `migration-manifest.json`, `specs/` | 01-04 | pending |
+| 01 | Thay bundle skill specs + spec-maker agent (xoá 15 file cũ) | R2 | `src/claude/skills/specs/**`, `src/claude/agents/spec-maker.md` | - | done |
+| 02 | Viết lại develop/sync theo quy trình mới (2 chế độ) | R7 | `skills/develop/SKILL.md`, `parallel-waves.md`, `skills/sync/SKILL.md`, `sync-protocols.md` | 01 | done |
+| 03 | Dạy lại test bám nội dung (specs + develop/sync) | R2, R3 | `scripts/run-skill-self-tests.mjs`, `bin/__tests__/*` (nặng nhất: `develop-contract.test.js` 2.878 dòng) | 01, 02 | done |
+| 04 | Đồng bộ luật nhà + docs + agents phụ | R4 | `src/claude/CLAUDE.md`, `src/claude/rules/*`, `src/codex/rules/state-sync.md`, `src/{codex,common}/AGENTS.md`, README/docs, `project-manager.md` | 01, 02 | done |
+| 05 | 2 done-gate layout mới + migration-manifest + archive spec cũ + cài lại + dogfood | R1, R5, R6 | `src/claude/hooks/spec-gate.cjs`, `src/codex/hooks/spec-gate.cjs`, `spec-resolver.cjs`, `migration-manifest.json`, `specs/` | 01-04 | in_progress — R1 human dogfood pending |
 
 **Ghi chú A2:** Task 01+02 là nội dung, Task 03 là test soi nội dung. Quy ước: **suite chỉ bắt buộc xanh sau Task 03**; khoảng 01→03 chấp nhận đỏ, **không commit giữa chừng** (không lưới máy enforce — đã xác minh không có pre-commit/CI hook tự động). Nếu khoảng đỏ phải kéo dài qua phiên, ghi trạng thái vào plan này trước khi dừng.
 
@@ -215,3 +215,14 @@ ls specs/archive/cafekit-semantic-eval-firewall/ARCHIVED.md
 - **Spot-check fix vòng 1: 5/5 VERIFIED** (codex-native ranges, mutation harness, receipt contract, CORE neutrality refs, migration-manifest mechanism).
 
 ### KHOÁ GIẤY (B4): đã dùng hết 2 vòng review giấy. Bản v4 là bản thực thi; lỗi phát hiện thêm sẽ bắt bằng runtime evidence trong lúc thực thi, ghi tiếp vào log này.
+
+## Execution log (2026-08-20)
+
+- Task 01-04: implemented. Specs bundle = 9 files / 696 lines; four primary develop/sync files = 399 lines; section-aware legacy vocabulary scan returned no live violation.
+- Task 05 implementation: both runtimes resolve process-v3 flat tasks and validate inline receipts; Claude migration manifest prunes the 15 retired paths; the semantic firewall spec moved under `specs/archive/`; real combined install completed with exit 0.
+- Runtime proof: a process-v3 done task without a receipt was blocked; a canonical receipt with bound provenance and the planned command passed. Installed Claude and Codex `spec-state.cjs` / `spec-gate.cjs` all stayed silent with exit 0 after the archive.
+- Regression proof: `pnpm -C packages/spec test` exited 0 with `[skill-test] PASS: 700 tests executed`; package Node tests reported 324 pass, 0 fail, 1 opt-in live-host skip; hook behavioral tests reported 180/180.
+- Runtime review repair: Receipt commands are now bound exactly to each task's `## Verification Plan`. One unfinished process-v3 packet wins over completed history; when every packet is complete, Stop revalidates the full receipt set instead of blocking on `multiple_persisted`. Pre-fix focused tests failed exactly 3/44 Claude and 3/31 Codex; post-fix they passed 44/44 and 31/31.
+- Independent remediation review: PASS for scope/spec compliance, correctness/security, reachability/provenance, and runtime parity; no remaining code finding.
+- Runtime repair discovered during install: native `src/codex/AGENTS.md` is now installed verbatim so the foreign-runtime ownership sentence is not rewritten into a Codex self-ignore instruction. Focused installer/native/inventory regression: 47 pass, 0 fail, 1 opt-in skip.
+- Remaining R1 evidence: the required human-driven `/hapo:specs` C1/C2/C3 transcript has not been performed. Do not mark Task 05 or the whole plan done until that transcript exists.

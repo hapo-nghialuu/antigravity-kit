@@ -45,6 +45,16 @@ function bindReceipt(root, value, feature = 'auth', session = 'session-a') {
   return value.replaceAll(VALID_BASE, context.base).replaceAll(VALID_HEAD, context.head);
 }
 
+function workflowRuntimeContext(root, feature = 'auth', session = 'session-a') {
+  return PROVENANCE.deriveRuntimeContext({
+    projectRoot: root,
+    specsRoot: path.join(root, 'specs'),
+    specFile: path.join(root, 'specs', feature, 'plan.md'),
+    featureName: feature,
+    runtimeSession: session,
+  });
+}
+
 function installFeatureReceipts(root, session = 'session-a') {
   const specsRoot = path.join(root, 'specs');
   if (!fs.existsSync(specsRoot)) return;
@@ -411,6 +421,133 @@ test('Codex completion gate cannot be bypassed from a nested cwd', () => {
     const closeout = runHook(gate, nested, payload);
     assert.equal(closeout.status, 0);
     assert.equal(closeout.stdout, '');
+  });
+});
+
+test('Codex completion gate validates explicit process-v3 inline Receipt', () => {
+  inHookFixture((root, hooks) => {
+    const nested = path.join(root, 'packages', 'app');
+    const feature = path.join(root, 'specs', 'auth');
+    const taskFile = path.join(feature, 'task-01-auth.md');
+    fs.mkdirSync(nested, { recursive: true });
+    fs.mkdirSync(feature, { recursive: true });
+    fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\n');
+    fs.writeFileSync(taskFile, [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+    ].join('\n'));
+
+    const gate = path.join(hooks, 'spec-gate.cjs');
+    const payload = {
+      cwd: nested,
+      featureName: 'auth',
+      session_id: 'session-a',
+      hook_event_name: 'Stop',
+      stop_hook_active: false,
+    };
+    const blocked = runHook(gate, nested, payload);
+    assert.equal(blocked.status, 0, blocked.stderr);
+    assert.match(JSON.parse(blocked.stdout).reason, /missing_receipt/);
+
+    const context = workflowRuntimeContext(root);
+    fs.writeFileSync(taskFile, [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`,
+      '```text', '$ node --test', 'pass: 1', '```', '',
+    ].join('\n'));
+    const passed = runHook(gate, nested, payload);
+    assert.equal(passed.status, 0, passed.stderr);
+    assert.equal(passed.stdout, '');
+  });
+});
+
+test('Codex process-v3 Receipt command must match the exact Verification Plan command', () => {
+  inHookFixture((root, hooks) => {
+    const feature = path.join(root, 'specs', 'auth');
+    fs.mkdirSync(feature, { recursive: true });
+    fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\n');
+    const context = workflowRuntimeContext(root);
+    fs.writeFileSync(path.join(feature, 'task-01-auth.md'), [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Verification Plan', '', '- Command: pnpm test', '',
+      '## Receipt', '', 'Verification: PASS', 'Command: true', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`,
+      '```text', '$ true', 'pass: 1', '```', '',
+    ].join('\n'));
+
+    const result = runHook(path.join(hooks, 'spec-gate.cjs'), root, {
+      cwd: root,
+      session_id: 'session-a',
+      hook_event_name: 'Stop',
+      stop_hook_active: false,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.notEqual(result.stdout, '', 'a substituted receipt command must block');
+    assert.match(JSON.parse(result.stdout).reason, /command_identity/);
+  });
+});
+
+test('Codex process-v3 Stop ignores a completed packet when one packet remains active', () => {
+  inHookFixture((root, hooks) => {
+    const completed = path.join(root, 'specs', 'auth');
+    const active = path.join(root, 'specs', 'active');
+    fs.mkdirSync(completed, { recursive: true });
+    fs.mkdirSync(active, { recursive: true });
+    fs.writeFileSync(path.join(completed, 'plan.md'), '# Auth plan\n');
+    fs.writeFileSync(path.join(active, 'plan.md'), '# Active plan\n');
+    const context = workflowRuntimeContext(root);
+    fs.writeFileSync(path.join(completed, 'task-01-auth.md'), [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`,
+      '```text', '$ node --test', 'pass: 1', '```', '',
+    ].join('\n'));
+    fs.writeFileSync(path.join(active, 'task-01-active.md'), [
+      '# Task 01: active', '', 'Status: pending', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+    ].join('\n'));
+
+    const result = runHook(path.join(hooks, 'spec-gate.cjs'), root, {
+      cwd: root,
+      session_id: 'session-a',
+      hook_event_name: 'Stop',
+      stop_hook_active: false,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, '');
+  });
+});
+
+test('Codex process-v3 Stop accepts two completed packets with valid Receipts', () => {
+  inHookFixture((root, hooks) => {
+    for (const featureName of ['auth', 'other']) {
+      const feature = path.join(root, 'specs', featureName);
+      fs.mkdirSync(feature, { recursive: true });
+      fs.writeFileSync(path.join(feature, 'plan.md'), `# ${featureName} plan\n`);
+      const context = workflowRuntimeContext(root, featureName);
+      fs.writeFileSync(path.join(feature, `task-01-${featureName}.md`), [
+        `# Task 01: ${featureName}`, '', 'Status: done', '',
+        '## Verification Plan', '', '- Command: node --test', '',
+        '## Receipt', '',
+        'Verification: PASS', 'Command: node --test', 'Exit: 0',
+        `Base: ${context.base}`, `Head: ${context.head}`,
+        '```text', '$ node --test', 'pass: 1', '```', '',
+      ].join('\n'));
+    }
+
+    const result = runHook(path.join(hooks, 'spec-gate.cjs'), root, {
+      cwd: root,
+      session_id: 'session-a',
+      hook_event_name: 'Stop',
+      stop_hook_active: false,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, '');
   });
 });
 

@@ -27,6 +27,7 @@ const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
 const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
 const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
 const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/parallel-waves.md');
+const SYNC_PROTOCOLS = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/references/sync-protocols.md');
 const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
 const RUNTIME_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-policy-runtime-'));
 const RUNTIME_SPEC = path.join(RUNTIME_ROOT, 'specs', 'demo', 'spec.json');
@@ -75,28 +76,62 @@ function installClaudeRuntimeClosure(fixtureRoot, entry = 'hooks/spec-gate.cjs')
   return path.join(destinationRoot, entry);
 }
 
-function markdownSection(content, heading) {
-  const marker = `## ${heading}`;
-  const start = content.indexOf(marker);
-  assert.notEqual(start, -1, `missing section ${heading}`);
-  const rest = content.slice(start + marker.length);
-  const end = rest.search(/\n## /);
-  return end === -1 ? rest : rest.slice(0, end);
+function markdownLegacyRegions(content) {
+  const headings = [];
+  const primaryLines = [];
+  const legacyLines = [];
+  const hierarchy = [];
+
+  for (const [index, line] of content.split('\n').entries()) {
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (heading) {
+      const level = heading[1].length;
+      while (hierarchy.at(-1)?.level >= level) hierarchy.pop();
+      const entry = { level, text: heading[2], line: index + 1 };
+      hierarchy.push(entry);
+      headings.push(entry);
+    }
+
+    const target = hierarchy.some(({ text }) => /legacy/i.test(text))
+      ? legacyLines
+      : primaryLines;
+    target.push({ line: index + 1, text: line });
+  }
+
+  return {
+    headings,
+    primary: primaryLines.map(({ text }) => text).join('\n'),
+    legacy: legacyLines.map(({ text }) => text).join('\n'),
+    primaryLines,
+  };
 }
 
-function markdownTable(section, firstHeader) {
-  const lines = section.split('\n').filter((line) => line.trim().startsWith('|'));
-  const cells = (line) => line.split('|').slice(1, -1).map((cell) => cell.trim());
-  const headerIndex = lines.findIndex((line) => cells(line)[0] === firstHeader);
-  assert.notEqual(headerIndex, -1, `missing table headed by ${firstHeader}`);
-  const headers = cells(lines[headerIndex]);
-  const rows = {};
-  for (const line of lines.slice(headerIndex + 2)) {
-    const values = cells(line);
-    if (values.length !== headers.length) break;
-    rows[values[0].replaceAll('`', '')] = Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+function assertVocabularyIsLegacyOnly(filePath, regions) {
+  const vocabulary = [
+    ['v2.1', /\bv2\.1\b/i],
+    ['spec.json', /\bspec\.json\b/i],
+    ['semantic_model', /\bsemantic[-_]model\b/i],
+    ['machine authority', /\bmachine authority\b/i],
+    ['task_registry', /\btask_registry\b/i],
+    ['workflow_policy', /\bworkflow_policy\b/i],
+    ['planning_depth', /\bplanning_depth\b/i],
+    ['assurance_level', /\bassurance_level\b/i],
+    ['execution_tier', /\bexecution_tier\b/i],
+    ['classified_minimum', /\bclassified_minimum\b/i],
+    ['coordination.boundaries', /\bcoordination\.boundaries\b/i],
+    ['lane', /\blane\b/i],
+  ];
+  const violations = [];
+  for (const { line, text } of regions.primaryLines) {
+    for (const [term, pattern] of vocabulary) {
+      if (pattern.test(text)) violations.push(`${line}:${term}`);
+    }
   }
-  return rows;
+  assert.deepEqual(
+    violations,
+    [],
+    `${path.relative(PACKAGE_ROOT, filePath)} has v2.1 vocabulary outside a Legacy heading`,
+  );
 }
 
 function runNode(root, script, args) {
@@ -305,11 +340,16 @@ test('CLI rejects flash and parallel before any mutation', () => {
   }
 });
 
-test('develop pre-state guard names executable policy contract', () => {
+test('develop flags retain their process-v3 contracts', () => {
   const develop = read(DEVELOP);
   assert.match(develop, /node \.claude\/scripts\/workflow-policy\.cjs --flash --parallel --json/);
-  assert.match(develop, /No spec state, task receipt, worktree, subagent, or commit was created/);
-  assert.match(develop, /flash\+parallel fail-fast/i);
+  assert.match(develop, /exits `2` before a task edit, receipt, worktree, subagent, or commit/i);
+  assert.match(develop, /--notes` is opt-in/i);
+  assert.match(develop, /implementation-notes-template\.html/);
+  assert.match(develop, /Never create it by default/i);
+  assert.match(develop, /--parallel \[N\][\s\S]*parallel-waves\.md[\s\S]*isolated worktrees[\s\S]*one controller writer/i);
+  assert.match(develop, /--flash[\s\S]*Status: in_progress[\s\S]*FLASH_UNVERIFIED[\s\S]*awaiting \/hapo:test <feature>/i);
+  assert.match(develop, /FLASH_UNVERIFIED[\s\S]*do not unblock dependents[\s\S]*sync-finalize path/i);
 });
 
 test('delegation plan consumes legacy tiers as obligations without an agent chain', () => {
@@ -674,7 +714,7 @@ test('approval schema fails closed for explicit null, array, empty, and malforme
   assert.throws(() => POLICY.approvalState({ schema_version: '1.0' }), /schema_version/);
 });
 
-test('CLI exposes a derived lane and Develop consumes independent canonical policy axes', () => {
+test('CLI exposes a derived lane without making it primary Develop authority', () => {
   const cli = spawnSync(process.execPath, [
     POLICY_PATH,
     '--classify-lane',
@@ -687,18 +727,17 @@ test('CLI exposes a derived lane and Develop consumes independent canonical poli
   assert.equal(payload.classification.lane, 'Direct');
   assert.equal(payload.policy.requiresSpec, false);
   const develop = read(DEVELOP);
+  const regions = markdownLegacyRegions(develop);
   assert.doesNotMatch(develop, /DO NOT write implementation code until an approved spec exists/i);
-  const policySection = develop.split('## Policy authority')[1]?.split('\n## ')[0] || '';
-  for (const authorityTerm of ['planning_depth', 'assurance_level', 'Risk', 'derived']) {
-    assert.ok(policySection.includes(authorityTerm), `policy authority missing ${authorityTerm}`);
-  }
-  for (const compatibilityView of ['**Direct**', '**Standard**', '**Critical**']) {
-    assert.ok(policySection.includes(compatibilityView), `missing derived view ${compatibilityView}`);
-  }
-  assert.ok(policySection.includes('derived Strict view'));
-  assert.ok(policySection.includes('Legacy approval fields'));
-  assert.ok(policySection.replace(/\s+/g, ' ').includes('zero authority'));
-  assert.match(develop, /Classify lane[\s\S]*test receipt[\s\S]*docs-impact sync/i);
+  assert.doesNotMatch(regions.primary, /planning_depth|assurance_level|execution_tier|\blane\b/i);
+  assert.match(regions.legacy, /planning_depth/);
+  assert.match(regions.legacy, /assurance_level/);
+  assert.match(regions.legacy, /execution_tier/);
+  assert.match(regions.legacy, /derived lane/i);
+  assert.match(regions.primary, /specs\/<feature>\/plan\.md[\s\S]*task-NN-\*\.md/i);
+  assert.match(regions.primary, /one unblocked task at a time/i);
+  assert.match(regions.primary, /Verification Plan/);
+  assert.match(regions.primary, /inline Receipt/i);
   assert.doesNotMatch(develop, /D2\[Step 3/);
   assert.match(develop, /--notes.*opt-in/i);
   assert.doesNotMatch(develop, /--no-notes/);
@@ -717,30 +756,67 @@ test('CLI exposes a derived lane and Develop consumes independent canonical poli
   assert.notDeepEqual(fullRoutine.proof_obligations, compactStrict.proof_obligations);
 });
 
-test('artifact router keeps optional expansion bound to uncertainty and typed topology', () => {
-  const router = markdownSection(read(SPECS), 'Artifact router');
-  const rows = markdownTable(router, 'Depth');
-  assert.deepEqual(Object.keys(rows), ['None', 'Compact', 'Full']);
-  assert.equal(rows.None['Durable core'], 'none');
-  for (const depth of ['Compact', 'Full']) {
-    assert.deepEqual(
-      rows[depth]['Durable core'].match(/`[^`]+`/g),
-      ['`spec.json`', '`requirements.md`', '`design.md`'],
-      `${depth} must share the canonical three-file core`,
-    );
-    assert.equal(rows[depth]['Research route'], 'only on a research trigger');
-    assert.equal(rows[depth]['Task route'], 'only on a typed topology trigger');
+test('Specs primary output is a flat process-first packet with isolated legacy compatibility', () => {
+  const specs = read(SPECS);
+  const regions = markdownLegacyRegions(specs);
+  const legacyHeadings = regions.headings.filter(({ text }) => /legacy/i.test(text));
+  assert.equal(legacyHeadings.length, 1);
+  assert.match(regions.primary, /specs\/<feature>\/[\s\S]*plan\.md[\s\S]*task-01-<slug>\.md[\s\S]*task-02-<slug>\.md/i);
+  assert.match(regions.primary, /Task files are flat beside `plan\.md`/i);
+  assert.match(regions.primary, /one task at a time/i);
+  assert.match(regions.primary, /inline `## Receipt`/i);
+  assert.match(regions.primary, /C1 — Scope[\s\S]*C2 — Findings[\s\S]*C3 — Done/i);
+  assert.match(regions.legacy, /spec\.json/i);
+  assert.match(regions.legacy, /never requires the legacy kernel/i);
+  assertVocabularyIsLegacyOnly(SPECS, regions);
+});
+
+test('R7 Develop and Sync surfaces teach process-v3 and isolate hierarchical Legacy sections', () => {
+  const surfaces = [
+    ['develop', DEVELOP],
+    ['parallel waves', PARALLEL_WAVES],
+    ['sync', SYNC_SKILL],
+    ['sync protocols', SYNC_PROTOCOLS],
+  ];
+  const regionsByName = new Map();
+  let legacyCorpus = '';
+
+  for (const [name, filePath] of surfaces) {
+    const regions = markdownLegacyRegions(read(filePath));
+    const legacyHeadings = regions.headings.filter(({ text }) => /legacy/i.test(text));
+    assert.equal(legacyHeadings.length, 1, `${name} must have exactly one Legacy heading`);
+    assert.match(regions.primary, /inline (?:`## )?Receipts?/i, `${name} must teach inline Receipts`);
+    assert.match(regions.legacy, /spec\.json/i, `${name} must retain the spec.json adapter`);
+    assert.match(regions.legacy, /task_registry/i, `${name} must retain task_registry compatibility`);
+    assertVocabularyIsLegacyOnly(filePath, regions);
+    regionsByName.set(name, regions);
+    legacyCorpus += `\n${regions.legacy}`;
   }
-  assert.notEqual(rows.Compact['Design expansion'], rows.Full['Design expansion']);
-  for (const falseTrigger of ['Requirement count', 'size', 'planning depth', 'assurance level', 'risk label', 'architectural layers']) {
-    assert.ok(router.includes(falseTrigger), `router must name inert trigger ${falseTrigger}`);
-  }
-  for (const boundary of ['ownership', 'dependency', 'transition', 'proof', 'parallel']) {
-    assert.ok(router.includes(boundary), `router must name typed topology ${boundary}`);
-  }
-  assert.ok(router.includes('unresolved material uncertainty'));
-  assert.ok(router.includes('external-current fact'));
-  assert.ok(router.includes('explicit user request'));
+
+  const develop = regionsByName.get('develop').primary;
+  assert.match(develop, /`specs\/<feature>\/plan\.md` plus flat `task-NN-\*\.md`/i);
+  assert.match(develop, /selects one unblocked task at a time/i);
+  assert.match(develop, /Outcome and Acceptance/i);
+  assert.match(develop, /Verification Plan/);
+  assert.match(develop, /final `## Receipt`/i);
+
+  const sync = regionsByName.get('sync').primary;
+  assert.match(sync, /<task-NN-slug\.md>/i);
+  assert.match(sync, /specs\/<feature>\/task-\*\.md` beside `plan\.md`/i);
+  assert.match(sync, /Acceptance[\s\S]*Verification Plan/i);
+  assert.match(sync, /current inline Receipt/i);
+
+  const waves = regionsByName.get('parallel waves').primary;
+  assert.match(waves, /plan task table[\s\S]*flat task's[\s\S]*`## Dependencies`/i);
+  assert.match(waves, /acceptance, Verification Plan/i);
+  assert.match(waves, /one file has one writer per wave/i);
+  assert.match(waves, /writes inline Receipts and Status updates one task at a\s+time/i);
+
+  const protocols = regionsByName.get('sync protocols').primary;
+  assert.match(protocols, /`plan\.md` and flat `task-\*\.md` files/i);
+  assert.match(protocols, /acceptance IDs/i);
+  assert.match(protocols, /current inline Receipt/i);
+  assert.match(legacyCorpus, /sync-finalize/i);
 });
 
 test('canonical verdict adapter handles completion and unfinished decisions', () => {
@@ -896,11 +972,9 @@ test('auto authoring reaches readiness only after promotion, validation, groundi
     const specs = read(SPECS);
     const executableBlocks = [...specs.matchAll(/```bash\n([\s\S]*?)```/g)].map((match) => match[1]);
     assert.ok(executableBlocks.every((block) => !/hapo:?develop/i.test(block)), 'Specs must never execute Develop');
-    const handoff = markdownSection(specs, 'Platform acceptance and handoff');
-    assert.ok(handoff.includes('After readiness'));
-    assert.ok(handoff.includes('/hapo:develop <feature>'));
-    assert.ok(handoff.includes('$hapo-develop <feature>'));
-    assert.ok(handoff.includes('must stop in Specs'));
+    assert.match(specs, /An implementation workflow owns execution/i);
+    assert.match(specs, /selects one unblocked task[\s\S]*runs\s+the task's verification[\s\S]*inline `## Receipt`/i);
+    assert.match(specs, /The user decides\s+at C3 whether the feature is done/i);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
@@ -1519,18 +1593,29 @@ test('flash selective promotion - only specific task is promoted, not blanket', 
 });
 
 test('parallel waves require immutable provenance receipts and safe recovery', () => {
-  const waves = read(PARALLEL_WAVES);
+  const waves = markdownLegacyRegions(read(PARALLEL_WAVES)).primary;
+  assert.match(waves, /only for explicit parallel execution/i);
+  assert.match(waves, /worktree isolation[\s\S]*fall back to the sequential loop/i);
+  assert.match(waves, /Clamp `--parallel N` to 1\.\.5; default to 3/i);
+  assert.match(waves, /clean destination[\s\S]*base_sha[\s\S]*base compatibility/i);
+  assert.match(waves, /parallel consent[\s\S]*worker commits[\s\S]*controller cherry-picks/i);
   for (const field of ['base_sha', 'head_sha', 'branch', 'worktree_path', 'commit_range']) {
     assert.match(waves, new RegExp(`\\b${field}\\b`));
   }
   assert.match(waves, /git diff(?: --stat)? [^\\n]*(?:BASE_SHA|base_sha)[^\\n]*(?:HEAD_SHA|head_sha)/i);
   assert.match(waves, /new commit|new commits|Every fix is a new commit/i);
-  assert.match(waves, /destination tree must be clean/i);
-  assert.match(waves, /compatible with the selected base/i);
-  assert.match(waves, /consent.*commit|commit.*consent/i);
-  assert.match(waves, /retention.*retained|retained.*worktree/i);
-  assert.match(waves, /cleanup_authorization|explicit discard/i);
-  assert.match(waves, /directory overlap|lockfiles|manifests|export barrels|migrations|registries|generated artifacts|shared state writers/i);
+  assert.match(waves, /plan task table[\s\S]*flat task's[\s\S]*Dependencies/i);
+  for (const sharedSurface of ['registry', 'lockfile', 'manifest', 'generated output', 'migration', 'export barrel']) {
+    assert.match(waves, new RegExp(sharedSurface, 'i'));
+  }
+  assert.match(waves, /One file has one writer per wave/i);
+  assert.match(waves, /controller owns[\s\S]*state and evidence synchronization/i);
+  assert.match(waves, /authorization covers worker commits/i);
+  assert.match(waves, /blocked or failed worker keeps[\s\S]*worktree and branch/i);
+  assert.match(waves, /Never[\s\S]*force-delete[\s\S]*merge success or explicit discard authorization/i);
+  assert.match(waves, /git cherry-pick <worker-commit>/i);
+  assert.match(waves, /On conflict, abort the cherry-pick[\s\S]*retain its[\s\S]*worktree\/branch/i);
+  assert.match(waves, /cleanup_authorization: merged-release/i);
   assert.match(waves, /affected integration|final.*integration/i);
   for (const category of ['baseline', 'environment', 'spec', 'code']) {
     assert.match(waves, new RegExp(`\\b${category}\\b`));

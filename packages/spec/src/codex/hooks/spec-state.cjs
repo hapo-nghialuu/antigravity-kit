@@ -39,10 +39,10 @@ try {
   const RECEIPT = receiptLoaded.receipt;
   const { projectRoot, runtime } = getHookContext(payload);
   if (runtime.spec?.tollgate === false) process.exit(0);
-  const { resolveActiveSpec } = require('./lib/spec-utils.cjs');
+  const { resolveWorkflowCandidate } = require('./lib/spec-utils.cjs');
   const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
   const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
-  const resolved = resolveActiveSpec(projectRoot, runtime, explicitFeature, explicitPath);
+  const resolved = resolveWorkflowCandidate(projectRoot, runtime, explicitFeature, explicitPath);
   if (!resolved) process.exit(0);
   if (resolved.error === 'multiple_active') {
     process.stdout.write(`> ⚠️ Multiple active specs detected: ${resolved.candidates.join(', ')}. Provide explicit feature target or resolve ambiguity. Tollgate paused.\n`);
@@ -59,16 +59,17 @@ try {
   }
   if (resolved.error) process.exit(0);
   const active = resolved;
+  const processWorkflow = active.layoutKind === 'process-v3';
   const runtimeContext = POLICY.deriveRuntimeContext({
     projectRoot,
     specsRoot: active.specsDir,
-    specFile: active.specFile || path.join(active.specsDir, active.featureName, 'spec.json'),
+    specFile: active.stateFile || active.specFile || path.join(active.specsDir, active.featureName, 'spec.json'),
     featureName: active.featureName,
     runtimeSession: payload.session_id || payload.sessionId || payload.sessionID || payload.session?.id,
   });
 
-  const phase = active.spec.current_phase || active.spec.phase || 'unknown';
-  const taskRegistry = active.spec.task_registry || {};
+  const phase = active.phase || active.spec?.current_phase || active.spec?.phase || 'unknown';
+  const taskRegistry = active.taskRegistry || active.spec?.task_registry || {};
   const flashTasks = POLICY.flashState(taskRegistry);
   const tasks = Object.entries(taskRegistry);
   const counts = tasks.reduce((result, [, task]) => {
@@ -85,7 +86,8 @@ try {
     && (task?.dependencies || []).every((dependency) => statuses.get(dependency) === 'done')
   ));
   const featureDir = path.join(active.specsDir, active.featureName);
-  const featureReceiptPresent = RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
+  const featureReceiptPresent = !processWorkflow
+    && RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
   const stateKey = JSON.stringify({
     project_root: runtimeContext.project_root,
     specs_root: runtimeContext.specs_root,
@@ -122,12 +124,20 @@ try {
   if (flashTasks.length > 0) {
     lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
-  lines.push(
-    '- Sync `spec.json` and task Markdown status only after verified work; task proof belongs in `receipts/<task-basename>.md`.',
-    `- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`,
-    `- Validate with \`node .codex/scripts/validate-spec-output.cjs specs/${active.featureName}\`.`,
-    '- Hooks revalidate receipt bytes but never grant approval.'
-  );
+  if (processWorkflow) {
+    lines.push(
+      '- Sync each flat task `Status:` only after verified work; task proof belongs in that task\'s inline `## Receipt`.',
+      `- Workflow source: \`specs/${active.featureName}/plan.md\`; Stop revalidates every task currently marked done.`,
+      '- Hooks revalidate receipt bytes but never grant approval.'
+    );
+  } else {
+    lines.push(
+      '- Sync `spec.json` and task Markdown status only after verified work; task proof belongs in `receipts/<task-basename>.md`.',
+      `- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`,
+      `- Validate with \`node .codex/scripts/validate-spec-output.cjs specs/${active.featureName}\`.`,
+      '- Hooks revalidate receipt bytes but never grant approval.'
+    );
+  }
   process.stdout.write(`${lines.join('\n')}\n`);
 } catch (error) {
   logCrash('spec-state', error);

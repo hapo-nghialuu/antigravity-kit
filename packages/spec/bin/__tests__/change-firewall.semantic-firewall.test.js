@@ -66,7 +66,7 @@ function initRepo(root, { version = '0.0.1-fixture' } = {}) {
 }
 
 function writeLegacyBridge(root, { baseCommit, semanticDigest = cf.sha256Tag('bridge-digest') }) {
-  writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
+  writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
     schema_version: '1',
     verdict: 'PASS',
     blocking_count: 0,
@@ -78,7 +78,7 @@ function writeLegacyBridge(root, { baseCommit, semanticDigest = cf.sha256Tag('br
 }
 
 function writeFeatureSeedPass(root, { reviewReceiptDigest = cf.sha256Tag('seed-review-receipt') } = {}) {
-  writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/spec.json'), {
+  writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/spec.json'), {
     validation: {
       semantic_review_history: {
         entries: [{
@@ -201,7 +201,7 @@ test('R1.14 negative: an absent or malformed legacy-bridge artifact fails the pr
     const inst = cf.createChangeFirewall({ root });
     assert.throws(() => inst.assertLegacyBridgeArtifact(), (error) => error.code === 'legacy_bridge_missing');
 
-    writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
+    writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
       schema_version: '1', verdict: 'FAIL', blocking_count: 0,
       reviewed_criteria: ['R1.1'], semantic_digest: cf.sha256Tag('x'),
       bootWindowBaseCommit: '0'.repeat(40), written_at: new Date().toISOString(),
@@ -379,7 +379,7 @@ test('C14/R1.8: bootstrapBaseline refuses before the seed PASS exists, and refus
     const inst = cf.createChangeFirewall({ root });
 
     // feature spec.json exists but carries no semantic_review_history yet (no seed PASS).
-    writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/spec.json'), { validation: {} });
+    writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/spec.json'), { validation: {} });
     assert.throws(
       () => inst.bootstrapBaseline({ baseCommit, headCommit, bootstrapReviewDigest: cf.sha256Tag('x'), packageVersion: '0.0.1-fixture' }),
       (error) => error.code === 'seed_pass_missing',
@@ -2131,4 +2131,3 @@ test('REGRESSION round7 (critical): a committed C10 authority renamed away then 
     assert.throws(() => inst.createFreezeManifest(null), (error) => error.code === 'out_of_band_edit');
   });
 });
-

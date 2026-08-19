@@ -1,243 +1,109 @@
-# Whole-spec semantic review v2.1
+# Plan review — evidence, adversarial lenses, and C2
 
-## Purpose
+Review exists to find costly errors before code. It is not a prose-quality
+score. Every accepted finding must be reproducible from current repository
+evidence.
 
-Review the spec as one consistency graph. A structural validator exit 0 proves
-only implemented structural checks; it does not prove semantic completeness,
-grounding, product correctness, negative paths, or executable behavior.
+## B1 — evidence rule
 
-## Resolve and inventory
+- Cite at least one real `path:line` for every repository claim. A finding
+  without a citation is excluded rather than debated.
+- Run the search or read command; a plausible-looking citation is not proof.
+- When a plan changes a symbol, interface, route, config key, or file contract,
+  count and list its callers, tests, exports, help text, and generated copies.
+- Replace "update all callers" with the observed count and names. Above ten,
+  list the first ten plus the total.
+- Label an unresolved external or runtime claim `[UNVERIFIED]` and name the
+  command, document, or environment that would settle it.
 
-1. Resolve the exact spec path; ambiguous active specs fail closed.
-2. Read final physical `spec.json`, `requirements.md`, `design.md`, optional
-   `research.md`, every task, and the machine-recorded semantic-review state.
-3. Confirm the physical artifact set matches `planning_depth` and its justified
-   optional gates:
-   - `None`: no durable spec;
-   - `Compact`: three-file core plus an optional task bundle/registry only when
-     ownership, dependency, durable transition, separate proof, or parallel
-     coordination activates the task gate;
-   - `Full`: the same three-file core plus only justified optional research,
-     task, or complex-task-graph phase metadata. Full depth
-     alone does not justify any optional artifact.
-4. Reject `feature-receipt.md` in spec authoring. It belongs to execution
-   closeout only.
+## Reviewer roles
 
-## Consistency graph
+| Role | Question | Required evidence |
+|---|---|---|
+| Fact Checker | Do named paths, symbols, commands, and keys exist? | search/read output with `path:line` |
+| Flow Tracer | Does the claimed call order and error path exist? | entrypoint-to-effect trace, including early returns |
+| Scope Auditor | Is new state scoped to the right lifetime and owner? | constructors, writers, cleanup, and existing equivalents |
+| Contract Verifier | Are all consumers and compatibility surfaces covered? | caller/test/export/config/help inventory |
 
-Build and inspect these edges:
+Scale the review to the number of independent work groups:
 
-```text
-scope_lock
-  -> outcomes/non-goals
-  -> RN.M acceptance
-  -> design boundary + typed anchors
-  -> named contracts/invariants
-  -> conditional task owners/consumers
-  -> verification + negative paths
-  -> technical readiness
-```
+| Groups | Reviewers | Roles | Claim budget |
+|---|---:|---|---:|
+| 1-2 | 2 | Fact Checker plus the highest-risk role | about 5 per group |
+| 3-5 | 3 | Fact Checker, Contract Verifier, one risk role | about 10 per group |
+| 6+ | 4 | all roles | at least 15 total |
 
-Check both directions:
+The table is a sizing guide, not permission to skip a material boundary.
 
-- every scoped outcome reaches measurable acceptance and proof;
-- every design decision traces to scope or acceptance;
-- every anchor has an ID unique across the whole spec, allowed type, exact
-  target, and role;
-- design anchors use `A-D-NN`; task-owned anchors use the canonical task-scoped
-  `A-R{requirement}-{sequence}-NN` namespace;
-- file anchors come first and symbols identify their containing files;
-- a task that only consumes a design target references its canonical `A-D-NN`
-  anchor instead of redefining the same target under a task-local ID;
-- every named contract/invariant has one canonical definition;
-- tasks reference contract IDs without copying bodies;
-- every cross-task contract/transition has exactly one owner before consumers;
-- every `RN.M` has exactly one implementation owner; a proof verifier owns a
-  separate proof criterion/artifact and does not repeat the subject's Acceptance;
-- every dependency is real and Markdown agrees with `task_registry`;
-- every task has one canonical `**Status:**` header using `pending`,
-  `in_progress`, `blocked`, or `done`, and its exact status token matches
-  `spec.json.task_registry[path].status`;
-- every task has exactly seven H2 sections and one
-  `ID | Type | Target | Role | Access | Action` table;
-- typed `coordination.boundaries` own topology; legacy trigger fields, priority
-  markers, related-file lists, and prose own nothing;
-- every executable implementation task owns a concrete test file or artifact
-  anchor or shares proof through a typed `proof` boundary; a bare `npm test`
-  string without such an anchor is not ownership;
-- specs-only never creates or updates docs and never fabricates execution
-  proof; doc impact is a brief recommendation at most;
-- no task, phase, research note, or review finding expands `scope_lock`;
-- optional phases exist only as compact `spec.json` groups for a complex Full
-  task graph and never repeat prose.
-- exactly one `## Verification Definitions` section uses parser-visible lines
-  `- **Vn**: Criteria RN.M; Owner ...; [Proof criteria ...; Proof owner ...;
-  Evidence anchor ...;] Decision refs D/I/C; Method ...; Expected ...;
-  Negative/failure ...; Reachability/grounding ...`; the proof extension is
-  conditional on a typed proof boundary; tables and V headings are not canonical.
+## B2 — fresh-context red team
 
-## Counterexample review
+Use reviewers that did not author the plan and give each one a distinct lens:
 
-For every `RN.M`, try at least one concrete counterexample that could
-make two competent implementers choose different behavior. Use relevant lenses:
+- **Security adversary:** authorization bypass, injection, secret exposure,
+  unsafe path and trust-boundary transitions.
+- **Failure-mode analyst:** race, partial write, crash recovery, retry,
+  cancellation, and stale state.
+- **Assumption destroyer:** implicit dependencies, unavailable services,
+  untested error paths, and claims that something "should" work.
+- **Scope and complexity critic:** premature abstraction, duplicated state,
+  optional work, and tasks too large for one owner.
 
-- missing/invalid input or permission;
-- dependency unavailable, timeout, partial success, retry, or duplicate event;
-- conflicting state, ordering, concurrency, restart, rollback, or migration;
-- boundary bypass, data disclosure, retention, or authorization confusion;
-- wrong clock anchor/source/timezone/precision or cutoff comparator/inclusivity or enforcement boundary for a retention/lifecycle rule (for example creation time or UTC vs local or `>` vs `>=` mismatch) that would retain or delete the wrong records;
-- partial public, replay, or operator API contract (missing method, route, auth, headers, request or response schema, error semantics, or idempotency and concurrency behavior);
-- orphaned route/component/worker/artifact with no runtime reachability;
-- task consumer beginning before its contract/schema/transition owner;
-- verification command passing while the user-visible behavior is wrong;
-- an executable task with only a generic test command and no owned test file or typed proof verifier.
+Prompt them to break the plan. For every finding require: severity, exact plan
+location, concrete counterexample, repository evidence, and the smallest repair.
+Ignore style-only feedback.
 
-A counterexample passes only when requirements or design already choose the
-behavior and the verification plan can distinguish the correct result. Do not
-invent a product decision during review; unresolved choices require a user
-decision. Two-review target is advisory: after two failed semantic rounds, pause for unresolved product/security/architecture uncertainty or repeated non-convergence; one clearly bounded mechanical correction without weakening gates is allowed; budgets never override correctness. Specs-only never creates or updates docs and never fabricates execution proof; record doc impact as a brief recommendation only.
+## Four red-team lenses
 
-## Assurance depth
+Apply these to the relevant boundary:
 
-| Level | Required semantic review |
-|---|---|
-| Routine | Same-session graph check and relevant counterexamples; no reviewer ceremony. |
-| Elevated | Same-session targeted adversarial review; no reviewer ceremony. |
-| Strict | Full red-team plus a host-hook-observed event from an allowlisted reviewer capability. |
+1. **Input and identity:** empty, duplicate, malformed, adversarial, stale, and
+   cross-tenant inputs.
+2. **State transition:** retry, partial completion, reordering, concurrency,
+   rollback, and recovery.
+3. **Integration:** callers, exports, registration, transport, persistence,
+   packaging, and runtime reachability.
+4. **Proof:** negative path, exact command, nonzero exit, zero-test result,
+   missing artifact, stale provenance, and environment limitation.
 
-Risk presence sets the automatic minimum to Elevated. Strict is opt-in only
-for an explicit user/project independent-audit requirement or a user-confirmed,
-scope-specific audit decision. Never select it from a keyword, severity label,
-Full depth, or reviewer availability. If the required host event is unavailable,
-pause once and report the capability blocker; do not retry loops or downgrade.
+Each finding must describe an observable failure, not a preference.
 
-Strict red-team lenses are Security Adversary, Failure Mode Analyst, Assumption
-Destroyer, and Scope & Complexity Critic. Findings without a concrete physical
-location and counterexample are rejected as unsupported.
+## Aggregate before C2
 
-## Finding format
+Normalize duplicate findings by root cause. Preserve the strongest evidence and
+smallest counterexample. Sort Critical, High, then Medium. Cap the presented
+list at 15; a larger useful set means the plan should be split.
 
-```markdown
-## Finding N: <title>
-- **Severity:** Critical | High | Medium
-- **Location:** <file:line or exact section/anchor/requirement ID>
-- **Broken edge:** <source -> target in the consistency graph>
-- **Flaw:** <specific contradiction or omission>
-- **Counterexample:** <concrete input/state/event and incorrect possible result>
-- **Evidence:** <short quote or missing required mapping>
-- **Suggested fix:** <smallest semantic correction>
-- **Disposition:** Accept | Reject
-- **Rationale:** <why>
-```
+Present C2 as a table:
 
-Apply accepted findings to requirements, design, task acceptance/changes, named
-contracts/invariants, dependencies, or verification. A report-only fix is not a
-fix. Scope or product decisions require explicit user approval before editing.
+| ID | Severity | Plan location | Failure scenario | Evidence | Proposed repair | Decision |
+|---|---|---|---|---|---|---|
 
-## Deterministic and grounding gates
+The user chooses accept, reject, or revise. Do not apply findings before that
+decision. Record the result in the plan review log.
 
-Finalize requirements, design, optional research, task files, and canonical
-`spec.json` topology first. Every required authoring stage (`requirements`,
-`design`, and, when present, `research`/`tasks`) must already read `validated`
-via a fresh run of `spec-authoring-validation.cjs` — the sole atomic writer of
-that transition and its C16 `AuthoringValidationReceipt` — before the digest
-below is computed; a `validated` reading with no matching fresh receipt digest
-is treated as `draft` everywhere it is read. Compute the candidate digest
-read-only, then provide a review JSON object with exactly `verdict`,
-`findings`, `unresolved_decisions`, `graph_coverage`, `reviewed_criteria`,
-`counterexamples`, and `reviewer_evidence` — the frozen C2 fields the reviewer
-itself supplies. `lifecycle_disposition` and `repair_round` are never authored
-in this JSON: the finalizer derives both (repair_round is the C13 `attempt_index`
-for the current review_epoch; lifecycle_disposition is CONTINUE unless a
-non-PASS at the epoch's third attempt forces BLOCKED) and appends the completed
-receipt to the durable, append-only `semantic_review_history` lineage. The
-author must not fabricate or directly write authority state.
+## B3 — consistency sweep
 
-The digest projects task registry semantics as `id`, `dependencies`, and optional
-`artifacts`. Execution-only status, blocker, timestamps, Markdown `Status`, and
-checkbox checked state do not stale review; requirement, design, research, task
-prose, dependency, artifact, or coordination changes do.
+After any accepted finding or user edit:
 
-```bash
-# Claude Code
-node .claude/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
-# Codex (installed projection — verify, not raw .claude path)
-node .codex/scripts/validate-spec-output.cjs specs/<feature> --semantic-digest
-```
+1. Reread every file in `specs/<feature>/`.
+2. List deltas: renamed terms, changed decisions, removed assumptions, task
+   order, ownership, dependencies, acceptance IDs, and commands.
+3. Search every delta and its old spelling across the whole feature packet.
+4. Reconcile the plan table, task details, examples, acceptance mapping, and
+   verification commands.
+5. Record: `files reread / deltas / stale references fixed / conflicts left`.
 
-The machine-recorded state binds the returned digest, exact reviewed `RN.M`
-criteria, and one concrete counterexample per criterion. Each counterexample uses exactly `criterion`,
-`case_kind`, `scenario`, `expected`, `decision_refs`, and `verification_ref`.
-Decision refs resolve to real `D`/`I`/`C` definitions; the `V` definition traces
-both the criterion and decisions. This state binds what was reviewed; it never
-substitutes for semantic judgment or resolves ambiguity.
+Any unresolved contradiction keeps the plan unready.
 
-Routine and Elevated have no reviewer ceremony. Strict requires a real event
-observed by the installed host hook from an allowlisted reviewer capability.
-The hook derives reviewer identity/capability and binds the digest; authoring
-prose cannot self-declare it.
-The final reviewer message contains
-exactly one line:
+## B4 — stop condition
 
-```text
-CAFEKIT_SEMANTIC_REVIEW_ATTESTATION {"feature_name":"<feature>","spec_file":"specs/<feature>/spec.json","semantic_digest":"sha256:<digest>","verdict":"PASS"}
-```
+- Allow at most two review-and-repair rounds before implementation.
+- Round three requires runtime evidence: an executed test, command output, or
+  observed host behavior. More paper argument is not a new finding.
+- A repair round should not grow the plan unless evidence proves missing scope.
+- Two add-only rounds trigger a split, deferral, or return to C1.
+- Stop early when remaining findings are duplicates, preferences, or already
+  covered by one acceptance criterion and one verification command.
 
-The `SubagentStop` hook recomputes the digest and stores a MAC-protected record
-outside the project, bound to canonical project/spec/feature identity. Codex
-must use its event-capable thread-spawn path for this Strict gate. Its legacy
-internal multi-agent path does not expose the child completion message through
-a supported hook event, so it stays not-ready; never derive authority from a
-parent summary or a spawn-only `PostToolUse` event.
-Do not add reviewer identity or independence claims to `semantic_review`.
-This is a host-hook-observed honest-agent guardrail. It is not host-attested
-evidence and not a security boundary against another process running as the
-same OS account.
-
-After the Strict observation (or immediately for Routine/Elevated), invoke the
-only supported atomic promotion path:
-
-```bash
-# Claude Code
-node .claude/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
-# Codex (installed projection — verify, not raw .claude path)
-node .codex/scripts/spec-readiness.cjs specs/<feature> --review-result <review.json>
-```
-
-Run normal validation only after the installed finalizer records that state:
-
-```bash
-# Claude Code
-node .claude/scripts/validate-spec-output.cjs specs/<feature>
-# Codex (installed projection)
-node .codex/scripts/validate-spec-output.cjs specs/<feature>
-```
-
-Run the runtime-provided grounding command for every durable spec. It
-deterministically recomputes factual anchor/path/symbol/command reachability and
-creates no additional receipt. Record command, exit code, and failing categories.
-Non-zero blocks readiness. Exit 0 does not override a broken consistency edge or
-counterexample; semantic review remains mandatory at the selected assurance level.
-
-## Final reconciliation
-
-Before readiness:
-
-1. Re-read all physical artifacts after fixes.
-2. Confirm accepted findings changed implementation-facing content.
-3. Confirm requirements, globally unique anchor IDs, canonical design-anchor
-   references, contracts, owners/consumers, dependencies, negative paths, and
-   verification form a closed graph.
-4. Confirm `feature-receipt.md`, phase files, copied contract bodies, legacy
-   topology markers, and unused template sections are absent.
-5. Write coherent final timestamps/status and rerun deterministic gates;
-   readiness means technical artifact readiness, not permission to implement.
-
-If any check fails, report `FAIL` or `BLOCKED`, preserve unfinished lifecycle
-state, and do not suggest implementation handoff.
-
-## Platform acceptance
-
-Acceptance covers Claude Code and Codex artifacts only. Verify the semantic
-rules/templates installed for both runtimes remain equivalent. Do not add a
-third runtime to this acceptance scope.
+Review saturation means new reviewers no longer find a distinct material
+failure with new evidence. It does not mean the plan is guaranteed correct.

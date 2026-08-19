@@ -37,7 +37,7 @@ const REL = {
   ledger: 'packages/spec/benchmarks/benchmark-failure-ledger.json',
   freeze: 'packages/spec/.cafekit-release/change-firewall-freeze.json',
   receipt: 'packages/spec/.cafekit-release/release-receipt.json',
-  legacyBridge: 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json',
+  legacyBridge: 'specs/archive/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json',
   cafekitReleaseDir: 'packages/spec/.cafekit-release/',
   packageJson: 'packages/spec/package.json',
 };
@@ -716,7 +716,7 @@ function readLegacyBridgeArtifact(root) {
 // C14 BootstrapAttestation / bootstrapBaseline
 // ---------------------------------------------------------------------------
 
-const REL_FEATURE_SPEC = 'specs/cafekit-semantic-eval-firewall/spec.json';
+const REL_FEATURE_SPEC = 'specs/archive/cafekit-semantic-eval-firewall/spec.json';
 
 function readFeatureSpecJson(root) {
   const loaded = readJsonFileIfExists(root, REL_FEATURE_SPEC);

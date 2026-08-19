@@ -525,9 +525,8 @@ The transition records success, failure, and recovery states.
 test('Codex installer transform preserves all owned spec assets with idempotent runtime parity', () => {
   for (const relative of [
     'src/claude/skills/specs/SKILL.md',
-    'src/claude/skills/specs/rules/tasks-generation.md',
-    'src/claude/skills/specs/rules/design-principles.md',
     'src/claude/skills/specs/references/review.md',
+    'src/claude/skills/specs/references/templates.md',
     'src/claude/skills/specs/templates/design.md',
     'src/claude/skills/specs/templates/task.md',
     'src/claude/scripts/spec-scaffold.cjs',
@@ -548,14 +547,15 @@ test('Codex installer transform preserves all owned spec assets with idempotent 
 
   const skill = fs.readFileSync(path.join(ROOT, 'src/claude/skills/specs/SKILL.md'), 'utf8');
   const review = fs.readFileSync(path.join(ROOT, 'src/claude/skills/specs/references/review.md'), 'utf8');
-  const designRules = fs.readFileSync(path.join(ROOT, 'src/claude/skills/specs/rules/design-principles.md'), 'utf8');
-  const taskRules = fs.readFileSync(path.join(ROOT, 'src/claude/skills/specs/rules/tasks-generation.md'), 'utf8');
-  assert.match(skill, /\| `Compact` \| `spec\.json`, `requirements\.md`, `design\.md` \| only on a research trigger \| only on a typed topology trigger \|/);
-  assert.match(skill, /\| `Full` \| `spec\.json`, `requirements\.md`, `design\.md` \| only on a research trigger \| only on a typed topology trigger \|/);
-  assert.doesNotMatch(review, /Standard[^\n]{0,100}(?:must not|forbidden|never)[^\n]{0,60}tasks?/i);
-  assert.match(designRules, /## Conditional detail[\s\S]*Migration:[\s\S]*only when existing state or public contracts change/);
-  assert.match(taskRules, /distinct ownership, a durable[\s\S]{0,180}parallel coordination/);
-  assert.match(taskRules, /receipts\/<task-basename>\.md|execution closeout/);
+  const templates = fs.readFileSync(path.join(ROOT, 'src/claude/skills/specs/references/templates.md'), 'utf8');
+  assert.match(skill, /specs\/<feature>\/[\s\S]{0,160}plan\.md[\s\S]{0,160}task-01-<slug>\.md/);
+  assert.match(skill, /C1 — Scope[\s\S]*C2 — Findings[\s\S]*C3 — Done/);
+  assert.doesNotMatch(skill, /--(?:status|validate|archive)\b/);
+  assert.match(review, /path:line/);
+  assert.match(review, /Cap the presented[\s\S]{0,40}list at 15/);
+  assert.match(review, /Round three requires runtime evidence/);
+  assert.match(templates, /\| ID \| EARS criterion \| Proof \|/);
+  assert.match(templates, /## Canonical inline Receipt[\s\S]*Verification: PASS[\s\S]*Exit: 0[\s\S]*Base:[\s\S]*Head:/);
 
   const parityRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-codex-validator-parity-'));
   try {
@@ -3201,7 +3201,7 @@ test('D11/R1.14: the legacy-bridge precondition artifact is reachable and change
   // resolves its own production root the same way, via git from its own file
   // location) -- ROOT here is packages/spec, one level below that root.
   const MONOREPO_ROOT = path.resolve(ROOT, '..', '..');
-  const bridgePath = path.join(MONOREPO_ROOT, 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json');
+  const bridgePath = path.join(MONOREPO_ROOT, 'specs/archive/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json');
   assert.ok(fs.existsSync(bridgePath), 'the legacy-bridge artifact must exist before any R0-01 change-firewall assertion runs');
   const parsed = CHANGE_FIREWALL.assertLegacyBridgeArtifact();
   assert.equal(parsed.schema_version, '1');

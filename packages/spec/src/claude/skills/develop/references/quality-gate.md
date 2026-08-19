@@ -1,99 +1,71 @@
-# Quality Gate — one closeout, separate proof and review
+# Quality gate — one closeout, separate proof and review
 
-This reference is loaded at develop closeout. It is an executable contract, not
-a fixed actor checklist. Canonical v2.1 policy input is authoritative; lane and
-`execution_tier` are derived/read-only compatibility views.
+Load this reference when closing a task or direct change. It defines ownership
+and evidence, not a fixed agent sequence.
 
-## Inputs and ownership
+## Ownership
 
-The single closeout owner receives the current scope, assurance, risk signals, blast
-radius, exact evidence commands, and the current diff. It calls the test owner
-once, then the review owner once when required. No parallel path, review path,
-or sync hook runs a duplicate hidden gate.
+- **Test owner:** executes the named commands and is the sole producer of
+  execution proof.
+- **Review owner:** evaluates correctness, security, scope, and reachability;
+  consumes proof but never creates it.
+- **Closeout owner:** normalizes both results, writes the task Receipt and
+  Status, and reports docs impact.
 
-- **Test owner:** executes commands and creates the canonical execution receipt.
-- **Review owner:** evaluates correctness, security, scope, and spec compliance;
-  consumes the receipt but never creates or claims execution proof.
-- **Closeout owner:** combines both results and performs one state/docs sync.
+Use `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. Only literal PASS plus all
+required proof can close. Review depth follows risk, blast radius, and repository
+policy, not file count.
 
-Review depth follows assurance, risk, and blast radius, not the number of files or
-tasks. There is no fixed Light/Standard/Deep agent sequence. The shared verdict
-surface is `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`; all adapters must use
-the same normalizer.
-
-## Working directory (parallel mode)
-
-When an opt-in wave is active, each command runs in its task worktree. A
-collapse of one task does not cancel other in-flight tasks; merge and state
-synchronization remain single-writer operations.
-
-## Required evidence
+## Required proof
 
 Before completion, verify:
 
-1. compile/typecheck precheck and every exact command named by the active
-   `Verification Plan`;
-2. real runtime reachability and declared artifact inspection;
-3. canonical `receipts/<task-basename>.md` with task identity/path, non-empty
-   exact command, successful exit/result, expected versus observed behavior,
-   applicable negative/reachability proof, both provenance anchors bound to the
-   runtime's expected Base/Head pair, and required SHA-256 declarations;
-4. correctness/security/spec review at the selected depth;
-5. a real independent audit when `needsIndependentAudit` is persisted. The
-   audit must use schema version `1`, distinct reviewer and implementation
-   session IDs, matching expected Base/Head binding, concrete evidence, and
-   literal `verdict: "PASS"`.
+1. applicable compile/typecheck and every exact task command;
+2. at least one real test when automated tests are required;
+3. runtime reachability through the declared entrypoint or consumer;
+4. negative/failure behavior named by Acceptance;
+5. artifact bytes and SHA-256 when the task declares an artifact;
+6. an inline `## Receipt` with `Verification: PASS`, exact `Command`, `Exit: 0`,
+   runtime-bound Base/Head, and non-empty fenced command output;
+7. correctness/security/scope review at the required depth.
 
-`PRECHECK_FAIL` outranks no-tests. Missing, pending, marker-only, contradictory,
-or placeholder proof is unfinished. `Audit: PASS` is not an independent audit.
-`NO_TESTS` may be retained as a legacy diagnostic input, but it can never become
-the shared completion verdict `PASS`.
+`PRECHECK_FAIL` outranks no-tests. Missing, pending, placeholder, contradictory,
+zero-test, stale, copied, or marker-only proof is unfinished. A review PASS
+cannot replace execution evidence.
 
-## Spec compliance review
+## Review focus
 
-Check scope lock, requirements, design contracts, task Acceptance, Verification
-Plan, runtime reachability, and artifact/provenance boundaries. A missing or orphaned
-runtime deliverable is a failure even when compilation succeeds.
+Check task Outcome, Scope, Acceptance, Dependencies, Verification Plan, changed
+diff, and actual consumers. Treat an unmounted UI, unregistered route, uncalled
+service, disconnected worker, missing export, or unconsumed artifact as a
+reachability failure even when compilation passes.
 
-**Specific-task mode:** review exactly the requested task and its diff, then
-stop. Do not select a next task.
+Apply security checks relevant to the touched boundary: auth and tenant scope,
+input validation, secret redaction, path containment and symlinks, atomic writes,
+concurrency, cleanup, and safe error behavior. Do not add unrelated ceremony.
 
-**Full-feature mode:** use the cumulative feature scope only at its closeout;
-intermediate synchronization does not claim feature completion. Run the Final
-Integration Scout when runtime-facing surfaces exist.
+Specific-task mode reviews only that task and stops. Full-feature mode uses
+cumulative scope only for the final integration check.
 
-## Correctness and security review
-
-Apply only the checks relevant to the touched boundary. For logging/redaction,
-check safe identifiers, quoted schemes, idempotence, and receipt secrecy. For
-filesystem writes, check lexical and canonical containment, symlink rejection,
-atomic same-directory replacement, cleanup, and canonical return paths. Add
-auth, persistence, provider, or concurrency checks only when scope/risk requires.
-
-## Quality cycle
+## Repair cycle
 
 ```text
-retry_count = 0
-while closeout is not PASS:
-  test owner executes required proof once
-  if proof is BLOCKED: stop without blind retry
-  review owner evaluates correctness/security/spec once
-  if FAIL: fix only the affected scope and rerun affected proof/review
-if retry_count reaches 3: stop and request user intervention
+test owner runs required proof once
+if BLOCKED: record prerequisite and stop
+if FAIL: repair the observed cause and rerun affected proof
+review owner evaluates the proven diff once
+if review FAIL: repair affected scope and rerun affected proof/review
+after three failed repair rounds: stop and request user direction
 ```
 
-Only `FAIL` enters remediation. `BLOCKED` is terminal until its prerequisite
-changes. `PASS_WITH_WARNINGS` is a review result only and remains unfinished;
-only literal `PASS` may close when all execution and policy obligations are
-complete.
+`PASS_WITH_WARNINGS` may report non-blocking observations but remains
+unfinished for state synchronization. Never retry an unchanged environment to
+manufacture a green result.
 
-## Flash Gate (`--flash`)
+## Flash gate
 
-Use only when the flag is explicit. Skip dedicated tests, full evidence
-execution, extended UI/manual checks, and review retry loops. Still perform a
-cheap preflight and scope/reachability sanity check.
-
-The flash record must contain exactly the unfinished semantics:
+With explicit `--flash`, run only a cheap available preflight and a basic
+scope/reachability check. Record:
 
 ```text
 Mode: --flash
@@ -101,54 +73,22 @@ Tests: skipped by user request
 Evidence: FLASH_UNVERIFIED
 Status: in_progress
 Blocker: awaiting /hapo:test <feature>
-Next verification: /hapo:test <feature>
 ```
 
-The persisted flash input must also contain `dependencyBlocked: true`,
-`unblocks: false`, and a non-placeholder blocker, and must omit
-`readyForSync`, `flashTransition`, and `promotionReceipt`. Sync-finalize
-rejects minimal or caller-pre-promoted states.
+Flash does not write a PASS receipt, mark done, unblock dependents, or report
+production readiness. Trusted sync-finalize may promote only after fresh proof
+passes the same receipt contract above.
 
-Terminal log:
+## Docs impact and C3
 
-```text
-⚡ Step 4 Flash Gate: tests skipped by --flash; preflight=<pass|skipped>; evidence=FLASH_UNVERIFIED
-```
+After proof and review, classify docs impact as `none`, `minor`, or `major`.
+Update only affected existing docs when impact is not none. Show the user the
+current command evidence and limitations at C3; do not infer approval from a
+receipt.
 
-Do not report `Test PASS`, `Evidence PASS`, `Auto-Approved`, or
-`production-ready`. Flash never sets `done`, unblocks dependents, or promotes
-from a marker. Trusted sync-finalize alone may consume a fresh canonical PASS
-receipt and derive promotion.
+## Legacy workflow compatibility
 
-## Closeout and docs impact
-
-After the test receipt and review verdict are both available, the closeout owner
-uses the policy adapter and synchronizes state. A review-only pass cannot close
-missing execution proof. Evaluate docs impact from the actual behavior change:
-
-- `none`: record no docs edit and stop;
-- `minor` or `major`: update only affected existing docs through the normal docs
-  workflow.
-
-Do not run a docs checkpoint merely because a task completed. Do not refresh the
-whole repository for a local change.
-
-After every task receipt is valid, final integration execution creates
-`feature-receipt.md` once. A task-bearing feature cannot close without all task
-receipts and the feature receipt. A taskless Compact/Full feature closes from a
-valid feature receipt; absence before final closeout is not a failure. Receipts
-never supply or imply approval, readiness, audit status, or product semantics.
-
-## Review threshold
-
-`PASS` requires no Critical or High correctness/security/spec finding and no
-blocking Medium finding. `PASS_WITH_WARNINGS` may carry documented non-blocking
-findings. Finding count never selects review depth or overrides missing proof.
-Any missing proof, unresolved obligation, scope drift, contract substitution, or
-reachability failure remains unfinished regardless of review severity.
-
-### Reachability Failure
-
-An unmounted UI, unregistered route, uncalled service/loader, disconnected
-worker/command/provider/reducer, missing artifact consumer, or other orphaned
-runtime-facing output is a review failure.
+Existing kernel packets keep their separate `receipts/<task-basename>.md`, task
+identity/path metadata, final `feature-receipt.md`, persisted independent-audit
+obligations, and completion-authority checks. The same proof/review ownership
+applies. Do not copy that storage shape into a flat process-first task.

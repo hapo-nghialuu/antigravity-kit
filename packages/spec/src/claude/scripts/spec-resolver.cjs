@@ -68,6 +68,105 @@ function candidateError(reason, code = 'malformed') {
   return error;
 }
 
+const WORKFLOW_STATUSES = new Set(['pending', 'in_progress', 'paused', 'blocked', 'done']);
+const WORKFLOW_TASK_NAME = /^task-[A-Za-z0-9][A-Za-z0-9._-]*\.md$/;
+
+function workflowTaskStatus(content, taskName) {
+  const matches = String(content || '').matchAll(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/gim);
+  const values = [...matches].map((match) => match[1].toLowerCase().replaceAll('-', '_'));
+  if (values.length !== 1 || !WORKFLOW_STATUSES.has(values[0])) {
+    throw candidateError(`${taskName} must contain exactly one supported Status field`);
+  }
+  return values[0];
+}
+
+function inspectWorkflowFeature(specsDir, canonicalSpecs, requestedName) {
+  const featureDir = path.join(specsDir, requestedName);
+  let featureLstat;
+  try {
+    featureLstat = fs.lstatSync(featureDir);
+  } catch (error) {
+    if (isMissingError(error)) return { missing: true };
+    throw candidateError(`feature lstat error: ${error.message}`);
+  }
+  if (featureLstat.isSymbolicLink() || !featureLstat.isDirectory()) {
+    throw candidateError('workflow feature entry must be a regular directory');
+  }
+
+  const canonicalFeature = fs.realpathSync(featureDir);
+  if (!isPathInside(canonicalSpecs, canonicalFeature) || path.dirname(canonicalFeature) !== canonicalSpecs) {
+    throw candidateError('workflow feature directory must be a direct child of specs root');
+  }
+
+  const featureName = path.basename(canonicalFeature);
+  if (fs.existsSync(path.join(canonicalFeature, 'spec.json'))) {
+    return { legacyPresent: true, featureName, featureDir: canonicalFeature };
+  }
+
+  const planFile = path.join(canonicalFeature, 'plan.md');
+  let planLstat;
+  try {
+    planLstat = fs.lstatSync(planFile);
+  } catch (error) {
+    if (isMissingError(error)) return { missingWorkflow: true, featureName, featureDir: canonicalFeature };
+    throw candidateError(`plan.md lstat error: ${error.message}`);
+  }
+  if (planLstat.isSymbolicLink() || !planLstat.isFile() || fs.realpathSync(planFile) !== planFile) {
+    throw candidateError('plan.md must be a regular non-symlink file in the workflow feature directory');
+  }
+
+  const taskNames = fs.readdirSync(canonicalFeature, { withFileTypes: true })
+    .filter((entry) => WORKFLOW_TASK_NAME.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  if (taskNames.length === 0) {
+    return { missingWorkflow: true, featureName, featureDir: canonicalFeature };
+  }
+
+  const tasks = taskNames.map((taskName) => {
+    const taskFile = path.join(canonicalFeature, taskName);
+    const taskLstat = fs.lstatSync(taskFile);
+    if (taskLstat.isSymbolicLink() || !taskLstat.isFile() || fs.realpathSync(taskFile) !== taskFile) {
+      throw candidateError(`${taskName} must be a regular non-symlink file in the workflow feature directory`);
+    }
+    return {
+      path: taskName,
+      status: workflowTaskStatus(fs.readFileSync(taskFile, 'utf8'), taskName),
+    };
+  });
+  const taskRegistry = Object.fromEntries(tasks.map((task) => [task.path, { status: task.status }]));
+  const allTasksDone = tasks.every((task) => task.status === 'done');
+  return {
+    layoutKind: 'process-v3',
+    featureName,
+    specsDir: canonicalSpecs,
+    featureDir: canonicalFeature,
+    planFile,
+    stateFile: planFile,
+    phase: allTasksDone ? 'done' : 'execution',
+    taskRegistry,
+    tasks,
+    allTasksDone,
+  };
+}
+
+function normalizeLegacyWorkflowCandidate(candidate) {
+  const registry = candidate.spec?.task_registry || {};
+  const tasks = Object.entries(registry).map(([taskPath, task]) => ({
+    path: taskPath,
+    status: task?.status || 'pending',
+  }));
+  return {
+    ...candidate,
+    layoutKind: 'legacy-spec',
+    stateFile: candidate.specFile,
+    phase: candidate.spec?.current_phase || candidate.spec?.phase || 'unknown',
+    taskRegistry: registry,
+    tasks,
+    allTasksDone: tasks.length > 0 && tasks.every((task) => task.status === 'done'),
+  };
+}
+
 function inspectFeature(specsDir, canonicalSpecs, requestedName) {
   const featureDir = path.join(specsDir, requestedName);
   let featureLstat;
@@ -491,6 +590,193 @@ function resolvePersistedSpec({ projectRoot, runtime, explicitFeature, explicitP
   }
 }
 
+function scanWorkflowFeatures(specsDir) {
+  let canonicalSpecs;
+  try {
+    canonicalSpecs = fs.realpathSync(specsDir);
+  } catch (error) {
+    if (isMissingError(error)) return { active: [], candidates: [], invalid: [] };
+    return { active: [], candidates: [], invalid: [{ featureName: '<specs>', reason: error.message }] };
+  }
+
+  const active = [];
+  const candidates = [];
+  const invalid = [];
+  const entries = fs.readdirSync(canonicalSpecs, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .sort((left, right) => left.name.localeCompare(right.name));
+  for (const entry of entries) {
+    try {
+      const candidate = inspectWorkflowFeature(canonicalSpecs, canonicalSpecs, entry.name);
+      if (candidate.missing || candidate.missingWorkflow || candidate.legacyPresent) continue;
+      candidates.push(candidate);
+      if (!candidate.allTasksDone) active.push(candidate);
+    } catch (error) {
+      invalid.push({ featureName: entry.name, reason: error.message, planFile: path.join(canonicalSpecs, entry.name, 'plan.md') });
+    }
+  }
+  return { active, candidates, invalid };
+}
+
+function explicitWorkflowFeatureName({ projectRoot, specsDir, explicitFeature, explicitPath }) {
+  if (explicitFeature !== undefined && explicitFeature !== null) {
+    if (typeof explicitFeature !== 'string' || explicitFeature.trim() === ''
+      || explicitFeature.includes('/') || explicitFeature.includes('\\') || explicitFeature.includes('..')) {
+      return { error: 'explicit_malformed', explicitFeature, reason: `malformed feature name: ${explicitFeature}` };
+    }
+    return { featureName: explicitFeature.trim() };
+  }
+
+  if (typeof explicitPath !== 'string' || explicitPath.trim() === '') {
+    return { error: 'explicit_malformed', explicitPath, reason: 'empty explicit path' };
+  }
+  const targetPath = path.resolve(projectRoot, explicitPath);
+  let targetLstat;
+  try {
+    targetLstat = fs.lstatSync(targetPath);
+  } catch (error) {
+    return isMissingError(error)
+      ? { error: 'explicit_not_found', explicitPath, reason: `workflow target not found at ${explicitPath}` }
+      : { error: 'explicit_malformed', explicitPath, reason: `explicit path stat error: ${error.message}` };
+  }
+  if (targetLstat.isSymbolicLink()) {
+    return { error: 'explicit_malformed', explicitPath, reason: 'explicit workflow target must not be a symlink' };
+  }
+
+  let featureDir;
+  if (targetLstat.isDirectory()) {
+    featureDir = targetPath;
+  } else if (targetLstat.isFile()
+    && (path.basename(targetPath) === 'plan.md' || WORKFLOW_TASK_NAME.test(path.basename(targetPath)))) {
+    featureDir = path.dirname(targetPath);
+  } else {
+    return { error: 'explicit_malformed', explicitPath, reason: 'explicit workflow path must target a feature directory, plan.md, or flat task-*.md' };
+  }
+  const relative = path.relative(path.resolve(specsDir), featureDir);
+  if (!relative || relative.includes(path.sep) || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return { error: 'explicit_malformed', explicitPath, reason: 'explicit workflow path must target a direct child of specs root' };
+  }
+  return { featureName: relative };
+}
+
+/**
+ * Resolve the authoring/execution workflow visible to prompt and Stop hooks.
+ * Persisted spec resolution remains unchanged; process-v3 is an additive adapter
+ * and never becomes completion-authority input by way of findAllSpecCandidates.
+ */
+function resolveWorkflowCandidate({ projectRoot, runtime, explicitFeature, explicitPath, target, includeCompleted = false } = {}) {
+  if (!projectRoot) throw new TypeError('projectRoot required');
+  const normalized = extractExplicitTarget(
+    target,
+    explicitFeature !== undefined ? { explicitFeature } : null,
+    explicitPath !== undefined ? { explicitPath } : null,
+  );
+  if (normalized) {
+    if (Object.prototype.hasOwnProperty.call(normalized, 'explicitFeature')) explicitFeature = normalized.explicitFeature;
+    if (Object.prototype.hasOwnProperty.call(normalized, 'explicitPath')) explicitPath = normalized.explicitPath;
+  }
+  const hasExplicit = explicitFeature !== undefined && explicitFeature !== null
+    || explicitPath !== undefined && explicitPath !== null;
+  let specsDir;
+  try {
+    specsDir = specsDirectory(projectRoot, runtime || {});
+  } catch (error) {
+    return { error: hasExplicit ? 'explicit_malformed' : 'invalid_specs', candidates: ['<specs>'], reason: error.message };
+  }
+
+  if (hasExplicit) {
+    const legacyDirect = resolveActiveSpec({ projectRoot, runtime, explicitFeature, explicitPath });
+    if (legacyDirect && !legacyDirect.error) return normalizeLegacyWorkflowCandidate(legacyDirect);
+    const identity = explicitWorkflowFeatureName({ projectRoot, specsDir, explicitFeature, explicitPath });
+    if (identity.error) return identity;
+
+    const legacy = resolveActiveSpec({ projectRoot, runtime, explicitFeature: identity.featureName });
+    if (legacy && !legacy.error) return normalizeLegacyWorkflowCandidate(legacy);
+    if (legacy && legacy.error !== 'explicit_not_found') return legacy;
+
+    let canonicalSpecs;
+    try {
+      canonicalSpecs = fs.realpathSync(specsDir);
+      const candidate = inspectWorkflowFeature(specsDir, canonicalSpecs, identity.featureName);
+      if (candidate.missing || candidate.missingWorkflow || candidate.legacyPresent) {
+        return { error: 'explicit_not_found', explicitFeature: identity.featureName, explicitPath, reason: `workflow not found for feature ${identity.featureName}` };
+      }
+      return candidate;
+    } catch (error) {
+      return { error: 'explicit_malformed', explicitFeature: identity.featureName, explicitPath, reason: error.message };
+    }
+  }
+
+  let legacyActive;
+  try {
+    const legacyCandidates = includeCompleted
+      ? findAllSpecCandidates(projectRoot, runtime || {})
+      : findAllActiveSpecs(projectRoot, runtime || {});
+    legacyActive = legacyCandidates.map(normalizeLegacyWorkflowCandidate);
+  } catch (error) {
+    return {
+      error: 'invalid_specs',
+      candidates: Array.isArray(error.invalid) ? error.invalid.map((entry) => entry.featureName) : ['<specs>'],
+      invalid: error.invalid || [],
+      reason: error.message,
+    };
+  }
+  const workflow = scanWorkflowFeatures(specsDir);
+  if (workflow.invalid.length > 0) {
+    return {
+      error: 'invalid_specs',
+      candidates: workflow.invalid.map((entry) => entry.featureName),
+      invalid: workflow.invalid,
+      reason: `Invalid workflow candidates: ${workflow.invalid.map((entry) => `${entry.featureName}: ${entry.reason}`).join('; ')}`,
+    };
+  }
+  const workflowCandidates = includeCompleted ? workflow.candidates : workflow.active;
+  const active = [...legacyActive, ...workflowCandidates]
+    .sort((left, right) => left.featureName.localeCompare(right.featureName));
+  if (active.length === 0) return null;
+  if (active.length === 1) return active[0];
+  return {
+    error: includeCompleted ? 'multiple_persisted' : 'multiple_active',
+    candidates: active.map((candidate) => candidate.featureName),
+    active,
+    reason: `Multiple ${includeCompleted ? 'persisted' : 'active'} workflows found: ${active.map((candidate) => candidate.featureName).join(', ')}. Provide explicit feature.`,
+  };
+}
+
+/**
+ * Narrow a Stop-gate ambiguity without changing legacy persisted-spec rules.
+ * A single unfinished process-v3 packet is the current workflow; completed
+ * packets are historical. If every process-v3 packet is complete, return the
+ * set so the gate can revalidate all receipts instead of blocking on identity.
+ */
+function refineWorkflowGateResolution(resolved) {
+  if (!resolved || resolved.error !== 'multiple_persisted' || !Array.isArray(resolved.active)) {
+    return resolved;
+  }
+  const candidates = resolved.active;
+  if (candidates.length === 0 || candidates.some((candidate) => candidate.layoutKind !== 'process-v3')) {
+    return resolved;
+  }
+
+  const unfinished = candidates.filter((candidate) => !candidate.allTasksDone);
+  if (unfinished.length === 1) return unfinished[0];
+  if (unfinished.length > 1) {
+    return {
+      ...resolved,
+      error: 'multiple_active',
+      candidates: unfinished.map((candidate) => candidate.featureName),
+      active: unfinished,
+      reason: `Multiple active workflows found: ${unfinished.map((candidate) => candidate.featureName).join(', ')}. Provide explicit feature.`,
+    };
+  }
+  return {
+    layoutKind: 'process-v3-completed-set',
+    candidates,
+    specsDir: candidates[0].specsDir,
+    allTasksDone: true,
+  };
+}
+
 module.exports = {
   specsDirectory,
   findAllActiveSpecs,
@@ -498,4 +784,6 @@ module.exports = {
   extractExplicitTarget,
   resolveActiveSpec,
   resolvePersistedSpec,
+  resolveWorkflowCandidate,
+  refineWorkflowGateResolution,
 };

@@ -28,6 +28,35 @@ const INSTALLER = path.join(PACKAGE_ROOT, 'bin/install.js');
 const MANIFEST = JSON.parse(
   fs.readFileSync(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'), 'utf8')
 );
+const SPECS_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/specs');
+const V3_SPECS_BUNDLE = [
+  'SKILL.md',
+  'references/review.md',
+  'references/templates.md',
+  'templates/design.md',
+  'templates/requirements-init.md',
+  'templates/requirements.md',
+  'templates/research.md',
+  'templates/spec-state.json',
+  'templates/task.md'
+];
+const OBSOLETE_SPECS_FILES = [
+  'references/archive-workflow.md',
+  'references/ask-user-question-gates.md',
+  'references/codebase-analysis.md',
+  'references/cross-spec-dependency.md',
+  'references/research-strategy.md',
+  'references/scope-inquiry.md',
+  'references/translation-mirror.md',
+  'rules/design-discovery-full.md',
+  'rules/design-discovery-light.md',
+  'rules/design-principles.md',
+  'rules/design-review.md',
+  'rules/ears-format.md',
+  'rules/phase-decision-matrix.md',
+  'rules/task-scoring-rubric.md',
+  'rules/tasks-generation.md'
+];
 
 function inTempProject(run) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-codex-native-'));
@@ -130,91 +159,99 @@ function assertInstalledVerificationModel(grounderPath, designTemplate) {
   }
 }
 
-function artifactRouterRecords(skill) {
-  const lines = skill.split('\n');
-  const heading = lines.findIndex((line) => line.trim() === '## Artifact router');
-  const start = lines.findIndex((line, index) => index > heading && line.trim().startsWith('|'));
-  const rows = [];
-  for (let index = start; index >= 0 && index < lines.length && lines[index].trim().startsWith('|'); index += 1) {
-    const cells = lines[index].split('|').slice(1, -1).map((cell) => cell.trim());
-    if (!cells.every((cell) => /^:?-+:?$/.test(cell))) rows.push(cells);
-  }
-  const header = rows.shift() || [];
-  return new Map(rows.map((cells) => [
-    (cells[0] || '').replaceAll('`', ''),
-    Object.fromEntries(header.map((name, index) => [name, cells[index] || '']))
-  ]));
-}
-
 function installedAuthoringProjectionIssues(files) {
   const issues = [];
-  const routes = artifactRouterRecords(files.skill);
-  const none = routes.get('None');
-  if (!none || none['Durable core'] !== 'none'
-    || none['Research route'] !== 'absent' || none['Task route'] !== 'absent') {
-    issues.push('none-route');
+  const foreignRuntimeBoundary = 'If you are Claude Code or any other runtime, ignore this entire Codex block';
+  if (!files.skill.includes('Task files are flat beside `plan.md`')
+    || !files.skill.includes('Do not create a nested task directory.')) {
+    issues.push('flat-layout-entrypoint');
   }
-  for (const depth of ['Compact', 'Full']) {
-    const route = routes.get(depth);
-    if (!route || !['spec.json', 'requirements.md', 'design.md'].every((name) => (
-      route['Durable core'].includes(`\`${name}\``)
-    ))) issues.push(`${depth.toLowerCase()}-core`);
-    if (!route?.['Research route'].includes('research trigger')) issues.push(`${depth.toLowerCase()}-research`);
-    if (!route?.['Task route'].includes('typed topology trigger')) issues.push(`${depth.toLowerCase()}-tasks`);
+  if (!files.templates.includes('The primary layout is always flat:')
+    || !files.templates.includes('task-NN-<slug>.md')) {
+    issues.push('flat-layout-template');
   }
-  if (/\balways search\b|\bcomprehensive research\b|\bcapture all findings\b/i.test(files.discovery)) {
-    issues.push('default-research');
+  for (const gate of ['C1 — Scope', 'C2 — Findings', 'C3 — Done']) {
+    if (!files.skill.includes(gate)) issues.push(`human-gate-${gate.slice(0, 2).toLowerCase()}`);
   }
-  if (/(?:limit|maximum|at most|top|≤|<=)\s*(?:to\s*)?3\b/i.test(files.review)) {
-    issues.push('review-cap');
+  if (!files.review.includes('fresh-context red team')
+    || !/Cap the presented\s+list at 15/.test(files.review)
+    || !files.review.includes('at most two review-and-repair rounds')) {
+    issues.push('adversarial-review');
   }
-  if (!/For every `RN\.M`/.test(files.review)) issues.push('criterion-coverage');
-  if (/\bcurrent_phase\b/.test(files.codex)) issues.push('phase-alias');
-  for (const state of ['in_progress', 'paused', 'blocked', 'done']) {
-    if (!files.codex.includes(`\`${state}\``)) issues.push(`lifecycle-${state}`);
+  if (!files.skill.includes('inline `## Receipt`')
+    || !files.templates.includes('## Canonical inline Receipt')) {
+    issues.push('inline-receipt');
   }
-  if (/^##\s+Evidence\s*$/m.test(files.tasks)) issues.push('task-evidence');
-  if (/\(P\)/.test(files.tasks)) issues.push('task-priority-marker');
+  for (const field of [
+    'Verification: PASS', 'Command:', 'Exit: 0', 'Base:', 'Head:'
+  ]) {
+    if (!files.templates.includes(field)) issues.push(`receipt-${field.toLowerCase()}`);
+  }
+  if (!/^name: hapo-specs$/m.test(files.skill)) issues.push('codex-skill-name');
+  const bundle = [files.skill, files.review, files.templates, files.legacyTemplates].join('\n');
+  const runtimeProjection = `${bundle}\n${files.codex.replace(foreignRuntimeBoundary, '')}`;
+  if (!files.codex.includes(foreignRuntimeBoundary)
+    || files.codex.includes('If you are Codex CLI or any other runtime, ignore this entire Codex block')) {
+    issues.push('codex-ownership-boundary');
+  }
   for (const claudeOnly of [
     'AskUserQuestion', 'TaskCreate', 'TaskGet', 'TaskUpdate', 'TaskList',
-    'WebSearch', 'WebFetch', 'SendMessage'
+    'WebSearch', 'WebFetch', 'SendMessage', 'Claude Code', '.claude', '/hapo:', 'hapo:'
   ]) {
-    if (files.codex.includes(claudeOnly)) issues.push(`claude-tool-${claudeOnly}`);
+    if (runtimeProjection.includes(claudeOnly)) issues.push(`claude-vocabulary-${claudeOnly}`);
   }
-  if (!files.codex.includes('semantic_model')
-    || !files.codex.includes('explicit installed machine semantic-sync step')
-    || !files.codex.includes('round-trip')
-    || !files.codex.includes('node .codex/scripts/spec-scaffold.cjs <feature> --sync-semantic-model')) {
-    issues.push('semantic-model-promotion');
+  for (const command of ['$hapo-specs', '$hapo-develop', '$hapo-sync']) {
+    if (!files.codex.includes(command)) issues.push(`codex-command-${command}`);
+  }
+  for (const state of ['pending', 'in_progress', 'paused', 'blocked', 'done']) {
+    if (!files.codex.includes(`\`${state}\``)) issues.push(`lifecycle-${state}`);
+  }
+  if (!files.codex.includes('flat `task-NN-*.md` files')
+    || !files.codex.includes('inline `## Receipt`')
+    || !files.codex.includes('C1') || !files.codex.includes('C2') || !files.codex.includes('C3')) {
+    issues.push('codex-process-v3');
   }
   return issues;
 }
 
 function assertInstalledAuthoringProjection(root) {
-  const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+  const installedRoot = path.join(root, '.agents/skills/specs');
+  const relativeFiles = (directory) => allFiles(directory, () => true)
+    .map((file) => path.relative(directory, file).split(path.sep).join('/'))
+    .sort();
+  assert.deepEqual(relativeFiles(SPECS_SOURCE_ROOT), V3_SPECS_BUNDLE);
+  assert.deepEqual(relativeFiles(installedRoot), V3_SPECS_BUNDLE);
+
+  for (const relative of V3_SPECS_BUNDLE) {
+    const sourcePath = path.join(SPECS_SOURCE_ROOT, relative);
+    const expected = normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath);
+    const actual = fs.readFileSync(path.join(installedRoot, relative), 'utf8');
+    assert.equal(actual, expected, `Codex Specs projection drifted: ${relative}`);
+  }
+  for (const relative of OBSOLETE_SPECS_FILES) {
+    assert.equal(fs.existsSync(path.join(installedRoot, relative)), false, `obsolete Specs file installed: ${relative}`);
+  }
+
+  const read = (relative) => fs.readFileSync(path.join(installedRoot, relative), 'utf8');
   const files = {
-    skill: read('.agents/skills/specs/SKILL.md'),
-    discovery: [
-      read('.agents/skills/specs/rules/design-discovery-light.md'),
-      read('.agents/skills/specs/rules/design-discovery-full.md')
-    ].join('\n'),
-    review: [
-      read('.agents/skills/specs/rules/design-review.md'),
-      read('.agents/skills/specs/references/review.md')
-    ].join('\n'),
-    tasks: [
-      read('.agents/skills/specs/rules/tasks-generation.md'),
-      read('.agents/skills/specs/rules/task-scoring-rubric.md'),
-      read('.agents/skills/specs/rules/phase-decision-matrix.md')
-    ].join('\n'),
-    codex: [read('AGENTS.md'), read('.codex/rules/state-sync.md')].join('\n')
+    skill: read('SKILL.md'),
+    review: read('references/review.md'),
+    templates: read('references/templates.md'),
+    legacyTemplates: V3_SPECS_BUNDLE
+      .filter((relative) => relative.startsWith('templates/'))
+      .map(read)
+      .join('\n'),
+    codex: [
+      fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'),
+      fs.readFileSync(path.join(root, '.codex/rules/state-sync.md'), 'utf8')
+    ].join('\n')
   };
   assert.deepEqual(installedAuthoringProjectionIssues(files), []);
   const mutations = [
-    ['discovery', (value) => `${value}\nAlways search before design.`],
-    ['review', (value) => `${value}\nLimit to 3 blockers.`],
-    ['codex', (value) => `${value}\nSet current_phase then call TaskUpdate.`],
-    ['tasks', (value) => `${value}\n## Evidence\nUse (P).`]
+    ['skill', (value) => value.replace('Task files are flat beside `plan.md`', 'Task files may be nested')],
+    ['review', (value) => value.replace('list at 15', 'list without a cap')],
+    ['templates', (value) => value.replace('Verification: PASS', 'Verification: UNKNOWN')],
+    ['codex', (value) => `${value}\nUse TaskUpdate for state changes.`]
   ];
   for (const [key, mutate] of mutations) {
     const changed = { ...files, [key]: mutate(files[key]) };
@@ -645,7 +682,7 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
   });
 });
 
-test('Codex install is project-local, native, and upgrade-safe', () => {
+test('Codex fresh install is exact while refresh and upgrade preserve existing files', () => {
   inTempProject((root) => {
     const userInstructions = '# User rules\n\nKeep this exact.\n';
     fs.writeFileSync(path.join(root, 'AGENTS.md'), userInstructions);
@@ -665,10 +702,7 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
       '.codex/scripts/spec-ground.cjs',
       '.codex/scripts/validate-spec-output.cjs',
       '.agents/.gitignore',
-      '.agents/skills/specs/SKILL.md',
-      '.agents/skills/specs/templates/design.md',
-      '.agents/skills/specs/templates/task.md',
-      '.agents/skills/specs/templates/spec-state.json'
+      ...V3_SPECS_BUNDLE.map((file) => `.agents/skills/specs/${file}`)
     ]) {
       assert.equal(fs.existsSync(path.join(root, relative)), true, `missing ${relative}`);
     }
@@ -776,7 +810,13 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
       ...allFiles(path.join(root, '.agents', 'skills'), (file) => file.endsWith('.md'))
     ];
     const visible = modelVisibleFiles.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    assert.doesNotMatch(visible, /\bAgent\(|subagent_type|`Agent`|\bSendMessage\b|\/hapo:|\bhapo:|Claude Code/);
+    const foreignRuntimeBoundary = 'If you are Claude Code or any other runtime, ignore this entire Codex block';
+    assert.match(visible, new RegExp(foreignRuntimeBoundary));
+    assert.doesNotMatch(visible, /If you are Codex CLI or any other runtime, ignore this entire Codex block/);
+    assert.doesNotMatch(
+      visible.replaceAll(foreignRuntimeBoundary, ''),
+      /\bAgent\(|subagent_type|`Agent`|\bSendMessage\b|\/hapo:|\bhapo:|Claude Code/,
+    );
     assert.doesNotMatch(visible, /@@PRIVACY_PROMPT_START@@|Claude Tasks/);
     assert.match(visible, /\$hapo-specs/);
 
@@ -795,10 +835,22 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
 
     const questionSkill = path.join(root, '.agents', 'skills', 'question', 'SKILL.md');
     fs.appendFileSync(questionSkill, '\nUSER-CODEX-SENTINEL\n');
+    // Fresh installs are exact. Refresh/upgrade intentionally documents the
+    // current Codex limitation: removed skill paths are not pruned.
+    const obsoleteSpecsRule = path.join(
+      root, '.agents', 'skills', 'specs', 'rules', 'design-principles.md'
+    );
+    fs.mkdirSync(path.dirname(obsoleteSpecsRule), { recursive: true });
+    fs.writeFileSync(obsoleteSpecsRule, 'LEGACY-CODEX-ORPHAN\n');
 
     const sameVersion = install(root);
     assert.equal(sameVersion.status, 0, `${sameVersion.stdout}\n${sameVersion.stderr}`);
     assert.match(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
+    assert.equal(
+      fs.existsSync(obsoleteSpecsRule),
+      true,
+      'known limitation: Codex refresh does not prune obsolete skill files'
+    );
 
     const metadataPath = path.join(root, '.codex', 'cafekit.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
@@ -808,6 +860,11 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
     const upgrade = install(root);
     assert.equal(upgrade.status, 0, `${upgrade.stdout}\n${upgrade.stderr}`);
     assert.match(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
+    assert.equal(
+      fs.existsSync(obsoleteSpecsRule),
+      true,
+      'known limitation: Codex upgrade does not prune obsolete skill files'
+    );
     assert.ok(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8').startsWith(userInstructions));
 
     const forced = install(root, ['--force-overwrite']);

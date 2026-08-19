@@ -173,14 +173,14 @@ function buildEvolutionSpecFixture(root, name) {
 // isolated root) -- reaches a real `released` generation 1 authority with no
 // hand-crafted digests. Returns the bound instance and key commits/digests.
 function publishOneReleasedGeneration(root) {
-  writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
+  writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/reports/bootstrap-legacy-bridge-review.json'), {
     schema_version: '1', verdict: 'PASS', blocking_count: 0, reviewed_criteria: ['R1.1'],
     semantic_digest: cf.sha256Tag('bridge'), bootWindowBaseCommit: git(root, ['rev-parse', 'HEAD']).trim(),
     written_at: new Date().toISOString(),
   });
   const baseCommit = git(root, ['rev-parse', 'HEAD']).trim();
   const reviewReceiptDigest = cf.sha256Tag('seed-review-receipt');
-  writeJson(path.join(root, 'specs/cafekit-semantic-eval-firewall/spec.json'), {
+  writeJson(path.join(root, 'specs/archive/cafekit-semantic-eval-firewall/spec.json'), {
     validation: {
       semantic_review_history: {
         entries: [{ sequence: 0, review_epoch: 0, verdict: 'PASS', review_receipt_digest: reviewReceiptDigest, semantic_digest: cf.sha256Tag('feature-digest') }],

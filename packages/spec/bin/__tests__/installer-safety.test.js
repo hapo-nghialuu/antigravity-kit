@@ -237,7 +237,8 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.match(core, /fail-safe/i);
     assert.match(core, /Ignore managed blocks not owned by your runtime/i);
     assert.match(codex, /owned by Codex/i);
-    assert.match(codex, /ignore this entire Codex block/i);
+    assert.match(codex, /If you are Claude Code or any other runtime, ignore this entire Codex block/i);
+    assert.doesNotMatch(codex, /If you are Codex CLI or any other runtime, ignore this entire Codex block/i);
     assert.match(codex, /fail-safe/i);
     // CORE must not contain runtime-specific directives that would leak
     assert.doesNotMatch(core, /\$hapo-|hapo:/i);
@@ -264,7 +265,8 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     const afterCore = managedBody(afterAgents, CORE_START, CORE_END);
     const afterCodex = managedBody(afterAgents, CODEX_START, CODEX_END);
     assert.match(afterCore, /runtime-neutral/i);
-    assert.match(afterCodex, /ignore this entire Codex block/i);
+    assert.match(afterCodex, /If you are Claude Code or any other runtime, ignore this entire Codex block/i);
+    assert.doesNotMatch(afterCodex, /If you are Codex CLI or any other runtime, ignore this entire Codex block/i);
   });
 });
 
@@ -686,9 +688,7 @@ test('managed Claude Addressing survives force refresh when template drops it', 
 
 test('managed Codex block Addressing survives upsert with the current template', () => {
   inTempProject(() => {
-    const codexTemplate = normalizeCodexBody(
-      fs.readFileSync(path.join(__dirname, '../../src/codex/AGENTS.md'), 'utf8')
-    );
+    const codexTemplate = fs.readFileSync(path.join(__dirname, '../../src/codex/AGENTS.md'), 'utf8');
     const userTop = '# User codex notes\n\n';
     const userBottom = '\n\n## User section\nKeep me.\n';
     const configuredAddressing = '## Addressing (Context Overflow Indicator)\n\nThe AI always addresses the user as "bro" throughout the conversation.';
@@ -726,4 +726,3 @@ test('copyRecursive skips generated artifacts while copying normal files', () =>
     assert.equal(fs.existsSync('dest/extra/bundle.pyo'), false);
   });
 });
-

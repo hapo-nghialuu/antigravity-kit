@@ -12,14 +12,18 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
 ## 2. Plan
 
-- For non-trivial features, use `/specs` to create or validate the spec.
-- For technically ready specs, start implementation only after a new explicit Develop invocation and work one task file at a time.
+- For non-trivial features, use `/hapo:specs` to challenge the minimum scope,
+  open C1, and create `specs/<feature>/plan.md` with flat
+  `task-NN-*.md` files beside it.
+- After adversarial review, open C2 and apply only the findings the user accepts
+  or revises. Specs never starts implementation.
+- Start implementation only after a new explicit `/hapo:develop` invocation,
+  then select one unblocked task at a time.
 - Extract from the active task:
   - `Status`
   - `Outcome`
   - `Scope`
-  - `Anchors and Ownership`
-  - `Changes`
+  - `Ownership`
   - `Acceptance`
   - `Dependencies`
   - `Verification Plan`
@@ -37,22 +41,26 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 - Run exact commands from `Verification Plan` first.
 - Then run repo-level lint/test/build as needed for confidence.
 - Use only fresh verification from the current run when claiming completion.
+- Review correctness, security, scope, and reachability without turning the
+  review into execution proof.
 - `PRECHECK_FAIL` outranks `NO_TESTS`.
 - `NO_TESTS` or `0 tests + exit 0` is not a pass when automated tests are required.
 - If verification fails, fix root cause and rerun. After 3 failed attempts, escalate with evidence.
 
 ## 5. Sync
 
-- Mark task state only after implementation, tests/evidence, and review pass.
-- Write task proof to `receipts/<task-basename>.md`; use legacy task-local
-  `## Evidence` only when consuming an old task format.
-- Create `feature-receipt.md` only for final integration closeout.
-- Treat `spec.json` as machine authority; task Markdown is a human projection.
-- Derive task ordering, ownership, proof, and parallel eligibility only from
-  typed `coordination.boundaries`, never `(P)`, `task_triggers`, `Related Files`,
-  or prose markers.
-- Keep `spec.json.task_registry` and markdown task files aligned.
+- Use `/hapo:sync` to edit observed state surgically; the controller is the
+  sole writer of task Status and proof.
+- Keep exactly one `Status:` field. Write or replace the task's final inline
+  `## Receipt` before setting `Status: done`.
+- A canonical Receipt contains the exact command, `Exit: 0`,
+  `Verification: PASS`, runtime-derived Base and Head values, and non-empty
+  fenced current output. Never invent, copy, or infer missing proof.
+- Re-read each edited task and reconcile its plan row, dependencies, acceptance
+  mapping, status, and receipt without rewriting unrelated bytes.
 - Run docs checkpoint when a completed task affects public docs or architecture docs.
+- After all requested work has current proof, show evidence and limitations at
+  C3. The user decides whether the feature is complete.
 
 ## Production Or CI Issues
 
@@ -63,3 +71,12 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 5. Review before syncing or shipping.
 
 Do not patch symptoms before diagnosis unless the issue is a trivial syntax/type/lint failure with an obvious local cause.
+
+## Legacy compatibility
+
+When an existing feature contains `spec.json`, nested `tasks/task-R*.md`, or
+other legacy kernel artifacts, keep using the installed adapter. Preserve its
+`task_registry`, `semantic_model`, `planning_depth`, lane,
+`execution_tier`, typed boundaries, separate receipts, and final feature
+receipt. Do not project that machine authority or storage shape into a new
+process-first packet.

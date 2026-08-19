@@ -80,7 +80,10 @@ try {
   const baseDir   = process.env.PROJECT_ROOT || cwd;
   const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
   const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
-  const resolved = RESOLVER.resolveActiveSpec({ projectRoot: baseDir, runtime, explicitFeature, explicitPath });
+  const resolveWorkflow = typeof RESOLVER.resolveWorkflowCandidate === 'function'
+    ? RESOLVER.resolveWorkflowCandidate
+    : RESOLVER.resolveActiveSpec;
+  const resolved = resolveWorkflow({ projectRoot: baseDir, runtime, explicitFeature, explicitPath });
 
   if (!resolved) {
     process.exit(0); // No active spec, do nothing
@@ -108,19 +111,20 @@ try {
     process.exit(0);
   }
 
-  const activeSpec = resolved.spec;
+  const activeSpec = resolved.spec || {};
+  const processWorkflow = resolved.layoutKind === 'process-v3';
   const featureName = resolved.featureName;
   const specsPath = resolved.specsDir;
   const runtimeContext = POLICY.deriveRuntimeContext({
     projectRoot: baseDir,
     specsRoot: specsPath,
-    specFile: resolved.specFile || path.join(specsPath, featureName, 'spec.json'),
+    specFile: resolved.stateFile || resolved.specFile || path.join(specsPath, featureName, 'spec.json'),
     featureName,
     runtimeSession: sessionIdentity(payload),
   });
 
-  const phase = activeSpec.current_phase || activeSpec.phase || 'unknown';
-  const taskRegistry = activeSpec.task_registry || {};
+  const phase = resolved.phase || activeSpec.current_phase || activeSpec.phase || 'unknown';
+  const taskRegistry = resolved.taskRegistry || activeSpec.task_registry || {};
   const flashTasks = POLICY.flashState(taskRegistry);
   const taskEntries = Object.entries(taskRegistry);
   const taskCounts = taskEntries.reduce((acc, [, task]) => {
@@ -135,7 +139,8 @@ try {
     return status === 'pending' && deps.every((dep) => taskStatusByPath.get(dep) === 'done');
   });
   const featureDir = path.join(specsPath, featureName);
-  const featureReceiptPresent = RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
+  const featureReceiptPresent = !processWorkflow
+    && RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
 
   // ── State-change gate: only emit the full tollgate when spec state changed ──
   // The cache is shared by installed hook copies, so its key must carry the
@@ -164,7 +169,8 @@ try {
   }
 
   if (stateKey && lastKey === stateKey) {
-    console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync \`spec.json\` when state changes.\n`);
+    const stateTarget = processWorkflow ? 'task Markdown' : '`spec.json`';
+    console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync ${stateTarget} when state changes.\n`);
     process.exit(0);
   }
 
@@ -187,9 +193,14 @@ try {
   if (flashTasks.length > 0) {
     lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
-  lines.push(`- Sync \`spec.json\` + task Markdown status after verified work; task proof belongs in \`receipts/<task-basename>.md\`.`);
-  lines.push(`- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`);
-  lines.push(`- Validate with \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
+  if (processWorkflow) {
+    lines.push('- Sync each flat task `Status:` only after verified work; task proof belongs in that task\'s inline `## Receipt`.');
+    lines.push(`- Workflow source: \`specs/${featureName}/plan.md\`; Stop revalidates every task currently marked done.`);
+  } else {
+    lines.push('- Sync `spec.json` + task Markdown status after verified work; task proof belongs in `receipts/<task-basename>.md`.');
+    lines.push(`- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`);
+    lines.push(`- Validate with \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
+  }
   lines.push('');
 
   console.log(lines.join('\n'));
