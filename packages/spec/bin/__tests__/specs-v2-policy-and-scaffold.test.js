@@ -634,3 +634,32 @@ test('schema 2.0 migration rejects unknown authority fields instead of projectio
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   }
 });
+
+test('--help and --version answer on stdout before any precondition runs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-scaffold-info-flags-'));
+  try {
+    for (const flag of ['--help', '-h']) {
+      const result = run(root, [flag]);
+      assert.equal(result.status, 0, `${flag}: ${output(result)}`);
+      assert.match(result.stdout, /^Usage: node spec-scaffold\.cjs/, `${flag} must print usage on stdout`);
+      assert.equal(result.stderr, '', `${flag} must not write to stderr`);
+    }
+
+    for (const flag of ['--version', '-v']) {
+      const result = run(root, [flag]);
+      assert.equal(result.status, 0, `${flag}: ${output(result)}`);
+      // Prerelease suffixes are normal on this package (e.g. 0.16.0-rc.4).
+      assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/, `${flag} must print a SemVer version`);
+      assert.equal(result.stderr, '', `${flag} must not write to stderr`);
+    }
+
+    // A help flag must never be read as a feature name, and must not create a spec.
+    assert.deepEqual(fs.readdirSync(root), [], 'info flags must not touch the work tree');
+
+    // The no-argument path keeps usage-as-diagnostic: stderr, exit 2.
+    const bare = run(root, []);
+    assert.equal(bare.status, 2, output(bare));
+    assert.equal(bare.stdout, '', 'bare invocation must not print usage on stdout');
+    assert.match(bare.stderr, /^Usage: node spec-scaffold\.cjs/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

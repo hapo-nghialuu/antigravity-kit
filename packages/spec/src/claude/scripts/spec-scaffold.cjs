@@ -129,8 +129,13 @@ const TRANSACTION_FORMAT = 'cafekit-spec-scaffold-transaction/1';
 
 class ScaffoldPreconditionError extends Error {}
 
+const USAGE_TEXT = 'Usage: node spec-scaffold.cjs <feature> [--sync-semantic-model] [--tasks "R0-01-slug,R1-01-slug" --boundaries \'[{"id":"B-OWN","type":"ownership",...}]\'] [--lane Standard|Critical] [--planning-depth Compact|Full] [--assurance-level Routine|Elevated|Strict] [--research --uncertainty "..."] [--phases \'[{"id":"phase-1","task_ids":["R1-01"],"entry_condition":"...","exit_condition":"...","owner_boundary":"B-OWN"}]\'] [--risks auth,privacy] [--lang en] [--title "..."] [--specs-root specs]';
+
+// Usage reaches stderr when it accompanies a precondition failure, and stdout
+// when the caller asked for it with --help; a requested help text is output,
+// not a diagnostic.
 function usage() {
-  console.error('Usage: node spec-scaffold.cjs <feature> [--sync-semantic-model] [--tasks "R0-01-slug,R1-01-slug" --boundaries \'[{"id":"B-OWN","type":"ownership",...}]\'] [--lane Standard|Critical] [--planning-depth Compact|Full] [--assurance-level Routine|Elevated|Strict] [--research --uncertainty "..."] [--phases \'[{"id":"phase-1","task_ids":["R1-01"],"entry_condition":"...","exit_condition":"...","owner_boundary":"B-OWN"}]\'] [--risks auth,privacy] [--lang en] [--title "..."] [--specs-root specs]');
+  console.error(USAGE_TEXT);
 }
 
 function failPrecondition(message) {
@@ -2002,7 +2007,45 @@ function syncSemanticModel({ workRoot, args, specDir, ts }) {
   console.log(`SEMANTIC_MODEL_SYNCED ${path.relative(process.cwd(), specDir) || specDir}`);
 }
 
+// Version lives in a different file depending on where this script runs: an
+// installed adapter carries `<adapter>/cafekit.json`, the source tree carries
+// `packages/spec/package.json`. Read them with fs rather than require so the
+// runtime dependency closure — which may only copy files under src/claude —
+// stays satisfiable in an installed runtime.
+function readVersion() {
+  const candidates = [
+    path.resolve(__dirname, '..', 'cafekit.json'),
+    path.resolve(__dirname, '..', '..', '..', 'package.json'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      if (typeof parsed.version === 'string' && parsed.version) return parsed.version;
+    } catch {
+      // try the next location
+    }
+  }
+  return 'unknown';
+}
+
+// --help/--version answer before any precondition runs: a caller asking what
+// this command is must not be told their help flag is an invalid feature name,
+// and must not trigger transaction recovery as a side effect.
+function respondToInfoFlags(argv) {
+  const flags = argv.slice(2);
+  if (flags.includes('--help') || flags.includes('-h')) {
+    console.log(USAGE_TEXT);
+    return true;
+  }
+  if (flags.includes('--version') || flags.includes('-v')) {
+    console.log(readVersion());
+    return true;
+  }
+  return false;
+}
+
 function main() {
+  if (respondToInfoFlags(process.argv)) return;
   const workRoot = path.resolve(process.cwd());
   const recoveredTransactions = recoverTransactions(workRoot);
   if (recoveredTransactions > 0) {
