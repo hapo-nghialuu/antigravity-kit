@@ -13,9 +13,7 @@
     "test:package": "node --test bin/__tests__/package-inventory.test.js",
     "test:secrets": "node --test bin/__tests__/secret-scanner.test.js",
     "test:policy": "node --test bin/__tests__/develop-contract.test.js",
-    "release:freeze": "node scripts/benchmark-workflow.mjs freeze",
-    "prepack": "node scripts/release-preflight.mjs",
-    "prepublishOnly": "node scripts/release-preflight.mjs"
+    "release:freeze": "node scripts/benchmark-workflow.mjs freeze"
   },
   "files": [
     "bin",

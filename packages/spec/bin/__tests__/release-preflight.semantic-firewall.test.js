@@ -553,7 +553,7 @@ test('sentinel: a corrupted freeze file surfaces as release-preflight exit 2, ne
 // package.json wiring: version preserved, reserved paths excluded (real checkout, read-only)
 // ---------------------------------------------------------------------------
 
-test('package.json: version stays valid SemVer (release-agnostic) and prepack/prepublishOnly wired to release-preflight.mjs', () => {
+test('package.json: version stays valid SemVer and the npm lifecycle stays unwired while the boot-window is open', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   // R1.6 requires the version field preserved, not pinned to one release literal
   // this task happened to land against -- a hard-coded release string would
@@ -562,8 +562,16 @@ test('package.json: version stays valid SemVer (release-agnostic) and prepack/pr
   // is a valid SemVer string (optional prerelease/build metadata included).
   assert.equal(typeof pkg.version, 'string');
   assert.match(pkg.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/);
-  assert.equal(pkg.scripts.prepack, 'node scripts/release-preflight.mjs');
-  assert.equal(pkg.scripts.prepublishOnly, 'node scripts/release-preflight.mjs');
+  // R0-01 wired prepack/prepublishOnly to release-preflight.mjs while stating
+  // it "does not invoke bootstrapBaseline, create a real freeze, or publish
+  // (D11/I9 boot-window)". R1-03 bootstrap-activation, which closes that
+  // window, never ran and this feature is paused -- so the wiring made every
+  // publish exit 2 on a freeze that nothing was allowed to create. The gate
+  // stays runnable on its own (`release:freeze`, and the script invoked
+  // directly by the tests above); it just no longer sits on npm's lifecycle.
+  // Rewire both when R1-03 lands.
+  assert.equal(pkg.scripts.prepack, undefined);
+  assert.equal(pkg.scripts.prepublishOnly, undefined);
   assert.equal(pkg.scripts['release:freeze'], 'node scripts/benchmark-workflow.mjs freeze');
   // pre-existing scripts untouched
   assert.equal(pkg.scripts.test, 'node scripts/run-skill-self-tests.mjs');
