@@ -86,7 +86,10 @@ Before detailing requirements, list unanswered questions:
   - codebase fit
   - external/current constraints
   - downstream task and test implications
-- If evidence leaves multiple viable choices with no obvious winner, route to `/hapo:brainstorm` or ask the user for a decision.
+- If evidence leaves multiple viable choices, classify authority: choose the
+  simplest reversible engineering option and record its bounded reversal;
+  HOLD/ASK only for a user-owned product, scope, security, data, or irreversible
+  decision. Missing repository facts remain grounding blockers, not questions.
 
 ### 7. Record Findings
 - Write to `research.md` using template `templates/research.md`

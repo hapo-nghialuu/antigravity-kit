@@ -38,7 +38,7 @@ function materializeWindowsHookCommands(content, projectRoot = process.cwd()) {
         const hookPath = path.join(canonicalRoot, '.codex', 'hooks', match[1]);
         const encodedPath = Buffer.from(hookPath, 'utf8').toString('base64url');
         handler.commandWindows = (
-          'node -e "require(Buffer.from(process.argv[1],\'base64url\').toString(\'utf8\'))" ' +
+          'node -e "process.argv[1]=Buffer.from(process.argv[1],\'base64url\').toString(\'utf8\');require(\'module\').runMain()" ' +
           encodedPath
         );
       }
@@ -91,6 +91,22 @@ function installRuntimeFiles(ctx, platformKey) {
     tracker: ctx.trackers[platformKey]
   });
   report(ctx, treeAction(agg), 'Codex native hooks');
+  // Keep one canonical command analyzer in the Claude source tree, then
+  // materialize the same bytes into the installed Codex runtime.
+  writeSourceFile(
+    ctx,
+    platformKey,
+    path.join(SRC, 'claude', 'hooks', 'lib', 'privacy-command-analysis.cjs'),
+    path.join(platform.folder, 'hooks', 'lib', 'privacy-command-analysis.cjs'),
+    'Codex privacy command analyzer'
+  );
+  writeSourceFile(
+    ctx,
+    platformKey,
+    path.join(SRC, 'claude', 'hooks', 'lib', 'runtime-path-safety.cjs'),
+    path.join(platform.folder, 'hooks', 'lib', 'runtime-path-safety.cjs'),
+    'Codex runtime path safety'
+  );
 }
 
 function installNativeRuleOverrides(ctx, platformKey) {

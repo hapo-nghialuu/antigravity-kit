@@ -18,10 +18,6 @@ const {
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
 const {
-  convertOpenCodeAgentContent,
-  convertOpenCodeCommandContent
-} = require('../lib/opencode-install');
-const {
   codexAgentName,
   convertCodexAgentContent
 } = require('../lib/codex-install');
@@ -29,8 +25,7 @@ const {
 const SRC = path.join(__dirname, '../../src');
 
 /**
- * Spec command files installed for a platform. Claude ships spec-* commands;
- * OpenCode generates its own command wrappers elsewhere.
+ * Spec command files installed for a platform. Claude ships spec-* commands.
  */
 function getPlatformSpecFiles(platformKey, ctx) {
   if (platformKey === 'claude') {
@@ -76,7 +71,6 @@ function copyPlatformFiles(ctx, platformKey) {
   const tracker = ctx.trackers[platformKey];
   const platformFolder = platform.folder;
 
-  // For OpenCode, text bodies are path-normalized (.claude → .opencode, etc.).
   const bodyTransform = getCopyOptions(platformKey, {}).transform;
 
   const skillsSourceDir = path.join(SRC, 'claude/skills');
@@ -162,9 +156,7 @@ function copyPlatformFiles(ctx, platformKey) {
         'tester.md', 'code-reviewer.md', 'fullstack-developer.md', 'debugger.md'
       ];
       let agentTransform;
-      if (platformKey === 'opencode') {
-        agentTransform = (content, src) => convertOpenCodeAgentContent(content, path.basename(src));
-      } else if (platformKey === 'codex') {
+      if (platformKey === 'codex') {
         agentTransform = (content, src) => convertCodexAgentContent(content, path.basename(src));
       }
 
@@ -222,11 +214,7 @@ function copyPlatformFiles(ctx, platformKey) {
       return;
     }
     const cmdTransform = (content, s) => {
-      let c = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
-      if (platformKey === 'opencode') {
-        c = convertOpenCodeCommandContent(c, path.basename(s));
-      }
-      return c;
+      return content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
     };
     const { action } = writeManagedFile({
       src, dest, platformFolder, ctx, tracker, transform: cmdTransform

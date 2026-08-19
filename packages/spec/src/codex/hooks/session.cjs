@@ -10,6 +10,7 @@ const {
   readPayload
 } = require('./lib/hook-context.cjs');
 const { clearState } = require('./lib/privacy-state.cjs');
+const { clearState: clearCompletionState } = require('./completion-authority-state.cjs');
 
 function readPackage(projectRoot) {
   try {
@@ -88,6 +89,7 @@ try {
 
   // Approval tokens never survive a session boundary or compaction.
   clearState(projectRoot);
+  clearCompletionState(projectRoot, payload.session_id);
 
   const parts = [
     projectType && `Type: ${projectType}`,

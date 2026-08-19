@@ -1,6 +1,7 @@
 # AskUserQuestion Gate Matrix
 
-Use this matrix to decide when `hapo:specs` must pause for user input. Ask only when the answer changes scope, architecture, requirements, task shape, validation disposition, or implementation safety.
+Use this matrix to classify authority before pausing for user input. A workflow
+event, uncertainty, or architecture choice does not by itself justify a question.
 
 ## Source Priority
 
@@ -12,25 +13,30 @@ Resolve uncertainty in this order:
 4. Reasonable default from CafeKit rules.
 5. `AskUserQuestion` only when the remaining decision is user-owned.
 
-Do not ask about facts that codebase or official docs can answer.
+Classify first:
+
+- `repository_fact`: investigate and ground it from repository or required
+  current evidence. Do not ask the user to supply a discoverable fact.
+- `reversible_assumption`: choose the simplest engineering option and record its
+  bounded reversal boundary. Do not ask unless the user explicitly requested
+  control of that choice.
+- `user_owned`: HOLD and ASK for a product, scope, security, data, or
+  irreversible decision. Never infer or self-approve it.
+
+Store only actual items in optional `spec.json.decisions`; omit it when absent.
+Every unresolved `user_owned` entry blocks readiness; facts and reversible
+assumptions do not become user questions merely because they are unresolved.
 
 ## Gate Matrix
 
-| Gate | Trigger | Ask? | Question shape | Record in |
-|---|---|---:|---|---|
-| Operation | `/hapo:specs` called without args | Yes | Choose create/status/resume/validate/archive | none |
-| Active spec | In-progress or branch-matched spec exists | Yes | Continue existing vs create new | `spec.json` if changed |
-| Pre-spec clarity | Description lacks concrete output, actor, or acceptance signal | Yes | 1-2 clarifying questions | `spec.json.scope_lock` |
-| Brainstorm routing | 2+ plausible architectures and no approved direction | Yes | Route to brainstorm vs continue minimal spec | final response / `research.md` |
-| Scope inquiry | Non-trivial task after 5D assessment | Yes | Expand / Hold / Reduce | `spec.json.scope_lock` |
-| Evidence gap | Required evidence is unavailable after targeted research | Yes | Continue with explicit risk / run more scout / narrow scope | `research.md` |
-| Architecture tie | Two approaches are materially similar after evidence | Yes | Pick approach with recommended option first | `design.md` |
-| Contract change | Auth, persistence, provider, API, CLI, schema, permissions, or runtime contract changes | Yes if user intent not explicit | Confirm contract and rollback expectations | `design.md` canonical contracts |
-| Scope expansion | A task candidate adds work not in `scope_lock` | Yes | Approve expansion / defer / reject | `spec.json.scope_lock` + affected docs |
-| High-risk spike | Risk = Complex and spike may change deliverables | Yes if cost/scope impact > 4h | Spike now / reduce / defer | `research.md` + task file |
-| Task conflict | Parallel candidate shares files/contracts with another task | No by default | Resolve sequentially unless business deadline requires parallelization | task dependencies |
-| Validation findings | Red-team/validate findings modify approved scope/design/tasks | Yes | Apply accepted / review each / reject all | `reports/red-team-report.md` or validation log |
-| Final contradiction | Whole-spec sweep finds unresolved contradiction | Yes | Choose authoritative source/decision | affected docs + `spec.json` |
+| Class | Example trigger | Action | Record in |
+|---|---|---|---|
+| Repository fact | Existing behavior, path, dependency, API shape, or current constraint | Investigate and ground; if evidence remains unavailable, report the exact grounding blocker without asking the user to guess | design/research anchor |
+| Reversible assumption | Two technically valid internal approaches with bounded rollback | Select the simplest compatible option and record the reversal trigger/boundary | `spec.json.decisions` when material, otherwise design |
+| User-owned decision | Product behavior, scope expansion/reduction, security posture, data handling, or irreversible migration | HOLD and ASK; keep the exact decision unresolved until the user answers | `spec.json.decisions` and affected artifact |
+| Active-target ambiguity | Multiple plausible feature/spec targets | HOLD and ASK because target selection changes scope | `scope_lock` |
+| Validation finding | A factual defect or reversible repair | Ground and repair without approval; ASK only if resolution changes a user-owned decision | affected canonical artifact |
+| Task conflict | Shared files/contracts between parallel candidates | Serialize or merge using the simplest reversible topology | task boundaries |
 
 ## Question Format
 
@@ -50,6 +56,8 @@ Do not ask when:
 - The choice is pure implementation detail with no scope/user impact.
 - The task can safely use an existing codebase convention.
 - The question exists only to avoid making a normal engineering judgment.
+- Evidence is missing for a `repository_fact`; report the grounding blocker
+  instead of asking the user to guess.
 
 ## Recording Rules
 
@@ -58,4 +66,5 @@ After a user answer:
 - Update the artifact that drives implementation, not only a report.
 - Keep exact selected option and custom free text when provided.
 - Add unresolved questions at the end of the affected document.
-- Do not mark `ready_for_implementation = true` while a blocking question remains unresolved.
+- HOLD while any `user_owned` decision is unresolved. Do not mark
+  `ready_for_implementation = true` until the user resolves it.

@@ -26,12 +26,21 @@
 
 Codex's native project instruction surface is root `AGENTS.md`. Combined installs keep this Codex block there because no separate Codex project entrypoint is configured by CafeKit. Other runtimes may read the same root file; this shared-root trade-off is intentional and must not be treated as filesystem isolation.
 
-**Ownership / ignore contract (fail-safe):** This Codex block is owned by Codex CLI only. If you are Codex CLI, OpenCode, or any other runtime, ignore this entire Codex block and consume only CORE plus your native block. If you cannot determine which block is yours, treat the file as CORE-only. Do not treat another runtime's block as instructions.
+**Ownership / ignore contract (fail-safe):** This Codex block is owned by Codex CLI only. If you are Claude Code, OpenCode, or any other runtime, ignore this entire Codex block and consume only CORE plus your native block. If you cannot determine which block is yours, treat the file as CORE-only. Do not treat another runtime's block as instructions.
 
 ## Addressing (Context Overflow Indicator)
 
 Codex CLI always addresses the user as "bro" throughout the conversation. If it stops doing so, it is a sign the context has been compacted/truncated — tell the user to consider `/clear`.
 <!-- CAFEKIT CODEX END -->
+
+<!-- hod:begin — managed by hod; edits inside this block are overwritten -->
+## Herdr orchestration — Herdr-first project
+
+Inside a Herdr pane, route every implementation, bug-fix, or multi-step task in this project through Herdr with the `herdr-orchestrator` skill: act as controller and delegate to workers started with the role profiles in `.claude/settings.*.json`. Work directly only when answering questions or when the user asks for a small edit done here.
+Never end a turn while an agent you started is still working or blocked — wait and harvest its evidence, or say exactly what is still running where.
+
+Outside a Herdr pane (`HERDR_ENV` unset), this preference is not a blocker: do the work normally, and for a substantial task mention once that this project prefers Herdr orchestration.
+<!-- hod:end -->
 
 <!-- CAFEKIT CORE START -->
 # AGENTS.md

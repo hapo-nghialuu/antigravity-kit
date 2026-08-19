@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Before investing time in planning, confirm with the user the appropriate level of investment. Avoid wasting time on deep research for simple tasks, or missing risks for complex ones.
+Before investing time in planning, select the smallest scope consistent with the
+request and evidence. Scope inquiry is an analysis step, not a mandatory user
+question.
 
 ## Skip Conditions
 
@@ -38,7 +40,9 @@ Classify the *knowability* of the solution path:
 - **Complex**: Outcome is uncertain; solution emerges through experimentation (e.g., AI/ML tuning, novel UX interactions, performance bottleneck with unknown root cause). Requires prototyping or spike tasks before committing to a full spec.
 - **Chaotic**: No clear path; urgent stabilization needed first (e.g., production outage, data corruption). Skip spec workflow entirely — use `hapo:hotfix` instead.
 
-> **Rule**: If Dimension 4 = Complex or Chaotic, flag this to the user immediately. Complex tasks should include explicit spike/prototype tasks in the spec. Chaotic tasks should exit the spec workflow.
+> **Rule**: If Dimension 4 = Complex, record the uncertainty and add a bounded
+> spike only when it is a real dependency. Chaotic tasks exit to `hapo:hotfix`.
+> Ask only when the response requires a user-owned scope or irreversible choice.
 
 ### Dimension 5: Dependency & Blast Radius
 Assess how many other parts of the system are affected if this change breaks or behaves unexpectedly:
@@ -57,11 +61,20 @@ After the qualitative 5-Dimension pass, run a quick quantitative gut-check. Thes
 - **> 12 task files** → the spec is large; consider splitting by deliverable boundary into sibling specs (cross-spec `blockedBy`) rather than one mega-spec.
 - **> 15 task files** → strong signal to split. A single mega-spec is slow to generate, prone to mid-run failure, and hard to review. Prefer 2-3 focused specs unless the work is genuinely one indivisible slice.
 
-If any tripwire fires, surface it in the Scope Inquiry summary and let the user decide (Expand / Hold / Reduce / Split). Do not silently build the mega-version.
+If a tripwire fires, first reduce or split using the simplest reversible boundary.
+HOLD and ASK only when that change would alter user-owned deliverables or scope.
+Do not silently build the mega-version.
 
 ## Level Selection
 
-After completing the 5-Dimension Assessment, present via `AskUserQuestion`:
+After the assessment, classify the remaining choice:
+
+- Ground current size, dependencies, and blast radius as `repository_fact`.
+- Choose the smallest `reversible_assumption` and record its bounded reversal.
+- For a `user_owned` Expand/Hold/Reduce/Split decision, HOLD and present via
+  `AskUserQuestion`; unresolved scope blocks readiness.
+
+When a user-owned choice exists, use:
 
 **Title:** "Scope Inquiry"
 **Question:** "Based on analysis, what scope level do you want?"
@@ -90,5 +103,5 @@ Scope Inquiry:
 - Blast Radius: [Isolated/Moderate/Critical Path] — [affected modules]
 - Complexity smells: [none | >8 files | >2 new services | >12 tasks → consider split | >15 tasks → split]
 - Minimum Change: [Essential gap vs Niceties]
-- User chose: [Expand / Hold / Reduce / Split]
+- Decision: [grounded fact | reversible default + reversal boundary | user choice]
 ```

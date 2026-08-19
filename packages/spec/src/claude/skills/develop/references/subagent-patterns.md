@@ -1,46 +1,51 @@
-# Subagent Invocation Patterns
+# Capability dispatch patterns
 
-Standard prompt templates for delegating work to subagents within the develop workflow.
+This reference is optional. Load it only when the persisted lane requires
+independent capability work. Role names are runtime configuration, not workflow
+policy: resolve them from the installed catalog instead of hardcoding an actor
+name or a sequence in a skill.
 
-## Agent Tool Pattern
-Use the current Claude Code `Agent` tool for subagent invocation. In older runtimes, the same shape may appear as legacy `Task`.
-```
-Agent(subagent_type="[agent-name]", prompt="[task description]", description="[short title]")
-```
+## Dispatch contract
 
-## Codebase Inspection Phase
-```
-Agent(subagent_type="inspector", prompt="Scan and identify all files related to [feature-name] in the current codebase.", description="Scout [feature-name]")
-```
+Every dispatch prompt includes:
 
-## Code Implementation Phase
-```
-Agent(subagent_type="implementer", prompt="Implement the sub-tasks from [tasks-directory] based on the specification in [spec.json]", description="Code Feature [feature]")
-```
+- Work context: the git root of the primary files;
+- Reports path: `<work-context>/plans/reports/`;
+- Plans path: `<work-context>/plans/`;
+- exact task/scope and owned files;
+- lane snapshot, risk/blast-radius obligations, and stop conditions;
+- required output, evidence, and status.
 
-## UI Implementation Phase
-```
-Agent(subagent_type="ui-ux-designer", prompt="Implement the frontend code for [feature] following ./docs/design-guidelines.md", description="Code UI [feature]")
-```
+Use a capability request such as:
 
-## Code Review Phase
-```
-Agent(subagent_type="code-auditor", prompt="Review all recently written code. Check for security holes, performance issues, and adherence to YAGNI/KISS/DRY. Return a verdict (PASS = no Critical, no High, at most one Medium), severity-classified findings, and concrete suggestions.", description="Review [phase]")
-```
-
-## Test Execution Phase
-```
-Agent(subagent_type="test-runner",
-  prompt="Run tests for recently implemented code. Apply blast-radius scoping
-    unless --full is requested. Return structured verdict with Status, Results,
-    Coverage, Failures, and Action.",
-  description="Test [feature]")
+```text
+dispatch(capability="inspection|implementation|verification|review|docs",
+  work_context="<root>",
+  scope="<task or feature>",
+  owned_files=["<paths>"],
+  obligations=["<persisted obligations>"],
+  output="<required packet and evidence>")
 ```
 
-## Parallel Quality Gate (Step 4)
-Spawn both simultaneously — do NOT wait for one before starting the other:
-```
-Agent(subagent_type="test-runner",  prompt="...", description="Test [feature]")
-Agent(subagent_type="code-auditor", prompt="...", description="Review [feature]")
-```
-Wait for both results → apply quality-gate.md combine logic.
+The runtime may map a capability to a local role. That mapping must not change
+the lane, add ceremony, or become a new persisted policy field.
+
+## Independence and ownership
+
+- Inspection may report entrypoints and blast radius but does not edit source.
+- Implementation edits only the active task scope and does not sync state.
+- Verification is the sole producer of canonical execution proof.
+- Review consumes proof and reports correctness/security/spec findings only.
+- Documentation work is invoked only after a real docs-impact decision.
+
+Specific-task mode ends after one task. Full-feature mode may continue only
+after the closeout owner synchronizes the current task and finds another
+unblocked task. A capability result marked `PENDING`, `BLOCKED`, or lacking
+provenance cannot be converted into PASS by the controller.
+
+## Safe fallback
+
+If the required capability or isolated workspace is unavailable, keep the
+workflow in `BLOCKED` or run the permitted main-session check. Do not substitute
+a model, profile, or actor silently, and do not claim an independent result
+without an actually independent execution.

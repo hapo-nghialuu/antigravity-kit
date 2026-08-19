@@ -9,10 +9,6 @@ const { test } = require('node:test');
 
 const backup = require('../lib/backup');
 const {
-  copyOpenCodeAgentsMdFile,
-  normalizeOpenCodeBody
-} = require('../lib/opencode-install');
-const {
   commandFailureReason,
   resolvePackageCommand
 } = require('../lib/skill-deps');
@@ -23,6 +19,7 @@ const { upsertManagedCoreBlock } = require('../lib/instruction-blocks');
 const { upsertManagedCodexBlock, normalizeCodexBody } = require('../lib/codex-install');
 const { copyRecursive } = require('../lib/copy-utils');
 const { createTracker, sha256 } = require('../lib/manifest');
+const { copyManagedTree } = require('../lib/managed-writer');
 
 const START = '<!-- CAFEKIT CLAUDE START -->';
 const END = '<!-- CAFEKIT CLAUDE END -->';
@@ -33,8 +30,6 @@ const SHARED_TEMPLATE = fs.readFileSync(path.join(__dirname, '../../src/common/A
 const INSTALLER = path.join(__dirname, '../install.js');
 const CODEX_START = '<!-- CAFEKIT CODEX START -->';
 const CODEX_END = '<!-- CAFEKIT CODEX END -->';
-const OPENCODE_START = '<!-- CAFEKIT OPENCODE START -->';
-const OPENCODE_END = '<!-- CAFEKIT OPENCODE END -->';
 
 function managedBody(content, start, end) {
   const startIndex = content.indexOf(start);
@@ -46,7 +41,7 @@ function managedBody(content, start, end) {
 function runCombinedInstaller(root, extraArgs = []) {
   return spawnSync(
     process.execPath,
-    [INSTALLER, '--platform', 'claude,codex,opencode', '--yes', ...extraArgs],
+    [INSTALLER, '--platform', 'claude,codex', '--yes', ...extraArgs],
     { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
   );
 }
@@ -117,7 +112,7 @@ test('legacy managed root gitignore migrates A13 plan patterns and preserves use
       '.cafekit-backup/',
       '.cafekit.lock',
       '.claude/',
-      '.opencode/',
+      '.legacy-runtime/',
       '.codex/',
       '.agents/',
       '',
@@ -149,7 +144,7 @@ test('legacy managed root gitignore migrates A13 plan patterns and preserves use
       '.cafekit-backup/',
       '.cafekit.lock',
       '.claude/',
-      '.opencode/',
+      '.legacy-runtime/',
       '.codex/',
       '.agents/'
     ]);
@@ -187,8 +182,7 @@ test('legacy managed root gitignore migrates A13 plan patterns and preserves use
 test('malformed managed marker topology fails transactionally and preserves exact bytes', () => {
   const markers = {
     claude: ['<!-- CAFEKIT CORE START -->', '<!-- CAFEKIT CORE END -->'],
-    codex: ['<!-- CAFEKIT CODEX START -->', '<!-- CAFEKIT CODEX END -->'],
-    opencode: ['<!-- CAFEKIT OPENCODE START -->', '<!-- CAFEKIT OPENCODE END -->']
+    codex: ['<!-- CAFEKIT CODEX START -->', '<!-- CAFEKIT CODEX END -->']
   };
   const topologies = (start, end) => [
     `user\n${end}\n`,
@@ -226,20 +220,17 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     const claude = fs.readFileSync('CLAUDE.md', 'utf8');
     const core = managedBody(agents, CORE_START, CORE_END);
     const codex = managedBody(agents, CODEX_START, CODEX_END);
-    const opencode = managedBody(agents, OPENCODE_START, OPENCODE_END);
     const claudeBlock = managedBody(claude, START, END);
 
     for (const [content, marker] of [
       [agents, CORE_START],
       [claude, START],
-      [agents, CODEX_START],
-      [agents, OPENCODE_START]
+      [agents, CODEX_START]
     ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
 
-    assert.doesNotMatch(core, /Claude|Codex|OpenCode|\.claude|\.codex|\.opencode|\/hapo:|\$hapo-/i);
-    assert.doesNotMatch(claudeBlock, /Codex|OpenCode|\.codex|\.opencode|\$hapo-/i);
+    assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/hapo:|\$hapo-/i);
+    assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$hapo-/i);
     assert.match(codex, /native project instruction surface is root `AGENTS\.md`/);
-    assert.match(opencode, /native project instruction surface is root `AGENTS\.md`/);
     assert.match(agents, /shared-root trade-off is intentional/);
     // H5 remediation: ownership/ignore contract must be explicit — not just marker presence
     assert.match(core, /runtime-neutral/i);
@@ -248,15 +239,11 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.match(codex, /owned by Codex/i);
     assert.match(codex, /ignore this entire Codex block/i);
     assert.match(codex, /fail-safe/i);
-    assert.match(opencode, /owned by OpenCode/i);
-    assert.match(opencode, /ignore this entire OpenCode block/i);
-    assert.match(opencode, /fail-safe/i);
     // CORE must not contain runtime-specific directives that would leak
     assert.doesNotMatch(core, /\$hapo-|hapo:/i);
     // No cross-runtime directive leakage: Claude block must not contain foreign runtime directives
-    assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT (CODEX|OPENCODE) /);
-    assert.doesNotMatch(codex, /<!-- CAFEKIT (CORE|OPENCODE) /);
-    assert.doesNotMatch(opencode, /<!-- CAFEKIT (CORE|CODEX) /);
+    assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT CODEX /);
+    assert.doesNotMatch(codex, /<!-- CAFEKIT CORE /);
 
     const userAgents = '\n## User-owned combined note\nKeep this exact.\n';
     const userClaude = '\n## User-owned Claude note\nKeep this exact.\n';
@@ -270,17 +257,14 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.match(afterClaude, /User-owned Claude note\nKeep this exact\./);
     assert.equal((afterAgents.match(new RegExp(CORE_START, 'g')) || []).length, 1);
     assert.equal((afterAgents.match(new RegExp(CODEX_START, 'g')) || []).length, 1);
-    assert.equal((afterAgents.match(new RegExp(OPENCODE_START, 'g')) || []).length, 1);
     assert.equal((afterClaude.match(new RegExp(START, 'g')) || []).length, 1);
     assert.equal(afterAgents.slice(-userAgents.length), userAgents);
     assert.equal(afterClaude.slice(-userClaude.length), userClaude);
     // Ownership contract must survive rerun
     const afterCore = managedBody(afterAgents, CORE_START, CORE_END);
     const afterCodex = managedBody(afterAgents, CODEX_START, CODEX_END);
-    const afterOpenCode = managedBody(afterAgents, OPENCODE_START, OPENCODE_END);
     assert.match(afterCore, /runtime-neutral/i);
     assert.match(afterCodex, /ignore this entire Codex block/i);
-    assert.match(afterOpenCode, /ignore this entire OpenCode block/i);
   });
 });
 
@@ -288,7 +272,7 @@ test('combined locale stays in CORE and addressing stays in each native managed 
   inTempProject((root) => {
     const result = spawnSync(
       process.execPath,
-      [INSTALLER, '--platform', 'claude,codex,opencode', '--yes', '--lang', 'vi'],
+      [INSTALLER, '--platform', 'claude,codex', '--yes', '--lang', 'vi'],
       { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } }
     );
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -300,18 +284,17 @@ test('combined locale stays in CORE and addressing stays in each native managed 
     assert.equal((claude.match(/## Language Consistency <!-- cafekit:lang -->/g) || []).length, 0);
 
     configureAddressing({
-      platforms: ['claude', 'codex', 'opencode'],
+      platforms: ['claude', 'codex'],
       ui: { success() {}, warn() {} },
       t: () => 'updated'
     }, 'anh');
 
     const addressedAgents = fs.readFileSync('AGENTS.md', 'utf8');
     const addressedClaude = fs.readFileSync('CLAUDE.md', 'utf8');
-    assert.equal((addressedAgents.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 2);
+    assert.equal((addressedAgents.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
     assert.equal((addressedClaude.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
     assert.equal((managedBody(addressedAgents, CORE_START, CORE_END).match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 0);
     assert.match(managedBody(addressedAgents, CODEX_START, CODEX_END), /Codex CLI always addresses the user as "anh"/);
-    assert.match(managedBody(addressedAgents, OPENCODE_START, OPENCODE_END), /OpenCode always addresses the user as "anh"/);
     assert.match(managedBody(addressedClaude, START, END), /Claude Code always addresses the user as "anh"/);
   });
 });
@@ -358,11 +341,10 @@ test('fresh no-lang install leaves locale unset and rules hook silent', () => {
   });
 });
 
-test('obsolete agent pruning is ownership-aware across Claude, Codex, and OpenCode', () => {
+test('obsolete agent pruning is ownership-aware across Claude and Codex', () => {
   const cases = {
     claude: ['agents/god-developer.md', '.claude'],
-    codex: ['agents/god_developer.toml', '.codex'],
-    opencode: ['agents/god-developer.md', '.opencode']
+    codex: ['agents/god_developer.toml', '.codex']
   };
   for (const [platformKey, [relative, folder]] of Object.entries(cases)) {
     for (const state of ['pristine', 'modified', 'untracked']) {
@@ -522,39 +504,7 @@ test('addressing appends when template has no section without entering shared CO
   });
 });
 
-test('OpenCode force refresh preserves user and Codex AGENTS blocks', () => {
-  inTempProject(() => {
-    const userContent = '# User instructions\n\nKeep this exact.\n';
-    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
-    fs.writeFileSync('AGENTS.md', `${userContent}\n${codexBlock}`);
-    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
 
-    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
-
-    const content = fs.readFileSync('AGENTS.md', 'utf8');
-    assert.ok(content.startsWith(userContent));
-    assert.ok(content.includes(codexBlock.trim()));
-    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
-    assert.equal(results.updated, 1);
-  });
-});
-
-test('legacy unmarked OpenCode AGENTS content is wrapped without duplication', () => {
-  inTempProject(() => {
-    const source = path.join(__dirname, '../../src/opencode/AGENTS.md');
-    const legacy = normalizeOpenCodeBody(fs.readFileSync(source, 'utf8'));
-    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
-    fs.writeFileSync('AGENTS.md', `${legacy}\n${codexBlock}`);
-    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
-
-    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
-
-    const content = fs.readFileSync('AGENTS.md', 'utf8');
-    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
-    assert.ok(content.includes('## OpenCode Runtime Mapping'));
-    assert.ok(content.includes(codexBlock.trim()));
-  });
-});
 
 test('locale patch does not claim ownership of a preserved user runtime', () => {
   inTempProject(() => {
@@ -672,6 +622,44 @@ test('managed targets and snapshots reject project symlink traversal', () => {
   });
 });
 
+test('managed tree copy rejects source and destination symlink traversal before writes', () => {
+  inTempProject((root) => {
+    const source = path.join(root, 'source');
+    const outsideSource = path.join(root, 'outside-source.txt');
+    const destination = path.join('.codex', 'payload');
+    fs.mkdirSync(source);
+    fs.writeFileSync(outsideSource, 'outside');
+    fs.symlinkSync(outsideSource, path.join(source, 'linked.txt'));
+    const ctx = {
+      dryRun: false,
+      options: { forceOverwrite: false },
+      ownership: {},
+      results: { preservedFiles: [] },
+    };
+    const copy = () => copyManagedTree({
+      src: source,
+      dest: destination,
+      platformFolder: '.codex',
+      ctx,
+      tracker: null,
+    });
+    assert.throws(copy, /source tree cannot contain symlinks/i);
+    assert.equal(fs.existsSync(destination), false);
+
+    fs.rmSync(path.join(source, 'linked.txt'));
+    fs.writeFileSync(path.join(source, 'safe.txt'), 'safe');
+    const outsideDestination = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-managed-outside-'));
+    try {
+      fs.symlinkSync(outsideDestination, path.join(root, '.codex'));
+      assert.throws(copy, /Refusing to follow symlinked managed path/);
+      assert.deepEqual(fs.readdirSync(outsideDestination), []);
+    } finally {
+      fs.rmSync(path.join(root, '.codex'), { force: true });
+      fs.rmSync(outsideDestination, { recursive: true, force: true });
+    }
+  });
+});
+
 test('managed Claude Addressing survives force refresh when template drops it', () => {
   inTempProject(() => {
     const before = '# User preface\n\n';
@@ -718,28 +706,6 @@ test('managed Codex block Addressing survives upsert with the current template',
   });
 });
 
-test('managed OpenCode block Addressing survives force refresh with the current template', () => {
-  inTempProject(() => {
-    const userContent = '# User instructions\n\nKeep this exact.\n';
-    const codexBlock = '<!-- CAFEKIT CODEX START -->\nCodex managed\n<!-- CAFEKIT CODEX END -->\n';
-    const configuredAddressing = '## Addressing (Context Overflow Indicator)\n\nThe AI always addresses the user as "anh" throughout the conversation.';
-    fs.writeFileSync(
-      'AGENTS.md',
-      `${userContent}<!-- CAFEKIT OPENCODE START -->\nOpenCode runtime line.\n\n${configuredAddressing}\n<!-- CAFEKIT OPENCODE END -->\n${codexBlock}`
-    );
-    const results = { copied: 0, updated: 0, skipped: 0, missingDependencies: 0 };
-
-    copyOpenCodeAgentsMdFile('opencode', results, { upgrade: true });
-
-    const content = fs.readFileSync('AGENTS.md', 'utf8');
-    assert.ok(content.startsWith(userContent));
-    assert.ok(content.includes(codexBlock.trim()));
-    assert.equal((content.match(/## Addressing \(Context Overflow Indicator\)/g) || []).length, 1);
-    assert.ok(content.includes('The AI always addresses the user as "anh"'));
-    assert.equal((content.match(/<!-- CAFEKIT OPENCODE START -->/g) || []).length, 1);
-    assert.equal(results.updated, 1);
-  });
-});
 
 test('copyRecursive skips generated artifacts while copying normal files', () => {
   inTempProject(() => {
@@ -761,50 +727,3 @@ test('copyRecursive skips generated artifacts while copying normal files', () =>
   });
 });
 
-test('OpenCode parity: AGENTS marks advisory completion gate and plugin provides best-effort spec-gate', () => {
-  const opencodeAgents = fs.readFileSync(path.join(__dirname, '../../src/opencode/AGENTS.md'), 'utf8');
-  assert.match(opencodeAgents, /advisory/i);
-  assert.match(opencodeAgents, /tier-2/i);
-  assert.match(opencodeAgents, /completion gate/i);
-  assert.match(opencodeAgents, /Do not claim parity with Claude\/Codex on `completion_gate`/);
-  assert.match(opencodeAgents, /spec-gate/);
-  // docs must describe actual after-hook, not before, and warning/banner semantics (not advisory-pass)
-  assert.match(opencodeAgents, /tool\.execute\.after/);
-  assert.doesNotMatch(opencodeAgents, /tool\.execute\.before/);
-  assert.match(opencodeAgents, /emits an advisory warning\/banner but does not hard-block the turn/);
-  assert.doesNotMatch(opencodeAgents, /treat `done` without a receipt as advisory-pass/);
-  // plugin file must exist and be advisory (never hard-block)
-  const pluginPath = path.join(__dirname, '../../src/opencode/plugins/spec-gate.ts');
-  assert.equal(fs.existsSync(pluginPath), true, 'OpenCode spec-gate plugin must exist for parity contract');
-  const plugin = fs.readFileSync(pluginPath, 'utf8');
-  assert.match(plugin, /advisory/i);
-  assert.match(plugin, /completion_gate/);
-  assert.match(plugin, /fail-open/i);
-  assert.match(plugin, /session\.idle|tool\.execute\.after/);
-  // JSDoc-safe wording: must not contain block-comment-closing pattern specs/*/spec.json
-  assert.doesNotMatch(plugin, /specs\/\*\/spec\.json/);
-  assert.match(plugin, /specs\/<feature>\/spec\.json/);
-  // traversal check must be sibling-prefix safe (resolve + relative, not simple startsWith)
-  assert.match(plugin, /relative\s*\(\s*resolvedFeatureDir/);
-  assert.match(plugin, /isAbsolute/);
-  assert.doesNotMatch(plugin, /if \(!abs\.startsWith\(featureDir\)\)/);
-  // provenance must require both endpoints (Base+Head or base_sha+head_sha) matching Claude/Codex policy
-  assert.match(plugin, /hasBase\s*&&\s*hasHead/);
-  assert.match(plugin, /hasBaseSha\s*&&\s*hasHeadSha/);
-  assert.match(plugin, /hasBase.*hasHead.*hasBaseSha.*hasHeadSha/s);
-  // hardened: non-empty same-line values required, not just field names
-  assert.match(plugin, /Base\\s\*:\[ \\t\]\*\\S/);
-  assert.match(plugin, /base_sha\\s\*:\[ \\t\]\*\\S/);
-  assert.match(plugin, /head_sha\\s\*:\[ \\t\]\*\\S/);
-  // shipped docs must not claim OpenCode parity for hard completion gate
-  const installerDocs = fs.readFileSync(path.join(__dirname, '../../../../docs/installer-architecture.md'), 'utf8');
-  assert.doesNotMatch(installerDocs, /OpenCode.*hard.*completion gate/i);
-  // combined install must copy the plugin
-  inTempProject((root) => {
-    const result = spawnSync(process.execPath, [INSTALLER, '--platform', 'opencode', '--yes'], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } });
-    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.equal(fs.existsSync(path.join(root, '.opencode/plugins/spec-gate.ts')), true);
-    const installed = fs.readFileSync(path.join(root, '.opencode/plugins/spec-gate.ts'), 'utf8');
-    assert.match(installed, /advisory/i);
-  });
-});

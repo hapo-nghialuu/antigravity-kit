@@ -1,182 +1,138 @@
-# Technical Design Rules and Principles
+# Adaptive design principles
 
-## Core Design Principles
+The design exists to remove implementation guesses. It defines behavior-owning
+boundaries and stable contracts without prescribing incidental code.
 
-### 1. Type Safety is Mandatory
-- **NEVER** use generic/loosely-typed patterns (e.g., `any` in TypeScript, `object` in Python, `interface{}` in Go unless strictly necessary)
-- Define explicit types for all parameters and returns
-- Use discriminated unions for error handling where supported
-- Specify generic constraints clearly
+## Detail by planning depth
 
-### 2. Design vs Implementation
-- **Focus on WHAT, not HOW**
-- Define interfaces and contracts, not code
-- Specify behavior through pre/post conditions
-- Document architectural decisions, not algorithms
+### Compact
 
-### 3. Visual Communication
-- **Simple features**: Basic component diagram or none
-- **Medium complexity**: Architecture + data flow
-- **High complexity**: Multiple diagrams (architecture, sequence, state)
-- **Always pure Mermaid**: No styling, just structure
+Keep only:
 
-### 4. Component Design Rules
-- **Single Responsibility**: One clear purpose per component
-- **Clear Boundaries**: Explicit domain ownership
-- **Dependency Direction**: Follow architectural layers
-- **Interface Segregation**: Minimal, focused interfaces
-- **Team-safe Interfaces**: Design boundaries that allow parallel implementation without merge conflicts
-- **Research Traceability**: Record boundary decisions and rationale in `research.md`
+1. boundary and responsibilities;
+2. typed source anchors;
+3. decisions, named contracts, and invariants needed for consistency; and
+4. verification, including relevant negative paths.
 
-### 5. Data Modeling Standards
-- **Domain First**: Start with business concepts
-- **Consistency Boundaries**: Clear aggregate roots
-- **Normalization**: Balance between performance and integrity
-- **Evolution**: Plan for schema changes
+Delete every unused heading. Compact is a complete durable design, not a teaser
+for a later Full document.
 
-### 6. Error Handling Philosophy
-- **Fail Fast**: Validate early and clearly
-- **Graceful Degradation**: Partial functionality over complete failure
-- **User Context**: Actionable error messages
-- **Observability**: Comprehensive logging and monitoring
+### Full
 
-### 7. Integration Patterns
-- **Loose Coupling**: Minimize dependencies
-- **Contract First**: Define interfaces before implementation
-- **Versioning**: Plan for API evolution
-- **Idempotency**: Design for retry safety
-- **Contract Visibility**: Surface API and event contracts in design.md while linking extended details from `research.md`
+Start from Compact. Add only relevant sections for:
 
-## Documentation Standards
+- cross-boundary contracts and flows;
+- data ownership, schema, consistency, and concurrency;
+- error classification and recovery;
+- security/privacy boundaries;
+- migration, compatibility, rollback, or deployment transition; and
+- proof that spans owners or runtime surfaces.
 
-### Language and Tone
-- **Declarative**: "The system authenticates users" not "The system should authenticate"
-- **Precise**: Specific technical terms over vague descriptions
-- **Concise**: Essential information only
-- **Formal**: Professional technical writing
+Do not add a section because the template contains it. Empty tables, generic
+best practices, and restated requirements form a template cemetery and must be
+deleted.
 
-### Structure Requirements
-- **Hierarchical**: Clear section organization
-- **Traceable**: Requirements to components mapping
-- **Complete**: All aspects covered for implementation
-- **Consistent**: Uniform terminology throughout
-- **Focused**: Keep design.md centered on architecture and contracts; move investigation logs and lengthy comparisons to `research.md`
+## Boundaries and typed anchors
 
-## Section Authoring Guidance
+A boundary names what owns, reads, writes, calls, registers, or exposes the
+behavior. “Service”, “module”, or “layer” without a grounded target is invalid.
 
-### Global Ordering
-- Default flow: Overview → Goals/Non-Goals → Requirements Traceability → Architecture → Technology Stack → System Flows → Components & Interfaces → Data Models → Optional sections.
-- Teams may swap Traceability earlier or place Data Models nearer Architecture when it improves clarity, but keep section headings intact.
-- Within each section, follow **Summary → Scope → Decisions → Impacts/Risks** so reviewers can scan consistently.
+Design and task anchors use the same closed six-column machine model:
+`ID | Type | Target | Role | Access | Action`. Every implementation-facing
+anchor has:
 
-### Requirement IDs
-- Reference requirements as `2.1, 2.3` without prefixes (no “Requirement 2.1”).
-- All requirements MUST have numeric IDs. If a requirement lacks a numeric ID, stop and fix `requirements.md` before continuing.
-- Use `N.M`-style numeric IDs where `N` is the top-level requirement number from requirements.md (for example, Requirement 1 → 1.1, 1.2; Requirement 2 → 2.1, 2.2).
-- Every component, task, and traceability row must reference the same canonical numeric ID.
+| Field | Rule |
+|---|---|
+| ID | Unique across the entire spec. Design-owned anchors use `A-D-NN`; task-owned anchors use `A-R{requirement}-{sequence}-NN`. |
+| Type | `file`, `symbol`, `command`, `route`, `schema`, `contract`, `artifact`, or `external`. |
+| Target | Exact path, identifier, command, route, schema object, contract ID, artifact path, or primary source. |
+| Role | Why the target matters: owner, consumer, entrypoint, proof, constraint, or reference. |
+| Access | `read` or `write`. |
+| Action | `read` for read access; `create`, `modify`, or `delete` for write access. |
 
-### Technology Stack
-- Include ONLY layers impacted by this feature (frontend, backend, data, messaging, infra).
-- For each layer specify tool/library + version + the role it plays; push extended rationale, comparisons, or benchmarks to `research.md`.
-- When extending an existing system, highlight deviations from the current stack and list new dependencies.
+Files-first is canonical. List `file` anchors before symbols, routes, schemas,
+or contracts they contain. A symbol anchor names its file. A command anchor is
+an exact project command. An external anchor states which decision it grounds.
+Role is descriptive only and never implies Action; words such as create,
+planned, new, producer, or output in prose have zero machine authority. Never
+reuse an anchor ID, even in another task. A task that consumes a canonical
+design anchor references its `A-D-NN` ID and does not redefine the same target in
+its task-scoped namespace.
 
-### System Flows
-- Add diagrams only when they clarify behavior:  
-  - **Sequence** for multi-step interactions  
-  - **Process/State** for branching rules or lifecycle  
-  - **Data/Event** for pipelines or async patterns
-- Always use pure Mermaid. If no complex flow exists, omit the entire section.
+## Named contracts and invariants
 
-### Requirements Traceability
-- Use the standard table (`Requirement | Summary | Components | Interfaces | Flows`) to prove coverage.
-- Collapse to bullet form only when a single requirement maps 1:1 to a component.
-- Prefer the component summary table for simple mappings; reserve the full traceability table for complex or compliance-sensitive requirements.
-- Re-run this mapping whenever requirements or components change to avoid drift.
+- Give every implementation-significant contract and invariant a stable ID,
+  such as `C1` or `I1`.
+- Define the canonical body once in `design.md`.
+- Task files reference IDs; they do not copy contract bodies.
+- Name one implementation owner before any cross-task consumer. Consumers
+  depend directly or transitively on the owner.
+- If implementation needs a different contract, revise and explicitly approve
+  the design before changing consumers.
 
-### Components & Interfaces Authoring
-- Group components by domain/layer and provide one block per component.
-- Begin with a summary table listing Component, Domain, Intent, Requirement coverage, key dependencies, and selected contracts.
-- Table fields: Intent (one line), Requirements (`2.1, 2.3`), Owner/Reviewers (optional).
-- Dependencies table must mark each entry as Inbound/Outbound/External and assign Criticality (`P0` blocking, `P1` high-risk, `P2` informational).
-- Summaries of external dependency research stay here; detailed investigation (API signatures, rate limits, migration notes) belongs in `research.md`.
-- design.md must remain a self-contained reviewer artifact. Reference `research.md` only for background, and restate any conclusions or decisions here.
-- Contracts: tick only the relevant types (Service/API/Event/Batch/State). Unchecked types should not appear later in the component section.
-- Service interfaces must declare method signatures, inputs/outputs, and error envelopes. API/Event/Batch contracts require schema tables or bullet lists covering trigger, payload, delivery, idempotency.
-- Use **Integration & Migration Notes**, **Validation Hooks**, and **Open Questions / Risks** to document rollout strategy, observability, and unresolved decisions.
-- Detail density rules:
-  - **Full block**: components introducing new boundaries (logic hooks, shared services, external integrations, data layers).
-  - **Summary-only**: presentational/UI components with no new boundaries (plus a short Implementation Note if needed).
-- Implementation Notes must combine Integration / Validation / Risks into a single bulleted subsection to reduce repetition.
-- Prefer lists or inline descriptors for short data (dependencies, contract selections). Use tables only when comparing multiple items.
+Contracts are required when drift could change auth/session, transport, API or
+event shape, persistence/schema, deletion/retention, generated artifacts,
+runtime entrypoints, or recovery behavior. Do not invent contract ceremony for
+local details that cannot drift across a boundary.
 
-### Shared Interfaces & Props
-- Define a base interface (e.g., `BaseUIPanelProps`) for recurring UI components and extend it per component to capture only the deltas.
-- Hooks, utilities, and integration adapters that introduce new contracts should still include full TypeScript signatures.
-- When reusing a base contract, reference it explicitly (e.g., “Extends `BaseUIPanelProps` with `onSubmitAnswer` callback”) instead of duplicating the code block.
+For any public, replay, or operator surface contract, specify method, route,
+auth, required headers, request schema, success response, error semantics, and
+idempotency/concurrency behavior in one place; a partial contract is not a
+contract.
 
-### Data Models
-- Domain Model covers aggregates, entities, value objects, domain events, and invariants. Add Mermaid diagrams only when relationships are non-trivial.
-- Logical Data Model should articulate structure, indexing, sharding, and storage-specific considerations (event store, KV/wide-column) relevant to the change.
-- Data Contracts & Integration section documents API payloads, event schemas, and cross-service synchronization patterns when the feature crosses boundaries.
-- Lengthy type definitions or vendor-specific option objects should be placed in the Supporting References section within design.md, linked from the relevant section. Investigation notes stay in `research.md`.
-- Supporting References usage is optional; only create it when keeping the content in the main body would reduce readability. All decisions must still appear in the main sections so design.md stands alone.
+## Decision quality
 
-### Error/Testing/Security/Performance Sections
-- Record only feature-specific decisions or deviations. Link or reference organization-wide standards (steering) for baseline practices instead of restating them.
+Record a decision only when another reasonable implementation would behave
+differently. For each decision state:
 
-### Diagram & Text Deduplication
-- Do not restate diagram content verbatim in prose. Use the text to highlight key decisions, trade-offs, or impacts that are not obvious from the visual.
-- When a decision is fully captured in the diagram annotations, a short “Key Decisions” bullet is sufficient.
+- chosen behavior and boundary;
+- relevant alternative or ambiguity rejected;
+- invariant or negative path that constrains implementation; and
+- anchor or evidence that makes it feasible.
 
-### General Deduplication
-- Avoid repeating the same information across Overview, Architecture, and Components. Reference earlier sections when context is identical.
-- If a requirement/component relationship is captured in the summary table, do not rewrite it elsewhere unless extra nuance is added.
+Use explicit types for public inputs, outputs, states, and errors. Avoid generic
+`any`, `object`, or unbounded maps unless the contract explains why they are
+intentional.
 
-## Diagram Guidelines
+## Conditional detail
 
-### When to include a diagram
-- **Architecture**: Use a structural diagram when 3+ components or external systems interact.
-- **Sequence**: Draw a sequence diagram when calls/handshakes span multiple steps.
-- **State / Flow**: Capture complex state machines or business flows in a dedicated diagram.
-- **ER**: Provide an entity-relationship diagram for non-trivial data models.
-- **Skip**: Minor one-component changes generally do not need diagrams.
+- Flow: include only for branching, asynchronous, or multi-party behavior.
+- Data: include only when shape, ownership, consistency, or lifecycle changes. Any retention/lifecycle policy must state clock anchor, clock source, timezone/precision, cutoff comparator/inclusivity, enforcement boundary, and a wrong-clock/boundary counterexample; domain-generic.
+- Error/recovery: include concrete triggers, responses, retry/rollback, and
+  terminal states only when relevant.
+- Security/privacy: include trust boundary, authorization, sensitive data, and
+  retention decisions only when touched.
+- Migration: include compatibility window, ordering, rollback trigger, and
+  verification only when existing state or public contracts change.
+- Diagrams: use plain Mermaid only when the relationship is materially clearer
+  than prose; do not duplicate the diagram in text.
 
-### Mermaid requirements
-```mermaid
-graph TB
-    Client --> ApiGateway
-    ApiGateway --> ServiceA
-    ApiGateway --> ServiceB
-    ServiceA --> Database
+## Traceability and verification
+
+Every acceptance criterion has exactly one implementation owner and maps to a
+boundary, contract/invariant, or explicit verification definition. Keep exactly
+one visible `## Verification Definitions`
+section. The validator's canonical grammar is a single line per definition:
+
+```markdown
+- **V1**: Criteria R1.1; Owner A-D-01; Decision refs D1, I1, C1; Method command `npm test`; Expected exit 0 and the persisted state; Negative/failure invalid input returns the named error; Reachability/grounding entrypoint `src/entry.js` via A-D-01.
 ```
 
-- **Plain Mermaid only** – avoid custom styling or unsupported syntax.
-- **Node IDs** – alphanumeric plus underscores only (e.g., `Client`, `ServiceA`). Do not use `@`, `/`, or leading `-`.
-- **Labels** – simple words. Do not embed parentheses `()`, square brackets `[]`, quotes `"`, or slashes `/`.
-  - ❌ `DnD[@dnd-kit/core]` → invalid ID (`@`).
-  - ❌ `UI[KanbanBoard(React)]` → invalid label (`()`).
-  - ✅ `DndKit[dnd-kit core]` → use plain text in labels, keep technology details in the accompanying description.
-  - ℹ️ Mermaid strict-mode will otherwise fail with errors like `Expecting 'SQE' ... got 'PS'`; remove punctuation from labels before rendering.
-- **Edges** – show data or control flow direction.
-- **Groups** – using Mermaid subgraphs to cluster related components is allowed; use it sparingly for clarity.
+Do not use a V table, `### V1` heading, or prose-only “see verification” alias;
+the semantic-review parser recognizes the bold V-ID line above. Each line names
+every exact `RN.M` it covers, all applicable `D`/`I`/`C` refs, a command or anchored
+inspection, observable expected result, concrete negative/failure case, and
+runtime reachability plus grounding expectation.
 
-## Quality Metrics
-### Design Completeness Checklist
-- All requirements addressed
-- No implementation details leaked
-- Clear component boundaries
-- Explicit error handling
-- Comprehensive test strategy
-- Security considered
-- Performance targets defined
-- Migration path clear (if applicable)
+For a typed proof boundary, extend the same line after Owner with `Proof criteria
+R1.2; Proof owner A-D-02; Evidence anchor A-D-02;`. Both criteria remain
+single-owner; without that boundary, omit the extension.
 
-### Common Anti-patterns to Avoid
-❌ Mixing design with implementation
-❌ Vague interface definitions
-❌ Missing error scenarios
-❌ Ignored non-functional requirements
-❌ Overcomplicated architectures
-❌ Tight coupling between components
-❌ Missing data consistency strategy
-❌ Incomplete dependency analysis
+Validator success proves structure only. The author and reviewer still test the
+design against concrete counterexamples and check that an implementer can act
+without choosing unspecified product behavior.
+
+For task-bearing specs, typed `spec.json.coordination.boundaries` are the only
+authority for ownership, dependencies, transitions, proof separation, and
+parallel eligibility. Design prose explains semantics but cannot replace those
+typed edges.

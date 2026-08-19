@@ -169,7 +169,7 @@ function createTracker(platformFolder, version, options = {}) {
  * Classify a managed file against the recorded baseline + the incoming payload.
  *
  * @param {string} absPath      destination path on disk
- * @param {string} platformFolder root of the platform install (.claude/.opencode)
+ * @param {string} platformFolder root of the platform install (e.g. .claude)
  * @param {object} manifest     result of read(platformFolder)
  * @param {string} payloadHash  sha256 of the content about to be written
  * @returns {{state: string, diskHash: string|null, recordedHash: string|null, changed: boolean}}

@@ -8,17 +8,30 @@
 const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert');
 const { spawnSync } = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
 const HOOK = path.join(__dirname, '..', 'spec-gate.cjs');
 const CACHE = path.join(__dirname, '..', '.logs', 'spec-gate-last.json');
+const PROVENANCE = require(path.join(__dirname, '..', '..', 'scripts', 'provenance.cjs'));
+const POLICY = require(path.join(__dirname, '..', '..', 'scripts', 'workflow-policy.cjs'));
 const FEATURE = 'demo';
 const TASK_REL = 'tasks/task-R0-01-x.md';
+const VALID_BASE = '0123456789abcdef0123456789abcdef01234567';
+const VALID_HEAD = '89abcdef0123456789abcdef0123456789abcdef';
+const FIXTURE_ARTIFACT = Buffer.from('cafekit claude fixture artifact\n');
+const FIXTURE_ARTIFACT_DIGEST = crypto.createHash('sha256').update(FIXTURE_ARTIFACT).digest('hex');
 
 function runHook(payload, cwd) {
   const projectRoot = cwd || payload.cwd;
+  const specsRoot = path.join(projectRoot, 'specs');
+  if (fs.existsSync(specsRoot)) {
+    for (const featureName of fs.readdirSync(specsRoot)) {
+      installFeatureReceipt(projectRoot, featureName, payload.session_id || 'test');
+    }
+  }
   // PROJECT_ROOT wins over cwd in the hook; pin it to the fixture so a host
   // monorepo's real specs/ cannot leak into the test (e.g. active rtk-* specs).
   const env = { ...process.env, PROJECT_ROOT: projectRoot };
@@ -42,7 +55,59 @@ function runHook(payload, cwd) {
 }
 
 function tmpDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ck-spec-gate-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ck-spec-gate-'));
+  for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test'], ['commit', '--allow-empty', '-qm', 'fixture']]) {
+    const result = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8' });
+    assert.strictEqual(result.status, 0, result.stderr);
+  }
+  return dir;
+}
+
+function runtimeContext(dir) {
+  return PROVENANCE.deriveRuntimeContext({
+    projectRoot: dir,
+    specsRoot: path.join(dir, 'specs'),
+    specFile: path.join(dir, 'specs', FEATURE, 'spec.json'),
+    featureName: FEATURE,
+    runtimeSession: 'test',
+  });
+}
+
+function bindFixtureReceipt(dir, value) {
+  const context = runtimeContext(dir);
+  return value.replaceAll(VALID_BASE, context.base).replaceAll(VALID_HEAD, context.head);
+}
+
+function installFeatureReceipt(dir, featureName = FEATURE, session = 'test') {
+  const featureDir = path.join(dir, 'specs', featureName);
+  const specFile = path.join(featureDir, 'spec.json');
+  if (!fs.existsSync(specFile)) return;
+  let spec;
+  try { spec = JSON.parse(fs.readFileSync(specFile, 'utf8')); } catch { return; }
+  const lifecyclePhase = spec.current_phase || spec.phase;
+  const explicitCloseout = ['completed', 'complete'].includes(spec.status)
+    || ['closeout', 'completion', 'completed', 'complete'].includes(lifecyclePhase);
+  if (!explicitCloseout) return;
+  const tasks = Object.values(spec.task_registry || {});
+  if (tasks.length === 0 || tasks.some((task) => task.status !== 'done')) return;
+  const context = PROVENANCE.deriveRuntimeContext({
+    projectRoot: dir,
+    specsRoot: path.join(dir, 'specs'),
+    specFile,
+    featureName,
+    runtimeSession: session,
+  });
+  fs.writeFileSync(path.join(featureDir, 'feature-receipt.md'), [
+    `Feature: ${featureName}`,
+    'Expected: final integration verification passes',
+    'Observed: final integration verification passed',
+    'Verification: PASS',
+    'Command: node --test',
+    'Exit: 0',
+    `Base: ${context.base}`,
+    `Head: ${context.head}`,
+    '',
+  ].join('\n'));
 }
 
 function clearCache() {
@@ -66,6 +131,8 @@ function readCache() {
  * @param {string} [opts.mdStatus='done']
  * @param {'valid'|'legacy-valid'|'failed'|'fence-only'|'missing-evidence'|'placeholder'|'none'} [opts.evidence='valid']
  * @param {object|null} [opts.runtime] — if set, write .claude/runtime.json
+ * @param {object|null} [opts.workflowPolicy] — if set, persist completion obligations
+ * @param {string} [opts.phase='closeout'] — persisted lifecycle boundary
  */
 function makeFixture(opts = {}) {
   const {
@@ -74,6 +141,8 @@ function makeFixture(opts = {}) {
     mdStatus = 'done',
     evidence = 'valid',
     runtime = null,
+    workflowPolicy = null,
+    phase = 'closeout',
   } = opts;
   const dir = tmpDir();
   const featureDir = path.join(dir, 'specs', FEATURE);
@@ -83,14 +152,14 @@ function makeFixture(opts = {}) {
   const entry = { status: taskStatus };
   if (completed_at !== null) entry.completed_at = completed_at;
 
-  fs.writeFileSync(
-    path.join(featureDir, 'spec.json'),
-    JSON.stringify({
-      status: 'in_progress',
-      current_phase: 'implementation',
-      task_registry: { [TASK_REL]: entry },
-    }),
-  );
+  const spec = {
+    status: 'in_progress',
+    feature_name: FEATURE,
+    current_phase: phase,
+    task_registry: { [TASK_REL]: entry },
+  };
+  if (workflowPolicy) spec.workflow_policy = workflowPolicy;
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify(spec));
 
   let evidenceBlock = '';
   if (evidence === 'valid') {
@@ -101,9 +170,9 @@ function makeFixture(opts = {}) {
       'Command: npm test',
       'Exit: 0',
       'Result: PASS',
-      'Base: abc123',
-      'Head: def456',
-      'Artifact: dist/bundle.js (sha256:deadbeef)',
+      `Base: ${VALID_BASE}`,
+      `Head: ${VALID_HEAD}`,
+      `Artifact: output/bundle.js (sha256:${FIXTURE_ARTIFACT_DIGEST})`,
       '```',
       'npm test',
       'PASS: 10 tests',
@@ -111,7 +180,7 @@ function makeFixture(opts = {}) {
       '',
     ].join('\n');
   } else if (evidence === 'legacy-valid') {
-    evidenceBlock = '## Evidence\n\nVerification: PASS\nCommand: npm test\nExit: 0\nBase: abc123\nHead: def456\nnpm test — passed, exit code 0\n';
+    evidenceBlock = `## Evidence\n\nVerification: PASS\nCommand: npm test\nExit: 0\nBase: ${VALID_BASE}\nHead: ${VALID_HEAD}\nnpm test — passed, exit code 0\n`;
   } else if (evidence === 'failed') {
     evidenceBlock = '## Evidence\n\nVerification: PASS\n\nFAIL: tests failed, exit code 1\n';
   } else if (evidence === 'fence-only') {
@@ -149,6 +218,15 @@ function makeFixture(opts = {}) {
     );
   }
 
+  if (evidence === 'valid') {
+    fs.mkdirSync(path.join(dir, 'output'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'output', 'bundle.js'), FIXTURE_ARTIFACT);
+  }
+  if (evidence === 'valid' || evidence === 'legacy-valid') {
+    const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
+    fs.writeFileSync(taskFile, bindFixtureReceipt(dir, fs.readFileSync(taskFile, 'utf8')));
+  }
+
   return dir;
 }
 
@@ -163,6 +241,57 @@ function parseBlock(stdout) {
     return JSON.parse(line);
   }
 }
+
+function installClaudeGate(root, policyMode = 'valid') {
+  const hooks = path.join(root, '.claude', 'hooks');
+  const scripts = path.join(root, '.claude', 'scripts');
+  fs.mkdirSync(hooks, { recursive: true });
+  fs.mkdirSync(scripts, { recursive: true });
+  fs.copyFileSync(HOOK, path.join(hooks, 'spec-gate.cjs'));
+  for (const name of [
+    'completion-authority-check.cjs', 'completion-authority-state.cjs', 'semantic-review-authority.cjs',
+  ]) fs.copyFileSync(path.join(__dirname, '..', name), path.join(hooks, name));
+  for (const name of ['spec-resolver.cjs', 'spec-receipt.cjs', 'validate-spec-output.cjs', 'spec-ground.cjs', 'spec-semantic-model.cjs', 'spec-final-state.cjs']) {
+    fs.copyFileSync(path.join(__dirname, '..', '..', 'scripts', name), path.join(scripts, name));
+  }
+  if (policyMode === 'valid') {
+    fs.copyFileSync(path.join(__dirname, '..', '..', 'scripts', 'workflow-policy.cjs'), path.join(scripts, 'workflow-policy.cjs'));
+    fs.copyFileSync(path.join(__dirname, '..', '..', 'scripts', 'provenance.cjs'), path.join(scripts, 'provenance.cjs'));
+  } else if (policyMode === 'malformed') {
+    fs.writeFileSync(path.join(scripts, 'workflow-policy.cjs'), 'module.exports = {\n');
+  }
+  return path.join(hooks, 'spec-gate.cjs');
+}
+
+test('CLAUDE_PROJECT_DIR wins over malicious payload.cwd and stale process cwd', () => {
+  const target = makeFixture({ evidence: 'missing-evidence' });
+  const stale = tmpDir();
+  try {
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const result = spawnSync(process.execPath, [HOOK], {
+      cwd: stale,
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: target,
+        PROJECT_ROOT: stale,
+      },
+      input: JSON.stringify({
+        hook_event_name: 'Stop',
+        session_id: 'test',
+        stop_hook_active: false,
+        cwd: stale,
+      }),
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const body = parseBlock(result.stdout.trim());
+    assert.equal(body?.decision, 'block');
+    assert.match(body.reason, new RegExp(TASK_REL.replace('/', '\\/')));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(stale, { recursive: true, force: true });
+  }
+});
 
 beforeEach(() => {
   clearCache();
@@ -190,6 +319,134 @@ test('1. newly-done task WITHOUT receipt → block, reason names task path', () 
     );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('installed Claude gate fails closed with a controlled decision when policy is missing or malformed', () => {
+  for (const policyMode of ['missing', 'malformed']) {
+    const dir = tmpDir();
+    const gate = installClaudeGate(dir, policyMode);
+    try {
+      const result = spawnSync(process.execPath, [gate], {
+        cwd: dir,
+        env: { ...process.env, PROJECT_ROOT: dir },
+        input: JSON.stringify({ cwd: dir, session_id: 'test', stop_hook_active: false }),
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${policyMode}: ${result.stderr}`);
+      assert.equal(result.stderr, '', `${policyMode} must not leak a stack trace`);
+      const block = parseBlock(result.stdout);
+      assert.equal(block?.decision, 'block', `${policyMode} must emit a controlled block`);
+      assert.match(block.reason, /workflow policy could not be loaded/i);
+      assert.ok(fs.existsSync(path.join(dir, '.claude', 'hooks', '.logs', 'hook-log.jsonl')));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('Claude adapter requires canonical SHA-256 only for a declared task artifact', () => {
+  const digest = FIXTURE_ARTIFACT_DIGEST;
+  const bodies = [
+    { suffix: '', expected: true, label: 'missing hash' },
+    { suffix: 'sha256: abc123\n', expected: true, label: 'invalid hash' },
+    { suffix: `sha256: ${'0'.repeat(64)}\n`, expected: true, label: 'mismatched hash' },
+    { suffix: `sha256: ${digest}\n`, expected: false, label: 'valid hash' },
+  ];
+  for (const { suffix, expected, label } of bodies) {
+    const dir = tmpDir();
+    const gate = installClaudeGate(dir);
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.mkdirSync(path.join(dir, 'output'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'output', 'bundle.js'), FIXTURE_ARTIFACT);
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      current_phase: 'closeout',
+      feature_name: FEATURE,
+      task_registry: {
+        [TASK_REL]: {
+          status: 'done',
+          completed_at: '2026-08-11T00:00:00.000Z',
+          artifacts: ['output/bundle.js'],
+        },
+      },
+    }));
+    fs.writeFileSync(path.join(featureDir, TASK_REL), [
+      '# Task', '', '**Status:** done', '', '## Evidence', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0', `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`,
+      'Artifact: output/bundle.js', suffix,
+    ].join('\n'));
+    fs.writeFileSync(
+      path.join(featureDir, TASK_REL),
+      bindFixtureReceipt(dir, fs.readFileSync(path.join(featureDir, TASK_REL), 'utf8')),
+    );
+    installFeatureReceipt(dir);
+    try {
+      const result = spawnSync(process.execPath, [gate], {
+        cwd: dir,
+        env: { ...process.env, PROJECT_ROOT: dir },
+        input: JSON.stringify({ cwd: dir, session_id: 'test', stop_hook_active: false }),
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+      if (expected) {
+        const block = parseBlock(result.stdout);
+        assert.equal(block?.decision, 'block', `${label} must block`);
+        assert.match(block.reason, /\bartifact_hash\b/);
+      } else {
+        assert.equal(result.stdout, '', `${label} must pass`);
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('Claude artifact verification rejects traversal and symlink paths', () => {
+  const cases = [
+    { artifactPath: '../outside.js', symlink: false },
+    { artifactPath: 'output/link.js', symlink: true },
+  ];
+  for (const { artifactPath, symlink } of cases) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    const artifactBytes = Buffer.from(`artifact-${artifactPath}\n`);
+    const digest = crypto.createHash('sha256').update(artifactBytes).digest('hex');
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    if (symlink) {
+      fs.mkdirSync(path.join(dir, 'output'), { recursive: true });
+      const target = path.join(dir, 'artifact-target.js');
+      fs.writeFileSync(target, artifactBytes);
+      fs.symlinkSync(target, path.join(dir, artifactPath));
+    } else {
+      fs.writeFileSync(path.join(dir, 'outside.js'), artifactBytes);
+    }
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      current_phase: 'closeout',
+      feature_name: FEATURE,
+      task_registry: {
+        [TASK_REL]: {
+          status: 'done',
+          completed_at: '2026-08-11T00:00:00.000Z',
+          artifacts: [artifactPath],
+        },
+      },
+    }));
+    fs.writeFileSync(path.join(featureDir, TASK_REL), bindFixtureReceipt(dir, [
+      '# Task', '', '**Status:** done', '', '## Evidence', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`,
+      `Artifact: ${artifactPath} (sha256:${digest})`,
+    ].join('\n')));
+    try {
+      const body = parseBlock(runHook({}, dir).stdout);
+      assert.equal(body?.decision, 'block', `${artifactPath} must block`);
+      assert.match(body.reason, /\bartifact_hash\b/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   }
 });
 
@@ -233,6 +490,32 @@ test('4. stop_hook_active: true → exit 0 silent even with violating task', () 
   }
 });
 
+test('4b. done task before explicit closeout without receipt blocks', () => {
+  const dir = makeFixture({ evidence: 'missing-evidence', phase: 'implementation' });
+  try {
+    const { code, stdout } = runHook({}, dir);
+    assert.strictEqual(code, 0);
+    const body = parseBlock(stdout);
+    assert.strictEqual(body?.decision, 'block');
+    assert.match(body.reason, new RegExp(TASK_REL));
+    assert.strictEqual(fs.existsSync(path.join(dir, 'specs', FEATURE, 'feature-receipt.md')), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('4c. done task before explicit closeout with valid task receipt is silent', () => {
+  const dir = makeFixture({ evidence: 'valid', phase: 'implementation' });
+  try {
+    const { code, stdout } = runHook({}, dir);
+    assert.strictEqual(code, 0);
+    assert.strictEqual(stdout, '');
+    assert.strictEqual(fs.existsSync(path.join(dir, 'specs', FEATURE, 'feature-receipt.md')), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('5. first run (no cache) with done-without-receipt → block (cache is not truth)', () => {
   const dir = makeFixture({ evidence: 'missing-evidence' });
   try {
@@ -253,22 +536,73 @@ test('5. first run (no cache) with done-without-receipt → block (cache is not 
   }
 });
 
-test('6. runtime.json spec.completion_gate: false → exit 0 silent', () => {
+test('6. forged payload, session, and context cannot bypass completion_gate=false', () => {
   const dir = makeFixture({
     evidence: 'missing-evidence',
     runtime: { spec: { completion_gate: false } },
   });
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
-    const { code, stdout } = runHook({}, dir);
+    const { code, stdout } = runHook({
+      user_authorized: true,
+      userAuthorized: true,
+      completion_gate_override: { authorized: true, session_id: 'test', nonce: 'forged' },
+      session: { id: 'test', user_authorized: true },
+      runtime_context: { project_root: dir, completion_gate: true, signed: true },
+    }, dir);
     assert.strictEqual(code, 0);
-    assert.strictEqual(stdout, '');
+    const body = parseBlock(stdout);
+    assert.equal(body?.decision, 'block');
+    assert.match(body.reason, /no completion-gate bypass is supported/i);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('7. Evidence with {{...}} placeholder → blocked (check c)', () => {
+test('empty or malformed Claude hook payload fails closed', () => {
+  const dir = tmpDir();
+  const gate = installClaudeGate(dir);
+  try {
+    for (const input of ['', 'null', '[]']) {
+      const result = spawnSync(process.execPath, [gate], {
+        cwd: dir,
+        env: { ...process.env, PROJECT_ROOT: dir },
+        input,
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${JSON.stringify(input)}: ${result.stderr}`);
+      assert.equal(result.stderr, '');
+      const block = parseBlock(result.stdout);
+      assert.equal(block?.decision, 'block', `${JSON.stringify(input)} must block`);
+      assert.match(block.reason, /hook payload (is empty|must be a JSON object)/i);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('explicit Strict completion ignores worker-writable proof strings and remains blocked', () => {
+  const dir = makeFixture({
+    workflowPolicy: POLICY.workflowPolicySnapshot({ riskSignals: { auth: true }, assurance_level: 'Strict' }),
+  });
+  try {
+    const specPath = path.join(dir, 'specs', FEATURE, 'spec.json');
+    const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+    spec.proofs = {
+      needsInspection: 'inspection completed',
+      needsIndependentAudit: 'PASS',
+      needsResearchGrounding: 'research completed',
+    };
+    fs.writeFileSync(specPath, JSON.stringify(spec));
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.equal(body?.decision, 'block');
+    assert.match(body.reason, /needsInspection|needsIndependentAudit|needsResearchGrounding/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('7. Evidence with {{...}} placeholder → blocked (placeholder)', () => {
   const dir = makeFixture({ evidence: 'placeholder' });
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
@@ -278,8 +612,8 @@ test('7. Evidence with {{...}} placeholder → blocked (check c)', () => {
     assert.ok(body, 'expected block JSON on stdout');
     assert.strictEqual(body.decision, 'block');
     assert.ok(
-      body.reason.includes(TASK_REL) && /\bc\b/.test(body.reason),
-      `reason must cite task path and check c; got: ${body.reason}`,
+      body.reason.includes(TASK_REL) && /\bplaceholder\b/.test(body.reason),
+      `reason must cite task path and placeholder; got: ${body.reason}`,
     );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -292,7 +626,7 @@ test('8. explicit failure cannot pass even when PASS text is present', () => {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     const body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body);
-    assert.match(body.reason, /\bc\b/);
+    assert.match(body.reason, /\bverification_state\b/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -314,14 +648,14 @@ test('10. completed_at must be a valid ISO timestamp', () => {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     const body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body);
-    assert.match(body.reason, /\bd\b/);
+    assert.match(body.reason, /\bcompleted_at\b/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('11. done → pending cache transition is persisted and can be gated again', () => {
-  const dir = makeFixture({ taskStatus: 'pending', mdStatus: 'pending' });
+test('11. done → pending cache transition is persisted and explicit closeout gates re-completion', () => {
+  const dir = makeFixture({ taskStatus: 'pending', mdStatus: 'pending', phase: 'implementation' });
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'done' } });
     assert.strictEqual(runHook({}, dir).stdout, '');
@@ -333,6 +667,7 @@ test('11. done → pending cache transition is persisted and can be gated again'
       status: 'done',
       completed_at: '2026-07-01T00:00:00Z',
     };
+    spec.current_phase = 'closeout';
     fs.writeFileSync(specFile, JSON.stringify(spec));
     const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
     fs.writeFileSync(taskFile, '# Task\n\n**Status:** done\n\n## Evidence\n\nFAIL: tests failed\n');
@@ -360,11 +695,12 @@ test('13. provenance requires both Base and Head - only Base fails', () => {
   fs.mkdirSync(tasksDir, { recursive: true });
   fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
     status: 'in_progress',
-    current_phase: 'implementation',
+    feature_name: FEATURE,
+    current_phase: 'closeout',
     task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
   }));
   // Only Base, missing Head
-  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), [
+  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), bindFixtureReceipt(dir, [
     '# Task',
     '',
     '**Status:** done',
@@ -374,17 +710,17 @@ test('13. provenance requires both Base and Head - only Base fails', () => {
     'Verification: PASS',
     'Command: npm test',
     'Exit: 0',
-    'Base: abc123',
+    `Base: ${VALID_BASE}`,
     '```',
     'npm test PASS',
     '```',
-  ].join('\n'));
+  ].join('\n')));
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     const body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body, 'only Base should block');
     assert.strictEqual(body.decision, 'block');
-    assert.match(body.reason, /\bg\b/);
+    assert.match(body.reason, /\bprovenance\b/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -397,7 +733,8 @@ test('14. provenance requires both Base and Head - only Head fails', () => {
   fs.mkdirSync(tasksDir, { recursive: true });
   fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
     status: 'in_progress',
-    current_phase: 'implementation',
+    feature_name: FEATURE,
+    current_phase: 'closeout',
     task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
   }));
   // Only Head, missing Base
@@ -411,7 +748,7 @@ test('14. provenance requires both Base and Head - only Head fails', () => {
     'Verification: PASS',
     'Command: npm test',
     'Exit: 0',
-    'Head: def456',
+    `Head: ${VALID_HEAD}`,
     '```',
     'npm test PASS',
     '```',
@@ -421,7 +758,7 @@ test('14. provenance requires both Base and Head - only Head fails', () => {
     const body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body, 'only Head should block');
     assert.strictEqual(body.decision, 'block');
-    assert.match(body.reason, /\bg\b/);
+    assert.match(body.reason, /\bprovenance\b/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -434,10 +771,11 @@ test('15. provenance with both Base and Head passes', () => {
   fs.mkdirSync(tasksDir, { recursive: true });
   fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
     status: 'in_progress',
-    current_phase: 'implementation',
+    feature_name: FEATURE,
+    current_phase: 'closeout',
     task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
   }));
-  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), [
+  fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), bindFixtureReceipt(dir, [
     '# Task',
     '',
     '**Status:** done',
@@ -447,12 +785,12 @@ test('15. provenance with both Base and Head passes', () => {
     'Verification: PASS',
     'Command: npm test',
     'Exit: 0',
-    'Base: abc123',
-    'Head: def456',
+    `Base: ${VALID_BASE}`,
+    `Head: ${VALID_HEAD}`,
     '```',
     'npm test PASS',
     '```',
-  ].join('\n'));
+  ].join('\n')));
   try {
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
     const { stdout } = runHook({}, dir);
@@ -481,8 +819,8 @@ test('16. registry task path with ../ escape or sibling-prefix is rejected (chec
     'Verification: PASS',
     'Command: npm test',
     'Exit: 0',
-    'Base: abc123',
-    'Head: def456',
+    `Base: ${VALID_BASE}`,
+    `Head: ${VALID_HEAD}`,
     '```',
     'pass',
     '```',
@@ -491,7 +829,8 @@ test('16. registry task path with ../ escape or sibling-prefix is rejected (chec
   const siblingPrefixRel = `tasks/../../${FEATURE}-evil/tasks/task.md`;
   fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
     status: 'in_progress',
-    current_phase: 'implementation',
+    feature_name: FEATURE,
+    current_phase: 'closeout',
     task_registry: {
       [maliciousRel]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' },
       [siblingPrefixRel]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' },
@@ -527,8 +866,9 @@ test('17. empty or bare provenance fails — Base:/Head: require non-empty same-
     const featureDir = path.join(dir, 'specs', FEATURE);
     fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
     fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
-      status: 'in_progress',
-      current_phase: 'implementation',
+    status: 'in_progress',
+    feature_name: FEATURE,
+    current_phase: 'closeout',
       task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
     }));
     fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
@@ -536,30 +876,33 @@ test('17. empty or bare provenance fails — Base:/Head: require non-empty same-
     const body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body, `empty/bare provenance should block for ${desc}`);
     assert.strictEqual(body.decision, 'block', `empty/bare should block: ${desc}`);
-    assert.match(body.reason, /\bg\b/, `should fail provenance g for ${desc}`);
+    assert.match(body.reason, /\bprovenance\b/, `should fail provenance for ${desc}`);
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
 test('18. valid non-empty Base: value and base_sha: value pass', () => {
   const validCases = [
-    ['Verification: PASS','Command: npm test','Exit: 0','Base: abc123','Head: def456'].join('\n'),
-    ['Verification: PASS','Command: npm test','Exit: 0','base_sha: abc123','head_sha: def456'].join('\n'),
-    ['Verification: PASS','Command: npm test','Exit: 0','Base: a1b2c3','Head: d4e5f6'].join('\n'),
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0',`Base: ${VALID_BASE}`,`Head: ${VALID_HEAD}`].join('\n'), shouldPass: true },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0',`base_sha: ${VALID_BASE}`,`head_sha: ${VALID_HEAD}`].join('\n'), shouldPass: true },
+    { evidence: ['Verification: PASS','Command: npm test','Exit: 0',`Base: ${'a'.repeat(40)}`,`Head: ${'b'.repeat(40)}`].join('\n'), shouldPass: false },
   ];
-  for (const evidence of validCases) {
+  for (const { evidence, shouldPass } of validCases) {
     const dir = tmpDir();
     const featureDir = path.join(dir, 'specs', FEATURE);
     fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
     fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
       status: 'in_progress',
-      current_phase: 'implementation',
+      feature_name: FEATURE,
+      current_phase: 'closeout',
       task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
     }));
-    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    const boundEvidence = shouldPass ? bindFixtureReceipt(dir, evidence) : evidence;
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + boundEvidence,'```','pass','```'].join('\n'));
     seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
-    const { stdout } = runHook({}, dir);
-    assert.strictEqual(stdout, '', `valid provenance should not block: ${evidence.slice(0,40)}`);
+    const result = runHook({}, dir);
+    if (shouldPass) assert.strictEqual(result.stdout, '', `valid provenance should not block: ${evidence.slice(0,40)}`);
+    else assert.match(parseBlock(result.stdout).reason, /\bprovenance\b/, 'arbitrary valid-length SHA values must block');
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -594,13 +937,13 @@ test('20. cache-hit: receipt mutation (removed Verification/Command) blocks even
     fs.writeFileSync(taskFile, [
       '# Task', '', '**Status:** done', '',
       '## Evidence', '',
-      'Exit: 0', 'Base: abc123', 'Head: def456',
+      'Exit: 0', `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`,
       '```', 'pass', '```',
     ].join('\n'));
     const blocked = parseBlock(runHook({}, dir).stdout);
     assert.ok(blocked, 'mutated receipt missing Verification/Command should block on cache-hit');
     assert.strictEqual(blocked.decision, 'block');
-    assert.match(blocked.reason, /\bc\b|\be\b/);
+    assert.match(blocked.reason, /\bverification_state\b|\bcommand\b/);
     // cache must not have been promoted to still-valid done; next run must still block
     const secondBlocked = parseBlock(runHook({}, dir).stdout);
     assert.ok(secondBlocked, 'second hit after mutation must still block');
@@ -618,21 +961,21 @@ test('21. cache-hit: provenance mutation (removed Head / changed to stale) block
     const taskFile = path.join(dir, 'specs', FEATURE, TASK_REL);
     fs.writeFileSync(taskFile, [
       '# Task', '', '**Status:** done', '',
-      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', 'Base: abc123',
+      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', `Base: ${VALID_BASE}`,
       '```', 'pass', '```',
     ].join('\n'));
     let body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body, 'missing Head provenance should block on cache-hit');
-    assert.match(body.reason, /\bg\b/);
+    assert.match(body.reason, /\bprovenance\b/);
     // mutate back to include both but with empty Head value (stale)
     fs.writeFileSync(taskFile, [
       '# Task', '', '**Status:** done', '',
-      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', 'Base: abc123', 'Head:',
+      '## Evidence', '', 'Verification: PASS', 'Command: npm test', 'Exit: 0', `Base: ${VALID_BASE}`, 'Head:',
       '```', 'pass', '```',
     ].join('\n'));
     body = parseBlock(runHook({}, dir).stdout);
     assert.ok(body, 'empty Head should block as stale provenance');
-    assert.match(body.reason, /\bg\b/);
+    assert.match(body.reason, /\bprovenance\b/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -690,6 +1033,211 @@ test('24. first-run (no cache file) with valid receipt passes and seeds cache', 
     assert.ok(fs.existsSync(CACHE), 'cache must be created on first valid run');
     assert.strictEqual(readCache()[FEATURE][TASK_REL], 'done');
   } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('25. placeholder tokens Command: TODO / Base: TBD / artifact sha256 empty must block', () => {
+  const cases = [
+    { evidence: ['Verification: PASS','Command: TODO','Exit: 0','Base: a','Head: b'].join('\n'), check: /\bcommand\b/, desc: 'Command TODO' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: TBD','Head: b'].join('\n'), check: /\bprovenance\b/, desc: 'Base TBD' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: N/A'].join('\n'), check: /\bprovenance\b/, desc: 'Head N/A' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','base_sha: pending','head_sha: unknown'].join('\n'), check: /\bprovenance\b/, desc: 'base_sha pending' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: b','Artifact: bundle','sha256: '].join('\n'), check: /\bartifact_hash\b/, desc: 'artifact empty sha' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: b','Artifact: bundle','sha256: TBD'].join('\n'), check: /\bartifact_hash\b/, desc: 'artifact TBD sha' },
+  ];
+  for (const { evidence, check, desc } of cases) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: FEATURE, current_phase: 'closeout', task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } } }));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, `placeholder case ${desc} should block`);
+    assert.strictEqual(body.decision, 'block', desc);
+    assert.match(body.reason, check, `check for ${desc}`);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  // Ensure normal todo substring does NOT block
+  const dir2 = tmpDir();
+  const featureDir2 = path.join(dir2, 'specs', FEATURE);
+  fs.mkdirSync(path.join(featureDir2, 'tasks'), { recursive: true });
+  fs.writeFileSync(path.join(featureDir2, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: FEATURE, current_phase: 'closeout', task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } } }));
+  fs.writeFileSync(path.join(dir2, 'specs', FEATURE, TASK_REL), bindFixtureReceipt(dir2, ['# Task','','**Status:** done','','## Evidence','','Verification: PASS','Command: npm run todo:test','Exit: 0',`Base: ${VALID_BASE}`,`Head: ${VALID_HEAD}`,'```','pass','```'].join('\n')));
+  seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+  assert.strictEqual(runHook({}, dir2).stdout, '', 'command containing todo substring should not block');
+  fs.rmSync(dir2, { recursive: true, force: true });
+});
+
+test('26. explicit failure outcomes Tests failed / Result FAIL and multiple Results must block', () => {
+  const cases = [
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: b','Tests failed: 1'].join('\n'), desc: 'Tests failed: 1' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: b','Result: FAIL','Result: PASS'].join('\n'), desc: 'Result FAIL then PASS' },
+    { evidence: ['Verification: PASS','Command: pnpm test','Exit: 0','Base: a','Head: b','0 tests passed'].join('\n'), desc: '0 tests' },
+  ];
+  for (const { evidence, desc } of cases) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: FEATURE, current_phase: 'closeout', task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } } }));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, `explicit failure ${desc} should block`);
+    assert.strictEqual(body.decision, 'block');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('27. task markdown symlink outside feature must be rejected (check a)', () => {
+  const dir = tmpDir();
+  const featureDir = path.join(dir, 'specs', FEATURE);
+  fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+  fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: FEATURE, current_phase: 'closeout', task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } } }));
+  const outside = path.join(dir, 'outside.md');
+  fs.writeFileSync(outside, '# Task\n\n**Status:** done\n\n## Evidence\n\nVerification: PASS\nCommand: pnpm test\nExit: 0\nBase: a\nHead: b\n');
+  const taskPath = path.join(dir, 'specs', FEATURE, TASK_REL);
+  try { fs.unlinkSync(taskPath); } catch {}
+  fs.symlinkSync(outside, taskPath);
+  seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+  const body = parseBlock(runHook({}, dir).stdout);
+  assert.ok(body, 'symlink task outside should block');
+  assert.strictEqual(body.decision, 'block');
+  assert.match(body.reason, /\ba\b/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('28. malformed spec.json must block with invalid_specs', () => {
+  const dir = tmpDir();
+  fs.mkdirSync(path.join(dir, 'specs', 'good'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'specs', 'bad'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'specs', 'good', 'spec.json'), JSON.stringify({ status: 'in_progress', feature_name: 'good', task_registry: {} }));
+  fs.writeFileSync(path.join(dir, 'specs', 'bad', 'spec.json'), '{ malformed');
+  seedCache({});
+  const { stdout } = runHook({}, dir);
+  const body = parseBlock(stdout);
+  assert.ok(body, 'malformed spec should block');
+  assert.strictEqual(body.decision, 'block');
+  assert.match(body.reason, /invalid spec/i);
+  assert.match(body.reason, /bad/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('29. specs/linked symlink outside must be explicit_malformed and non-explicit scan must not count it', () => {
+  const dir = tmpDir();
+  const specsDir = path.join(dir, 'specs');
+  fs.mkdirSync(specsDir, { recursive: true });
+  const outside = path.join(dir, 'outside-feat');
+  fs.mkdirSync(outside, { recursive: true });
+  fs.writeFileSync(path.join(outside, 'spec.json'), JSON.stringify({ status: 'in_progress' }));
+  const link = path.join(specsDir, 'linked');
+  fs.symlinkSync(outside, link);
+  // non-explicit should block with invalid_specs (fail-closed, not phantom no-active)
+  seedCache({});
+  const nonExplicit = parseBlock(runHook({}, dir).stdout);
+  assert.ok(nonExplicit, 'non-explicit symlink outside should block with invalid_specs');
+  assert.strictEqual(nonExplicit.decision, 'block');
+  assert.match(nonExplicit.reason, /invalid spec/i);
+  assert.match(nonExplicit.reason, /linked/);
+  // explicit should block explicit_malformed
+  const body = parseBlock(runHook({ featureName: 'linked' }, dir).stdout);
+  assert.ok(body);
+  assert.strictEqual(body.decision, 'block');
+  assert.match(body.reason, /explicit_malformed/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('30. phantom vectors via gate evidence must block with verification_state (r3)', () => {
+  const vectors = [
+    'ℹ tests 0',
+    'Tests: 0 total',
+    '0 tests',
+    'collected 0 items',
+    'No tests found.',
+    'ℹ cancelled 1',
+    'cancelled 1',
+    '1 cancelled',
+    'Test Suites: 1 failed, 1 total',
+    'FAIL ./foo.test.js',
+    'FAIL\tpackage',
+    'FAIL\texample.test/probe\t0.431s',
+    '--- FAIL: TestName (0.00s)',
+    'FAILED tests/test_demo.py::test_foo - assert 1 == 2',
+    'FAILED tests/test_demo.py',
+    '# fail 1',
+    'ℹ fail 1',
+    'not ok 1 - test',
+    '1 error in 0.12s',
+    'ERROR collecting tests/test_demo.py',
+    'Found 2 errors',
+    'Tests run: 5, Failures: 1, Errors: 0',
+    '[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0',
+    '[ERROR] Tests run: 5, Failures: 0, Errors: 1, Skipped: 0',
+    '[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test',
+    '5 tests completed, 1 failed',
+  ];
+  for (const v of vectors) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      feature_name: FEATURE,
+      current_phase: 'closeout',
+      task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+    }));
+    const evidence = bindFixtureReceipt(dir, ['Verification: PASS','Command: npm test','Exit: 0',`Base: ${VALID_BASE}`,`Head: ${VALID_HEAD}`, v].join('\n'));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, `vector should block: ${v}`);
+    assert.strictEqual(body.decision, 'block', `vector ${v} should block`);
+    assert.match(body.reason, /\bverification_state\b/, `vector ${v} should fail verification_state`);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  // positive controls must not block
+  const passes = [
+    'Tests failed: 0',
+    'fail 0',
+    'Tests: 0 failed',
+    'cancelled 0',
+    'Test Suites: 0 failed',
+    '5 tests completed, 0 failed',
+    'errors 0',
+    'Found 0 errors',
+    'collected 1 item',
+    '[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0',
+    '[ERROR] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0',
+    '[ERROR] Error handling is documented',
+    'Error handling is documented',
+    'FAILURE mode analysis',
+    'Notes: tests failed previously but now fixed',
+    'Notes: supports zero-test parsing',
+    '# tests 1',
+    '# suites 0',
+    '# pass 1',
+    '# fail 0',
+    '# cancelled 0',
+    '# skipped 0',
+    '# todo 0',
+    '# duration_ms 114.203625',
+  ];
+  for (const v of passes) {
+    const dir = tmpDir();
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(path.join(featureDir, 'tasks'), { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'spec.json'), JSON.stringify({
+      status: 'in_progress',
+      feature_name: FEATURE,
+      current_phase: 'closeout',
+      task_registry: { [TASK_REL]: { status: 'done', completed_at: '2026-07-01T00:00:00Z' } },
+    }));
+    const evidence = bindFixtureReceipt(dir, ['Verification: PASS','Command: npm test','Exit: 0',`Base: ${VALID_BASE}`,`Head: ${VALID_HEAD}`, v].join('\n'));
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, TASK_REL), ['# Task','','**Status:** done','','## Evidence','','' + evidence,'```','pass','```'].join('\n'));
+    seedCache({ [FEATURE]: { [TASK_REL]: 'pending' } });
+    const { stdout } = runHook({}, dir);
+    assert.strictEqual(stdout, '', `positive control should not block: ${v}`);
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

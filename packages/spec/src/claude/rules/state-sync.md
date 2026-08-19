@@ -1,31 +1,62 @@
-# Tollgate Protocol (State Sync)
+# Specs v2.1 state synchronization
 
-## Single Source of Truth
+## Authority layers
 
-In any Spec-driven workflow (`specs`), the state of the project is physically persisted in **two layers**:
-1. **Machine Layer (`spec.json`)**: Tracks phase, status, overall completion, and per-task machine state via `task_registry`.
-2. **Human Layer (`tasks/task-*.md`)**: Checkboxes indicating granular execution progress.
+`spec.json` is machine semantic authority. Requirements, design, conditional
+research, and conditional task Markdown are human projections. Host state may
+record authority or integrity, but it never supplies product semantics.
 
-## The Sync-back Rule (Mandatory)
+Planning depth and assurance level remain independent. The artifact router runs
+before discovery: None persists no spec; Compact and Full persist the bounded
+core; research and tasks remain absent unless their semantic triggers exist.
 
-Whenever an agent finishes a task or blocks due to an issue, it **MUST NOT** simply respond with "Done" or "Blocked" in chat. 
-Before returning control to the user or orchestrator, the agent **MUST**:
+## Canonical lifecycle
 
-### On Success:
-1. Update `spec.json`: Modify `current_phase` if moving forward, ensure `status` accurately reflects progress, keep `task_files` synchronized with the real files on disk, and update the corresponding `task_registry` entry (`status`, `blocker`, `started_at`, `completed_at`, `last_updated_at`).
-2. Edit `task-R*.md`: Change `Status` only after real verification has passed (build/test/runtime/artifact). Then check `[x]` the sub-task boxes and relevant completion criteria.
-3. Call `TaskUpdate` if Claude Tasks are active, setting the status to "completed" only after the physical files were updated.
+The feature lifecycle is exactly `in_progress`, `paused`, `blocked`, or `done`.
+Authoring state is independently `draft`, `validated`, or `absent`. Do not emit
+legacy lifecycle aliases in a new 2.1 artifact.
 
-### On Block/Failure (>3 retries):
-1. Update `spec.json`: Set `"status": "blocked"` and fill out the `"blocker"` string with the root cause.
-2. Update the corresponding `task_registry` entry to `blocked`, persist the blocker reason, and stamp `last_updated_at`.
-3. Edit `task-R*.md`: Change `Status: pending` (or `in_progress`) to `Status: blocked` with a note.
-4. Alert the orchestrator or user via `AskUserQuestion` or explicit warning.
+Technical readiness is not lifecycle completion. `ready_for_implementation`
+may change only through the installed machine finalization path after every
+routed artifact, projection, semantic review, grounding check, and deterministic
+gate passes. An author must not directly declare readiness, authority, approval,
+review capability, execution proof, or closeout.
 
-**Canonical state values:** New specs MUST use `status: "in_progress"` for active work. Legacy `in-progress` may be read for compatibility, but must not be emitted in new files.
+## Projection sync
 
-**Golden Rule:** If the current phase changes, or a task completes, the agent must update the physical files. Never mark a task completed before there is execution proof, and never let `task_registry` disagree with the matching markdown task file. The context is intentionally NOT persisted in the chat to save tokens. An injected Hook (`spec-state.cjs`) constantly enforces and validates this state.
+After any semantic Markdown edit:
 
-### Completion gate (Stop)
+1. invoke the explicit installed machine semantic-sync step to promote `semantic_model`;
+2. regenerate or reconcile every affected Markdown projection;
+3. verify requirements, decisions, anchors, task registry, typed boundaries,
+   and verification refs round-trip without loss; and
+4. rerun the applicable deterministic validation and grounding checks.
 
-Marking a task `done` is now machine-gated on the **Stop** hook (`spec-gate.cjs`), not only reminded on each prompt. When a turn ends with *newly-done* tasks, the gate requires a verification receipt in each task markdown: `Status: done`, `## Evidence` (legacy heading aliases still parse) with real proof (no `{{...}}` placeholders; at least one fenced command block or PASS/FAIL line), and a non-empty `task_registry[path].completed_at`. First adoption (no cache yet) seeds history without blocking. Escape hatch for humans: `"spec": { "completion_gate": false }` in `.claude/runtime.json` (missing key keeps the gate ON).
+For Claude Code, the isolated promotion is
+`node .claude/scripts/spec-scaffold.cjs <feature> --sync-semantic-model`.
+
+Task Markdown exists only when typed ownership, dependency, transition, proof,
+or parallel topology requires it. Its status and dependencies project the
+matching `task_registry` entry. Its Verification Plan is prospective and never
+contains an execution verdict or proof claim. Topology comes only from typed
+`coordination.boundaries`, never from legacy trigger fields, priority markers,
+related-file lists, or prose.
+
+## Lifecycle updates
+
+- Starting or continuing authored work keeps the feature `in_progress`.
+- A deliberate resumable stop uses `paused` with the exact remaining decision.
+- An external or semantic blocker uses `blocked` with a concrete cause.
+- Task state changes update `task_registry` and the matching task projection
+  together, but only from observed work and verification.
+- Feature `done` is reserved for final-state authority after implementation
+  closeout; authoring or readiness cannot produce it.
+
+State synchronization never fabricates commands, PASS results, timestamps,
+receipts, completed work, reviewer identity, or user approval. When execution
+evidence is absent, preserve the unfinished state and report the missing proof.
+Never hand-author the `semantic_model` shape or treat an unsynchronized Markdown
+edit as machine authority.
+
+Claude-native plan/task state may mirror physical state when available, but it
+is never a substitute for `spec.json` or authority to advance the lifecycle.

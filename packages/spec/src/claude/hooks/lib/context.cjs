@@ -2,7 +2,7 @@
 /**
  * context.cjs - Context/reminder building for session injection
  *
- * Extracted from hooks for reuse in both Claude hooks and OpenCode plugins.
+ * Extracted from hooks for reuse across runtime adapters.
  * Builds session context, rules, paths, and plan information.
  *
  * @module context

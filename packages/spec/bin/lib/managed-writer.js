@@ -43,11 +43,16 @@ function readPayload(src, transform) {
  *   action: 'created' | 'updated' | 'unchanged' | 'preserved' | 'missing'
  */
 function writeManagedFile(opts) {
-  const { src, dest, platformFolder, ctx, tracker, transform } = opts;
+  const { src, dest, platformFolder, ctx, tracker, transform, sourceRoot } = opts;
 
   if (!fs.existsSync(src)) {
     return { action: 'missing', state: 'absent' };
   }
+  const sourceStat = fs.lstatSync(src);
+  if (sourceStat.isSymbolicLink() || !sourceStat.isFile()) {
+    throw new Error(`Managed source must be a non-symlink regular file: ${src}`);
+  }
+  if (sourceRoot) assertNoSymlinkPath(src, sourceRoot);
   assertNoSymlinkPath(dest);
 
   const { data, utf8 } = readPayload(src, transform);
@@ -141,6 +146,7 @@ function writeManagedFile(opts) {
  */
 function copyManagedTree(opts) {
   const { src, dest, platformFolder, ctx, tracker, transform } = opts;
+  const sourceRoot = opts.sourceRoot || path.resolve(src);
   const agg = { created: 0, updated: 0, unchanged: 0, preserved: 0, missing: 0 };
 
   if (!fs.existsSync(src)) {
@@ -148,7 +154,9 @@ function copyManagedTree(opts) {
     return agg;
   }
 
-  const stats = fs.statSync(src);
+  const stats = fs.lstatSync(src);
+  if (stats.isSymbolicLink()) throw new Error(`Managed source tree cannot contain symlinks: ${src}`);
+  if (path.resolve(src) !== path.resolve(sourceRoot)) assertNoSymlinkPath(src, sourceRoot);
   if (stats.isDirectory()) {
     for (const childName of fs.readdirSync(src)) {
       // Generated artifacts (coverage, Python bytecode) are not runtime
@@ -157,6 +165,7 @@ function copyManagedTree(opts) {
       const destName = childName === 'gitignore' ? '.gitignore' : childName;
       const childAgg = copyManagedTree({
         ...opts,
+        sourceRoot,
         src: path.join(src, childName),
         dest: path.join(dest, destName)
       });
@@ -165,7 +174,7 @@ function copyManagedTree(opts) {
     return agg;
   }
 
-  const { action } = writeManagedFile({ src, dest, platformFolder, ctx, tracker, transform });
+  const { action } = writeManagedFile({ src, dest, platformFolder, ctx, tracker, transform, sourceRoot });
   if (agg[action] !== undefined) agg[action]++;
   return agg;
 }

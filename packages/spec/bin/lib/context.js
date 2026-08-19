@@ -13,7 +13,6 @@
 const fs = require('fs');
 const path = require('path');
 const packageJson = require('../../package.json');
-const { getOpenCodeCopyOptions } = require('./opencode-install');
 const { isInteractive, createUI } = require('./ui');
 const { resolveLang, createTranslator } = require('./i18n');
 const { normalizeSourcePaths } = require('./copy-utils');
@@ -57,12 +56,10 @@ function loadClaudeMigrationManifest() {
 const DEPENDENCY_TEMPLATES = {
   commands: {
     claude: {},
-    opencode: {},
     codex: {}
   },
   agents: {
     claude: {},
-    opencode: {},
     codex: {}
   }
 };
@@ -91,29 +88,6 @@ const PLATFORMS = {
       scripts: true,
       rules: true,
       commands: true
-    }
-  },
-  opencode: {
-    id: 'opencode',
-    name: 'OpenCode',
-    description: 'OpenCode terminal AI coding agent',
-    folder: '.opencode',
-    detectFiles: ['.opencode', 'opencode.json', 'opencode.jsonc'],
-    commandsDir: '.opencode/commands',
-    skillsDir: '.opencode/skills',
-    agentsDir: '.opencode/agents',
-    skillsRef: '.opencode/skills',
-    commandPrefix: '/',
-    sourceDir: 'claude',
-    sourceSubdir: 'commands',  // Dead config (manifest commands.core is []); kept for shape parity
-    backupTargets: ['.opencode', 'AGENTS.md', 'opencode.json', 'opencode.jsonc'],
-    capabilities: {
-      skills: true,
-      agents: true,
-      references: true,
-      scripts: true,
-      rules: true,
-      commands: false
     }
   },
   codex: {
@@ -192,26 +166,8 @@ function getRuntimeSupportTargetDir(platformKey, subdir) {
   return path.join(PLATFORMS[platformKey].folder, subdir);
 }
 
-// Warn opencode-only installs when a legacy .claude/ folder remains from
-// pre-0.9.0 installs (when OpenCode shared the .claude/ runtime). We do not
-// delete anything; user must remove it explicitly to opt in.
-function warnLegacyClaudeFolder(platforms) {
-  if (!platforms.includes('opencode')) return;
-  if (platforms.includes('claude')) return;
-  if (!fs.existsSync('.claude')) return;
-
-  console.log('');
-  console.log('⚠ Legacy .claude/ folder detected.');
-  console.log('  As of CafeKit 0.9.0, OpenCode installs are self-contained under .opencode/.');
-  console.log('  The .claude/ folder from older installs is no longer used by OpenCode.');
-  console.log('  After this install finishes you can remove it: rm -rf .claude');
-  console.log('');
-}
 
 function getCopyOptions(platformKey, baseOptions = {}) {
-  if (platformKey === 'opencode') {
-    return getOpenCodeCopyOptions(baseOptions);
-  }
   if (platformKey === 'codex') {
     // Lazy require avoids coupling the shared registry to a runtime adapter
     // during module initialization.
@@ -358,7 +314,6 @@ module.exports = {
   getPlatformKeys,
   hasPlatformCapability,
   getRuntimeSupportTargetDir,
-  warnLegacyClaudeFolder,
   getCopyOptions,
   parseInstallerArgs,
   createResults,

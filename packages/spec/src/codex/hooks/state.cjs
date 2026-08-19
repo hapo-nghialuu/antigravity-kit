@@ -140,6 +140,7 @@ try {
       refreshGit(data, projectRoot);
       writeData(dir, data);
     });
+    process.stdout.write('{}\n');
     process.exit(0);
   }
 
@@ -151,6 +152,7 @@ try {
       writeData(dir, data);
       archive(dir);
     });
+    process.stdout.write('{}\n');
   }
 } catch (error) {
   logCrash('state', error);

@@ -1,201 +1,185 @@
 ---
 name: hapo:test
-description: "Run and verify project tests across all scopes: unit, integration, e2e, and UI. Blast-radius scoping for speed, chrome-devtools for UI verification, structured verdicts for downstream automation."
+description: "Execute the smallest adequate verification scope and own the canonical execution proof."
 user-invocable: true
-when_to_use: "Invoke to run and verify unit, integration, e2e, and UI tests."
+when_to_use: "Use after implementation, for a feature scope, or for an explicit test request."
 category: testing
-keywords: [test, unit, integration, e2e]
+keywords: [test, unit, integration, e2e, proof]
 argument-hint: "[scope|--full|--ui <url>|--ui-auth <url>|--ui-flow <url>]"
 metadata:
   author: haposoft
   version: "2.0.0"
 ---
-# Test — Verify Implementation Quality
+# Test — execution proof owner
 
-Run the project's test suite, analyze results, and return a structured verdict.
-Designed to work **after `hapo:develop`**. Standalone `/hapo:test` uses the same `test-runner` contract that `hapo:develop` relies on during its Quality Gate, and may run **in parallel with `hapo:code-review`**.
-
-**Principles:** Fail-fast | Blast-radius scoping | Zero hidden failures | No mocking to pass
+`hapo:test` is the sole owner of canonical execution proof. It runs real
+commands, records what ran, and emits the receipt consumed by closeout and
+review. Review may consume that receipt but must not run tests, create a second
+receipt, or claim execution proof.
 
 ## Usage
 
-```bash
-/hapo:test                    # Blast-radius mode: only tests affected by recent changes
-/hapo:test --full             # Run full test suite regardless of changes
-/hapo:test <scope>            # Test a specific module or path
-/hapo:test <feature-name>     # Spec-aware test: load specs/<feature-name> and verify scope/task evidence
-/hapo:test specs/<feature>    # Spec-aware test by spec directory
-/hapo:test --ui <url>         # UI verification via chrome-devtools (public pages)
-/hapo:test --ui-auth <url>    # UI verification with auth injection (protected pages)
-/hapo:test --ui-flow <url>    # UI testing with User Journey (form fill/submit simulation)
+```text
+/hapo:test
+/hapo:test --full
+/hapo:test <scope-or-path>
+/hapo:test <feature-name>
+/hapo:test specs/<feature>
+/hapo:test --ui <url>
+/hapo:test --ui-auth <url>
+/hapo:test --ui-flow <url>
 ```
 
-<HARD-GATE>
-NEVER claim tests pass when they were NOT actually executed.
-NEVER mock, stub, or skip a failing test to produce a green result.
-If no test command is detected, report NO_TESTS — do not fabricate results.
-If a test command exits 0 but runs 0 tests, report NO_TESTS — this is a green lie, not a PASS.
-If tests fail, list every failure explicitly — do not summarize failures away.
-</HARD-GATE>
+## Hard gates
+
+- Never claim a pass without executing the relevant command.
+- Never mock, stub, delete, weaken, or skip a failing assertion to obtain green.
+- A missing runner, missing required command, or zero executed tests is not
+  `PASS`; report the blocker and keep closeout unfinished.
+- A compile/typecheck failure is a precheck failure even if no test command is
+  available.
+- Preserve the exact command, exit result, provenance, and artifact hashes
+  required by the canonical receipt schema.
+
+## Scope and policy
+
+For a feature target, load `spec.json`, `requirements.md`, `design.md`, and
+the active task's exact seven v2.1 sections and typed coordination boundaries
+when that target exists. Compare actual execution against
+`scope_lock`, contracts, completion criteria, runtime reachability, and
+negative-path obligations.
+
+Choose depth from `assurance_level`, risk, and blast radius. Lane is derived:
+
+- Direct: targeted commands and diff/runtime self-check;
+- Standard: bounded affected suite and feature receipt;
+- Critical: strict commands plus the independent evidence required by the
+  persisted obligations.
+
+Do not infer depth from file count or from the legacy `execution_tier`. That
+field is a read-only compatibility adapter. A task bundle is not required for a
+small Standard feature.
+
+## Spec-Aware Mode
 
 <SCOPE-GATE>
-When a feature name or `specs/<feature>` path is supplied, testing is spec-aware.
-Load `spec.json`, `requirements.md`, `design.md`, active/recent task files, and task `Evidence` / test-plan proof.
-The verdict MUST compare executed/reachable behavior against `scope_lock`, requirements, design contracts, task Completion Criteria, and runtime reachability obligations.
-Build/typecheck success without scoped runtime proof is not PASS.
-## Flash promotion contract
+For a feature target, test only the active scope, requirements, completion
+criteria, and reachable runtime surfaces. A missing or orphaned runtime surface
+is a failure even when the command exits successfully.
+</SCOPE-GATE>
 
-Executable policy source: `.claude/scripts/workflow-policy.cjs` (source: `src/claude/scripts/workflow-policy.cjs`). Its `consumeReviewVerdict` and `promoteFlashTask` functions are sole source for PASS/FAIL/BLOCKED handling and task-scoped promotion.
+Use blast-radius selection by default; `--full` overrides selection, not proof
+requirements. Use UI checks only when a reachable UI surface is in scope.
 
-When `/hapo:test <feature>` finds a task with `status: "in_progress"` and receipt `FLASH_UNVERIFIED`, evaluate that task's exact Evidence and runtime reachability only:
+## Execution
 
-- PASS → replace receipt with concrete proof while keeping `status: "in_progress"`, `dependencyBlocked: true`, `unblocks: false`, and `readyForSync: true`; only explicit `/hapo:sync ... sync-finalize` may set `done` and unblock dependents.
-- FAIL, BLOCKED, or NO_TESTS → keep `status: "in_progress"`, keep or update blocker, and do not promote any other flash task.
-- Never blanket-promote every flash task in a feature because one task passed.
+1. Detect the project runner and exact commands from repository files and task
+   evidence. Do not invent commands.
+2. Run a cheap compile/typecheck precheck where the project provides one.
+3. Execute the smallest adequate unit, integration, UI, E2E, accessibility,
+   performance, or security proof for the changed surface.
+4. Inspect runtime reachability and declared artifacts when the task creates
+   runtime-facing or generated output.
+5. Preserve raw outcomes and, only after real execution, write one canonical
+   receipt. For a task use `receipts/<task-basename>.md`; never append execution
+   evidence to the task plan. A receipt must not contain secrets or placeholder
+   provenance.
 
+Required proof type follows the behavior, not ceremony:
 
+| Surface | Adequate proof |
+|---|---|
+| pure logic/parser/validator | unit plus negative path |
+| stateful UI or module wiring | component/integration and mounted path |
+| API, persistence, provider, or process boundary | real contract/state handoff |
+| complete user workflow | E2E or UI flow |
+| layout or responsive behavior | viewport/visual check |
+| interactive focus/labels/keyboard | accessibility check |
+| regression | reproduction before fix plus passing regression |
+| security/performance | only when requirement, risk, or boundary requires it |
 
-```mermaid
-flowchart TD
-    A["/hapo:test"] --> B[Phase 1: Detect]
-    B --> C{Test runner found?}
-    C -->|No| Z[STOP: Verdict = NO_TESTS]
-    C -->|Yes| D[Phase 2: Execute]
-    D --> E{--ui / auth / flow?}
-    E -->|Yes| F["UI Verification (Parallel Subagents)"]
-    E -->|No| G[Code Tests (Blast Radius)]
-    F --> H[Phase 3: Verdict]
-    G --> H
-    H --> I[Phase 4: Sync Memory]
-    I -->|PASS| J[Hand off to hapo:code-review]
-    I -->|FAIL| K[Load failure-triage.md → classify → escalate]
-```
+## Canonical receipt
 
-### Phase 1 — Detect
+The receipt is execution evidence, not a status marker. It must contain the
+task identity and canonical `tasks/task-*.md` path for task receipts, the actual
+command, a successful exit/result, expected versus observed behavior, applicable
+negative-path and reachability proof, both provenance anchors (`Base` and
+`Head`, or their canonical aliases), and any declared artifact SHA-256. Reject
+`Exit: 1`, conflicting outcomes, empty commands, placeholders, missing
+provenance, zero execution, and failure summaries. No-artifact tasks remain
+compatible; declared artifacts require hashes.
 
-Auto-detect the test runner from project files:
-- `package.json` → npm/yarn/pnpm/bun test, jest, vitest, mocha
-- `pyproject.toml` / `setup.cfg` → pytest
-- `go.mod` → go test
-- `Cargo.toml` → cargo test
-- `pubspec.yaml` → flutter test
+Closeout and flash callers must also provide an explicit runtime binding; a
+valid-length `Base`/`Head` pair alone is not identity proof. The minimal adapter
+contract is `const binding = policy.createReceiptBinding({ base, head })`, then
+pass `receipt_binding: binding` to `completionDecision` or include the binding's
+`expectedProvenance` in the flash task. The policy requires that binding and
+compares both receipt anchors before completion or flash promotion.
 
-Unless `--full` is specified: apply **Blast Radius scoping** to run only tests
-affected by recent file changes. See `references/execution-strategy.md` Phase A.
+For a normal closeout, emit a receipt that the shared policy validator accepts.
+Legacy task `## Evidence` remains readable, but prefer the separate receipt. If
+both exist and their proof identities conflict, report `FAIL` and do not choose
+one. After all task receipts pass, execute final integration and create
+`feature-receipt.md` exactly once. Taskless Compact/Full specs create that file
+only at final closeout; absence before closeout is normal.
+For `--flash`, emit proof for the current `FLASH_UNVERIFIED` task only. Only explicit trusted sync-finalize may promote it. The
+receipt may make the task eligible for trusted sync-finalize, but it must not
+promote the task, unblock dependents, or fabricate a done state.
 
-If the argument resolves to `specs/<feature>` or a feature directory under `specs/`, enter **Spec-Aware Mode**:
-- Load `spec.json`, `requirements.md`, `design.md`, and task files referenced by `task_registry`
-- Identify tasks marked `done`, `in_progress`, or recently changed
-- Extract exact commands, runtime/artifact proof, runtime reachability proof, and negative-path checks
-- Scope test selection by affected task files, but do not skip any mandatory task evidence
+## Verdict and handoff
 
-### Phase 2 — Execute
+The shared workflow surface is:
 
-**Code testing (default):**
-1. Pre-flight: run typecheck/lint to catch compile errors first
-2. Execute test command with coverage flags
-3. Collect test counts, coverage percentages, and fail stack traces
-4. Treat 0 executed tests as `NO_TESTS`, even if the command exits 0
-5. In Spec-Aware Mode, inspect runtime reachability from declared entrypoints/callers and fail if scoped surfaces are missing or orphaned
+`PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`
 
-**Spec-aware test type escalation:**
-- Unit tests are mandatory when task evidence covers pure logic, transforms, validators, sorting/filtering, or regressions.
-- Component/integration tests are expected when task evidence covers stateful UI, context/store wiring, API/service boundaries, or persistence.
-- E2E/UI flow tests are expected once a complete user-facing workflow exists, not for isolated foundation tasks.
-- Visual/responsive checks are expected for layout, theme, dashboard, and style tasks.
-- Accessibility checks are expected for interactive UI surfaces where focus, roles, labels, keyboard navigation, or ARIA can regress.
-- Smoke checks are enough for scaffold/config tasks unless the task requires deeper proof.
-- Performance/security checks are only mandatory when the requirement, design risk, or touched runtime boundary calls for them.
-
-**UI verification (`--ui` / `--ui-auth` / `--ui-flow`):**
-Execute multi-page discovery, then spawn **Parallel UI Subagents** (test-runner instances) to handle Smoke, Core-Vitals, Accessibility, SEO, Security, and User Flows simultaneously.
-See `references/execution-strategy.md` Phase C for full phase breakdown.
-
-Delegate execution to `test-runner` agent:
-```
-Agent(subagent_type="test-runner",
-  prompt="Run tests. Scope: [blast-radius|full|ui|spec-aware]. Target: [path|url|feature]. Load specs when target is a feature. Return structured verdict with scope/spec coverage and runtime reachability.",
-  description="Test [feature]")
-```
-
-### Phase 3 — Verdict
-
-Return a **structured verdict** (required format — not free-form prose):
+Warnings describe residual, non-blocking concerns; they never replace missing
+execution proof. A legacy diagnostic result such as `NO_TESTS` is normalized by
+the shared adapter to an unfinished outcome and is never treated as `PASS`.
 
 ```markdown
 ## Test Verdict
 
-**Status:** PASS | FAIL | PARTIAL | NO_TESTS
-**Scope:** blast-radius (N/M tests) | full-suite (N tests) | ui-check
-**Duration:** Xs
+**Status:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
+**Scope:** [target and selection]
+**Commands:** [exact commands]
+**Exit:** [actual result]
+**Duration:** [measured time]
+**Receipt:** [path or inline canonical receipt]
 
 ### Results
-- Passed: N | Failed: N | Skipped: N
+- Passed: N | Failed: N | Skipped: N | Executed: N
 
-### Coverage (if applicable)
-| Metric    | Result | Threshold | Status    |
-|-----------|--------|-----------|-----------|
-| Lines     | X%     | 80%       | PASS/FAIL |
-| Branches  | X%     | 70%       | PASS/FAIL |
-| Functions | X%     | 80%       | PASS/FAIL |
-
-### Failures (if any)
-1. `path/to/file.test.ts:42` — AssertionError: expected X but got Y — Category: Logic Error
-
-### UI Results (if --ui)
-- Console errors: N found | none
-- Network errors (4xx/5xx): N found | none
-- Performance: LCP Xms | CLS X | FCP Xms
-- Accessibility issues: N found | none
-- Screenshots: [paths]
-
-### Scope / Spec Coverage (if feature scope)
-- Requirements covered: N/N
-- Task evidence checks: PASS | FAIL | UNVERIFIED
-- Runtime reachability: PASS | FAIL | UNVERIFIED
-- Out-of-scope behavior detected: none | [list]
-
-### Test Regression Check
-- **Comparison:** Compare current test count and assertion depth against previous runs.
-- **Result:** OK | REGRESSION (tests deleted/weakened)
+### Scope / reachability
+- Requirements: [covered/uncovered]
+- Runtime reachability: PASS | FAIL | BLOCKED
+- Artifact/provenance checks: PASS | FAIL | BLOCKED
 
 ### Action
-- PASS → Proceed. Hand off to hapo:code-review.
-- FAIL → [list specific fixes needed] → Return to implementer. (If REGRESSION: label "Test Regression — tests were deleted or weakened to produce green result")
-- PARTIAL → [list uncovered areas] → Consider adding tests.
-- NO_TESTS → No test runner detected. User must configure tests first.
-
-<lessons_learned>
-{
-  "flaky_tests_added": []
-}
-</lessons_learned>
+- PASS → give the receipt to the single closeout owner; only literal `PASS` can
+  complete a task.
+- PASS_WITH_WARNINGS → give the receipt to the closeout owner, but keep the
+  task unfinished until a literal `PASS` decision is recorded.
+- FAIL → list exact failures; implementation remains unfinished.
+- BLOCKED → state the changed prerequisite; do not blind-retry.
 ```
 
-### Phase 4 — Sync Memory
+The closeout owner calls this workflow once for the current task or feature.
+Do not trigger review from inside the test workflow and do not run a duplicate
+test pass merely because review is requested. Review evaluates correctness,
+security, and spec compliance against this proof.
 
-After receiving the verdict from `test-runner`, the orchestrator (`hapo:test`) intercepts the `<lessons_learned>` block.
-It merges the JSON data into `.hapo/test-memory.json` per `references/test-memory.md` to ensure that future runs remember flaky tests or environment setup requirements without modifying the codebase.
+## Flash proof
 
-## Skill Interconnections
-
-| Skill / Agent | Direction | Role |
-|---|---|---|
-| `hapo:code-review` | runs in parallel | Both run at Quality Gate Step 4 |
-| `hapo:develop` | orchestrates | Spawns hapo:test at Step 4 |
-| `inspector` agent | hapo:test → | Scout test file locations when structure is unfamiliar |
-| `implementer` agent | hapo:test → | FAIL verdicts route back here for fixing |
-| `test-runner` agent | hapo:test → | Primary executor, spawned via the `Agent` tool |
-| chrome-devtools scripts | test-runner → | UI verification (navigate, screenshot, console, network, performance, aria-snapshot, inject-auth) |
+When the target contains an in-progress `FLASH_UNVERIFIED` task, test only its
+exact Verification Plan and reachability obligations. On pass, keep the task
+`in_progress`, keep `FLASH_UNVERIFIED`, `dependencyBlocked: true`, and
+`unblocks: false`; return canonical proof to trusted sync-finalize. On failure,
+blocker, or no tests, do not promote any task.
 
 ## References
 
-- `references/execution-strategy.md` — Blast-radius algorithm, auto-detect logic, UI verification phases (A–E)
-- `references/failure-triage.md` — Failure categories, triage decision tree, escalation rules
-- `references/test-memory.md` — `.hapo/test-memory.json` schema and merge rules
-
-## Related
-
-- Previous skill: `hapo:develop`
-- Parallel skill: `hapo:code-review`
-- Parent workflow: `hapo:develop` Step 4 Quality Gate
+- `references/execution-strategy.md` — blast-radius and UI selection, loaded
+  only when the default strategy needs detail.
+- `references/failure-triage.md` — failure classification, loaded on failure.
+- `references/test-memory.md` — optional historical context; current receipt
+  evidence always wins.

@@ -6,12 +6,13 @@ const path = require('path');
 const {
   APPROVAL_PREFIX,
   createPending,
-  consumeToken
+  hasGrant
 } = require('./lib/privacy-state.cjs');
 const {
   getHookContext,
   readPayload
 } = require('./lib/hook-context.cjs');
+const { commandAccess } = require('./lib/privacy-command-analysis.cjs');
 
 const RESTRICTED = [
   /^\.env(?:[.\[*?{]|$)/i,
@@ -60,15 +61,90 @@ function resolveTarget(filePath, cwd) {
   }
 }
 
-function extractCommandPaths(command) {
-  const paths = new Set();
-  for (const token of String(command).split(/[\s|;&<>"']+/).filter(Boolean)) {
-    const cleaned = token.replace(/^["'()`]+|["'(),:]+$/g, '');
-    for (const candidate of cleaned.split('=')) {
-      const value = candidate.replace(/^["'()`]+|["'(),:]+$/g, '');
-      if (value && (isSensitive(value) || isSafe(value))) paths.add(value);
+/**
+ * When realpath fails, check whether the requested path is a symlink (or chain)
+ * whose lexical target is sensitive. Dangling link to protected target -> true (fail-closed deny);
+ * dangling benign link or link to allowed example/template -> false (allow).
+ * Limit hops to avoid loops; malformed/looping -> fail closed.
+ * TOCTOU note: check and use are not atomic; target could be swapped between this check and the actual read.
+ * This is a best-effort guardrail, not an arbitrary-shell security boundary. For strong isolation use OS sandbox.
+ */
+function isSymlinkToSensitive(filePath, cwd) {
+  try {
+    const requested = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+    let current = requested;
+    let hops = 0;
+    const MAX_HOPS = 8;
+    while (hops < MAX_HOPS) {
+      let stat;
+      try {
+        stat = fs.lstatSync(current);
+      } catch {
+        return false;
+      }
+      if (!stat.isSymbolicLink()) return false;
+      let linkTarget;
+      try {
+        linkTarget = fs.readlinkSync(current);
+      } catch {
+        return true;
+      }
+      if (isSensitive(linkTarget) && !isSafe(linkTarget)) return true;
+      if (isSafe(linkTarget)) return false;
+      const next = path.isAbsolute(linkTarget) ? linkTarget : path.resolve(path.dirname(current), linkTarget);
+      if (next === current) return true;
+      try {
+        const real = fs.realpathSync(next);
+        if (isSensitive(real) && !isSafe(real)) return true;
+        if (isSafe(real)) return false;
+        return false;
+      } catch {
+        current = next;
+        hops += 1;
+        continue;
+      }
     }
+    return true;
+  } catch {
+    return true;
   }
+}
+
+function extractCommandPaths(command) {
+  // The analyzer parses the command and returns the operands of every reading
+  // command it recognises, nested shells and `find -exec` included. Treating
+  // every unresolved expansion as sensitive, as this did before, denied
+  // `cat $FILE`, `wc -l *.cjs` and `cat ~/.zshrc` alike -- and every denial here
+  // costs a round trip through a one-shot approval prompt.
+  // A heredoc whose delimiter is quoted (<<'BODY') is inert: the shell expands
+  // nothing inside it, so no word in the body is ever read. The analyzer has no
+  // notion of heredocs and parses the body as shell, so prose that quotes a
+  // command -- a PR body carrying `cat .env` in backticks -- came back as a real
+  // command substitution. Blank those bodies out first. An unquoted delimiter
+  // (<<BODY) does expand, so it is left to the analyzer.
+  const scrubbed = String(command).replace(
+    /(<<-?[ \t]*)(['"])([A-Za-z_]\w*)\2[^\n]*\n[\s\S]*?\n[ \t]*\3\b/g,
+    '$1$2$3$2'
+  );
+
+  const paths = new Set(commandAccess(scrubbed).paths);
+
+  // Two shapes the analyzer cannot return. It drops any word carrying an
+  // expansion, so `~/.ssh/id_rsa` and `certs/*.pem` still have to be matched by
+  // name. And it only walks commands it recognises, so an unknown tool handed a
+  // secret through a file-shaped option, such as
+  // `docker compose --env-file .env`, is invisible to it.
+  const FILE_OPTION = /^--?[\w-]*(?:file|config|key|cert|identity)$/i;
+  const tokens = scrubbed.split(/[\s|;&<>"'()`]+/);
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const shaped = /^~|[*?[{]/.test(token);
+    const optionFed = index > 0 && FILE_OPTION.test(tokens[index - 1]);
+    if (!shaped && !optionFed) continue;
+    const value = token.replace(/^~/, '').replace(/^["'()`]+|["'(),]+$/g, '');
+    if (value && isSensitive(value) && !isSafe(value)) paths.add(value);
+  }
+
   return [...paths];
 }
 
@@ -126,6 +202,8 @@ function sensitiveRequest(filePath, cwd) {
   if (target) {
     if (isSensitive(target) && !isSafe(target)) return true;
     if (isSafe(target)) return false;
+  } else {
+    if (isSymlinkToSensitive(filePath, cwd)) return true;
   }
   return !isSafe(filePath) && isSensitive(filePath);
 }
@@ -152,7 +230,8 @@ try {
   if (runtime.privacyBlock === false) process.exit(0);
 
   const filePaths = sensitivePaths(data.tool_name || '', data.tool_input || {}, sessionCwd);
-  if (filePaths.length === 0) process.exit(0);
+  const effectivePaths = filePaths;
+  if (effectivePaths.length === 0) process.exit(0);
   if (!data.session_id) {
     deny(
       'Sensitive file access denied because this hook invocation had no Codex session ID. ' +
@@ -160,19 +239,19 @@ try {
     );
     process.exit(0);
   }
-  const tokenInput = {
+  const grantInput = {
     projectRoot,
     sessionCwd,
     sessionId: data.session_id,
-    filePaths,
-    toolName: data.tool_name
+    filePaths: effectivePaths
   };
-  if (consumeToken(tokenInput)) process.exit(0);
+  if (hasGrant(grantInput)) process.exit(0);
 
-  const pending = createPending(tokenInput);
+  const pending = createPending(grantInput);
   deny(
     `Sensitive file access denied: ${pending.displayName}. ` +
-    `If you approve exactly one retry in this Codex session, send this exact user prompt: ` +
+    `To approve access to exactly these paths for the next hour of this Codex ` +
+    `session, send this exact user prompt: ` +
     `${APPROVAL_PREFIX}${pending.requestId}`
   );
   process.exit(0);

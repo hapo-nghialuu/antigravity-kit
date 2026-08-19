@@ -11,8 +11,7 @@ const path = require('path');
 const {
   PLATFORMS,
   detectPlatforms,
-  getPlatformKeys,
-  warnLegacyClaudeFolder
+  getPlatformKeys
 } = require('../lib/context');
 const { SUPPORTED, LANGUAGE_LABELS, OTHER_LABEL } = require('../lib/i18n');
 
@@ -162,7 +161,6 @@ async function resolvePlatforms(ctx) {
     ctx.ui.info(ctx.t('installingFor', {
       names: platformNames(requested)
     }));
-    warnLegacyClaudeFolder(requested);
     reportInstallMode(ctx);
     return ctx;
   }
@@ -216,7 +214,6 @@ async function resolvePlatforms(ctx) {
   ctx.platforms = platforms;
 
   ctx.ui.info(ctx.t('installingFor', { names: platformNames(platforms) }));
-  warnLegacyClaudeFolder(platforms);
 
   reportInstallMode(ctx);
 
@@ -225,7 +222,7 @@ async function resolvePlatforms(ctx) {
 
 /**
  * Get the installed platform from cafekit.json files.
- * Returns the platform key (e.g. 'claude', 'opencode') or null.
+ * Returns the platform key (e.g. 'claude', 'codex') or null.
  */
 function getInstalledPlatforms() {
   const installed = [];

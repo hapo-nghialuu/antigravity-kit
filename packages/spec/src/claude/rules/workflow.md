@@ -13,14 +13,16 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 ## 2. Plan
 
 - For non-trivial features, use `/specs` to create or validate the spec.
-- For approved specs, work one task file at a time.
+- For technically ready specs, start implementation only after a new explicit Develop invocation and work one task file at a time.
 - Extract from the active task:
-  - `Context`
-  - `Steps`
-  - `Requirements`
-  - `Related Files`
-  - `Completion Criteria`
-  - `Evidence`
+  - `Status`
+  - `Outcome`
+  - `Scope`
+  - `Anchors and Ownership`
+  - `Changes`
+  - `Acceptance`
+  - `Dependencies`
+  - `Verification Plan`
 - If these are missing or too vague to verify, route back to spec correction.
 
 ## 3. Execute
@@ -32,7 +34,7 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
 ## 4. Verify
 
-- Run exact commands from `Evidence` first.
+- Run exact commands from `Verification Plan` first.
 - Then run repo-level lint/test/build as needed for confidence.
 - Use only fresh verification from the current run when claiming completion.
 - `PRECHECK_FAIL` outranks `NO_TESTS`.
@@ -42,7 +44,13 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 ## 5. Sync
 
 - Mark task state only after implementation, tests/evidence, and review pass.
-- Write a verification receipt with commands run, outcomes, and artifact/runtime proof.
+- Write task proof to `receipts/<task-basename>.md`; use legacy task-local
+  `## Evidence` only when consuming an old task format.
+- Create `feature-receipt.md` only for final integration closeout.
+- Treat `spec.json` as machine authority; task Markdown is a human projection.
+- Derive task ordering, ownership, proof, and parallel eligibility only from
+  typed `coordination.boundaries`, never `(P)`, `task_triggers`, `Related Files`,
+  or prose markers.
 - Keep `spec.json.task_registry` and markdown task files aligned.
 - Run docs checkpoint when a completed task affects public docs or architecture docs.
 

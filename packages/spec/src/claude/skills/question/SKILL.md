@@ -73,7 +73,7 @@ If `unclear`, ask one focused follow-up with the minimum choices needed.
 
 Repo evidence priority:
 1. `README.md`, `AGENTS.md`, `CLAUDE.md`
-2. relevant `docs/`, `specs/`, `.claude/`, `.opencode/`
+2. relevant `docs/`, `specs/`, `.claude/`
 3. source files, tests, scripts, package manifests, config files
 4. git history only when the question asks about changes or provenance
 

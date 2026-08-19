@@ -24,6 +24,10 @@ try {
   const data = readPayload();
   if (!data) process.exit(0);
   const { projectRoot } = getHookContext(data);
+  // A pasted prompt arrives with whatever whitespace the terminal added around
+  // it. Rejecting on a trailing newline made the approval look broken while the
+  // id it named was still perfectly valid; the exactness that matters is the
+  // request id, checked below.
   const prompt = String(data.prompt || '').trim();
   cleanup(projectRoot);
 
@@ -49,8 +53,8 @@ try {
   }
 
   context(
-    `User approved one retry for the pending sensitive access (${result.displayName}). ` +
-    `The token is session-bound, path-bound, tool-bound, time-limited, and consumed atomically.`
+    `User approved the pending sensitive access (${result.displayName}). ` +
+    `The grant is session-bound, bound to exactly those paths, and expires in one hour.`
   );
   process.exit(0);
 } catch {

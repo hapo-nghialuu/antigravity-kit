@@ -18,7 +18,6 @@ const {
 const { sha256 } = require('../lib/manifest');
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
-const { normalizeOpenCodeBody } = require('../lib/opencode-install');
 const {
   upsertManagedCoreBlock,
   managedRange,
@@ -120,7 +119,7 @@ function copyClaudeAgentsMdFile(ctx, platformKey) {
   ensureSharedAgentsMdCore(ctx);
 }
 
-/** Copy ROUTING.md (SKILLS_DIR substituted; OpenCode body normalized). */
+/** Copy ROUTING.md (SKILLS_DIR substituted). */
 function copyRoutingFile(ctx, platformKey) {
   const platform = PLATFORMS[platformKey];
   const src = path.join(SRC, platform.sourceDir, 'ROUTING.md');
@@ -129,7 +128,6 @@ function copyRoutingFile(ctx, platformKey) {
 
   const transform = (content) => {
     let c = content.replace(/\{\{SKILLS_DIR\}\}/g, platform.skillsRef);
-    if (platformKey === 'opencode') c = normalizeOpenCodeBody(c);
     return c;
   };
   const { action } = writeManagedFile({

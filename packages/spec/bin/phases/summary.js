@@ -55,7 +55,6 @@ function printSummary(ctx) {
   for (const key of platforms) {
     const messageKey = {
       claude: 'nsClaude',
-      opencode: 'nsOpencode',
       codex: 'nsCodex'
     }[key];
     if (messageKey) lines.push(t(messageKey));

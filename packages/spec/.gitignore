@@ -6,3 +6,4 @@ plans/
 !plans/templates/
 .cafekit-backup/
 .cafekit.lock
+.cafekit-release/

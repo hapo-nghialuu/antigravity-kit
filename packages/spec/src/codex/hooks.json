@@ -45,6 +45,11 @@
           },
           {
             "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/completion-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/completion-authority.cjs\""
+          },
+          {
+            "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/rules.cjs\"",
             "commandWindows": "node \".codex/hooks/rules.cjs\""
           },
@@ -58,7 +63,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write|Read|Glob|Grep|mcp__.*",
+        "matcher": "Bash|exec_command|apply_patch|Edit|Write|Read|Glob|Grep|mcp__.*|shell",
         "hooks": [
           {
             "type": "command",
@@ -100,6 +105,11 @@
           },
           {
             "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/completion-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/completion-authority.cjs\""
+          },
+          {
+            "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",
             "commandWindows": "node \".codex/hooks/state.cjs\""
           }
@@ -110,6 +120,11 @@
       {
         "matcher": "*",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/semantic-review-authority.cjs\"",
+            "commandWindows": "node \".codex/hooks/semantic-review-authority.cjs\""
+          },
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/state.cjs\"",

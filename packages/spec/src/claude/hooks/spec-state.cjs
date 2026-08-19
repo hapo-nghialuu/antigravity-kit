@@ -8,14 +8,42 @@
  * Scans for an active spec in progress and dynamically injects
  * the State Sync (Tollgate) rule into the agent's context.
  *
- * Exit: 0 always (fail-open)
+ * Exit: 0 always; unavailable policy is surfaced as a controlled failure.
  */
 
-try {
-  const fs   = require('fs');
-  const path = require('path');
-  const POLICY = require(path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs'));
+const fs = require('fs');
+const path = require('path');
 
+function logCrash(error) {
+  try {
+    const d = path.join(__dirname, '.logs');
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+    fs.appendFileSync(
+      path.join(d, 'hook-log.jsonl'),
+      JSON.stringify({ ts: new Date().toISOString(), hook: 'spec-state', status: 'crash', error: error.message }) + '\n'
+    );
+  } catch (_) {}
+}
+
+function emitControlledFailure(reason) {
+  console.log(`\n> ⚠️ Spec tollgate unavailable: ${reason}. Repair the installed workflow policy before continuing.\n`);
+}
+
+function sessionIdentity(payload) {
+  const candidates = [
+    payload && payload.session_id,
+    payload && payload.sessionId,
+    payload && payload.sessionID,
+    payload && payload.session && payload.session.id,
+  ];
+  return candidates.find((value) => typeof value === 'string' && value.length > 0) || null;
+}
+
+function canonicalPath(value) {
+  try { return fs.realpathSync(value); } catch { return null; }
+}
+
+try {
   // ── Main ──────────────────────────────────────────────────────────────────
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
@@ -24,6 +52,20 @@ try {
   const payload = JSON.parse(stdin);
   const cwd     = payload.cwd || process.cwd();
 
+  let POLICY;
+  let RESOLVER;
+  let RECEIPT;
+  try {
+    POLICY = require(path.join(__dirname, '..', 'scripts', 'workflow-policy.cjs'));
+    RESOLVER = require(path.join(__dirname, '..', 'scripts', 'spec-resolver.cjs'));
+    RECEIPT = require(path.join(__dirname, '..', 'scripts', 'spec-receipt.cjs'));
+    if (typeof POLICY.flashState !== 'function') throw new Error('shared workflow policy has no flashState function');
+  } catch (error) {
+    logCrash(error);
+    emitControlledFailure(error.message);
+    process.exit(0);
+  }
+
   // Read runtime configuration if exists
   let runtime = {};
   try {
@@ -31,41 +73,51 @@ try {
     if (fs.existsSync(p)) runtime = JSON.parse(fs.readFileSync(p, 'utf8'));
   } catch { /* ignore */ }
 
-  // Reminder toggle — same key the OpenCode spec-state plugin honors.
+  // Reminder toggle.
   // (The Stop completion gate has its own toggle: spec.completion_gate.)
   if (runtime.spec && runtime.spec.tollgate === false) process.exit(0);
 
   const baseDir   = process.env.PROJECT_ROOT || cwd;
-  const specsPath = path.join(baseDir, runtime.paths?.specs || 'specs');
+  const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
+  const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
+  const resolved = RESOLVER.resolveActiveSpec({ projectRoot: baseDir, runtime, explicitFeature, explicitPath });
 
-  if (!fs.existsSync(specsPath)) {
+  if (!resolved) {
+    process.exit(0); // No active spec, do nothing
+  }
+
+  if (resolved.error === 'multiple_active') {
+    const candidates = resolved.candidates.join(', ');
+    console.log(`\n> ⚠️ Multiple active specs detected: ${candidates}. Provide explicit feature target or resolve ambiguity. Tollgate paused.\n`);
     process.exit(0);
   }
 
-  // Find the active spec
-  let activeSpec = null;
-  let featureName = null;
-
-  const entries = fs.readdirSync(specsPath, { withFileTypes: true });
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      const specFile = path.join(specsPath, entry.name, 'spec.json');
-      if (fs.existsSync(specFile)) {
-        try {
-          const specData = JSON.parse(fs.readFileSync(specFile, 'utf8'));
-          if (specData.status === 'in_progress' || specData.status === 'in-progress') {
-            activeSpec = specData;
-            featureName = entry.name;
-            break; // take the first active one
-          }
-        } catch { /* skip bad JSON */ }
-      }
-    }
+  if (resolved.error === 'invalid_specs') {
+    const cands = resolved.candidates.join(', ');
+    console.log(`\n> ⚠️ Invalid spec JSON detected: ${cands}. ${resolved.reason}. Fix or remove malformed spec.json before continuing. Tollgate paused.\n`);
+    process.exit(0);
   }
 
-  if (!activeSpec) {
-    process.exit(0); // No active spec, do nothing
+  if (resolved.error === 'explicit_not_found' || resolved.error === 'explicit_malformed') {
+    const detail = resolved.reason || resolved.explicitFeature || resolved.explicitPath || 'unknown';
+    console.log(`\n> ⚠️ Explicit spec target invalid (${resolved.error}): ${detail}. Provide a valid feature target inside configured specs root. Tollgate paused.\n`);
+    process.exit(0);
   }
+
+  if (resolved.error) {
+    process.exit(0);
+  }
+
+  const activeSpec = resolved.spec;
+  const featureName = resolved.featureName;
+  const specsPath = resolved.specsDir;
+  const runtimeContext = POLICY.deriveRuntimeContext({
+    projectRoot: baseDir,
+    specsRoot: specsPath,
+    specFile: resolved.specFile || path.join(specsPath, featureName, 'spec.json'),
+    featureName,
+    runtimeSession: sessionIdentity(payload),
+  });
 
   const phase = activeSpec.current_phase || activeSpec.phase || 'unknown';
   const taskRegistry = activeSpec.task_registry || {};
@@ -82,27 +134,44 @@ try {
     const deps = Array.isArray(task?.dependencies) ? task.dependencies : [];
     return status === 'pending' && deps.every((dep) => taskStatusByPath.get(dep) === 'done');
   });
+  const featureDir = path.join(specsPath, featureName);
+  const featureReceiptPresent = RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
 
   // ── State-change gate: only emit the full tollgate when spec state changed ──
-  // This hook runs on EVERY UserPromptSubmit. Re-printing the whole block when
-  // phase + done/total are unchanged is wasted context (~460 tok/turn). We keep
-  // a tiny state fingerprint in a temp file: same -> one-line reminder; changed
-  // -> full block (and refresh the fingerprint). Fail-open at every step.
-  const stateKey = `${phase}|${taskCounts.done || 0}/${taskEntries.length}`;
+  // The cache is shared by installed hook copies, so its key must carry the
+  // canonical project, complete session identity, and canonical spec identity.
+  // If any identity is unavailable, skip caching and emit the full block.
+  const stateKey = JSON.stringify({
+    projectRoot: runtimeContext.project_root,
+    specsRoot: runtimeContext.specs_root,
+    specFile: runtimeContext.spec_file,
+    featureName: runtimeContext.feature_name,
+    runtimeSession: runtimeContext.runtime_session,
+    provenanceMode: runtimeContext.provenance_mode,
+    Base: runtimeContext.base,
+    Head: runtimeContext.head,
+    contextId: runtimeContext.context_id,
+    phase,
+    done: taskCounts.done || 0,
+    total: taskEntries.length,
+    featureReceiptPresent,
+  });
   const cacheFile = path.join(__dirname, '.logs', 'tollgate-last.txt');
 
   let lastKey = '';
-  try { lastKey = fs.readFileSync(cacheFile, 'utf8').trim(); } catch { /* first run */ }
+  if (stateKey) {
+    try { lastKey = fs.readFileSync(cacheFile, 'utf8'); } catch { /* first run */ }
+  }
 
-  if (lastKey === stateKey) {
+  if (stateKey && lastKey === stateKey) {
     console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync \`spec.json\` when state changes.\n`);
     process.exit(0);
   }
 
   try {
     fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
-    fs.writeFileSync(cacheFile, stateKey);
-  } catch { /* fail-open: if the write fails we still print the full block */ }
+    if (stateKey) fs.writeFileSync(cacheFile, stateKey);
+  } catch { /* cache failure only disables reminder compression */ }
 
   // Compact state-change block (enforcement lives on Stop via spec-gate.cjs).
   const lines = [];
@@ -116,22 +185,18 @@ try {
     lines.push(`- Next unblocked: \`${nextUnblocked[0]}\``);
   }
   if (flashTasks.length > 0) {
-    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. PASS promotion keeps task in_progress until explicit sync-finalize.`);
+    lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
-  lines.push(`- Sync \`spec.json\` + task file after verified work; run \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\` before \`ready_for_implementation=true\`.`);
-  lines.push(`- A completion gate verifies receipts when you end a turn with newly-done tasks.`);
+  lines.push(`- Sync \`spec.json\` + task Markdown status after verified work; task proof belongs in \`receipts/<task-basename>.md\`.`);
+  lines.push(`- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`);
+  lines.push(`- Validate with \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
   lines.push('');
 
   console.log(lines.join('\n'));
   process.exit(0);
 
 } catch (e) {
-  try {
-    const fs = require('fs'), p = require('path');
-    const d = p.join(__dirname, '.logs');
-    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-    fs.appendFileSync(p.join(d, 'hook-log.jsonl'),
-      JSON.stringify({ ts: new Date().toISOString(), hook: 'spec-state', status: 'crash', error: e.message }) + '\n');
-  } catch (_) {}
+  logCrash(e);
+  emitControlledFailure(e.message);
   process.exit(0);
 }

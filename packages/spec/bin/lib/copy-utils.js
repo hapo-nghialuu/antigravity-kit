@@ -13,7 +13,7 @@ function isTextAsset(filePath) {
 
 // Generated artifacts never ship as runtime payload: the coverage db, the
 // Python bytecode cache directory, and bytecode files. Skipping them here keeps
-// both copyRecursive and copyManagedTree (and the OpenCode plugin copy path
+// both copyRecursive and copyManagedTree
 // built on copyRecursive) from ever copying build residue.
 function isGeneratedArtifact(name) {
   const base = String(name || '');

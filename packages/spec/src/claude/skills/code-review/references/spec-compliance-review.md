@@ -23,10 +23,18 @@ Do not attempt a standard text-based review if the project includes Visual Specs
    - *Prompt:* "Hey `hapo:ai-multimodal`, please look at this design mockup/document and compare it with the layout/logic described in this Code. Are there any discrepancies?"
 3. If NO (Markdown Spec only): Read the spec directly and extract:
    - requirement bullets
-   - task `Completion Criteria`
-   - task `## Evidence` (legacy heading aliases still parse)
+   - task `Outcome`, `Scope`, `Anchors and Ownership`, `Changes`, `Acceptance`,
+     `Dependencies`, and `Verification Plan`
+   - typed `coordination.boundaries` as the only ownership/DAG/proof/parallel authority
+   - task `Verification Plan`
    - canonical contracts/invariants from `design.md`
    Then verify the changed files against those concrete obligations.
+
+Execution proof is separate from the task plan. Consume
+`receipts/<task-basename>.md` first and legacy `## Evidence` only as fallback;
+conflicting proof identities fail closed. At final integration, consume
+`feature-receipt.md`. Review never creates either receipt and never treats a
+receipt as approval, readiness, audit status, or semantic judgment.
 
 ## 3. Verdict Scale
 

@@ -24,8 +24,6 @@ bin/lib/
                             normalizeSourcePaths / readJsonFile  (existing)
   instruction-blocks.js     shared CORE block upsert/migrate + Addressing-section
                             extract/preserve primitives
-  opencode-install.js       OpenCode conversion + writers (plugin copy skips
-                            generated artifacts, normalizes text plugins)
   codex-install.js          Codex path/tool/skill transforms + managed AGENTS block
   codex-frontmatter.js      minimal agent frontmatter reader for TOML conversion
   path-safety.js            reject managed targets that traverse project symlinks
@@ -35,12 +33,11 @@ bin/phases/
   claude-runtime.js         ROUTING, runtime files, obsolete cleanup, CLAUDE.md,
                             AGENTS core + wrappers, rules (Addressing-preserving)
   claude-settings.js        settings.json merge + obsolete-hook pruning
-  opencode-runtime.js       delegates to opencode-install.js (plugins, commands, AGENTS, config)
   codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
-  post-install.js           OpenCode model, Gemini API key, language + managed-block
-                            addressing for Claude, Codex, and OpenCode
+  post-install.js           Gemini API key, language + managed-block
+                            addressing for Claude and Codex
   skills-setup.js           opt-in: venv+pip, skill npm, Chromium; detect+guide system tools
   setup-rtk.js              opt-in: rtk token-saver binary + Claude Code hook registration
   summary.js / report.js    summary output + per-action reporting helper
@@ -54,22 +51,22 @@ bin/lib/
 2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`), load the
    migration manifest, init results counters.
 3. **Select platforms** — honor `--platform`, otherwise restore installed/detected
-   `.claude/`, `.codex/`, and `.opencode/` runtimes or prompt.
+   `.claude/` and `.codex/` runtimes or prompt.
 4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
    (skipped in dry-run). Claude snapshots `.claude/`, `CLAUDE.md`, and `AGENTS.md`;
    Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
-5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude, Codex, or OpenCode runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, the installer runs **`ensureSharedAgentsMdCore`** once for every selected runtime, installing/refreshing the shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START/END -->`) in root `AGENTS.md`; Codex/OpenCode writers append only their runtime-specific managed blocks.
+5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude or Codex runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, the installer runs **`ensureSharedAgentsMdCore`** once for every selected runtime, installing/refreshing the shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START/END -->`) in root `AGENTS.md`; the Codex writer appends only its runtime-specific managed block.
 
    The Claude-specific per-platform sequence is:
    - copyClaudeRuntimeFiles (ROUTING, rules, scripts, references)
    - removeObsoleteClaudeRuntimeFiles
    - mergeClaudeSettings
-   - **ensureSharedAgentsMdCore** — installs/refreshes the shared `src/common/AGENTS.md` core exactly once in root `AGENTS.md`; Codex/OpenCode writers append only their runtime-specific managed blocks
+   - **ensureSharedAgentsMdCore** — installs/refreshes the shared `src/common/AGENTS.md` core exactly once in root `AGENTS.md`; the Codex writer appends only its runtime-specific managed block
    - copyClaudeMdFile — writes `CLAUDE.md` with `@AGENTS.md` import and Claude-specific runtime guidance
    - copyRulesDirectory
 6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.codex/`,
-   `.agents/`, `.opencode/`, `.cafekit-backup/`, `.cafekit.lock`).
-7. **Post-install** — OpenCode model, runtime locale, language and managed-block addressing for Claude, Codex, and OpenCode.
+   `.agents/`, `.cafekit-backup/`, `.cafekit.lock`).
+7. **Post-install** — runtime locale, language and managed-block addressing for Claude and Codex.
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
 10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
@@ -86,9 +83,9 @@ Two distinct manifests (never conflated):
 ### Payload mapping and self-tests
 
 The implementation agent payload is `agents/implementer.md`; the legacy
-`god-developer.md` name is not used. The migration manifest, Codex `AGENT_NAMES`,
-and OpenCode command templates use the same `implementer` name so every runtime
-resolves the same implementation role.
+`god-developer.md` name is not used. The migration manifest and Codex `AGENT_NAMES`
+use the same `implementer` name so every runtime resolves the same
+implementation role.
 
 The installer copies payload files and transforms paths, syntax, and command
 mappings for each target runtime. Installer self-tests exercise the transformed
@@ -107,22 +104,21 @@ A file written earlier in the same run (e.g. spec templates copied by the `specs
 tree, then revisited by the template-sync loop) is treated as pristine via the
 tracker's in-run record, avoiding false "user-created" classification.
 
-Claude and OpenCode keep their ownership manifest inside one runtime root.
+Claude keeps its ownership manifest inside one runtime root.
 Codex uses one tracker with `recordRoot: "."` and only allows keys under
 `.codex/` or `.agents/`; root `AGENTS.md` is managed separately as a marked
-block so project and OpenCode instructions remain byte-preserved.
+block so project instructions remain byte-preserved.
 
 By default the installer gitignores the runtime folders (`.claude/`, `.codex/`,
-`.agents/`, `.opencode/`)
+`.agents/`)
 at project root — reinstall with `npx @haposoft/cafekit` on each machine. The
 ownership manifest therefore lives only on disk as a local re-install baseline.
 If a team deliberately force-adds and commits the runtime folder, they should
 also commit the ownership manifest so teammates share the baseline; otherwise
 their first install would treat those files as user-created and never update them.
 
-A second layer lives inside the runtime: `.claude/.gitignore`,
-`.opencode/.gitignore`, or Codex's `.codex/.gitignore` +
-`.agents/.gitignore`. These ignore secrets, skill dependencies, session state,
+A second layer lives inside the runtime: `.claude/.gitignore` or Codex's
+`.codex/.gitignore` + `.agents/.gitignore`. These ignore secrets, skill dependencies, session state,
 and logs so partial un-ignores and force-adds stay safer.
 
 ## Native Codex layout
@@ -136,15 +132,15 @@ and logs so partial un-ignores and force-adds stay safer.
 .codex/hooks/               native event handlers and state/privacy libraries
 .codex/{rules,scripts,references}/
 .codex/{runtime,cafekit}.json
-AGENTS.md                    shared CafeKit CORE block (once) plus runtime-specific Codex/OpenCode blocks, all marker-managed
+AGENTS.md                    shared CafeKit CORE block (once) plus the runtime-specific Codex block, all marker-managed
 ```
 
-Codex and OpenCode use root `AGENTS.md` as their native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block (`<!-- CAFEKIT CORE START/END -->`) remains runtime-neutral while Codex/OpenCode managed markers preserve ownership and user bytes.
+Codex uses root `AGENTS.md` as its native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block (`<!-- CAFEKIT CORE START/END -->`) remains runtime-neutral while the Codex managed markers preserve ownership and user bytes.
 
 **Combined-install boundary (fail-safe by ownership, not filesystem isolation):**
-- `CORE` is runtime-neutral by contract: it contains no runtime-specific tool names, paths, or commands (`Codex`, `OpenCode`, `.codex`, `.opencode`, `$hapo-`, `/hapo:` are forbidden in CORE — enforced by installer tests).
-- Each runtime owns exactly one additional managed block: `<!-- CAFEKIT CODEX START/END -->` or `<!-- CAFEKIT OPENCODE START/END -->`. The block header states an explicit ignore contract: non-owners must ignore that block and consume only `CORE` plus their native block. If ownership cannot be determined, the file is treated as `CORE`-only (fail-safe).
-- Markers are not a filesystem isolation boundary — they are an ownership/ignore contract. Tests assert no cross-runtime directive leakage (e.g., Codex block not treated as Claude instructions, OpenCode block not treated as Codex instructions, and `CORE` stays neutral). Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
+- `CORE` is runtime-neutral by contract: it contains no runtime-specific tool names, paths, or commands (`Codex`, `.codex`, `$hapo-`, `/hapo:` are forbidden in CORE — enforced by installer tests).
+- Each runtime owns exactly one additional managed block (Codex: `<!-- CAFEKIT CODEX START/END -->`). The block header states an explicit ignore contract: non-owners must ignore that block and consume only `CORE` plus their native block. If ownership cannot be determined, the file is treated as `CORE`-only (fail-safe).
+- Markers are not a filesystem isolation boundary — they are an ownership/ignore contract. Tests assert no cross-runtime directive leakage (e.g., Codex block not treated as Claude instructions, and `CORE` stays neutral). Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
 
 The installer does not create `.codex/config.toml` or change user-global trust.
 
@@ -162,8 +158,7 @@ keywords such as Python `prompt=` or `description=` from being corrupted.
 - **Rollback** — destructive steps (obsolete removal, settings prune) are covered by the
   pre-run snapshot; a failure restores platform folders and root files.
 - **Concurrency** — the lock prevents two installs racing on the same project.
-- **Dry-run** — every write/delete/`mkdir`/manifest write is guarded; OpenCode delegation
-  is skipped (it is not dry-run aware) while `rules/` still previews.
+- **Dry-run** — every write/delete/`mkdir`/manifest write is guarded.
 - **Path safety** — managed writes and snapshots reject symlink traversal outside
   the intended project paths.
 - **Permissions** — POSIX execute bits from payload scripts are preserved without
@@ -171,16 +166,15 @@ keywords such as Python `prompt=` or `description=` from being corrupted.
 - **Selective refresh** — re-running the same version updates pristine payload
   files and preserves user modifications; only explicit `--force-overwrite`
   resets them.
-- **Managed Addressing survives reinstall** — Claude, Codex, and OpenCode block
+- **Managed Addressing survives reinstall** — Claude and Codex block
   upserts carry over the exact saved `## Addressing (Context Overflow Indicator)`
   section from the existing managed block when a newer template drops it, so the
   user's address is not lost; only reads the managed body, never user-owned or
   shared-CORE content.
 - **Generated-artifact filtering** — `.coverage`, `__pycache__`, and `.pyc`/`.pyo`
-  are never copied as runtime payload, in `copyRecursive`, `copyManagedTree`, and
-  the OpenCode plugin copy path.
+  are never copied as runtime payload, in `copyRecursive` and `copyManagedTree`.
 - **Source-path tripwire** — install self-tests assert no installed payload under
-  `.claude`, `.codex`, or `.opencode` leaks a `packages/spec/src/` source path,
+  `.claude` or `.codex` leaks a `packages/spec/src/` source path,
   covering standalone and combined installs; direct text plugin files are also
   byte-normalized.
 - **Codex privacy/state** — sensitive approval is one-use and bound to the exact
@@ -190,7 +184,5 @@ keywords such as Python `prompt=` or `description=` from being corrupted.
 
 ## Known follow-ups
 
-- `bin/lib/opencode-install.js` (866 lines) still exceeds the 200-line guidance and its
-  writers are not ownership-tracked — a later pass.
 - The ownership manifest can grow large (deep skill trees → thousands of entries) and is
   not pruned when files become obsolete.

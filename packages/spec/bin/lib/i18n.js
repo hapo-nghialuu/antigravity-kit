@@ -107,7 +107,6 @@ const MESSAGES = {
     // Next steps
     nextStepsTitle:  'Next steps',
     nsClaude:        'Start coding: /hapo:specs <feature>',
-    nsOpencode:      'Start coding: ask the agent to begin a new feature or brainstorm',
     nsCodex:         'Start with `$hapo-specs <feature>`; review and trust project hooks with `/hooks`',
     nsKeys:          'Some skills need API keys: {skills}\n  Copy <skill>/.env.example → .env and fill in the values',
     nsForce:         'To force-refresh managed files: npx @haposoft/cafekit --force-overwrite',
@@ -228,7 +227,6 @@ const MESSAGES = {
 
     nextStepsTitle:  '次のステップ',
     nsClaude:        'コーディング開始: /hapo:specs <機能名>',
-    nsOpencode:      'コーディング開始: エージェントに新機能の開始またはブレストを依頼',
     nsCodex:         '`$hapo-specs <機能名>` で開始し、`/hooks` でプロジェクトフックを確認・信頼',
     nsKeys:          '一部のスキルに API キーが必要です: {skills}\n  <skill>/.env.example を .env にコピーし、値を入力してください',
     nsForce:         '管理ファイルを強制更新: npx @haposoft/cafekit --force-overwrite',
@@ -348,7 +346,6 @@ const MESSAGES = {
 
     nextStepsTitle:  'Bước tiếp theo',
     nsClaude:        'Bắt đầu code: /hapo:specs <mô-tả-tính-năng>',
-    nsOpencode:      'Bắt đầu code: yêu cầu agent khởi động tính năng mới hoặc brainstorm',
     nsCodex:         'Bắt đầu bằng `$hapo-specs <tính-năng>`; kiểm tra và trust project hooks bằng `/hooks`',
     nsKeys:          'Một số skill cần API key: {skills}\n  Sao chép <skill>/.env.example → .env rồi điền giá trị',
     nsForce:         'Làm mới file được quản lý: npx @haposoft/cafekit --force-overwrite',

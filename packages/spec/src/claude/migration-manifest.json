@@ -61,7 +61,14 @@
       "generate-skill-catalog.cjs",
       "validate-spec-output.cjs",
       "scan-staged-secrets.cjs",
-      "workflow-policy.cjs"
+      "workflow-policy.cjs",
+      "spec-resolver.cjs",
+      "spec-receipt.cjs",
+      "spec-ground.cjs",
+      "spec-semantic-model.cjs",
+      "spec-final-state.cjs",
+      "spec-readiness.cjs",
+      "provenance.cjs"
     ]
   },
   "agentReferences": {
@@ -73,8 +80,7 @@
   "obsolete": {
     "agents": {
       "claude": ["agents/god-developer.md"],
-      "codex": ["agents/god_developer.toml"],
-      "opencode": ["agents/god-developer.md"]
+      "codex": ["agents/god_developer.toml"]
     },
     "runtimeFiles": [
       "hooks/skill-router.cjs",
@@ -102,6 +108,10 @@
       "hooks/rules.cjs",
       "hooks/spec-state.cjs",
       "hooks/spec-gate.cjs",
+      "hooks/completion-authority.cjs",
+      "hooks/completion-authority-check.cjs",
+      "hooks/completion-authority-state.cjs",
+      "hooks/semantic-review-authority.cjs",
       "hooks/state.cjs",
       "hooks/lib/color.cjs",
       "hooks/lib/parser.cjs",
@@ -109,7 +119,9 @@
       "hooks/lib/git.cjs",
       "hooks/lib/config.cjs",
       "hooks/lib/context.cjs",
-      "hooks/lib/detect.cjs"
+      "hooks/lib/detect.cjs",
+      "hooks/lib/privacy-command-analysis.cjs",
+      "hooks/lib/runtime-path-safety.cjs"
     ]
   },
   "settings": {

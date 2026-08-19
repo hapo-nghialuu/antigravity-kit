@@ -5,11 +5,27 @@ const fs = require('fs');
 const path = require('path');
 
 // Installed layout: <project>/.codex/hooks/lib/hook-context.cjs
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
+// Canonicalize installed project root via realpath where available; lexical fallback keeps source-tree tests working.
+// This ensures a symlink project root (e.g., /tmp/link -> /real/project) is resolved to its real location,
+// keeping assertConfiguredSpecsPath and state paths consistent with resolveSessionCwd's realpath.
+// Installed-root authority stays PROJECT_ROOT (now canonical); do not change without updating state/approval paths.
+const PROJECT_ROOT = (() => {
+  const lexical = path.resolve(__dirname, '..', '..', '..');
+  try {
+    return fs.realpathSync(lexical);
+  } catch {
+    return lexical;
+  }
+})();
 
 function readPayload() {
   const raw = fs.readFileSync(0, 'utf8').trim();
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) throw new Error('hook payload is empty');
+  const payload = JSON.parse(raw);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('hook payload must be a JSON object');
+  }
+  return payload;
 }
 
 function resolveSessionCwd(payload) {
@@ -35,11 +51,45 @@ function readRuntime(projectRoot = PROJECT_ROOT) {
   }
 }
 
+function assertConfiguredSpecsPath(projectRoot, runtime) {
+  const configured = runtime?.paths?.specs;
+  if (configured !== undefined && (typeof configured !== 'string' || configured.trim() === '')) {
+    throw new Error('runtime.paths.specs must be a non-empty path');
+  }
+  const requested = configured || 'specs';
+  const root = path.resolve(projectRoot);
+  const resolved = path.resolve(root, requested);
+  const relative = path.relative(root, resolved);
+  if (relative !== '' && (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))) {
+    throw new Error('configured specs root escapes project root');
+  }
+  let probe = resolved;
+  try {
+    while (!fs.existsSync(probe)) {
+      const parent = path.dirname(probe);
+      if (parent === probe) break;
+      probe = parent;
+    }
+    const rootReal = fs.realpathSync(root);
+    const probeReal = fs.realpathSync(probe);
+    const canonicalRelative = path.relative(rootReal, probeReal);
+    if (canonicalRelative !== '' && (canonicalRelative === '..' || canonicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(canonicalRelative))) {
+      throw new Error('configured specs root traverses outside project root');
+    }
+  } catch (error) {
+    if (/configured specs root/.test(error.message)) throw error;
+    throw new Error(`configured specs root cannot be validated (${error.message})`);
+  }
+  return resolved;
+}
+
 function getHookContext(payload) {
+  const runtime = readRuntime(PROJECT_ROOT);
+  assertConfiguredSpecsPath(PROJECT_ROOT, runtime);
   return {
     projectRoot: PROJECT_ROOT,
     sessionCwd: resolveSessionCwd(payload),
-    runtime: readRuntime(PROJECT_ROOT)
+    runtime
   };
 }
 
@@ -65,7 +115,10 @@ function atomicWrite(file, content, mode = 0o600) {
 
 function logCrash(hook, error) {
   try {
-    const dir = path.join(PROJECT_ROOT, '.codex', 'hooks', '.logs');
+    const isSourceTree = PROJECT_ROOT.includes(`${path.sep}packages${path.sep}spec${path.sep}src`);
+    const dir = isSourceTree
+      ? path.join(require('os').tmpdir(), 'cafekit-hook-logs', 'codex', hook)
+      : path.join(PROJECT_ROOT, '.codex', 'hooks', '.logs');
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(
       path.join(dir, 'hook-log.jsonl'),
@@ -88,6 +141,7 @@ module.exports = {
   logCrash,
   readPayload,
   readRuntime,
+  assertConfiguredSpecsPath,
   resolveProjectPath,
   resolveSessionCwd
 };
