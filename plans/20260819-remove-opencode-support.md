@@ -4,7 +4,7 @@
 
 ## Quyết định scope (C1 — 2026-08-19, sửa sau review vòng 1)
 
-- **Đã có gì sẵn:** `git grep -lie opencode` → **101 file tracked** toàn repo. Trừ `plans/`, `cafekit-web/`, `pnpm-lock.yaml` → **52 file in-scope**: `bin/` 18, `src/opencode/` 11, `src/claude/` 8, `scripts/` 1, doc/md 13, cộng `.gitignore`, `.repomixignore`, `packages/spec/package.json`.
+- **Đã có gì sẵn:** `git grep -lie opencode` → **101 file tracked** toàn repo. Trừ `plans/`, `cafekit-web/`, `pnpm-lock.yaml` → **52 file in-scope**: `bin/` 18, `src/opencode/` 11, `src/claude/` 8, `scripts/` 1, doc/md 11, cộng `.gitignore`, `.repomixignore`, `packages/spec/package.json`.
 - **Platform registry tập trung** tại `bin/lib/context.js:96-118` (entry `opencode: {` → `},`; dòng 110-117 là block `capabilities`). Comment `:70-72` xác nhận `PLATFORMS` là registry chính thức. Mọi consumer đều keyed động (`Object.entries/keys`) — gỡ entry không vỡ vòng lặp nào trong `bin/`.
 - **User chọn: MỞ RỘNG**, đã điều chỉnh sau review vòng 1 (xem Review log).
 
@@ -19,7 +19,7 @@
 
 - **`cafekit-web/` — user quyết để NGOÀI (2026-08-19).** Đây là workspace member (`pnpm-workspace.yaml:3`) chứa 34 file / 122 ref, gồm 3 trang `public/content/docs/{en,ja,vi}/platforms/opencode.mdx` và typed nav registry `src/lib/docs-config.ts:60`. **Hệ quả phải chấp nhận: sau khi xong việc này, site tài liệu công khai vẫn còn 3 trang mô tả OpenCode như platform được hỗ trợ.** Acceptance Task 05 đã hạ phạm vi cho khớp sự thật này, không tuyên bố "không doc nào còn mô tả". Việc gỡ web là plan riêng.
 - **KHÔNG xoá `.agents/` và `.codex/`** (root lẫn trong `packages/spec/`) — đây là runtime Claude/Codex đang dùng thật (`.codex/` 10 entry, `packages/spec/.codex/` 9), gitignored nên không phục hồi được bằng git. Bản plan trước ghi nhầm là artifact cần xoá.
-- **Giữ nguyên** `.gitignore:118` và `.repomixignore:14` (rule `.opencode/`) — để thư mục `.opencode/` cũ trên máy người dùng không nhảy ra untracked. Chỉ gỡ khi có yêu cầu riêng.
+- **Giữ nguyên** `.gitignore:118` và `.repomixignore:14` (rule `.opencode/*`) — để thư mục `.opencode/` cũ trên máy người dùng không nhảy ra untracked. Chỉ gỡ khi có yêu cầu riêng.
 - Không đụng hỗ trợ Claude Code và Codex CLI; không refactor kiến trúc registry.
 
 ## Task
@@ -31,7 +31,7 @@
 | 03 | Xoá source + file/doc riêng của OpenCode | `src/opencode/`, `docs/opencode-*.md` | 01, 02 | pending |
 | 04 | Doc + dependency + changelog | `README.md`, `docs/*.md`, `package.json` | 03 | pending |
 
-**Ghi chú A2 (ngoại lệ có chủ đích):** Task 01 đụng ~20 file, vượt xa ngưỡng ~5. Lý do: registry, mọi consumer của nó, **và các test/static-check assert sự tồn tại của nó** là một thao tác nguyên tử. Review vòng 1 chứng minh việc tách chúng tạo vùng chết — `installer-safety.test.js:14` require module bị xoá, `run-skill-self-tests.mjs:598-611` assert `context.js` chứa `"id: 'opencode'"`, cả hai `exit(1)` ngay dòng đầu khiến Task 02/03 chạy mù. Gộp lại là cách duy nhất giữ suite xanh sau mỗi task.
+**Ghi chú A2 (ngoại lệ có chủ đích):** Task 01 đụng ~20 file, vượt xa ngưỡng ~5. Lý do: registry, mọi consumer của nó, **và các test/static-check assert sự tồn tại của nó** là một thao tác nguyên tử. Review vòng 1 chứng minh việc tách chúng tạo vùng chết — `installer-safety.test.js:14` require module bị xoá, `run-skill-self-tests.mjs:597-616` assert `context.js` chứa `"id: 'opencode'"`, cả hai `exit(1)` ngay dòng đầu khiến Task 02/03 chạy mù. Gộp lại là cách duy nhất giữ suite xanh sau mỗi task.
 
 ---
 
@@ -43,13 +43,16 @@
 
 ### File
 - Sửa: `bin/lib/context.js` (21 ref: registry `:96-118`, `DEPENDENCY_TEMPLATES` `:60`/`:65`, require `:16`), `bin/lib/i18n.js` (`nsOpencode` `:110`/`:231`/`:351`), `bin/install.js` (5), `bin/lib/manifest.js` (1), `bin/lib/copy-utils.js` (1), `bin/phases/select-platform.js` (1), `bin/phases/copy-payload.js` (9), `bin/phases/post-install.js` (12), `bin/phases/root-config.js` (3), `bin/phases/summary.js` (1, gồm map `:58` `opencode: 'nsOpencode'`), `bin/phases/claude-runtime.js` (3, gồm `normalizeOpenCodeBody` `:132` trong `copyRoutingFile` dùng chung)
-- Sửa test: `bin/__tests__/installer-safety.test.js` (55 ref, require `:14`), `bin/__tests__/package-inventory.test.js` (13), `bin/__tests__/develop-contract.test.js` (6), `bin/__tests__/codex-native.test.js` (3), `scripts/run-skill-self-tests.mjs` (140 ref — gồm hàm `runOpenCodeInstallerFixtureTests()` `:2024-2214` và lời gọi `:3012-3013`; static check `:598-611`, `:673-677`, `:709`)
-- Xoá: `bin/lib/opencode-install.js`, `bin/phases/opencode-runtime.js`
+- Sửa test: `bin/__tests__/installer-safety.test.js` (55 ref, require destructuring `:11-14`), `bin/__tests__/package-inventory.test.js` (13), `bin/__tests__/develop-contract.test.js` (6), `bin/__tests__/codex-native.test.js` (3), `scripts/run-skill-self-tests.mjs` (140 ref — gồm hàm `runOpenCodeInstallerFixtureTests()` `:2024-2217` và lời gọi `:3012-3013`; static check `:597-616`, `:673-677`, `:710`)
+- Xoá: `bin/lib/opencode-install.js`, `bin/phases/opencode-runtime.js`, `bin/__tests__/opencode-spec-gate.test.js` (45 ref — nằm dưới `bin/` nên phải đi cùng task này cho acceptance grep=0 khả thi; 0 export/0 importer; nó require `src/opencode/plugins/*.ts` nhưng test đã xoá thì không còn ai require)
 
 ### Cạm bẫy đã biết (từ review vòng 1)
 - **`context.js` entry kết thúc `:118`, KHÔNG phải `:109`** — cắt sai để lại `capabilities:{...}` mồ côi → SyntaxError.
-- **`run-skill-self-tests.mjs:2799` `roots[2]` là index cứng** — mảng `standalone` `:2723-2727` xếp claude=0, codex=1, opencode=2, rồi `:2742` push `decoy`. Gỡ opencode khỏi mảng mà quên block `:2799-2820` sẽ khiến `opencodeRoot` trỏ vào `decoy` → **pass giả, grep không bắt được**. Phải gỡ cả block.
-- **Static check README** `:673-677` assert README chứa `"OpenCode: supported project-local runtime install"`; check `:709` assert `root-config.js` chứa `'.opencode/'`. Cả hai phải gỡ trong task này, nếu không Task 04 sẽ phá chúng mà không ai bắt.
+- **`run-skill-self-tests.mjs:2799` `roots[2]` là index cứng** — mảng `standalone` `:2722-2726` xếp claude=0, codex=1, opencode=2, rồi `:2742` push `decoy`. Gỡ opencode khỏi mảng mà quên block `:2799-2820` sẽ khiến `opencodeRoot` trỏ vào `decoy` → **pass giả, grep không bắt được**. Phải gỡ cả block.
+- **Shared check `:1334`** cùng loại bẫy với `:1344`: liệt cả `src/opencode/plugins/spec-gate.ts` lẫn 2 file Claude — chỉ gỡ phần tử opencode, giữ check cho Claude. (Check `:664`, `:1282`, `:1294`, `:1312` là opencode-only → xoá trọn.)
+- **`package-inventory.test.js:315/316/328`** — assert phủ định dùng chung (`doesNotMatch /Claude|Codex|OpenCode|.../`) bảo vệ CORE/Claude block: **gỡ nhánh `OpenCode|\.opencode` trong alternation, KHÔNG xoá nguyên dòng**.
+- **Vùng phụ thuộc trong `runWave1InstructionFixtureTests` kéo tới `:2892`** (ngoài block `2799-2820`): `--platform "claude,codex,opencode"` `:2827`/`:2868` sẽ hard-fail sau khi registry gỡ; env `OPENCODE_MODEL` `:2834-2835`/`:2875-2876`; marker `:2847`; `assertNoSourcePayloadPaths(..., "opencode", ...)` `:2864`/`:2892`; map/nhánh `:2248`, `:2619-2620`, `:2646`, `:2682-2686`.
+- **Static check README** `:673-677` assert README chứa `"OpenCode: supported project-local runtime install"`; check `:710` assert `root-config.js` chứa `'.opencode/'` (đúng dòng 710 — dòng 709 là assert `.claude/`, 711 là `.codex/`, phải giữ). Cả hai phải gỡ trong task này, nếu không Task 04 sẽ phá chúng mà không ai bắt.
 
 ### Acceptance
 - `grep -ri opencode packages/spec/bin/ packages/spec/scripts/` → **0 kết quả**.
@@ -96,7 +99,7 @@ pnpm -C packages/spec test
 `run-skill-self-tests.mjs:1267`, `:1324`, `:1344` có check dùng chung liệt cả 3 platform, ví dụ `:1344` `files: ["src/claude/hooks/rules.cjs", "src/codex/hooks/rules.cjs", "src/opencode/plugins/rules.ts"]`. Task 01 phải đã gỡ phần opencode khỏi các check này; nếu còn sót, xoá `src/opencode/` sẽ làm **mất coverage cho claude/codex**, không chỉ opencode.
 
 ### File
-- Xoá: `packages/spec/src/opencode/`, `packages/spec/bin/__tests__/opencode-spec-gate.test.js` (đã xác minh: 0 export, 0 importer), `packages/spec/docs/opencode-hook-port-audit.md`, `packages/spec/docs/opencode-plugin-contract.md`
+- Xoá: `packages/spec/src/opencode/` (test riêng đã xoá từ Task 01), `packages/spec/docs/opencode-hook-port-audit.md`, `packages/spec/docs/opencode-plugin-contract.md`
 - Dọn: `rm -rf packages/spec/.opencode`
 
 ### Acceptance
@@ -120,7 +123,7 @@ pnpm -C packages/spec test
 
 ### File
 - Sửa: `README.md` (4 ref), `packages/spec/README.md` (17), `docs/installer-architecture.md` (24), `docs/provenance.md` (1), `AGENTS.md` (`:29` — bản render ở root, song sinh với `packages/spec/src/codex/AGENTS.md:28`), `packages/spec/src/codex/AGENTS.md`
-- Dependency: `packages/spec/package.json` — gỡ devDep `@opencode-ai/plugin` (`:62`), sửa `description` (`:4`, đang ghi "Claude Code, Codex CLI, and OpenCode"); chạy `pnpm install --lockfile-only` để regen `pnpm-lock.yaml`
+- Dependency: `packages/spec/package.json` — gỡ devDep `@opencode-ai/plugin` (`:60`; entry duy nhất — xoá cả block `devDependencies` rỗng), sửa `description` (`:4`, đang ghi "Claude Code, Codex CLI, and OpenCode"); chạy `pnpm install --lockfile-only` để regen `pnpm-lock.yaml`
 - Thêm entry (không xoá cũ): `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`
 - Thêm ghi chú: `docs/audit-cafekit-vs-claude-code-2026-07.md`
 
@@ -153,5 +156,8 @@ Cả hai verdict **FAIL**, 5 Critical mỗi bên, hội tụ vào cùng nhóm v�
 Reviewer xác nhận đúng: 37/37 path tồn tại, mọi ref count per-file chính xác, `src/opencode/` đúng 11 file, gitignore claim đúng, `opencode-spec-gate.test.js` 0 importer, registry iteration keyed động, quyết định giữ entry changelog lịch sử là đúng chuẩn.
 
 **Quyết định user (C1 sửa):** (1) `cafekit-web/` để **ngoài** scope — acceptance Task 05 cũ bị hạ xuống cho khớp sự thật; (2) **gỡ** devDep + lockfile + description; (3) **gộp** Task 01+04.
+
+### Vòng 2 (2026-08-19) — 1 reviewer fresh-context, verify bản sửa
+Verdict FAIL nhưng khoanh hẹp: kiến trúc/thứ tự/inventory ĐÚNG (9/9 mục verify, 0 file mồ côi, 0 cửa sổ đỏ); lỗi còn lại là 6 con số dòng + 1 acceptance, "không cần vòng 3 — verify được bằng sed". Đã tự kiểm từng con số bằng file thật và áp: fixture `:2024-2217`; static check `:597-616`; root-config check `:710` (giữ 709/711); devDep `:60` + xoá block rỗng; chuyển `opencode-spec-gate.test.js` sang Task 01; bổ sung cạm bẫy `:1334`, `package-inventory:315/316/328`, vùng `:2827-2892`. Hết ngân sách review giấy (B4) — từ đây mọi tranh luận cần bằng chứng runtime.
 
 **Sweep sau sửa (B3):** đọc lại toàn file; delta = {web ra ngoài, bỏ rm .agents/.codex, range 96-118, gộp task, +i18n/package.json/AGENTS.md, inventory 52, acceptance hạ phạm vi}; đã reconcile mục C1, Ngoài phạm vi, bảng Task, cả 4 task. Task cũ đánh số 05 nay là 04. Còn mâu thuẫn: 0.
