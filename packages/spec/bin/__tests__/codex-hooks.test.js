@@ -128,7 +128,7 @@ function inHookFixture(run, options = {}) {
   }
 }
 
-test('Codex privacy approval is exact, session-bound, and one-time', () => {
+test('Codex privacy approval is exact, session-bound, and reusable within its window', () => {
   inHookFixture((root, hooks) => {
     const nested = path.join(root, 'packages', 'app');
     fs.mkdirSync(nested, { recursive: true });
@@ -173,31 +173,36 @@ test('Codex privacy approval is exact, session-bound, and one-time', () => {
     });
     assert.match(wrongSession.stdout, /rejected/);
 
+    // A pasted prompt carries the terminal's surrounding whitespace. The
+    // exactness that matters is the request id, not the padding.
     const padded = runHook(approve, nested, {
       cwd: nested,
       session_id: 'session-a',
       hook_event_name: 'UserPromptSubmit',
       prompt: ` ${prompt}\n`
     });
-    assert.equal(padded.stdout, '', 'whitespace-padded prompt must not issue a token');
+    assert.match(padded.stdout, /User approved/, 'whitespace padding must not void the approval');
 
-    const approved = runHook(approve, nested, {
-      cwd: nested,
-      session_id: 'session-a',
-      hook_event_name: 'UserPromptSubmit',
-      prompt
-    });
-    assert.match(approved.stdout, /approved one retry/);
-
+    // The grant now covers repeated access to the same paths, and is not bound
+    // to the tool that first tripped the gate.
     const allowedOnce = runHook(block, nested, request);
     assert.equal(allowedOnce.stdout, '');
 
-    const deniedAgain = runHook(block, nested, request);
-    assert.equal(JSON.parse(deniedAgain.stdout).hookSpecificOutput.permissionDecision, 'deny');
+    const allowedAgain = runHook(block, nested, request);
+    assert.equal(allowedAgain.stdout, '', 'one approval covers a re-read');
 
+    const allowedOtherTool = runHook(block, nested, {
+      ...request,
+      tool_name: 'exec_command'
+    });
+    assert.equal(allowedOtherTool.stdout, '', 'grant is not bound to a tool name');
+
+    // A fresh session, so the single-path grant above cannot mask the exact-set
+    // matching under test.
     fs.writeFileSync(path.join(nested, 'credentials.json'), '{"token":"test"}\n');
     const multiRequest = {
       ...request,
+      session_id: 'session-c',
       tool_input: { command: 'cat .env credentials.json' }
     };
     const multiDenied = runHook(block, nested, multiRequest);
@@ -210,31 +215,65 @@ test('Codex privacy approval is exact, session-bound, and one-time', () => {
 
     const multiApproved = runHook(approve, nested, {
       cwd: nested,
-      session_id: 'session-a',
+      session_id: 'session-c',
       hook_event_name: 'UserPromptSubmit',
       prompt: multiPrompt
     });
-    assert.match(multiApproved.stdout, /approved one retry/);
+    assert.match(multiApproved.stdout, /User approved/);
 
-    // A token for two paths cannot authorize a subset, and the failed subset
-    // attempt must not consume the exact-set token.
-    const subsetDenied = runHook(block, nested, request);
+    // A grant for two paths authorizes exactly that set: neither a subset nor a
+    // superset, in either order.
+    const subsetDenied = runHook(block, nested, { ...request, session_id: 'session-c' });
     assert.equal(JSON.parse(subsetDenied.stdout).hookSpecificOutput.permissionDecision, 'deny');
     fs.writeFileSync(path.join(nested, 'tokens.json'), '{"token":"test"}\n');
     const supersetDenied = runHook(block, nested, {
       ...request,
+      session_id: 'session-c',
       tool_input: { command: 'cat .env credentials.json tokens.json' }
     });
     assert.equal(JSON.parse(supersetDenied.stdout).hookSpecificOutput.permissionDecision, 'deny');
     const reordered = {
       ...request,
+      session_id: 'session-c',
       tool_input: { command: 'cat credentials.json .env' }
     };
     assert.equal(runHook(block, nested, reordered).stdout, '');
-    assert.equal(
-      JSON.parse(runHook(block, nested, multiRequest).stdout).hookSpecificOutput.permissionDecision,
-      'deny'
-    );
+    assert.equal(runHook(block, nested, multiRequest).stdout, '', 'the set stays granted');
+
+    // Session binding survives the change: another session sees no grant.
+    const otherSession = runHook(block, nested, { ...request, session_id: 'session-d' });
+    assert.equal(JSON.parse(otherSession.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  });
+});
+
+test('Codex privacy grant window is one hour and restarts at approval', () => {
+  inHookFixture((root, hooks) => {
+    const state = require(path.join(hooks, 'lib', 'privacy-state.cjs'));
+    const HOUR = 60 * 60 * 1000;
+    assert.equal(state.TTL_MS, HOUR, 'a five-minute window expired mid-conversation');
+
+    fs.writeFileSync(path.join(root, '.env'), 'SECRET=1\n');
+    const pending = state.createPending({
+      projectRoot: root,
+      sessionCwd: root,
+      sessionId: 'session-ttl',
+      filePaths: ['.env'],
+    });
+    assert.ok(pending.expiresAt - Date.now() > HOUR - 5000, 'pending must live an hour');
+
+    const approved = state.approvePending({
+      projectRoot: root,
+      sessionId: 'session-ttl',
+      requestId: pending.requestId,
+    });
+    assert.equal(approved.ok, true);
+
+    const stateDir = path.join(root, '.codex', 'hooks', '.privacy');
+    const tokenFile = fs.readdirSync(stateDir).find((name) => name.startsWith('token-'));
+    assert.ok(tokenFile, 'approval must write a grant');
+    const grant = JSON.parse(fs.readFileSync(path.join(stateDir, tokenFile), 'utf8'));
+    assert.ok(grant.expiresAt - Date.now() > HOUR - 5000, 'the grant window starts at approval');
+    assert.equal(grant.toolName, undefined, 'a grant is not bound to a tool name');
   });
 });
 

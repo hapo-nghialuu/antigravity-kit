@@ -6,7 +6,7 @@ const path = require('path');
 const {
   APPROVAL_PREFIX,
   createPending,
-  consumeToken
+  hasGrant
 } = require('./lib/privacy-state.cjs');
 const {
   getHookContext,
@@ -239,19 +239,19 @@ try {
     );
     process.exit(0);
   }
-  const tokenInput = {
+  const grantInput = {
     projectRoot,
     sessionCwd,
     sessionId: data.session_id,
-    filePaths: effectivePaths,
-    toolName: data.tool_name
+    filePaths: effectivePaths
   };
-  if (consumeToken(tokenInput)) process.exit(0);
+  if (hasGrant(grantInput)) process.exit(0);
 
-  const pending = createPending(tokenInput);
+  const pending = createPending(grantInput);
   deny(
     `Sensitive file access denied: ${pending.displayName}. ` +
-    `If you approve exactly one retry in this Codex session, send this exact user prompt: ` +
+    `To approve access to exactly these paths for the next hour of this Codex ` +
+    `session, send this exact user prompt: ` +
     `${APPROVAL_PREFIX}${pending.requestId}`
   );
   process.exit(0);

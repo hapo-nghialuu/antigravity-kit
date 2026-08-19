@@ -5,7 +5,12 @@ const fs = require('fs');
 const path = require('path');
 const PATH_SAFETY = require('./runtime-path-safety.cjs');
 
-const TTL_MS = 5 * 60 * 1000;
+// Codex cannot raise an interactive prompt from a hook -- PreToolUse honours no
+// "ask" decision -- so approval costs a full round trip: the agent has to relay
+// a request id and the user has to type it back. A five-minute window expired
+// mid-conversation, leaving the agent repeating a request id that could no
+// longer be approved. An hour outlives a working session's train of thought.
+const TTL_MS = 60 * 60 * 1000;
 const APPROVAL_PREFIX = 'APPROVE CAFEKIT PRIVACY ';
 function stateDir(projectRoot) {
   return path.join(projectRoot, '.codex', 'hooks', '.privacy');
@@ -115,8 +120,7 @@ function createPending({
   sessionCwd,
   sessionId,
   filePaths,
-  filePath,
-  toolName
+  filePath
 }) {
   cleanup(projectRoot);
   if (!sessionId) throw new Error('A Codex session ID is required');
@@ -129,7 +133,6 @@ function createPending({
     sessionId: String(sessionId || ''),
     pathKeys: requestPathKeys(paths, sessionCwd),
     displayName: displayNames(paths),
-    toolName: String(toolName || ''),
     expiresAt: Date.now() + TTL_MS
   };
   const dir = secureStateDir(projectRoot, true);
@@ -156,24 +159,32 @@ function approvePending({ projectRoot, sessionId, requestId }) {
     return { ok: false, reason: 'consumed' };
   }
 
+  // The grant window starts when the user approves, not when the request was
+  // raised. Carrying the pending record's deadline over meant a late approval
+  // bought only the minutes left on it.
   atomicWrite(dir, path.join(dir, `token-${requestId}.json`), {
     version: 2,
     requestId,
     sessionId: record.sessionId,
     pathKeys: record.pathKeys,
-    toolName: record.toolName,
-    expiresAt: Math.min(record.expiresAt, Date.now() + TTL_MS)
+    expiresAt: Date.now() + TTL_MS
   });
   return { ok: true, displayName: record.displayName };
 }
 
-function consumeToken({
+/**
+ * A grant is session-bound, path-bound and time-limited, but not single-use:
+ * one approval covers repeated access to the same paths until it expires.
+ * Consuming it on first use made every re-read a fresh round trip, and the tool
+ * name is not part of the identity either -- reading a file with `cat` and with
+ * a native read is the same access to the same secret.
+ */
+function hasGrant({
   projectRoot,
   sessionCwd,
   sessionId,
   filePaths,
-  filePath,
-  toolName
+  filePath
 }) {
   cleanup(projectRoot);
   if (!sessionId) return false;
@@ -185,26 +196,16 @@ function consumeToken({
 
   for (const name of fs.readdirSync(dir)) {
     if (!/^token-[a-f0-9]{24}\.json$/.test(name)) continue;
-    const tokenFile = path.join(dir, name);
-    const token = readJson(dir, tokenFile);
+    const token = readJson(dir, path.join(dir, name));
     if (
       !token ||
       token.sessionId !== String(sessionId || '') ||
       !samePathKeys(token.pathKeys, expectedPaths) ||
-      token.toolName !== String(toolName || '') ||
       Number(token.expiresAt) <= Date.now()
     ) {
       continue;
     }
-
-    const claimed = `${tokenFile}.claimed-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;
-    try {
-      fs.renameSync(tokenFile, claimed);
-      fs.unlinkSync(claimed);
-      return true;
-    } catch {
-      // Only one concurrent tool invocation can rename and consume this token.
-    }
+    return true;
   }
   return false;
 }
@@ -215,7 +216,7 @@ module.exports = {
   pathKey,
   createPending,
   approvePending,
-  consumeToken,
+  hasGrant,
   cleanup,
   clearState
 };
