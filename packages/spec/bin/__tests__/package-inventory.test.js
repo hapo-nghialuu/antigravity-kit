@@ -35,7 +35,6 @@ const FORBIDDEN_PAYLOAD = [
 const RUNTIMES = {
   claude: { root: '.claude', rules: '.claude/hooks/rules.cjs' },
   codex: { root: '.codex', rules: '.codex/hooks/rules.cjs' },
-  opencode: { root: '.opencode', rules: '.opencode/plugins/rules.ts' },
 };
 
 function npmPack(args, cwd) {
@@ -303,29 +302,24 @@ function assertCombinedInstructionIsolation(root) {
   const core = managedBlock(agents, '<!-- CAFEKIT CORE START -->', '<!-- CAFEKIT CORE END -->');
   const claudeBlock = managedBlock(claude, '<!-- CAFEKIT CLAUDE START -->', '<!-- CAFEKIT CLAUDE END -->');
   const codexBlock = managedBlock(agents, '<!-- CAFEKIT CODEX START -->', '<!-- CAFEKIT CODEX END -->');
-  const opencodeBlock = managedBlock(agents, '<!-- CAFEKIT OPENCODE START -->', '<!-- CAFEKIT OPENCODE END -->');
 
   for (const [content, marker] of [
     [agents, '<!-- CAFEKIT CORE START -->'],
     [agents, '<!-- CAFEKIT CODEX START -->'],
-    [agents, '<!-- CAFEKIT OPENCODE START -->'],
     [claude, '<!-- CAFEKIT CLAUDE START -->']
   ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
 
-  assert.doesNotMatch(core, /Claude|Codex|OpenCode|\.claude|\.codex|\.opencode|\/hapo:|\$hapo-/i);
-  assert.doesNotMatch(claudeBlock, /Codex|OpenCode|\.codex|\.opencode|\$hapo-/i);
+  assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/hapo:|\$hapo-/i);
+  assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$hapo-/i);
   assert.match(codexBlock, /native project instruction surface is root `AGENTS\.md`/);
-  assert.match(opencodeBlock, /native project instruction surface is root `AGENTS\.md`/);
   assert.match(agents, /shared-root trade-off is intentional/);
   // H5 ownership/ignore contract
   assert.match(core, /runtime-neutral/i);
   assert.match(core, /fail-safe/i);
   assert.match(codexBlock, /owned by Codex/i);
   assert.match(codexBlock, /ignore this entire Codex block/i);
-  assert.match(opencodeBlock, /owned by OpenCode/i);
-  assert.match(opencodeBlock, /ignore this entire OpenCode block/i);
   assert.doesNotMatch(core, /\$hapo-|hapo:/i);
-  assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT (CODEX|OPENCODE) /);
+  assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT CODEX /);
 }
 function stableInstallSnapshot(root, platforms) {
   const files = ['AGENTS.md', 'CLAUDE.md', '.gitignore'];
@@ -359,12 +353,6 @@ function assertHookLanguage(root, platform, lang, sessionId) {
   assert.equal(runtimeJson.locale.responseLanguage, lang || null);
   const rulesPath = path.join(root, runtime.rules);
   assert.ok(fs.existsSync(rulesPath), `installed rules path missing: ${rulesPath}`);
-  if (platform === 'opencode') {
-    const plugin = fs.readFileSync(rulesPath, 'utf8');
-    assert.match(plugin, /if \(respondLang\)/);
-    assert.match(plugin, /Respond in \$\{respondLang\}/);
-    return;
-  }
   const result = spawnSync(process.execPath, [rulesPath], {
     cwd: root,
     input: JSON.stringify({ cwd: root, session_id: sessionId }),
@@ -857,9 +845,8 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
     const cases = [
       { name: 'claude', platforms: ['claude'] },
       { name: 'codex', platforms: ['codex'] },
-      { name: 'opencode', platforms: ['opencode'] },
-      { name: 'combined', platforms: ['claude', 'codex', 'opencode'] },
-      { name: 'combined-rerun', platforms: ['claude', 'codex', 'opencode'], rerun: true },
+      { name: 'combined', platforms: ['claude', 'codex'] },
+      { name: 'combined-rerun', platforms: ['claude', 'codex'], rerun: true },
     ];
     for (const matrixCase of cases) {
       for (const lang of [null, 'vi']) {

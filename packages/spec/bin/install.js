@@ -33,7 +33,6 @@ const {
   removeObsoleteAgents
 } = require('./phases/claude-runtime');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
-const { installOpenCodeRuntime } = require('./phases/opencode-runtime');
 const { installCodexRuntime } = require('./phases/codex-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
 const { checkVersions } = require('./lib/version-check');
@@ -70,10 +69,6 @@ function installPlatform(ctx, platformKey) {
     copyRulesDirectory(ctx, platformKey);
   }
 
-  if (platformKey === 'opencode') {
-    installOpenCodeRuntime(ctx, platformKey);
-  }
-
   if (platformKey === 'codex') {
     installCodexRuntime(ctx, platformKey);
   }
@@ -95,11 +90,11 @@ function printHelp() {
 Usage: npx @haposoft/cafekit [options]
 
 Installs CafeKit skills, agents, rules and runtime into the current project
-for Claude Code, OpenCode, and/or Codex CLI. Re-runs are selective: managed files are updated,
+for Claude Code and/or Codex CLI. Re-runs are selective: managed files are updated,
 your edits are preserved.
 
 Options:
-  --platform <id[,id]> Select claude, opencode, or codex explicitly
+  --platform <id[,id]> Select claude or codex explicitly
   --dry-run            Preview changes; write nothing
   --force-overwrite    Overwrite user-modified managed files (backup kept)
   -u, --upgrade, -f, --force   Alias of --force-overwrite

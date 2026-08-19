@@ -1,7 +1,7 @@
 /**
  * Phase: post-install runtime configuration.
  *
- * OpenCode model + addressing config. Interactive prompts use ctx.ui (clack);
+ * Addressing config. Interactive prompts use ctx.ui (clack);
  * in non-interactive/dry-run they are skipped via fallbacks so spawned/CI runs
  * never hang.
  *
@@ -15,14 +15,12 @@ const fs = require('fs');
 const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { LANGUAGE_LABELS } = require('../lib/i18n');
-const { setupOpenCodeModel, transformManagedOpenCodeContent } = require('../lib/opencode-install');
 const { transformManagedCodexContent } = require('../lib/codex-install');
 const { transformManagedClaudeContent } = require('./claude-runtime');
 const { transformManagedCoreContent } = require('../lib/instruction-blocks');
 const ASSISTANT_NAMES = {
   claude: 'Claude Code',
-  codex: 'Codex CLI',
-  opencode: 'OpenCode'
+  codex: 'Codex CLI'
 };
 const LANGUAGE_LABEL_BY_CODE = {
   vi: 'Vietnamese',
@@ -50,10 +48,6 @@ function instructionTargets(ctx) {
       file: path.join(process.cwd(), 'AGENTS.md'),
       transform: transformManagedCodexContent
     },
-    opencode: {
-      file: path.join(process.cwd(), 'AGENTS.md'),
-      transform: transformManagedOpenCodeContent
-    }
   };
   return Object.keys(targets)
     .filter((key) => ctx.platforms.includes(key))
@@ -161,7 +155,7 @@ function patchRuntimeLocale(ctx) {
 
 /** Human assistant name for the active platform(s). */
 function assistantName(platformKey) {
-  return ASSISTANT_NAMES[platformKey] || ASSISTANT_NAMES.opencode;
+  return ASSISTANT_NAMES[platformKey] || platformKey;
 }
 
 function configureAddressing(ctx, userAddress) {
@@ -188,7 +182,7 @@ ${name} always addresses the user as "${userAddress}" throughout the conversatio
 }
 
 async function setupAddressing(ctx) {
-  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex' || key === 'opencode')) return;
+  if (!ctx.platforms.some((key) => key === 'claude' || key === 'codex')) return;
 
   let existingName = null;
   for (const target of instructionTargets(ctx)) {
@@ -237,16 +231,10 @@ async function setupAddressing(ctx) {
 /** Run the post-install configuration sequence. */
 async function runPostInstall(ctx) {
   if (ctx.dryRun) {
-    ctx.ui.info('[dry-run] Skipping OpenCode model / addressing setup');
+    ctx.ui.info('[dry-run] Skipping addressing setup');
     return ctx;
   }
 
-  // OpenCode model uses its own readline; only run it when it won't block:
-  // interactive, or an env override is present (which it reads without prompting).
-  const hasModelEnv = Boolean(process.env.OPENCODE_MODEL || process.env.OPENCODE_DEFAULT_MODEL);
-  if (ctx.platforms.includes('opencode') && (ctx.interactive || hasModelEnv)) {
-    await setupOpenCodeModel(ctx.platforms, ctx.results);
-  }
 
   await setupAddressing(ctx);
 

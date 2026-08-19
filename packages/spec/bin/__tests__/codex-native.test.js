@@ -271,7 +271,7 @@ test('platform resolver keeps saved runtimes and newly detected Codex', async ()
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-codex-detect-'));
   const originalCwd = process.cwd();
   try {
-    for (const folder of ['.claude', '.opencode', '.codex']) {
+    for (const folder of ['.claude', '.codex']) {
       fs.mkdirSync(path.join(root, folder), { recursive: true });
     }
     fs.writeFileSync(
@@ -287,7 +287,7 @@ test('platform resolver keeps saved runtimes and newly detected Codex', async ()
       t: (key) => key
     };
     await resolvePlatforms(ctx);
-    assert.deepEqual(ctx.platforms, ['claude', 'opencode', 'codex']);
+    assert.deepEqual(ctx.platforms, ['claude', 'codex']);
   } finally {
     process.chdir(originalCwd);
     fs.rmSync(root, { recursive: true, force: true });
@@ -653,7 +653,6 @@ test('Codex install is project-local, native, and upgrade-safe', () => {
     const first = install(root);
     assert.equal(first.status, 0, `${first.stdout}\n${first.stderr}`);
     assert.equal(fs.existsSync(path.join(root, '.claude')), false);
-    assert.equal(fs.existsSync(path.join(root, '.opencode')), false);
     assert.equal(fs.existsSync(path.join(root, '.codex', 'config.toml')), false);
 
     for (const relative of [

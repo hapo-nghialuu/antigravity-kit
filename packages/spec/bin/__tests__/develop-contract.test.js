@@ -2635,17 +2635,11 @@ test('P0 regression: safeTaskFile fail-closed on realpath error and single autho
   // Single authority: Claude hook should delegate to POLICY, not duplicate parser
   assert.match(specGateSrc, /POLICY\.validateCanonicalReceipt/);
   assert.doesNotMatch(specGateSrc, /const EXPLICIT_FAILURE/);
-  // Codex and OpenCode should delegate to shared workflow-policy
+  // Codex should delegate to shared workflow-policy
   const codexSrc = fs2.readFileSync(path2.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'), 'utf8');
   assert.match(codexSrc, /getSharedValidate/);
   assert.match(codexSrc, /workflow-policy\.cjs/);
   assert.doesNotMatch(codexSrc, /const PLACEHOLDER_TOKENS/);
-  const opencodeSrc = fs2.readFileSync(path2.join(PACKAGE_ROOT, 'src/opencode/plugins/spec-gate.ts'), 'utf8');
-  assert.match(opencodeSrc, /getSharedValidate/);
-  assert.match(opencodeSrc, /workflow-policy\.cjs/);
-  // The parser should only exist in workflow-policy, not in adapters (check that adapter does not define full validate logic)
-  const opencodeValidateCount = (opencodeSrc.match(/function validateCanonicalReceipt/g) || []).length;
-  assert.equal(opencodeValidateCount, 1, 'OpenCode should have only delegating validate, not duplicate parser');
   // safeTaskFile fail-closed: simulate realpathSync throwing
   const tmp = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'cafekit-realpath-'));
   try {
