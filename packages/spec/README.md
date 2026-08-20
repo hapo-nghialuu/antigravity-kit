@@ -206,16 +206,26 @@ hosted or specialized tools may not enter the local hook path.
 
 ## Spec Output
 
-Specs are stored under:
+New process-first Specs packets are stored under:
 
 ```text
 specs/<feature-name>/
-├── spec.json
-├── requirements.md
-├── research.md
-├── design.md
-└── tasks/task-R*.md
+├── plan.md
+├── task-01-<slug>.md
+└── task-NN-<slug>.md
 ```
+
+The process-first workflow has three human decision gates. `hapo:specs` opens
+C1 to fix scope before authoring and C2 to resolve adversarial findings, then
+stops. A later explicit `hapo:develop` invocation executes the tasks and
+presents C3 for closeout only after real execution proof. Each task has one
+`Status:` field and keeps its canonical `## Receipt` inline, including the
+exact Verification Plan command, `Exit: 0`, `Verification: PASS`,
+runtime-derived Base and Head, and current command output.
+
+Existing packets with `spec.json`, nested `tasks/task-R*.md`, or separate
+receipts remain supported through the legacy compatibility adapter. New Specs
+work does not author those legacy artifacts.
 
 ## Development
 
