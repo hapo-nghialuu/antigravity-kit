@@ -5,88 +5,88 @@ import { useLocale } from "@/hooks/use-locale";
 
 const copy = {
   en: {
-    heading: "What gets installed",
+    heading: "What CafeKit installs into your repo",
     subheading:
-      "New users want to know whether CafeKit changes the app or just installs workflow infrastructure. Show that clearly.",
+      "The installer only adds workflow/runtime infrastructure under `.claude` or `.opencode`. Application code stays untouched until you run a workflow for a real feature.",
     items: [
       {
         title: ".claude/skills",
-        description: "The runtime command surface for specs, develop, test, review, git, and sync.",
+        description: "Skills that create the command surface for question, brainstorm, specs, develop, test, review, docs, sync, and git.",
       },
       {
         title: ".claude/hooks",
-        description: "State reminders, privacy guardrails, and runtime context injection around Claude Code.",
+        description: "Hooks for state/spec drift reminders, sensitive-read blocking, session context injection, and usage updates.",
       },
       {
         title: ".claude/agents",
-        description: "Specialist agents for testing, review, docs, sync, and workflow enforcement during delivery.",
+        description: "Subagents for inspect, spec, develop, test, review, docs, git, and deployment handoff.",
       },
       {
         title: ".claude/rules",
-        description: "Execution rules that keep spec state, quality gates, docs sync, and Git handoff aligned.",
+        description: "Operating rules that keep scope, spec state, quality gates, docs sync, and Git handoff aligned.",
       },
       {
         title: "Your app code",
-        description: "Untouched until you intentionally enter the spec and task workflow for a real feature.",
+        description: "Left unchanged during install. CafeKit touches app code only when you assign a clear implementation task.",
       },
     ],
-    footer: "No framework lock-in. Works inside an existing repo and tells you what it is doing.",
+    footer: "No framework lock-in. Re-runs use an ownership manifest to update managed files while preserving your edits.",
   },
   vi: {
-    heading: "CafeKit cài những gì",
+    heading: "CafeKit cài gì vào dự án",
     subheading:
-      "Người mới luôn muốn biết CafeKit có sửa app hay chỉ cài workflow infrastructure. Nên nói thật rất rõ.",
+      "Bộ cài chỉ thêm hạ tầng vận hành vào `.claude` hoặc `.opencode`. Code ứng dụng không bị chạm cho đến khi bạn chạy quy trình cho một tính năng thật.",
     items: [
       {
         title: ".claude/skills",
-        description: "Command surface cho specs, develop, test, review, git và sync.",
+        description: "Bộ kỹ năng tạo các lệnh cho question, brainstorm, specs, develop, test, review, docs, sync và git.",
       },
       {
         title: ".claude/hooks",
-        description: "State reminders, privacy guardrails và runtime context injection quanh Claude Code.",
+        description: "Hook nhắc lệch trạng thái hoặc đặc tả, chặn đọc dữ liệu nhạy cảm, nạp ngữ cảnh phiên làm việc và cập nhật mức sử dụng.",
       },
       {
         title: ".claude/agents",
-        description: "Các agent chuyên biệt cho test, review, docs, sync và workflow enforcement trong quá trình delivery.",
+        description: "Agent hỗ trợ chuyên trách inspect, spec, develop, test, review, docs, git và bàn giao triển khai.",
       },
       {
         title: ".claude/rules",
-        description: "Rule giữ spec state, quality gate, docs sync và Git handoff đi cùng nhau.",
+        description: "Quy tắc vận hành giữ phạm vi, trạng thái đặc tả, cổng chất lượng, đồng bộ tài liệu và bàn giao Git đi cùng nhau.",
       },
       {
         title: "Code ứng dụng",
-        description: "Không bị đụng tới cho đến khi bạn chủ động chạy workflow spec và task cho một feature thật.",
+        description: "Được giữ nguyên trong lúc cài đặt. CafeKit chỉ sửa ứng dụng khi bạn giao một tác vụ triển khai rõ ràng.",
       },
     ],
-    footer: "Không khóa framework. Chạy trong repo sẵn có và nói rõ nó đang làm gì.",
+    footer: "Không khóa framework. Khi chạy lại, manifest sở hữu giúp cập nhật file do CafeKit quản lý mà vẫn giữ chỉnh sửa của bạn.",
   },
   ja: {
-    heading: "何がインストールされるか",
+    heading: "CafeKit が repo にインストールするもの",
     subheading:
-      "新規ユーザーは、CafeKit が app code を変えるのか、workflow infrastructure を入れるだけなのかをまず知りたいです。",
+      "installer は `.claude` または `.opencode` に workflow/runtime infrastructure だけを追加します。実際の feature workflow を始めるまで app code は変更されません。",
     items: [
       {
         title: ".claude/skills",
-        description: "specs、develop、test、review、git、sync の command surface。",
+        description: "question、brainstorm、specs、develop、test、review、docs、sync、git の command surface を作る skills。",
       },
       {
         title: ".claude/hooks",
-        description: "state reminder、privacy guardrail、runtime context injection。",
+        description: "state/spec drift の reminder、sensitive read の block、session context injection、usage update を担う hooks。",
       },
       {
         title: ".claude/agents",
-        description: "test、review、docs、sync、workflow enforcement を担う specialist agent 群。",
+        description: "inspect、spec、develop、test、review、docs、git、deployment handoff を担う subagents。",
       },
       {
         title: ".claude/rules",
-        description: "spec state、quality gate、docs sync、Git handoff を揃える実行ルール。",
+        description: "scope、spec state、quality gate、docs sync、Git handoff を揃える operating rules。",
       },
       {
         title: "アプリ本体のコード",
-        description: "本物の feature で workflow を開始するまで勝手には変更されません。",
+        description: "install 中は変更されません。CafeKit が app code を触るのは、明確な implementation task を渡した後だけです。",
       },
     ],
-    footer: "framework lock-in はありません。既存 repo の中で動き、何をしているかを明示します。",
+    footer: "framework lock-in はありません。re-run 時は ownership manifest により managed files を更新しつつ、user edits を preserve します。",
   },
 } as const;
 

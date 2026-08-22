@@ -2,6 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "@/hooks/use-locale";
 import { cn } from "@/lib/utils";
 
 type TerminalLine = {
@@ -58,6 +59,33 @@ const steps: TerminalStep[] = [
   },
 ];
 
+const terminalCopy = {
+  en: {
+    replay: "Replay",
+    labels: ["Install", "Create spec", "Validate", "Develop", "Test"],
+    activeLoop: "Active Loop",
+    activeLoopValue: "specs -> develop -> test",
+    taskPacket: "Task Packet",
+    taskName: "R0-02 auth setup",
+  },
+  vi: {
+    replay: "Chạy lại",
+    labels: ["Cài đặt", "Tạo đặc tả", "Kiểm tra", "Triển khai", "Kiểm thử"],
+    activeLoop: "Vòng chạy",
+    activeLoopValue: "đặc tả -> triển khai -> kiểm thử",
+    taskPacket: "Gói tác vụ",
+    taskName: "R0-02 thiết lập xác thực",
+  },
+  ja: {
+    replay: "Replay",
+    labels: ["Install", "Create spec", "Validate", "Develop", "Test"],
+    activeLoop: "Active Loop",
+    activeLoopValue: "specs -> develop -> test",
+    taskPacket: "Task Packet",
+    taskName: "R0-02 auth setup",
+  },
+} as const;
+
 function lineClasses(kind: TerminalLine["kind"]) {
   if (kind === "command") return "font-semibold text-[#F2EA9D]";
   if (kind === "success") return "text-[#6FD4A2]";
@@ -66,7 +94,9 @@ function lineClasses(kind: TerminalLine["kind"]) {
 }
 
 export function InteractiveRuntimeTerminal() {
-  const [runToken, setRunToken] = useState(0);
+  const locale = useLocale();
+  const t = terminalCopy[locale] ?? terminalCopy.en;
+  const [replayCycle, setReplayCycle] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [completedStep, setCompletedStep] = useState(-1);
   const [visibleLines, setVisibleLines] = useState<TerminalLine[]>([]);
@@ -147,7 +177,7 @@ export function InteractiveRuntimeTerminal() {
       timersRef.current.forEach((timer) => window.clearTimeout(timer));
       timersRef.current = [];
     };
-  }, [runToken]);
+  }, [replayCycle]);
 
   const renderedLines = typingLine
     ? [
@@ -176,11 +206,11 @@ export function InteractiveRuntimeTerminal() {
           <span className="font-mono text-sm text-[#A7C5EE]">~ /cafekit-runtime</span>
           <button
             type="button"
-            onClick={() => setRunToken((current) => current + 1)}
+            onClick={() => setReplayCycle((current) => current + 1)}
             className="inline-flex items-center gap-1 rounded-lg border border-[#A7C5EE]/14 bg-[#13262A] px-2.5 py-1.5 text-xs font-medium text-[#A7C5EE] transition hover:border-[#A7C5EE]/28 hover:bg-[#173038]"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Replay
+            {t.replay}
           </button>
         </div>
 
@@ -198,7 +228,7 @@ export function InteractiveRuntimeTerminal() {
                     : "border-[#A7C5EE]/12 bg-[#13262A] text-[#8EACD0] hover:border-[#A7C5EE]/24 hover:text-[#DDE9F9]",
                 )}
               >
-                {step.label}
+                {t.labels[index] ?? step.label}
               </div>
             ))}
           </div>
@@ -224,13 +254,13 @@ export function InteractiveRuntimeTerminal() {
       </div>
 
       <div className="absolute right-2 top-1 rounded-2xl border border-[#A7C5EE]/18 bg-[#0E1A21]/92 px-4 py-3 shadow-[0_20px_50px_-24px_rgba(16,24,32,0.6)] backdrop-blur">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[#8EACD0]">Active Loop</div>
-        <div className="mt-1 text-sm font-semibold text-[#F6FAF7]">specs → develop → test</div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-[#8EACD0]">{t.activeLoop}</div>
+        <div className="mt-1 text-sm font-semibold text-[#F6FAF7]">{t.activeLoopValue}</div>
       </div>
 
       <div className="absolute bottom-3 left-2 rounded-2xl border border-[#F2EA9D]/22 bg-[#13262A]/90 px-4 py-3 shadow-[0_20px_50px_-24px_rgba(16,24,32,0.56)] backdrop-blur">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[#F2EA9D]">Task Packet</div>
-        <div className="mt-1 text-sm font-semibold text-[#F6FAF7]">R0-02 auth setup</div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-[#F2EA9D]">{t.taskPacket}</div>
+        <div className="mt-1 text-sm font-semibold text-[#F6FAF7]">{t.taskName}</div>
         <div className="mt-2 h-1.5 w-28 overflow-hidden rounded-full bg-white/8">
           <div className="h-full w-4/5 rounded-full bg-[#6FD4A2]" />
         </div>
