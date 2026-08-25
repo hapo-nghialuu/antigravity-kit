@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0-rc.8] - 2026-08-25
+
+### Changed
+
+- **Specs implementation readiness**: process-first packets now declare an explicit queue-ready contract, keep unversioned packets in compatibility mode, and require adversarial review findings, exact task dependencies, and canonical inline proof before implementation handoff.
+- **Installed runtime parity**: Claude and Codex state hooks share receipt-aware dependency eligibility, proof-sensitive cache identities, and the same migration guidance for older flat packets.
+
+### Fixed
+
+- **Dependency resolution**: unique legacy `Task NN` references remain readable, while ambiguous references, missing dependencies, duplicate edges, self-dependencies, and multi-task cycles fail closed.
+- **Receipt proof boundaries**: fenced examples cannot become task status, dependencies, contract markers, or canonical Receipt fields. Command output requires a non-empty, correctly closed Markdown fence; explicit failure and nonzero-exit evidence inside output still blocks completion.
+- **Specs dogfood artifacts**: refreshed the timing benchmark packet under the stricter readiness contract and repaired archive successor citations without inventing execution proof.
+
+### Validation
+
+- `npm test` executes 753 tests: 752 pass, 0 fail, and 1 expected opt-in live Codex host skip.
+- Focused Claude completion-gate tests pass 48/48; focused Codex hook tests pass 36/36.
+
 ## [0.16.0-rc.7] - 2026-08-20
 
 ### Removed
