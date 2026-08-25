@@ -21,7 +21,7 @@ The installer records the package version in the selected runtime:
 
 CafeKit installs a native runtime bundle for each supported coding agent:
 - `hapo:question` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
-- `hapo:brainstorm` for scout-first ideation before a spec is ready
+- `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
 - `hapo:debug` and `hapo:hotfix` for evidence-first diagnosis and safe bug fixes
@@ -33,10 +33,12 @@ CafeKit uses rule-based skill routing guidance and an installed skill catalog.
 Agents choose the right `hapo:*` skill from workflow/domain rules instead of
 using an automatic prompt-scoring hook.
 
-Core flow (shown with Claude Code syntax):
+Core routes (shown with Claude Code syntax):
 
 ```text
-Question -> /hapo:question -> Idea -> /hapo:brainstorm (if design choices remain) -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+Feature/docs: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+Bug/failure: /hapo:debug -> /hapo:hotfix only when the user requested a fix
+Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> stop
 ```
 
 ## Quick Start

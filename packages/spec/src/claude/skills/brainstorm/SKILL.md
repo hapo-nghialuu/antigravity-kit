@@ -1,188 +1,150 @@
 ---
 name: hapo:brainstorm
-description: "Scout-first brainstorming for unclear ideas, architectural choices, scope gates, and translating raw intent into a spec-ready design."
+description: "Turn unresolved product or architecture intent into a bounded decision contract, with proportional routing, evidence, and safe handoff."
 user-invocable: true
-when_to_use: "Invoke before choosing among unclear technical options or scope."
+when_to_use: "Use when material product, scope, or architecture choices remain; skip direct factual answers and already-concrete Specs work."
 category: utilities
 keywords: [ideation, tradeoffs, decisions, scope]
 argument-hint: "<idea_or_problem>"
 metadata:
   author: haposoft
-  version: "2.1.0"
+  version: "3.0.0"
 ---
-# Brainstorming Skill
+# Brainstorm — proportional pre-delivery design
 
-You execute CafeKit's pre-spec design workflow. Your job is to turn a raw idea into a validated, spec-ready design without writing code or starting implementation.
-
-`hapo:brainstorm` is the workflow entrypoint. The `brainstormer` agent is a specialist you may call for difficult architectural debate; it is not a replacement for this workflow.
-
-## Core Stance
-
-- Scout before asking. Do not ask generic questions when the repository can make the question concrete.
-- Make requirements exact before proposing architecture.
-- Challenge assumptions without turning the session into a debate for its own sake.
-- Prefer the simplest design that satisfies the agreed acceptance criteria.
-- Keep design approval incremental: small sections, explicit confirmation, then handoff.
+Turn unresolved intent into a bounded contract without turning clear work into
+an interview. `hapo:brainstorm` owns the workflow; `brainstormer` is an optional
+specialist for real architectural trade-offs.
 
 <HARD-GATE>
-Do NOT invoke implementation skills, write code, scaffold files, modify source, or begin `/hapo:develop` until the design has been presented and explicitly approved by the user.
+Brainstorm never writes implementation, invokes Develop, or treats approval as
+implementation authority. Feature or documentation delivery may prepare context
+for a new explicit `hapo:specs` invocation; it never starts Specs implicitly.
 </HARD-GATE>
 
-<HARD-GATE-SCOUT-FIRST>
-Before asking clarifying questions or proposing approaches, run `hapo:inspect` or perform a narrow equivalent scout.
+## Front-door routing — before scout or questions
 
-Mandatory scout findings:
-1. Project type, primary languages, and major frameworks.
-2. Existing files/modules relevant to the topic.
-3. Current patterns or conventions for similar work.
-4. Relevant docs, specs, or plans already present.
-5. Constraints discovered from code, schemas, APIs, naming, or runtime setup.
+Classify intent first. This routing never waives safety or permission rules.
 
-Then summarize the useful findings to the user in 3-6 bullets before Discovery.
-</HARD-GATE-SCOUT-FIRST>
+1. **Direct request:** for a factual answer, a specific command, or an explicitly
+   different workflow, leave Brainstorm before scout, questions, approval, or
+   persistence. Read-only product or architecture exploration is not direct merely
+   because it writes no files.
+2. **Hydrate the contract, then keep routing:** for every request that remains,
+   reuse accepted Outcome, Constraints, Non-goals, and Acceptance field by field
+   only when current user text or an approved artifact binds them to the same
+   target and revision. Preserve current non-conflicting fields; treat missing,
+   stale, or conflicting fields as gaps. Never infer approval. Hydration is not a
+   terminal route; continue to exactly one intent route below.
+3. **Bug or failure:** before diagnosis, capture the repaired-behavior Outcome,
+   Constraints, Non-goals, and Acceptance evidence. Then use `hapo:debug` until
+   root cause is evidenced. Do not brainstorm fixes from a symptom. If at least
+   two cause-aligned remedies remain, compare 2–3 here. Hand off to `hapo:hotfix`
+   only when the user explicitly requested a fix; diagnosis-only work returns the
+   root-cause report and stops.
+4. **Non-bug exploration only:** inspect enough evidence, give a chat
+   recommendation, and stop. Do not request design approval, persist a report, or
+   invoke another workflow without a new explicit request.
+5. **Feature or documentation delivery:** continue through the design workflow.
 
-<HARD-GATE-EXACT-REQUIREMENTS>
-Before proposing solutions, capture concrete answers for:
-1. Expected output: feature behavior, artifact, UI surface, API shape, CLI behavior, or document.
-2. Acceptance criteria: observable checks that prove done.
-3. Scope boundary: what is explicitly out of scope for this round.
-4. Non-negotiable constraints: stack, files, compatibility, deadlines, naming, runtime.
-5. Touchpoints: existing files/modules/data/contracts the design will affect.
+## Contract and evidence
 
-If any item is vague, ask one more grounded question. Do not proceed with phrases like "make it better" or "add validation" unless you have concrete examples.
-</HARD-GATE-EXACT-REQUIREMENTS>
+For feature/docs delivery and every bug/failure, resolve four user-owned fields:
 
-## Anti-Rationalization
+- **Outcome:** observable end state.
+- **Constraints:** safety, compatibility, time, technology, and ownership limits.
+- **Non-goals:** nearby work excluded from this delivery.
+- **Acceptance:** observable evidence that proves completion.
 
-| Thought | Reality |
-|---------|---------|
-| "This is too simple to need a design" | Simple projects = most wasted work from unexamined assumptions. |
-| "I already know the solution" | Then writing it down takes 30 seconds. Do it. |
-| "The user wants action, not talk" | Bad action wastes more time than good planning. |
-| "I'll skip the scout summary and go straight to questions" | Gate order is scout → summarize findings → ask. Questions come from evidence. |
-| "I'll just prototype quickly" | Prototypes become production code. Design first. |
+After front-door routing, run `hapo:inspect` or a narrow equivalent before
+technical design. Inspect relevant modules, patterns, docs/plans, contracts, and
+runtime constraints; summarize only useful findings in 3–6 bullets.
 
-## Collaboration Tools
+For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` before
+designing. Add a diagram only when it clarifies a material choice or flow.
 
-Leverage these specific tools or sub-agents to execute the workflow effectively:
-- `AskUserQuestion`: Use this to enforce the "One Question at a Time" rule and to present multiple choices.
-- `hapo:inspect`: Mandatory first pass for repo-aware brainstorming.
-- `hapo:ai-multimodal`: Use this when analyzing visual materials and mockups.
-- `repomix --remote`: Use this bash command to summarize external Github repositories if a URL is provided.
-- `psql`: Query database schemas to understand existing data structures.
-Call brainstormer only when 2+ architectures have material trade-offs after discovery; call researcher only for external/current facts the repo cannot answer.
+Derive technical touchpoints from repository evidence. Ask the user about a
+touchpoint only when its ownership or scope boundary is a product decision that
+cannot be discovered. Keep intent separate from current-state evidence.
+
+If the request spans three or more independently deliverable subsystems, split
+it. A subsystem is independent only when its outcome, boundary, and verification
+or deployment path can move through the lifecycle separately.
 
 ## Discovery Question Framework
 
-Load and follow `references/question-framework.md` before the first user-facing discovery question.
+Load `references/question-framework.md` before the first discovery question.
+Generate questions from scout evidence, user intent, contract gaps, applicable
+domain guidance, and risk surfaces. Never ask the user for a technical fact that
+code, docs, or trusted current research can answer.
 
-Use it to:
-- Generate questions from scout evidence, user intent, exact requirement gaps, matching domain matrices, and risk surfaces.
-- Avoid asking the user to answer technical facts that should be verified from code, docs, or current provider/browser documentation.
-- Prioritize only questions that can materially change architecture, MVP scope, UX, cost/privacy/security, acceptance criteria, or delivery format.
-- Record every user-confirmed decision in a decision register in the final report.
+Use the runtime's native structured user-input tool when available. Ask one
+highest-impact question by default; batch at most three independent questions
+only when none depends on an earlier answer. Record confirmed decisions,
+assumptions, and open questions separately in the decision register.
 
-If the framework conflicts with the general "one question at a time" rule, prefer the framework's question budget and batching limits: one high-impact question by default, up to 3 independent questions in one `AskUserQuestion` call only when batching reduces friction without mixing unrelated decisions.
+Stop asking when remaining details have safe implementation defaults. Do not
+force questions merely to consume a budget.
 
-## Authoritative Workflow
+## Options and specialist use
 
-```mermaid
-flowchart TD
-    A["Run /hapo:inspect or narrow scout"] --> B["Summarize codebase findings"]
-    B --> C["Load question framework"]
-    C --> DQ["Ask highest-impact grounded question"]
-    DQ --> D{"Exact requirements captured?"}
-    D -->|No| DQ
-    D -->|Yes| E{"Multiple independent subsystems?"}
-    E -->|Yes| F["Decompose into sub-projects"]
-    F --> DQ
-    E -->|No| G{"Medium/high complexity?"}
-    G -->|Yes| H["Call brainstormer/researcher/docs-keeper as needed"]
-    G -->|No| I["Propose 2-3 approaches"]
-    H --> I
-    I --> J["Recommend simplest viable option"]
-    J --> K["Present design in sections"]
-    K --> L{"User approves section?"}
-    L -->|No, revise| K
-    L -->|Yes| M["Run 4-point review"]
-    M --> N{"Final approval?"}
-    N -->|No| I
-    N -->|Yes| O["Write Design Doc / Summary Report"]
-    O --> P["Invoke /hapo:specs with report context"]
-    P --> Q["Optional project notes update"]
-```
+A material design choice exists only when at least two viable paths would satisfy
+the contract with meaningfully different consequences.
 
-## Tactical Execution Rules
+- For a material choice, compare 2–3 mechanically distinct viable approaches by
+  setup cost, runtime complexity, maintenance, UX/DX, compatibility/migration,
+  risk, and time-to-value.
+- With one viable path, present it and explain briefly why alternatives would be
+  artificial or fail the contract. Never create strawman options.
+- Recommend the smallest path that satisfies the contract.
 
-### 1. Scout Phase
+Call `brainstormer` only for a material architectural choice that benefits from
+deeper pressure-testing. Use researcher only for current external facts the
+repository cannot establish. The controller remains responsible for questions,
+approval, persistence, and handoff.
 
-- Start with `hapo:inspect` for normal repositories. Use direct `Glob`/`Grep` only when the scope is tiny and obvious.
-- Do not scan the entire repository blindly. Target the user's topic.
-- If the user gives a GitHub URL, use `repomix --remote` before discussing architecture.
-- Report only useful findings, not raw file dumps.
+## Delivery design and approval
 
-### 2. Discovery Phase
+For feature or documentation delivery:
 
-- Load `references/question-framework.md`.
-- Ask exactly **one high-impact question at a time** by default. Do not stack unrelated questions.
-- You may batch up to 3 independent questions only when each question maps to a different required decision surface and none requires explanation before the user can answer.
-- Prefer multiple-choice options grounded in scout findings.
-- Push vague intent into concrete examples, sample inputs/outputs, or acceptance criteria.
-- Challenge the first proposed solution when the underlying goal suggests a simpler path.
-- Do not ask users to decide technical facts. Research browser/runtime/provider/package facts first; then ask only the product or trade-off decision.
-- Track decisions as you go so the final report can distinguish `User Decision`, `Assumption`, and `Open Question`.
+1. Draft one coherent candidate scaled to the work: architecture, data flow,
+   interfaces/UX, error behavior, verification, and rollout only when material.
+2. Run the internal 4-point review before presentation:
+   - remove placeholders and vague instructions;
+   - reconcile contradictory behavior;
+   - remove scope creep;
+   - make observable behavior and proof concrete.
+3. Present the reviewed candidate.
+4. Before final approval, require a separate explicit section decision when
+   the design changes auth/secrets/privacy, destructive or irreversible behavior
+   or data-loss risk, money/privilege/safety, or production-state mutation.
+5. After critical section decisions and revisions, request one final approval by
+   default.
 
-### 3. Scope Guard
+Revise material disagreement before handoff. An already accepted, current
+contract is not re-approved unless new evidence changes it.
 
-- If the request spans 3+ independent subsystems, stop and decompose it.
-- Each sub-project should be able to move through brainstorm -> specs -> develop -> test -> review independently.
-- Do not design a monolithic spec when the work needs multiple specs.
+## Persistence and handoff
 
-### 4. Trade-Off Analysis
-Whenever multiple approaches exist, compare them using specific dimensions:
-- setup cost
-- runtime complexity
-- maintenance load
-- user experience and developer experience
-- compatibility and migration risk
-- time-to-value
+Persist only approved decisions and semantics, only with user authority, and
+only when they must survive the session or feed Specs. Use the repository's
+configured report path and naming convention. Do not create a report merely to
+satisfy this skill. Before writing, redact live secrets, credentials, private
+keys, access tokens, and unnecessary PII; preserve exact approved meaning with a
+safe placeholder and ownership reference instead of copying the sensitive value.
 
-Always name the simplest viable option and explain the trade-off that makes it preferable.
+A durable summary contains the four contract fields, discovered touchpoints,
+options actually evaluated, chosen direction, risks, validation, decision
+register, and unresolved questions.
 
-### 5. Visual & UI Protocols
+- Feature/docs delivery: provide the approved summary and ask the user to invoke
+  `hapo:specs` explicitly in a new request.
+- Diagnosed bug: follow the fix-authority rule in front-door routing.
+- Non-bug exploration: recommendation already returned in chat; stop.
 
-If the topic involves UI layouts, interactive elements, visual styling, architecture diagrams, or spatial flows:
-- Use `hapo:ai-multimodal` for supplied images, videos, PDFs, or mockups.
-- Use a Mermaid diagram in the design doc when it would make trade-offs clearer.
-- Do not force text-only guesswork for visual choices.
-- Visual aids support the brainstorm; they do not bypass user approval.
+## Completion bar
 
-### 6. Design Presentation
-
-- Present design in sections sized to complexity: Architecture, Data Flow, Interfaces, UX, Error Cases, Testing Strategy, Rollout.
-- Ask for approval after each meaningful section.
-- Keep changes tied to discovered touchpoints.
-- Do not invent unrelated refactors.
-
-### 7. 4-Point Spec Review
-Before passing the completed design to the user for final review, you must internally sanitize the drafted document:
-1. **Placeholder Scan:** Hunt and eliminate any "TBD", "TODO", or vague placeholder variables.
-2. **Consistency Check:** Ensure no contradictory flows exist between architecture and behavior segments.
-3. **Scope Check:** Verify the design addresses only the agreed feature bounds without uncontrolled scope creep.
-4. **Ambiguity Check:** Replace abstract claims ("we will implement logic here") with concrete instructions.
-
-### 8. Final Handoff & Documentation
-Upon the user's explicit final approval of the sanitized design document:
-1. Generate the final **Design Doc / Summary Report**.
-2. Include: problem statement, exact requirements, evaluated approaches, recommended solution, risks, validation criteria, decision register, open questions, and next steps.
-3. Invoke `/hapo:specs` with the report context to hand off into CafeKit's structured specification phase.
-4. Optionally update an existing project notes, docs, or report file if the approved design context should be persisted for future work.
-
-## Completion Bar
-
-You are done only when:
-- Scout findings were summarized.
-- The five exact requirement fields are concrete.
-- The selected design was approved by the user.
-- The 4-point review found no blocking gaps.
-- The summary/report is ready for `/hapo:specs`.
+Brainstorm is complete when the selected route is explicit, current evidence is
+separated from intent, every material user-owned gap is resolved or named, and
+the route-specific output has been returned without unauthorized persistence or
+implementation. Never claim live behavior from this written contract alone.

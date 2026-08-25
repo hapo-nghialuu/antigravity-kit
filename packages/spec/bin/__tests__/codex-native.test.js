@@ -32,6 +32,18 @@ const MANIFEST = JSON.parse(
 );
 const SPECS_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/specs');
 const SPEC_MAKER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md');
+const BRAINSTORM_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/brainstorm');
+const BRAINSTORM_SKILL_SOURCE_PATH = path.join(BRAINSTORM_SOURCE_ROOT, 'SKILL.md');
+const BRAINSTORM_REFERENCE_SOURCE_PATH = path.join(
+  BRAINSTORM_SOURCE_ROOT,
+  'references/question-framework.md'
+);
+const BRAINSTORM_AGENT_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/brainstormer.md');
+const BRAINSTORM_SOURCE_PATHS = [
+  BRAINSTORM_SKILL_SOURCE_PATH,
+  BRAINSTORM_REFERENCE_SOURCE_PATH,
+  BRAINSTORM_AGENT_SOURCE_PATH
+];
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
   ['Interaction/UI', 'entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior'],
   ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
@@ -678,6 +690,162 @@ function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
 }
 
+function canonicalBrainstormSourceBytes() {
+  return new Map(BRAINSTORM_SOURCE_PATHS.map((sourcePath) => [
+    sourcePath,
+    fs.readFileSync(sourcePath)
+  ]));
+}
+
+function assertCanonicalBrainstormSourceBytesUnchanged(sourceBytes) {
+  for (const [sourcePath, expected] of sourceBytes) {
+    const actual = fs.readFileSync(sourcePath);
+    assert.deepEqual(
+      actual,
+      expected,
+      `canonical Brainstorm source changed: ${path.relative(PACKAGE_ROOT, sourcePath)}`
+    );
+    assert.equal(sha256(actual), sha256(expected));
+  }
+}
+
+function readInstalledBrainstormProjection(projectRoot) {
+  const skillRoot = path.join(projectRoot, '.agents/skills/brainstorm');
+  const agentPath = path.join(projectRoot, '.codex/agents/brainstormer.toml');
+  return {
+    skill: fs.readFileSync(path.join(skillRoot, 'SKILL.md'), 'utf8'),
+    framework: fs.readFileSync(path.join(skillRoot, 'references/question-framework.md'), 'utf8'),
+    agent: parseGeneratedTomlString(fs.readFileSync(agentPath, 'utf8'), 'developer_instructions')
+  };
+}
+
+function brainstormProjectionClausePrefix(content, index) {
+  const starts = ['.', '!', '?', ';', '\n'].map((marker) => content.lastIndexOf(marker, index - 1));
+  return content.slice(Math.max(...starts) + 1, index).trim();
+}
+
+function brainstormProjectionIsLocallyNegated(content, index) {
+  const clausePrefix = brainstormProjectionClausePrefix(content, index);
+  const localBoundary = Math.max(
+    clausePrefix.lastIndexOf(','),
+    clausePrefix.lastIndexOf(':'),
+    clausePrefix.lastIndexOf('—')
+  );
+  const localPrefix = clausePrefix.slice(localBoundary + 1).trim().toLowerCase();
+  const directNegation = /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*\s*$/;
+  if (directNegation.test(localPrefix)) return true;
+  const fullPrefix = clausePrefix.toLowerCase();
+  if (/\b(?:but|yet|however|except|instead)\b[^.!?;\n]*$/.test(fullPrefix)) return false;
+  return /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)\b(?:(?!\b(?:but|yet|however|except|instead)\b).){0,160}\b(?:and|or|nor)(?:\s+then)?(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*\s*$/.test(fullPrefix);
+}
+
+function brainstormProjectionHasUnauthorizedAuthority(content) {
+  const actionPattern = /\b(?:ask|question|contact|invoke|start|dispatch|launch|route|forward|run|execute|hand(?:\s+|-)?off|write|edit|update|mutate|delegate|claim)\b/gi;
+  const actions = [...content.matchAll(actionPattern)];
+  for (let index = 0; index < actions.length; index += 1) {
+    const match = actions[index];
+    const normalizedAction = match[0].toLowerCase().replace(/[-\s]+/g, ' ');
+    const action = normalizedAction === 'handoff' ? 'hand off' : normalizedAction;
+    const start = match.index + match[0].length;
+    const nextAction = actions[index + 1]?.index ?? content.length;
+    const punctuation = content.slice(start).search(/[.!?;\n]/);
+    const punctuationEnd = punctuation < 0 ? content.length : start + punctuation;
+    const tail = content.slice(start, Math.min(start + 100, nextAction, punctuationEnd));
+    const hasTarget = ['ask', 'question', 'contact'].includes(action)
+      ? /\b(?:the )?user\b/i.test(tail)
+      : ['invoke', 'start', 'dispatch', 'launch', 'route', 'forward', 'run', 'execute', 'hand off'].includes(action)
+        ? /\b(?:Specs|Hotfix|Develop)\b/i.test(tail)
+        : ['write', 'edit', 'update', 'mutate'].includes(action)
+          ? /\b(?:files?|task state|shared state)\b/i.test(tail)
+          : action === 'delegate'
+            ? /\b(?:work|tasks?)\b/i.test(tail)
+            : /\bapproval\b/i.test(tail);
+    if (hasTarget && !brainstormProjectionIsLocallyNegated(content, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormProjectionIssues(files) {
+  const compact = (value) => String(value).replace(/\s+/g, ' ').trim();
+  const skill = compact(files.skill);
+  const framework = compact(files.framework);
+  const agent = compact(files.agent);
+  const issues = new Set();
+  const specialistBoundary = 'Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Hotfix/Develop, or claim approval.';
+  const specialistHandoff = 'Non-bug exploration may end in chat; feature/docs delivery may only prepare a future explicit Specs invocation; bug handoff requires evidenced root cause and the user\'s explicit fix request.';
+  const agentAuthorityRemainder = agent
+    .replace(specialistBoundary, '')
+    .replace(specialistHandoff, '');
+
+  if (!skill.includes('leave Brainstorm before scout, questions, approval, or persistence.')
+    || !skill.includes('Hydration is not a terminal route; continue to exactly one intent route below.')) {
+    issues.add('front-door-routing');
+  }
+  if (!skill.includes('Then use `hapo-debug` until root cause is evidenced.')
+    || !skill.includes('Hand off to `hapo-hotfix` only when the user explicitly requested a fix')) {
+    issues.add('bug-routing');
+  }
+  if (!skill.includes('Do not request design approval, persist a report, or invoke another workflow without a new explicit request.')) {
+    issues.add('exploration-stop');
+  }
+  if (!skill.includes('For a material choice, compare 2–3 mechanically distinct viable approaches')
+    || !skill.includes('Never create strawman options.')
+    || !agent.includes('never invent strawmen to fill a quota.')) {
+    issues.add('option-cardinality');
+  }
+  if (!agent.includes('You advise `hapo-brainstorm`; you do not replace its routing, question, approval, persistence, or handoff ownership.')
+    || !agent.includes(specialistBoundary)
+    || brainstormProjectionHasUnauthorizedAuthority(agentAuthorityRemainder)) {
+    issues.add('specialist-boundary');
+  }
+  if (!agent.includes('If the request is a symptom without an evidenced root cause, return it to `hapo-debug`.')
+    || !agent.includes('If the controller has not identified whether the work is feature delivery, an explicitly authorized fix, or non-bug exploration, request that routing context instead of guessing.')) {
+    issues.add('specialist-routing');
+  }
+  if (!agent.includes(specialistHandoff)) {
+    issues.add('specialist-handoff');
+  }
+  if (!skill.includes('Persist only approved decisions and semantics, only with user authority')
+    || !skill.includes('redact live secrets, credentials, private keys, access tokens, and unnecessary PII;')
+    || !framework.includes('Do not write "user selected" unless direct user text or the native input tool confirms it.')) {
+    issues.add('approval-persistence');
+  }
+  const visible = `${skill}\n${framework}\n${agent}`;
+  if (/\bAskUserQuestion\b/.test(visible)
+    || /\b(?:a|an|one|each|every|another|this|that|the|[0-9]+)\s+a structured user-input request\b/i.test(visible)
+    || /\ban structured user-input request\b/i.test(visible)
+    || /\ba structured user-input request\s+(?:calls|batches)\b/i.test(visible)) {
+    issues.add('projection-grammar');
+  }
+  return [...issues].sort();
+}
+
+function assertInstalledBrainstormMutationTarget(projectRoot, source) {
+  const skillRoot = path.join(projectRoot, '.agents/skills/brainstorm');
+  if (source === 'agent') {
+    const agentRoot = path.join(projectRoot, '.codex/agents');
+    const targetPath = path.join(agentRoot, 'brainstormer.toml');
+    return assertDisposableInstalledMutationTarget({
+      projectRoot,
+      installedScope: agentRoot,
+      targetPath,
+      expectedTargetPath: targetPath,
+      canonicalSourcePaths: BRAINSTORM_SOURCE_PATHS,
+      scopeLabel: '.codex/agents'
+    });
+  }
+  const relative = source === 'skill' ? 'SKILL.md' : 'references/question-framework.md';
+  const targetPath = path.join(skillRoot, relative);
+  return assertDisposableInstalledMutationTarget({
+    projectRoot,
+    installedScope: skillRoot,
+    targetPath,
+    expectedTargetPath: targetPath,
+    canonicalSourcePaths: BRAINSTORM_SOURCE_PATHS,
+    scopeLabel: '.agents/skills/brainstorm'
+  });
+}
+
 function assertCanonicalSpecsSourceBytesUnchanged(sourceBytes) {
   for (const [sourcePath, expected] of sourceBytes) {
     const actual = fs.readFileSync(sourcePath);
@@ -1195,6 +1363,160 @@ test('Codex payload transform emits native skill and subagent syntax', () => {
   assert.match(transformed, /`exec_command`/);
   assert.match(transformed, /`apply_patch`/);
   assert.doesNotMatch(transformed, /Agent\(|subagent_type|\/specs\b|Claude Code/);
+});
+
+test('Codex payload transform keeps structured user-input grammar across determiners', () => {
+  const cases = [
+    ['standalone bare token', 'AskUserQuestion', 'a structured user-input request'],
+    ['standalone code token', '`AskUserQuestion`', 'a structured user-input request'],
+    ['standalone multi-backtick token', '``AskUserQuestion``', 'a structured user-input request'],
+    ['standalone padded multi-backtick token', '`` AskUserQuestion ``', 'a structured user-input request'],
+    ['one', 'one AskUserQuestion call', 'one structured user-input request call'],
+    ['one multi-backtick', 'one ``AskUserQuestion`` call', 'one structured user-input request call'],
+    ['one padded multi-backtick', 'one `` AskUserQuestion `` call', 'one structured user-input request call'],
+    ['each', 'each AskUserQuestion call', 'each structured user-input request call'],
+    ['every', 'every AskUserQuestion batch', 'every structured user-input request batch'],
+    ['another', 'another AskUserQuestion call', 'another structured user-input request call'],
+    ['this', 'this AskUserQuestion call', 'this structured user-input request call'],
+    ['that', 'that AskUserQuestion call', 'that structured user-input request call'],
+    ['a', 'a AskUserQuestion call', 'a structured user-input request call'],
+    ['an', 'an AskUserQuestion call', 'a structured user-input request call'],
+    ['capitalized each', 'Each AskUserQuestion call', 'Each structured user-input request call'],
+    ['capitalized an', 'An AskUserQuestion call', 'A structured user-input request call'],
+    ['the', 'the AskUserQuestion call', 'the structured user-input request call'],
+    ['numeric', '27 AskUserQuestion calls', '27 structured user-input request calls'],
+    ['plural calls', 'AskUserQuestion calls', 'structured user-input request calls'],
+    ['plural batches', 'AskUserQuestion batches', 'structured user-input request batches']
+  ];
+
+  for (const [name, input, expected] of cases) {
+    const actual = normalizeCodexBody(input, '/fixture/instructions.md');
+    assert.equal(actual, expected, name);
+    assert.equal(normalizeCodexBody(actual, '/fixture/instructions.md'), expected, `${name} idempotence`);
+    assert.doesNotMatch(actual, /\bAskUserQuestion\b/, `${name} Claude-only token`);
+    assert.doesNotMatch(actual, /\ban structured user-input request\b/i, `${name} incompatible article`);
+    assert.doesNotMatch(
+      actual,
+      /\b(?:a|an|one|each|every|another|this|that|the|[0-9]+)\s+a structured user-input request\b/i,
+      `${name} doubled article`
+    );
+  }
+
+  assert.equal(
+    normalizeCodexBody('one\nAskUserQuestion call', '/fixture/instructions.md'),
+    'one\nstructured user-input request call',
+    'a single Markdown soft break must preserve its determiner relationship'
+  );
+  assert.equal(
+    normalizeCodexBody('AskUserQuestion\nCalls', '/fixture/instructions.md'),
+    'structured user-input request\nCalls',
+    'a single Markdown soft break must preserve a plural relationship'
+  );
+  assert.equal(
+    normalizeCodexBody('one\n\nAskUserQuestion call', '/fixture/instructions.md'),
+    'one\n\na structured user-input request call',
+    'a paragraph break must not bind a prior determiner'
+  );
+  assert.equal(
+    normalizeCodexBody('MyAskUserQuestionHelper AskUserQuestionFactory', '/fixture/instructions.md'),
+    'MyAskUserQuestionHelper AskUserQuestionFactory',
+    'balanced token matching must preserve identifiers'
+  );
+  assert.equal(
+    normalizeCodexBody('[tool](https://example.test/AskUserQuestion)', '/fixture/instructions.md'),
+    '[tool](https://example.test/AskUserQuestion)',
+    'Markdown link destinations must stay byte-exact'
+  );
+  assert.equal(
+    normalizeCodexBody('https://example.test/AskUserQuestion', '/fixture/instructions.md'),
+    'https://example.test/AskUserQuestion',
+    'raw URL tokens must stay byte-exact'
+  );
+  assert.equal(
+    normalizeCodexBody('one ``AskUserQuestion``` call', '/fixture/instructions.md'),
+    'one ``AskUserQuestion``` call',
+    'mismatched backtick runs must stay byte-exact'
+  );
+  assert.equal(
+    normalizeCodexBody('``Use AskUserQuestion here``', '/fixture/instructions.md'),
+    '``Use AskUserQuestion here``',
+    'non-token code spans must stay byte-exact'
+  );
+  assert.equal(
+    normalizeCodexBody('```js\nAskUserQuestion\n````', '/fixture/instructions.md'),
+    '```js\nAskUserQuestion\n````',
+    'a longer closing backtick fence must protect its body'
+  );
+  assert.equal(
+    normalizeCodexBody('~~~text\nAskUserQuestion\n~~~~', '/fixture/instructions.md'),
+    '~~~text\nAskUserQuestion\n~~~~',
+    'a longer closing tilde fence must protect its body'
+  );
+  const markerCollision = '\uE000CAFEKIT_0_ASK_999\uE001';
+  assert.equal(
+    normalizeCodexBody(markerCollision, '/fixture/instructions.md'),
+    markerCollision,
+    'literal internal-marker-shaped input must stay byte-exact'
+  );
+  const codeMarkerCollision = '\uE000CAFEKIT_0_CODE_0\uE001 and ``not token``';
+  assert.equal(
+    normalizeCodexBody(codeMarkerCollision, '/fixture/instructions.md'),
+    codeMarkerCollision,
+    'mask restoration must not replace a literal marker-shaped prefix'
+  );
+  assert.equal(
+    normalizeCodexBody('one AskUserQuestion call', '/fixture/session.cjs'),
+    'one AskUserQuestion call',
+    'non-instruction assets must preserve executable text'
+  );
+  assert.equal(
+    normalizeCodexBody('No structured input token here.', '/fixture/instructions.md'),
+    'No structured input token here.',
+    'token-free instruction text must stay byte-exact'
+  );
+});
+
+test('Codex structured-input corpus oracle stays differential and production-aware', () => {
+  const sourceRoot = path.join(PACKAGE_ROOT, 'src/claude');
+  const occurrenceFiles = allFiles(sourceRoot, (file) => /\.(?:md|mdx|txt|cjs|js)$/i.test(file))
+    .filter((file) => fs.readFileSync(file, 'utf8').includes('AskUserQuestion'));
+  const relative = (file) => path.relative(PACKAGE_ROOT, file).split(path.sep).join('/');
+  const actualPaths = occurrenceFiles.map(relative).sort();
+  const expectedPaths = [
+    'src/claude/agents/spec-maker.md',
+    'src/claude/hooks/session.cjs',
+    'src/claude/skills/git/SKILL.md',
+    'src/claude/skills/inspect/SKILL.md',
+    'src/claude/skills/test/references/failure-triage.md'
+  ];
+  assert.deepEqual(actualPaths, expectedPaths, 'every source occurrence needs an explicit projection oracle');
+
+  const instructionExpectedSnippets = new Map([
+    ['src/claude/skills/git/SKILL.md', 'Present options via a structured user-input request — header'],
+    ['src/claude/skills/inspect/SKILL.md', '**Fallback to a structured user-input request:**'],
+    ['src/claude/skills/test/references/failure-triage.md', 'Call a structured user-input request:']
+  ]);
+  for (const [relativePath, expectedSnippet] of instructionExpectedSnippets) {
+    const sourcePath = path.join(PACKAGE_ROOT, relativePath);
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    const sentinel = '__CAFEKIT_STRUCTURED_INPUT_SENTINEL__';
+    const withSentinel = source.replace(/`?\bAskUserQuestion\b`?/g, sentinel);
+    assert.notEqual(withSentinel, source, `${relativePath} differential control must replace a token`);
+    const expected = normalizeCodexBody(withSentinel, sourcePath)
+      .replaceAll(sentinel, 'a structured user-input request');
+    const actual = normalizeCodexBody(source, sourcePath);
+    assert.equal(actual, expected, `${relativePath} independent differential oracle`);
+    assert.match(actual, new RegExp(expectedSnippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  const specMaker = fs.readFileSync(SPEC_MAKER_SOURCE_PATH, 'utf8');
+  const convertedAgent = convertCodexAgentContent(specMaker, path.basename(SPEC_MAKER_SOURCE_PATH));
+  assert.doesNotMatch(convertedAgent, /\bAskUserQuestion\b/);
+  assert.doesNotMatch(convertedAgent, /structured user-input request/);
+
+  const sessionPath = path.join(PACKAGE_ROOT, 'src/claude/hooks/session.cjs');
+  const session = normalizeCodexBody(fs.readFileSync(sessionPath, 'utf8'), sessionPath);
+  assert.equal((session.match(/\bAskUserQuestion\b/g) || []).length, 2);
 });
 
 test('Codex payload transform preserves executable keyword arguments', () => {
@@ -1806,6 +2128,226 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
     const forced = install(root, ['--force-overwrite']);
     assert.equal(forced.status, 0, `${forced.stdout}\n${forced.stderr}`);
     assert.doesNotMatch(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
+  });
+});
+
+test('Codex installed Brainstorm skill reference and agent preserve proportional routing parity', () => {
+  inTempProject((root) => {
+    const sourceBytes = canonicalBrainstormSourceBytes();
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedSkillPath = path.join(root, '.agents/skills/brainstorm/SKILL.md');
+    const installedReferencePath = path.join(
+      root,
+      '.agents/skills/brainstorm/references/question-framework.md'
+    );
+    const installedAgentPath = path.join(root, '.codex/agents/brainstormer.toml');
+    const sourceSkill = fs.readFileSync(BRAINSTORM_SKILL_SOURCE_PATH, 'utf8');
+    const sourceReference = fs.readFileSync(BRAINSTORM_REFERENCE_SOURCE_PATH, 'utf8');
+    const sourceAgent = fs.readFileSync(BRAINSTORM_AGENT_SOURCE_PATH, 'utf8');
+
+    assert.equal(
+      fs.readFileSync(installedSkillPath, 'utf8'),
+      normalizeCodexBody(sourceSkill, BRAINSTORM_SKILL_SOURCE_PATH),
+      'installed Brainstorm skill must equal the generic Codex projection'
+    );
+    assert.equal(
+      fs.readFileSync(installedReferencePath, 'utf8'),
+      normalizeCodexBody(sourceReference, BRAINSTORM_REFERENCE_SOURCE_PATH),
+      'installed Brainstorm reference must equal the generic Codex projection'
+    );
+    assert.equal(
+      fs.readFileSync(installedAgentPath, 'utf8'),
+      convertCodexAgentContent(sourceAgent, path.basename(BRAINSTORM_AGENT_SOURCE_PATH)),
+      'installed brainstormer agent must equal the Codex TOML projection'
+    );
+
+    assert.deepEqual(brainstormProjectionIssues(readInstalledBrainstormProjection(root)), []);
+    assertCanonicalBrainstormSourceBytesUnchanged(sourceBytes);
+
+    const safelyStrengthened = readInstalledBrainstormProjection(root);
+    safelyStrengthened.agent += '\nThe specialist may never ask the user directly or contact the user. Do not write files or mutate shared task state. Do not delegate work or delegate tasks. The specialist is not permitted to launch Specs or run Develop.';
+    assert.deepEqual(
+      brainstormProjectionIssues(safelyStrengthened),
+      [],
+      'safe specialist prohibitions must not produce authority issues'
+    );
+
+    const mutations = [
+      {
+        name: 'debug-route-removed',
+        source: 'skill',
+        from: 'Then use `hapo-debug` until',
+        to: 'Skip diagnosis and choose a remedy before',
+        expected: ['bug-routing']
+      },
+      {
+        name: 'fix-authority-removed',
+        source: 'skill',
+        from: 'only when the user explicitly requested a fix',
+        to: 'automatically whenever root cause is known',
+        expected: ['bug-routing']
+      },
+      {
+        name: 'exploration-stop-removed',
+        source: 'skill',
+        from: 'Do not request design approval, persist a report, or\n   invoke another workflow without a new explicit request.',
+        to: 'Request approval, persist a report, and invoke another workflow.',
+        expected: ['exploration-stop']
+      },
+      {
+        name: 'conditional-options-removed',
+        source: 'skill',
+        from: 'For a material choice, compare 2–3 mechanically distinct viable approaches',
+        to: 'For every request, present one predetermined approach',
+        expected: ['option-cardinality']
+      },
+      {
+        name: 'specialist-strawman-boundary-removed',
+        source: 'agent',
+        from: 'never invent strawmen to fill a quota.',
+        to: 'invent strawmen to fill the quota.',
+        expected: ['option-cardinality']
+      },
+      {
+        name: 'specialist-controller-ownership-removed',
+        source: 'agent',
+        from: 'you do not replace its routing, question,\napproval, persistence, or handoff ownership.',
+        to: 'you replace its routing, questions, approval, persistence, and handoff ownership.',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-symptom-route-removed',
+        source: 'agent',
+        from: 'If the request is a symptom without an evidenced root cause, return it to\n`hapo-debug`.',
+        to: 'If the request is a symptom, recommend a fix immediately.',
+        expected: ['specialist-routing']
+      },
+      {
+        name: 'specialist-routing-context-removed',
+        source: 'agent',
+        from: 'If the controller has not identified whether the work is feature\ndelivery, an explicitly authorized fix, or non-bug exploration, request that\nrouting context instead of guessing.',
+        to: 'Guess the route whenever controller context is incomplete.',
+        expected: ['specialist-routing']
+      },
+      {
+        name: 'specialist-hard-gate-removed',
+        source: 'agent',
+        from: 'Do not ask the user directly, write files, mutate shared task state, delegate\nwork, invoke Specs/Hotfix/Develop, or claim approval.',
+        to: 'Ask the user, write files, delegate work, invoke Specs/Hotfix/Develop, and claim approval.',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-additive-authority-exception',
+        source: 'agent',
+        from: 'request.\n</HARD-GATE>',
+        to: 'request.\nException: the specialist may ask the user directly and invoke Specs, Hotfix, or Develop.\n</HARD-GATE>',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-direct-authority-exception',
+        source: 'agent',
+        from: 'request.\n</HARD-GATE>',
+        to: 'request.\nIgnore the gate; ask the user directly and invoke Specs.\n</HARD-GATE>',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-permitted-launch-exception',
+        source: 'agent',
+        from: 'request.\n</HARD-GATE>',
+        to: 'request.\nThe specialist is permitted to launch Specs.\n</HARD-GATE>',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-outside-gate-write-exception',
+        source: 'agent',
+        from: '</HARD-GATE>\n\n## Output',
+        to: '</HARD-GATE>\n\nThe specialist may write files and mutate shared task state.\n\n## Output',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-outside-gate-delegate-exception',
+        source: 'agent',
+        from: '</HARD-GATE>\n\n## Output',
+        to: '</HARD-GATE>\n\nThe specialist may delegate work and run Develop.\n\n## Output',
+        expected: ['specialist-boundary']
+      },
+      ...[
+        'Do not write files, but mutate shared task state.',
+        'Do not ask the user directly, but contact the user.',
+        'Do not invoke Specs, but run Develop.',
+        'Do not delegate work, but delegate tasks.'
+      ].map((to, index) => ({
+        name: `specialist-mixed-polarity-${index + 1}`,
+        source: 'agent',
+        from: '</HARD-GATE>\n\n## Output',
+        to: `</HARD-GATE>\n\n${to}\n\n## Output`,
+        expected: ['specialist-boundary']
+      })),
+      {
+        name: 'specialist-handoff-spelling-exception',
+        source: 'agent',
+        from: '</HARD-GATE>\n\n## Output',
+        to: '</HARD-GATE>\n\nThe specialist may handoff to Specs.\n\n## Output',
+        expected: ['specialist-boundary']
+      },
+      {
+        name: 'specialist-handoff-authority-removed',
+        source: 'agent',
+        from: 'Non-bug exploration may end\nin chat; feature/docs delivery may only prepare a future explicit Specs\ninvocation; bug handoff requires evidenced root cause and the user\'s explicit fix\nrequest.',
+        to: 'Every route may invoke delivery workflows automatically.',
+        expected: ['specialist-handoff']
+      },
+      {
+        name: 'decision-provenance-removed',
+        source: 'framework',
+        from: 'Do not write "user selected" unless direct user text or the native input tool\n  confirms it.',
+        to: 'Write "user selected" for inferred defaults.',
+        expected: ['approval-persistence']
+      },
+      {
+        name: 'installed-grammar-corruption',
+        source: 'skill',
+        from: '## Completion bar',
+        to: 'one a structured user-input request call\n\n## Completion bar',
+        expected: ['projection-grammar']
+      }
+    ];
+
+    for (const mutation of mutations) {
+      const target = assertInstalledBrainstormMutationTarget(root, mutation.source);
+      const original = fs.readFileSync(target);
+      const fullContent = original.toString('utf8');
+      const projectedContent = mutation.source === 'agent'
+        ? parseGeneratedTomlString(fullContent, 'developer_instructions')
+        : fullContent;
+      const anchor = projectedContent.indexOf(mutation.from);
+      assert.ok(anchor >= 0, `${mutation.name} mutation anchor must exist`);
+      assert.equal(
+        projectedContent.indexOf(mutation.from, anchor + mutation.from.length),
+        -1,
+        `${mutation.name} mutation anchor must be unique`
+      );
+      const weakened = `${projectedContent.slice(0, anchor)}${mutation.to}${projectedContent.slice(anchor + mutation.from.length)}`;
+      const rendered = mutation.source === 'agent'
+        ? replaceGeneratedTomlString(fullContent, 'developer_instructions', weakened)
+        : weakened;
+      try {
+        fs.writeFileSync(assertInstalledBrainstormMutationTarget(root, mutation.source), rendered);
+        assertCanonicalBrainstormSourceBytesUnchanged(sourceBytes);
+        assert.deepEqual(
+          brainstormProjectionIssues(readInstalledBrainstormProjection(root)),
+          mutation.expected,
+          mutation.name
+        );
+      } finally {
+        fs.writeFileSync(assertInstalledBrainstormMutationTarget(root, mutation.source), original);
+      }
+      assert.deepEqual(fs.readFileSync(target), original, `${mutation.name} byte restore`);
+      assert.deepEqual(brainstormProjectionIssues(readInstalledBrainstormProjection(root)), []);
+      assertCanonicalBrainstormSourceBytesUnchanged(sourceBytes);
+    }
   });
 });
 

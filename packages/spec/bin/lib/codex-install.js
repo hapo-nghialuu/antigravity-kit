@@ -25,7 +25,6 @@ const AGENT_NAMES = [
   'ui-ux-designer'
 ];
 const INSTRUCTION_REPLACEMENTS = [
-  [/`?\bAskUserQuestion\b`?/g, 'a structured user-input request'],
   [/`?\bTodoWrite\b`?/g, 'task-state tracking'],
   [/`?\bTaskCreate\b`?/g, 'task creation'],
   [/`?\bTaskUpdate\b`?/g, 'task-state updates'],
@@ -62,6 +61,172 @@ function applyReplacements(content, replacements) {
     next = next.replace(pattern, replacement);
   }
   return next;
+}
+
+function isMarkdownLinkDestination(content, offset) {
+  const opener = content.lastIndexOf('](', offset);
+  if (opener < 0 || content.lastIndexOf('[', opener) < 0) return false;
+
+  let depth = 1;
+  for (let index = opener + 2; index < offset; index += 1) {
+    if (content[index] === '\\') {
+      index += 1;
+    } else if (content[index] === '(') {
+      depth += 1;
+    } else if (content[index] === ')') {
+      depth -= 1;
+      if (depth === 0) return false;
+    }
+  }
+  return depth > 0;
+}
+
+function isUrlLikeToken(content, offset) {
+  const prefix = content.slice(0, offset).split(/[\s]/).at(-1) || '';
+  return /^<?(?:[a-z][a-z0-9+.-]*:\/\/|mailto:|www\.)\S*$/i.test(prefix);
+}
+
+function maskMarkdownCodeSpans(content) {
+  const spans = [];
+  let markerNonce = 0;
+  while (content.includes(`\uE000CAFEKIT_${markerNonce}_`)) markerNonce += 1;
+  const markerPrefix = `\uE000CAFEKIT_${markerNonce}_`;
+  let masked = '';
+  let index = 0;
+
+  const addMarker = (kind, original) => {
+    const marker = `${markerPrefix}${kind}_${spans.length}\uE001`;
+    spans.push({ marker, original });
+    return marker;
+  };
+
+  const fencedBlockEnd = (openerLineEnd, delimiter, delimiterLength) => {
+    let lineStart = openerLineEnd < 0 ? content.length : openerLineEnd + 1;
+    while (lineStart < content.length) {
+      const newline = content.indexOf('\n', lineStart);
+      const lineEnd = newline < 0 ? content.length : newline;
+      const line = content.slice(lineStart, lineEnd);
+      const match = line.match(/^[ \t]{0,3}([`~]+)[ \t]*\r?$/);
+      if (match
+        && [...match[1]].every((character) => character === delimiter)
+        && match[1].length >= delimiterLength) {
+        return lineEnd;
+      }
+      lineStart = newline < 0 ? content.length : newline + 1;
+    }
+    return content.length;
+  };
+
+  while (index < content.length) {
+    if (content[index] !== '`' && content[index] !== '~') {
+      masked += content[index];
+      index += 1;
+      continue;
+    }
+
+    const opener = index;
+    const delimiter = content[index];
+    while (index < content.length && content[index] === delimiter) index += 1;
+    const delimiterLength = index - opener;
+    const lineStart = content.lastIndexOf('\n', opener - 1) + 1;
+    const linePrefix = content.slice(lineStart, opener);
+    const openerLineEnd = content.indexOf('\n', index);
+    const infoEnd = openerLineEnd < 0 ? content.length : openerLineEnd;
+    const info = content.slice(index, infoEnd);
+    const isFence = delimiterLength >= 3
+      && /^[ \t]{0,3}$/.test(linePrefix)
+      && (delimiter === '~' || !info.includes('`'));
+
+    if (isFence) {
+      const end = fencedBlockEnd(openerLineEnd, delimiter, delimiterLength);
+      masked += addMarker('CODE', content.slice(opener, end));
+      index = end;
+      continue;
+    }
+
+    if (delimiter !== '`') {
+      masked += content.slice(opener, index);
+      continue;
+    }
+
+    let cursor = index;
+    let closer = -1;
+    while (cursor < content.length) {
+      const runStart = content.indexOf('`', cursor);
+      if (runStart < 0) break;
+      let runEnd = runStart;
+      while (runEnd < content.length && content[runEnd] === '`') runEnd += 1;
+      if (runEnd - runStart === delimiterLength) {
+        closer = runStart;
+        break;
+      }
+      cursor = runEnd;
+    }
+
+    if (closer < 0) {
+      const newline = content.indexOf('\n', opener);
+      const end = newline < 0 ? content.length : newline;
+      masked += addMarker('CODE', content.slice(opener, end));
+      index = end;
+      continue;
+    }
+
+    const end = closer + delimiterLength;
+    const original = content.slice(opener, end);
+    const inner = content.slice(opener + delimiterLength, closer);
+    const kind = inner.trim() === 'AskUserQuestion' ? 'ASK' : 'CODE';
+    masked += addMarker(kind, original);
+    index = end;
+  }
+
+  return {
+    content: masked,
+    askMarkerPattern: `${markerPrefix}ASK_[0-9]+\uE001`,
+    askMarkerPrefix: `${markerPrefix}ASK_`,
+    restore(value) {
+      return spans.reduce(
+        (next, { marker, original }) => next.split(marker).join(original),
+        value
+      );
+    }
+  };
+}
+
+function normalizeAskUserQuestion(content) {
+  const masked = maskMarkdownCodeSpans(content);
+  const determinerPattern = [
+    'one', 'each', 'every', 'another', 'this', 'that', 'a', 'an', 'the'
+  ].map((word) => [...word].map((letter) => `[${letter}${letter.toUpperCase()}]`).join('')).join('|');
+  const oneSeparator = '(?:[^\\S\\r\\n]+|[^\\S\\r\\n]*\\r?\\n[^\\S\\r\\n]*)';
+  const pattern = new RegExp(
+    `(?:(\\b(?:${determinerPattern}|[0-9]+)\\b)(${oneSeparator}))?`
+      + `(\\bAskUserQuestion\\b|${masked.askMarkerPattern})`,
+    'g'
+  );
+  const normalized = masked.content.replace(pattern, (match, determiner, spacing, _token, offset, source) => {
+    const literalIndex = match.indexOf('AskUserQuestion');
+    const tokenOffset = offset + (literalIndex >= 0
+      ? literalIndex
+      : match.indexOf(masked.askMarkerPrefix));
+    const previous = source[tokenOffset - 1] || '';
+    if (isMarkdownLinkDestination(source, tokenOffset)
+      || isUrlLikeToken(source, tokenOffset)
+      || /[/=?#&%@]/.test(previous)) {
+      return match;
+    }
+
+    if (determiner) {
+      const normalizedDeterminer = /^an$/i.test(determiner)
+        ? (determiner[0] === 'A' ? 'A' : 'a')
+        : determiner;
+      return `${normalizedDeterminer}${spacing}structured user-input request`;
+    }
+
+    const trailing = source.slice(offset + match.length);
+    const pluralContext = new RegExp(`^${oneSeparator}(?:calls|batches)\\b`, 'i').test(trailing);
+    return `${pluralContext ? '' : 'a '}structured user-input request`;
+  });
+  return masked.restore(normalized);
 }
 
 function normalizeRuntimePaths(content) {
@@ -129,7 +294,7 @@ function normalizeCodexBody(content, sourcePath = '') {
   if (!isInstructionAsset(sourcePath)) return next;
 
   next = normalizeAgentInvocations(normalizeAgentNames(normalizeSkillNames(next)));
-  return applyReplacements(next, INSTRUCTION_REPLACEMENTS);
+  return applyReplacements(normalizeAskUserQuestion(next), INSTRUCTION_REPLACEMENTS);
 }
 
 function getCodexCopyOptions(baseOptions = {}) {

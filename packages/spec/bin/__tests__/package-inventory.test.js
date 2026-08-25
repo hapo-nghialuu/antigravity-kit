@@ -121,6 +121,9 @@ const REQUIRED_PAYLOAD = [
   'src/claude/scripts/validate-spec-output.cjs',
   'src/claude/scripts/spec-authoring-validation.cjs',
   'src/claude/scripts/spec-authoring-digest.cjs',
+  'src/claude/skills/brainstorm/SKILL.md',
+  'src/claude/skills/brainstorm/references/question-framework.md',
+  'src/claude/agents/brainstormer.md',
 ];
 const FORBIDDEN_PAYLOAD = [
   /(^|\/)\.logs(\/|$)/,
@@ -148,6 +151,11 @@ const ADAPTIVE_SOURCE_RELATIVES = {
   specMaker: 'src/claude/agents/spec-maker.md',
   templates: 'src/claude/skills/specs/references/templates.md',
   review: 'src/claude/skills/specs/references/review.md',
+};
+const BRAINSTORM_SOURCE_RELATIVES = {
+  skill: 'src/claude/skills/brainstorm/SKILL.md',
+  framework: 'src/claude/skills/brainstorm/references/question-framework.md',
+  agent: 'src/claude/agents/brainstormer.md',
 };
 
 function npmPack(args, cwd) {
@@ -547,6 +555,36 @@ function assertPackedAdaptiveParity(project, platform) {
   }
   assertInstalledSpecsReadiness(project, platform);
   assertInstalledAdaptiveCoverage(project, platform);
+}
+
+function assertPackedBrainstormParity(project, platform) {
+  const installedRelatives = platform === 'codex'
+    ? {
+        skill: '.agents/skills/brainstorm/SKILL.md',
+        framework: '.agents/skills/brainstorm/references/question-framework.md',
+        agent: '.codex/agents/brainstormer.toml',
+      }
+    : {
+        skill: '.claude/skills/brainstorm/SKILL.md',
+        framework: '.claude/skills/brainstorm/references/question-framework.md',
+        agent: '.claude/agents/brainstormer.md',
+      };
+
+  for (const [source, sourceRelative] of Object.entries(BRAINSTORM_SOURCE_RELATIVES)) {
+    const sourcePath = path.join(PACKAGE_ROOT, sourceRelative);
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const expected = platform === 'codex'
+      ? (source === 'agent'
+          ? convertCodexAgentContent(sourceText, path.basename(sourcePath))
+          : normalizeCodexBody(sourceText, sourcePath))
+      : sourceText;
+    const installedPath = path.join(project, installedRelatives[source]);
+    assert.equal(
+      fs.readFileSync(installedPath, 'utf8'),
+      expected,
+      `${platform} packed Brainstorm ${source} must equal its exact production projection`
+    );
+  }
 }
 
 function sha256(content) {
@@ -1861,7 +1899,7 @@ test('npm dry-run inventory is deterministic and preserves runtime payload', () 
   assertCleanInventory(firstInventory);
 });
 
-test('packed Claude and Codex installs preserve adaptive Specs and spec-maker', () => {
+test('packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-package-matrix-'));
   const destination = path.join(root, 'pack');
   fs.mkdirSync(destination, { recursive: true });
@@ -1887,6 +1925,7 @@ test('packed Claude and Codex installs preserve adaptive Specs and spec-maker', 
           assertInstalledScripts(project, platform);
           assertTransforms(project, platform);
           assertPackedAdaptiveParity(project, platform);
+          assertPackedBrainstormParity(project, platform);
           if (matrixCase.platforms.length === 1 && lang === null) {
             assertInstalledReadinessMutationsDetected(root, project, platform);
             assertInstalledAdaptiveMutationsDetected(root, project, platform);
@@ -1906,7 +1945,10 @@ test('packed Claude and Codex installs preserve adaptive Specs and spec-maker', 
           const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
             .filter((file) => !before[file] || !after[file] || !before[file].equals(after[file]));
           assert.deepEqual(changed, [], `${matrixCase.name} rerun must be byte-idempotent`);
-          for (const platform of matrixCase.platforms) assertPackedAdaptiveParity(project, platform);
+          for (const platform of matrixCase.platforms) {
+            assertPackedAdaptiveParity(project, platform);
+            assertPackedBrainstormParity(project, platform);
+          }
           assertCombinedInstructionIsolation(project);
           assert.match(fs.readFileSync(path.join(project, 'AGENTS.md'), 'utf8'), /User matrix note\nKeep this exact\./);
           assert.match(fs.readFileSync(path.join(project, 'CLAUDE.md'), 'utf8'), /User Claude matrix note\nKeep this exact\./);

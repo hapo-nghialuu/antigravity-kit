@@ -950,7 +950,7 @@ async function runAdaptiveCoverageContractTests() {
     .join(", ");
   console.log(`✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: ${changed}; total ${total}/750`);
   console.log(`✔ hapo:specs adaptive coverage checker rejects ${mutations.length} semantic weakenings`);
-  return mutations.length + 2;
+  return mutations.length + 3;
 }
 
 const PROCESS_TASK_STATUS_CLAUSES = {
@@ -1139,6 +1139,546 @@ async function runProcessTaskStatusContractTests() {
 
   console.log(`✔ hapo:specs process-task status checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
+}
+
+const BRAINSTORM_BUNDLE_LIMIT = 506;
+const BRAINSTORM_CONTRACT_CLAUSES = {
+  direct: "for a factual answer, a specific command, or an explicitly different workflow, leave Brainstorm before scout, questions, approval, or persistence.",
+  readOnlyExploration: "Read-only product or architecture exploration is not direct merely because it writes no files.",
+  acceptedSkill: "reuse accepted Outcome, Constraints, Non-goals, and Acceptance field by field only when current user text or an approved artifact binds them to the same target and revision.",
+  hydrationTransition: "Hydration is not a terminal route; continue to exactly one intent route below.",
+  acceptedFramework: "Preserve a current non-conflicting field; do not ask the user to repeat it.",
+  staleFramework: "Treat a missing, stale, or conflicting field as unresolved",
+  hydrationFramework: "Hydration never selects the route; classify the remaining request afterward.",
+  neverApproval: "Never infer approval.",
+  bugContract: "before diagnosis, capture the repaired-behavior Outcome, Constraints, Non-goals, and Acceptance evidence.",
+  debugFirst: "Then use `hapo:debug` until root cause is evidenced. Do not brainstorm fixes from a symptom.",
+  remedyCount: "If at least two cause-aligned remedies remain, compare 2–3 here.",
+  hotfixAuthority: "Hand off to `hapo:hotfix` only when the user explicitly requested a fix",
+  diagnosisStop: "diagnosis-only work returns the root-cause report and stops.",
+  nonBugExploration: "Non-bug exploration only",
+  explorationStop: "Do not request design approval, persist a report, or invoke another workflow without a new explicit request.",
+  explicitSpecs: "ask the user to invoke `hapo:specs` explicitly in a new request.",
+  noDevelop: "Brainstorm never writes implementation, invokes Develop, or treats approval as implementation authority.",
+  materialChoice: "A material design choice exists only when at least two viable paths would satisfy the contract with meaningfully different consequences.",
+  optionCount: "For a material choice, compare 2–3 mechanically distinct viable approaches",
+  singlePath: "With one viable path, present it and explain briefly why alternatives would be artificial or fail the contract. Never create strawman options.",
+  reviewBeforePresent: "Run the internal 4-point review before presentation",
+  presentReviewed: "Present the reviewed candidate.",
+  criticalDecision: "Before final approval, require a separate explicit section decision when the design changes auth/secrets/privacy, destructive or irreversible behavior or data-loss risk, money/privilege/safety, or production-state mutation.",
+  finalApproval: "After critical section decisions and revisions, request one final approval by default.",
+  approvedPersistence: "Persist only approved decisions and semantics, only with user authority",
+  configuredPath: "Use the repository's configured report path and naming convention.",
+  redactPersistence: "Before writing, redact live secrets, credentials, private keys, access tokens, and unnecessary PII;",
+  visualEvidence: "For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` before designing.",
+  touchpoints: "Technical touchpoints are evidence, not a fifth user-owned field.",
+  riskSurfaces: "Raise only risks that can change the contract or approval path",
+  decisionTruth: "Do not write \"user selected\" unless direct user text or the native input tool confirms it.",
+  specialistGate: "Proceed only when at least two viable architectural paths have materially different consequences.",
+  specialistSingle: "If one path is viable, return that conclusion and why alternatives fail the contract; never invent strawmen to fill a quota.",
+  specialistBoundary: "Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Hotfix/Develop, or claim approval.",
+  specialistHandoff: "Non-bug exploration may end in chat; feature/docs delivery may only prepare a future explicit Specs invocation; bug handoff requires evidenced root cause and the user's explicit fix request.",
+};
+
+const BRAINSTORM_BASELINE_LINES = {
+  skill: 188,
+  framework: 232,
+  agent: 86,
+};
+
+function brainstormSemanticMarkdown(content) {
+  return String(content)
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/~~~[\s\S]*?~~~/g, " ")
+    .replace(/~~[\s\S]*?~~/g, " ");
+}
+
+function replaceBrainstormClauseOnce(content, clause, replacement) {
+  const pattern = normalizeMarkdownWhitespace(clause)
+    .split(" ")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  const matcher = new RegExp(pattern, "g");
+  const matches = [...String(content).matchAll(matcher)];
+  if (matches.length !== 1) {
+    throw new Error(`expected one normalized Brainstorm mutation anchor, found ${matches.length}`);
+  }
+  return String(content).replace(matcher, replacement);
+}
+
+function brainstormClausePrefix(content, index) {
+  const starts = [".", "!", "?", ";", "\n"].map((marker) => content.lastIndexOf(marker, index - 1));
+  return content.slice(Math.max(...starts) + 1, index).trim();
+}
+
+function brainstormIsLocallyNegated(content, index) {
+  const clausePrefix = brainstormClausePrefix(content, index);
+  const localBoundary = Math.max(
+    clausePrefix.lastIndexOf(","),
+    clausePrefix.lastIndexOf(":"),
+    clausePrefix.lastIndexOf("—"),
+  );
+  const localPrefix = clausePrefix.slice(localBoundary + 1).trim().toLowerCase();
+  const directNegation = /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*\s*$/;
+  if (directNegation.test(localPrefix)) return true;
+  const fullPrefix = clausePrefix.toLowerCase();
+  if (/\b(?:but|yet|however|except|instead)\b[^.!?;\n]*$/.test(fullPrefix)) return false;
+  return /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)\b(?:(?!\b(?:but|yet|however|except|instead)\b).){0,160}\b(?:and|or|nor)(?:\s+then)?(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*\s*$/.test(fullPrefix);
+}
+
+function brainstormHasAffirmativePhrase(content, pattern) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(pattern)) {
+    if (!brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasWorkflowDispatch(content, workflow, allowUserInvocation = false) {
+  const escapedWorkflow = workflow.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    "\\b(?:invoke|start|dispatch|launch|route|forward|run|execute|hand(?:\\s+|-)?off)\\b"
+      + `[^.!?;\\n]{0,100}?\\b(?:hapo:)?${escapedWorkflow}\\b`,
+    "gi",
+  );
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(pattern)) {
+    const prefix = brainstormClausePrefix(value, match.index).toLowerCase();
+    if (brainstormIsLocallyNegated(value, match.index)) continue;
+    if (allowUserInvocation
+      && /\b(?:(?:ask|tell|require)(?:s|ed|ing)?\s+the user to|the user may|wait for the user to)\s*$/.test(prefix)) continue;
+    return true;
+  }
+  return false;
+}
+
+function brainstormHasUnauthorizedSpecialistAuthority(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  const actionPattern = /\b(?:ask|question|contact|invoke|start|dispatch|launch|route|forward|run|execute|hand(?:\s+|-)?off|write|edit|update|mutate|delegate|claim)\b/gi;
+  const actions = [...value.matchAll(actionPattern)];
+  for (let index = 0; index < actions.length; index += 1) {
+    const match = actions[index];
+    const normalizedAction = match[0].toLowerCase().replace(/[-\s]+/g, " ");
+    const action = normalizedAction === "handoff" ? "hand off" : normalizedAction;
+    const start = match.index + match[0].length;
+    const nextAction = actions[index + 1]?.index ?? value.length;
+    const punctuation = value.slice(start).search(/[.!?;\n]/);
+    const punctuationEnd = punctuation < 0 ? value.length : start + punctuation;
+    const tail = value.slice(start, Math.min(start + 100, nextAction, punctuationEnd));
+    const hasTarget = ["ask", "question", "contact"].includes(action)
+      ? /\b(?:the )?user\b/i.test(tail)
+      : ["invoke", "start", "dispatch", "launch", "route", "forward", "run", "execute", "hand off"].includes(action)
+        ? /\b(?:Specs|Hotfix|Develop)\b/i.test(tail)
+        : ["write", "edit", "update", "mutate"].includes(action)
+          ? /\b(?:files?|task state|shared state)\b/i.test(tail)
+          : action === "delegate"
+            ? /\b(?:work|tasks?)\b/i.test(tail)
+            : /\bapproval\b/i.test(tail);
+    if (hasTarget && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasUnsafePersistence(content) {
+  return brainstormHasAffirmativePhrase(
+    content,
+    /\b(?:persist|write|save|copy|store|archive|record|commit)\b.{0,120}\b(?:before (?:final )?approval|without (?:explicit )?(?:user )?authority|raw (?:credentials?|secrets?|tokens?|private keys?|PII)|(?:credentials?|secrets?|tokens?|private keys?|PII) (?:verbatim|unredacted)|unapproved draft)\b/gi,
+  );
+}
+
+function brainstormHasApprovalBypass(content) {
+  return brainstormHasAffirmativePhrase(
+    content,
+    /\b(?:(?:skip|bypass|omit)\b|avoid\b(?!\s+duplicate\b)).{0,80}\b(?:final approval|section decision|approval)\b/gi,
+  ) || brainstormHasAffirmativePhrase(
+    content,
+    /\b(?:final approval|section decision|approval)\b.{0,60}\b(?:optional|not required|unnecessary)\b/gi,
+  );
+}
+
+function brainstormHasDirectCeremony(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  const actionPattern = /\b(?:scout|inspect|discovery|questions?|approval|ask|request|seek|require|persist|write|save)\b/gi;
+  for (const match of value.matchAll(actionPattern)) {
+    const prefix = brainstormClausePrefix(value, match.index).toLowerCase();
+    if (!/\bdirect requests?\b/.test(prefix)) continue;
+    if (!brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormContractIssues(input) {
+  const expectedKeys = ["agent", "framework", "skill"];
+  const keys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)
+    || expectedKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("brainstorm checker expects exactly agent, framework, and skill UTF-8 strings");
+  }
+
+  const issues = new Set();
+  const semantic = Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [key, brainstormSemanticMarkdown(value)]),
+  );
+  const normalized = Object.fromEntries(
+    Object.entries(semantic).map(([key, value]) => [key, normalizeMarkdownWhitespace(value)]),
+  );
+  const has = (source, clause) => normalized[source].includes(normalizeMarkdownWhitespace(clause));
+  const frontDoor = markdownSectionUnderHeading(semantic.skill, "Front-door routing — before scout or questions");
+  const contract = markdownSectionUnderHeading(semantic.skill, "Contract and evidence");
+  const options = markdownSectionUnderHeading(semantic.skill, "Options and specialist use");
+  const delivery = markdownSectionUnderHeading(semantic.skill, "Delivery design and approval");
+  const persistence = markdownSectionUnderHeading(semantic.skill, "Persistence and handoff");
+  const frameworkContract = markdownSectionUnderHeading(semantic.framework, "Contract gaps and accepted decisions");
+  const risk = markdownSectionUnderHeading(semantic.framework, "Risk surfaces");
+  const decisionRegister = markdownSectionUnderHeading(semantic.framework, "Decision Register");
+  const agentEntry = markdownSectionUnderHeading(semantic.agent, "Entry gate");
+  const normalizedFrontDoor = normalizeMarkdownWhitespace(frontDoor);
+  const normalizedOptions = normalizeMarkdownWhitespace(options);
+  const normalizedDelivery = normalizeMarkdownWhitespace(delivery);
+  const normalizedPersistence = normalizeMarkdownWhitespace(persistence);
+  const normalizedAgentGate = normalizeMarkdownWhitespace(
+    semantic.agent.match(/<HARD-GATE>([\s\S]*?)<\/HARD-GATE>/)?.[1] || "",
+  );
+  const normalizedSkillGate = normalizeMarkdownWhitespace(
+    semantic.skill.match(/<HARD-GATE>([\s\S]*?)<\/HARD-GATE>/)?.[1] || "",
+  );
+  const skillGateRemainder = normalizedSkillGate.replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.noDevelop),
+    "",
+  );
+  const agentAuthorityRemainder = normalized.agent.replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary),
+    "",
+  ).replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistHandoff),
+    "",
+  );
+
+  const directIndex = frontDoor.indexOf("**Direct request:**");
+  const hydrationIndex = frontDoor.indexOf("**Hydrate the contract, then keep routing:**");
+  const directRoute = directIndex >= 0 && hydrationIndex > directIndex
+    ? frontDoor.slice(directIndex, hydrationIndex)
+    : "";
+  const directRemainder = normalizeMarkdownWhitespace(directRoute)
+    .replace(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.direct), "")
+    .replace(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration), "");
+  if (directIndex < 0 || hydrationIndex < 0
+    || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.direct))
+    || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration))
+    || brainstormHasDirectCeremony(directRemainder)
+    || !semantic.skill.includes("After front-door routing, run `hapo:inspect`")
+    || semantic.skill.indexOf("## Front-door routing — before scout or questions")
+      > semantic.skill.indexOf("After front-door routing, run `hapo:inspect`")) {
+    issues.add("front-door-routing");
+  }
+  const bugIndex = frontDoor.indexOf("**Bug or failure:**");
+  if (!normalizedFrontDoor.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.acceptedSkill))
+    || !normalizedFrontDoor.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.hydrationTransition))
+    || !normalizeMarkdownWhitespace(frameworkContract).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.acceptedFramework))
+    || !normalizeMarkdownWhitespace(frameworkContract).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.staleFramework))
+    || !normalizeMarkdownWhitespace(frameworkContract).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.hydrationFramework))
+    || !/\b(?:never|do not) infer approval\b/i.test(normalizedFrontDoor)
+    || hydrationIndex < 0 || bugIndex < hydrationIndex) {
+    issues.add("accepted-contract");
+  }
+
+  const debugIndex = frontDoor.indexOf("`hapo:debug`", bugIndex);
+  const remedyIndex = frontDoor.indexOf("cause-aligned remedies", debugIndex);
+  const explorationIndex = frontDoor.indexOf("**Non-bug exploration only:**");
+  const featureIndex = frontDoor.indexOf("**Feature or documentation delivery:**", explorationIndex);
+  const bugRoute = bugIndex >= 0 && explorationIndex > bugIndex
+    ? frontDoor.slice(bugIndex, explorationIndex)
+    : "";
+  const normalizedBugRoute = normalizeMarkdownWhitespace(bugRoute);
+  const hotfixRemainder = normalized.skill.replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority),
+    "",
+  );
+  const contractFields = markdownBoldBulletFields(contract);
+  if (bugIndex < 0 || debugIndex < bugIndex || remedyIndex < debugIndex
+    || explorationIndex < remedyIndex
+    || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.bugContract))
+    || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.debugFirst))
+    || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.remedyCount))
+    || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority))
+    || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop))
+    || !normalizeMarkdownWhitespace(contract).includes("For feature/docs delivery and every bug/failure, resolve four user-owned fields:")
+    || ["Outcome", "Constraints", "Non-goals", "Acceptance"].some((field) => !contractFields.has(field))
+    || brainstormHasWorkflowDispatch(hotfixRemainder, "hotfix")) {
+    issues.add("bug-routing");
+  }
+  const explorationRoute = explorationIndex >= 0 && featureIndex > explorationIndex
+    ? frontDoor.slice(explorationIndex, featureIndex)
+    : "";
+  const explorationRemainder = normalizeMarkdownWhitespace(explorationRoute).replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.explorationStop),
+    "",
+  );
+  if (!normalizeMarkdownWhitespace(explorationRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.nonBugExploration))
+    || !normalizeMarkdownWhitespace(explorationRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.explorationStop))
+    || featureIndex < 0
+    || brainstormHasAffirmativePhrase(explorationRemainder, /\b(?:request|seek|require)\b.{0,40}\bapproval\b/gi)
+    || brainstormHasAffirmativePhrase(explorationRemainder, /\b(?:persist|write|save)\b.{0,40}\b(?:report|summary|design)\b/gi)
+    || ["specs", "hotfix", "develop"].some((workflow) => brainstormHasWorkflowDispatch(explorationRemainder, workflow))) {
+    issues.add("exploration-stop");
+  }
+  if (!normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs))
+    || !normalizedSkillGate.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.noDevelop))
+    || brainstormHasWorkflowDispatch(normalized.skill, "specs", true)
+    || brainstormHasWorkflowDispatch(normalized.skill, "develop")
+    || /\bimplementation\b.{0,60}\b(?:begin|start|proceed|allowed|permitted)\b/i.test(skillGateRemainder)) {
+    issues.add("handoff-boundary");
+  }
+  if (!normalizedOptions.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.materialChoice))
+    || !normalizedOptions.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.optionCount))
+    || !normalizedOptions.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.singlePath))) {
+    issues.add("option-cardinality");
+  }
+  const reviewIndex = normalizedDelivery.indexOf(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.reviewBeforePresent));
+  const presentIndex = normalizedDelivery.indexOf(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.presentReviewed));
+  const criticalIndex = normalizedDelivery.indexOf(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.criticalDecision));
+  const approvalIndex = normalizedDelivery.indexOf(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.finalApproval));
+  const approvalRemainder = normalized.skill.replace(
+    normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.finalApproval),
+    "",
+  );
+  if (!normalizedDelivery.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.reviewBeforePresent))
+    || !normalizedDelivery.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.presentReviewed))
+    || !normalizedDelivery.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.finalApproval))
+    || !normalizedDelivery.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.criticalDecision))
+    || !normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.approvedPersistence))
+    || !normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.configuredPath))
+    || !normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.redactPersistence))
+    || !(reviewIndex >= 0 && reviewIndex < presentIndex && presentIndex < criticalIndex && criticalIndex < approvalIndex)
+    || brainstormHasUnsafePersistence(normalized.skill)
+    || brainstormHasApprovalBypass(normalized.skill)
+    || brainstormHasAffirmativePhrase(approvalRemainder, /\b(?:request|seek|obtain|get)\b.{0,50}\bfinal approval\b/gi)
+    || !risk.includes("Critical section decision")) {
+    issues.add("approval-persistence");
+  }
+  if (!normalizeMarkdownWhitespace(frameworkContract).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.touchpoints))
+    || !normalizeMarkdownWhitespace(risk).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.riskSurfaces))
+    || !normalizeMarkdownWhitespace(decisionRegister).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.decisionTruth))
+    || !normalizeMarkdownWhitespace(contract).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.visualEvidence))
+    || !semantic.framework.includes("## Domain Matrix")
+    || !semantic.framework.includes("### Browser Extension")
+    || !semantic.framework.includes("### AI / LLM")) {
+    issues.add("question-evidence");
+  }
+  if (!normalizeMarkdownWhitespace(agentEntry).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistGate))
+    || !normalizeMarkdownWhitespace(agentEntry).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistSingle))
+    || !normalizedAgentGate.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary))
+    || !normalizedAgentGate.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.specialistHandoff))
+    || agentEntry === ""
+    || /^tools:.*\b(?:Write|Edit|TaskCreate|TaskUpdate|SendMessage)\b/m.test(semantic.agent)
+    || brainstormHasUnauthorizedSpecialistAuthority(agentAuthorityRemainder)) {
+    issues.add("specialist-boundary");
+  }
+
+  const lines = Object.values(input).reduce((sum, value) => {
+    const parts = value.split("\n");
+    return sum + (value.endsWith("\n") ? parts.length - 1 : parts.length);
+  }, 0);
+  if (lines > BRAINSTORM_BUNDLE_LIMIT) issues.add("context-budget");
+
+  return [...issues].sort();
+}
+
+async function runBrainstormContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] hapo:brainstorm proportional routing contract: ${message}`);
+  };
+  const paths = {
+    skill: { relativePath: "src/claude/skills/brainstorm/SKILL.md", baselineLines: BRAINSTORM_BASELINE_LINES.skill },
+    framework: { relativePath: "src/claude/skills/brainstorm/references/question-framework.md", baselineLines: BRAINSTORM_BASELINE_LINES.framework },
+    agent: { relativePath: "src/claude/agents/brainstormer.md", baselineLines: BRAINSTORM_BASELINE_LINES.agent },
+  };
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(paths).map(async ([key, { relativePath }]) => [
+      key,
+      await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const intact = brainstormContractIssues(baseline);
+  if (intact.length > 0) fail(`intact sources returned ${intact.join(", ")}`);
+
+  const reflowed = {
+    ...baseline,
+    skill: replaceBrainstormClauseOnce(
+      baseline.skill,
+      BRAINSTORM_CONTRACT_CLAUSES.direct,
+      BRAINSTORM_CONTRACT_CLAUSES.direct.replace(" before scout", "\n   before scout"),
+    ),
+  };
+  const reflowIssues = brainstormContractIssues(reflowed);
+  if (reflowIssues.length > 0) fail(`whitespace-only reflow returned ${reflowIssues.join(", ")}`);
+
+  const safeStrengthenings = [
+    [BRAINSTORM_CONTRACT_CLAUSES.explorationStop, `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Never invoke Hotfix from exploration. Do not invoke Develop.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} The user may invoke \`hapo:specs\` in a new request.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} After final approval, save the draft.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.noDevelop, `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} The controller is forbidden to invoke Specs.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.finalApproval, `${BRAINSTORM_CONTRACT_CLAUSES.finalApproval} Avoid duplicate final approval.`],
+  ];
+  const safelyStrengthened = {
+    ...baseline,
+    skill: safeStrengthenings.reduce(
+      (content, [from, to]) => replaceBrainstormClauseOnce(content, from, to),
+      baseline.skill,
+    ),
+    agent: replaceBrainstormClauseOnce(
+      baseline.agent,
+      BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary,
+      `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} The specialist may never ask the user directly or contact the user. Do not write files or mutate shared task state. Do not delegate work or delegate tasks. The specialist is not permitted to launch Specs or run Develop.`,
+    ),
+  };
+  const strengtheningIssues = brainstormContractIssues(safelyStrengthened);
+  if (strengtheningIssues.length > 0) {
+    fail(`safe prohibition strengthening returned ${strengtheningIssues.join(", ")}`);
+  }
+
+  const mutations = [
+    { name: "direct-after-scout", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.direct, to: "scout first, then leave Brainstorm.", expected: ["front-door-routing"] },
+    {
+      name: "direct-safe-clause-moved-outside-route",
+      source: "skill",
+      mutate: (value) => replaceBrainstormClauseOnce(
+        replaceBrainstormClauseOnce(value, BRAINSTORM_CONTRACT_CLAUSES.direct, "Direct requests scout first."),
+        "## Completion bar",
+        `${BRAINSTORM_CONTRACT_CLAUSES.direct}\n\n## Completion bar`,
+      ),
+      expected: ["front-door-routing"],
+    },
+    { name: "direct-contradictory-ceremony", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration, to: `${BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration} Direct requests scout first.`, expected: ["front-door-routing"] },
+    { name: "direct-discovery-synonym", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration, to: `${BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration} Direct requests run discovery first.`, expected: ["front-door-routing"] },
+    { name: "direct-approval-synonym", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration, to: `${BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration} Direct requests go through approval first.`, expected: ["front-door-routing"] },
+    { name: "read-only-architecture-exits", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration, to: "Every read-only request is direct and exits Brainstorm.", expected: ["front-door-routing"] },
+    { name: "accepted-contract-not-revision-bound", source: "skill", from: "binds them to the same target and revision.", to: "may come from any earlier approved artifact.", expected: ["accepted-contract"] },
+    { name: "accepted-contract-reasks-fields", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.acceptedFramework, to: "Ask the user to restate every accepted field.", expected: ["accepted-contract"] },
+    { name: "accepted-contract-infers-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.neverApproval, to: "Infer approval from an old label.", expected: ["accepted-contract"] },
+    { name: "accepted-contract-becomes-terminal", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hydrationTransition, to: "Hydration completes routing; stop here.", expected: ["accepted-contract"] },
+    { name: "framework-hydration-selects-route", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.hydrationFramework, to: "Hydration selects the final route.", expected: ["accepted-contract"] },
+    { name: "bug-contract-drops-fields", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.bugContract, to: "before diagnosis, capture the repaired behavior.", expected: ["bug-routing"] },
+    { name: "bug-options-before-debug", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.debugFirst, to: "Compare remedies, then use `hapo:debug`.", expected: ["bug-routing"] },
+    { name: "bug-remedy-count-removed", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.remedyCount, to: "If remedies remain, compare any number here.", expected: ["bug-routing"] },
+    { name: "hotfix-without-authority", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority, to: "Hand off to `hapo:hotfix` whenever root cause is known", expected: ["bug-routing"] },
+    { name: "hotfix-contradictory-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Urgent incidents may invoke \`hapo:hotfix\` without user authority.`, expected: ["bug-routing"] },
+    { name: "hotfix-hyphenated-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand-off to Hotfix immediately.`, expected: ["bug-routing"] },
+    { name: "hotfix-object-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand off this request to Hotfix.`, expected: ["bug-routing"] },
+    { name: "diagnosis-only-hotfix", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: "diagnosis-only work continues to Hotfix.", expected: ["bug-routing"] },
+    { name: "exploration-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: "Request approval, persist a report, then stop.", expected: ["exploration-stop"] },
+    { name: "exploration-later-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Then invoke \`hapo:specs\`.`, expected: ["exploration-stop", "handoff-boundary"] },
+    { name: "implicit-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: "invoke `hapo:specs` immediately.", expected: ["handoff-boundary"] },
+    { name: "specs-additive-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Emergency exception: hand off to \`hapo:specs\` automatically.`, expected: ["handoff-boundary"] },
+    { name: "specs-forward-summary", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Forward the approved summary to Specs automatically.`, expected: ["handoff-boundary"] },
+    { name: "specs-launch-workflow", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Launch the Specs workflow.`, expected: ["handoff-boundary"] },
+    { name: "develop-after-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: "Brainstorm may invoke Develop after approval.", expected: ["handoff-boundary"] },
+    { name: "develop-additive-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} Hand off to Develop after approval.`, expected: ["handoff-boundary"] },
+    { name: "develop-route-request", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} Route this request to Develop.`, expected: ["handoff-boundary"] },
+    { name: "develop-unrelated-negation", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} Do not wait, hand off to Develop immediately.`, expected: ["handoff-boundary"] },
+    { name: "implementation-additive-gate-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} Exception: implementation may begin after approval.`, expected: ["handoff-boundary"] },
+    {
+      name: "develop-gate-moved-outside-hard-gate",
+      source: "skill",
+      mutate: (value) => replaceBrainstormClauseOnce(
+        replaceBrainstormClauseOnce(value, BRAINSTORM_CONTRACT_CLAUSES.noDevelop, "Implementation is allowed after design approval."),
+        "## Completion bar",
+        `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop}\n\n## Completion bar`,
+      ),
+      expected: ["handoff-boundary"],
+    },
+    { name: "one-option-material-choice", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.optionCount, to: "For a material choice, compare at most three approaches", expected: ["option-cardinality"] },
+    { name: "single-path-strawman", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.singlePath, to: "With one viable path, invent alternatives for comparison.", expected: ["option-cardinality"] },
+    {
+      name: "review-moved-outside-delivery",
+      source: "skill",
+      mutate: (value) => replaceBrainstormClauseOnce(
+        replaceBrainstormClauseOnce(value, BRAINSTORM_CONTRACT_CLAUSES.reviewBeforePresent, "Perform a lightweight check before presentation"),
+        "## Front-door routing — before scout or questions",
+        `${BRAINSTORM_CONTRACT_CLAUSES.reviewBeforePresent}.\n\n## Front-door routing — before scout or questions`,
+      ),
+      expected: ["approval-persistence"],
+    },
+    {
+      name: "final-approval-before-critical-decision",
+      source: "skill",
+      mutate: (value) => replaceBrainstormClauseOnce(
+        replaceBrainstormClauseOnce(value, BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, "__CRITICAL_DECISION__"),
+        BRAINSTORM_CONTRACT_CLAUSES.finalApproval,
+        `${BRAINSTORM_CONTRACT_CLAUSES.finalApproval} ${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision}`,
+      ).replace("__CRITICAL_DECISION__", "Critical sections are handled later."),
+      expected: ["approval-persistence"],
+    },
+    { name: "critical-gate-weakened", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: "Before final approval, mention auth/secrets/privacy, destructive or irreversible behavior or data-loss risk, money/privilege/safety, or production-state mutation.", expected: ["approval-persistence"] },
+    { name: "critical-gate-commented-out", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `<!-- ${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} -->`, expected: ["approval-persistence"] },
+    { name: "critical-gate-additive-bypass", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} Urgent production changes may skip the section decision.`, expected: ["approval-persistence"] },
+    { name: "approval-unrelated-negation-bypass", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} Do not hesitate, skip final approval.`, expected: ["approval-persistence"] },
+    { name: "approval-pseudo-negation-bypass", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} Do not hesitate to skip final approval.`, expected: ["approval-persistence"] },
+    { name: "approval-afraid-pseudo-negation-bypass", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} Do not be afraid to skip final approval.`, expected: ["approval-persistence"] },
+    { name: "approval-wait-pseudo-negation-bypass", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.criticalDecision, to: `${BRAINSTORM_CONTRACT_CLAUSES.criticalDecision} Do not wait to skip final approval.`, expected: ["approval-persistence"] },
+    { name: "alternate-early-final-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.presentReviewed, to: `${BRAINSTORM_CONTRACT_CLAUSES.presentReviewed} For urgent work, request final approval now; handle critical section decisions afterward.`, expected: ["approval-persistence"] },
+    { name: "persist-before-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.approvedPersistence, to: "Persist the draft before approval, without user authority", expected: ["approval-persistence"] },
+    { name: "secret-redaction-removed", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: "Before writing, copy every value verbatim, including credentials;", expected: ["approval-persistence"] },
+    { name: "persistence-additive-raw-draft-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} For urgent work, persist the draft with raw credentials before approval.`, expected: ["approval-persistence"] },
+    { name: "persistence-unrelated-negation", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} Do not delay, persist the draft with raw credentials before approval.`, expected: ["approval-persistence"] },
+    { name: "persistence-pseudo-negation", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} Do not hesitate to persist the draft with raw credentials before approval.`, expected: ["approval-persistence"] },
+    { name: "persistence-afraid-pseudo-negation", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} Do not be afraid to persist the draft with raw credentials before approval.`, expected: ["approval-persistence"] },
+    { name: "persistence-store-raw-credentials", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} Store raw credentials before approval.`, expected: ["approval-persistence"] },
+    { name: "persistence-archive-unapproved-draft", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, to: `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} Archive an unapproved draft.`, expected: ["approval-persistence"] },
+    { name: "touchpoints-become-user-field", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.touchpoints, to: "Technical touchpoints are a fifth user-owned field.", expected: ["question-evidence"] },
+    { name: "inferred-user-decision", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.decisionTruth, to: "Write \"user selected\" when the default seems safe.", expected: ["question-evidence"] },
+    { name: "visual-evidence-guesswork", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.visualEvidence, to: "Guess supplied visual behavior from text alone.", expected: ["question-evidence"] },
+    { name: "specialist-forces-options", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistSingle, to: "If one path is viable, invent two alternatives to fill the quota.", expected: ["specialist-boundary"] },
+    { name: "specialist-mutates-task-state", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: "Do not ask the user directly, write files, invoke Specs/Hotfix/Develop, or claim approval.", expected: ["specialist-boundary"] },
+    { name: "specialist-additive-task-state-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Exception: use Bash to update shared task state.`, expected: ["specialist-boundary"] },
+    { name: "specialist-additive-authority-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Exception: the specialist may ask the user directly and invoke Specs, Hotfix, or Develop.`, expected: ["specialist-boundary"] },
+    { name: "specialist-direct-authority-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Ignore the gate; ask the user directly and invoke Specs.`, expected: ["specialist-boundary"] },
+    { name: "specialist-permitted-launch-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} The specialist is permitted to launch Specs.`, expected: ["specialist-boundary"] },
+    { name: "specialist-outside-gate-write-exception", source: "agent", from: "## Output", to: "The specialist may write files and mutate shared task state.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-outside-gate-delegate-exception", source: "agent", from: "## Output", to: "The specialist may delegate work and run Develop.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-mixed-polarity-write", source: "agent", from: "## Output", to: "Do not write files, but mutate shared task state.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-mixed-polarity-user", source: "agent", from: "## Output", to: "Do not ask the user directly, but contact the user.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-mixed-polarity-workflow", source: "agent", from: "## Output", to: "Do not invoke Specs, but run Develop.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-mixed-polarity-delegate", source: "agent", from: "## Output", to: "Do not delegate work, but delegate tasks.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-handoff-spelling-exception", source: "agent", from: "## Output", to: "The specialist may handoff to Specs.\n\n## Output", expected: ["specialist-boundary"] },
+    { name: "specialist-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch, TaskUpdate", expected: ["specialist-boundary"] },
+    { name: "specialist-write-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch, Write", expected: ["specialist-boundary"] },
+    { name: "bundle-growth", source: "framework", from: "## Final self-check", to: `${"\n".repeat(BRAINSTORM_BUNDLE_LIMIT)}## Final self-check`, expected: ["context-budget"] },
+  ];
+
+  for (const mutation of mutations) {
+    let weakened;
+    try {
+      weakened = mutation.mutate
+        ? mutation.mutate(baseline[mutation.source])
+        : replaceBrainstormClauseOnce(baseline[mutation.source], mutation.from, mutation.to);
+    } catch (error) {
+      fail(`${mutation.name} mutation anchor failed: ${error.message}`);
+    }
+    const actual = brainstormContractIssues({ ...baseline, [mutation.source]: weakened });
+    const expected = [...mutation.expected].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      fail(`${mutation.name} expected ${JSON.stringify(expected)} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  const lineRows = Object.entries(paths).map(([key, { relativePath, baselineLines }]) => {
+    const value = baseline[key];
+    const parts = value.split("\n");
+    const count = value.endsWith("\n") ? parts.length - 1 : parts.length;
+    return [relativePath, count, count - baselineLines];
+  });
+  const total = lineRows.reduce((sum, [, count]) => sum + count, 0);
+  if (total > BRAINSTORM_BUNDLE_LIMIT) fail(`bundle line budget is ${total}/${BRAINSTORM_BUNDLE_LIMIT}`);
+  const deltas = lineRows
+    .map(([relativePath, count, delta]) => `${relativePath}=${count} (${delta >= 0 ? "+" : ""}${delta})`)
+    .join(", ");
+  console.log(`✔ hapo:brainstorm proportional routing contract is complete and bounded; ${deltas}; total ${total}/${BRAINSTORM_BUNDLE_LIMIT}`);
+  console.log(`✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=${mutations.length}`);
+  return mutations.length + 2;
 }
 
 function outsideLegacySections(content) {
@@ -1494,6 +2034,7 @@ async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
   const adaptiveCoverageTests = await runAdaptiveCoverageContractTests();
+  const brainstormContractTests = await runBrainstormContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -2078,27 +2619,6 @@ async function runStaticSemanticTests() {
         !content.includes("`references/debugger/"),
     },
     {
-      label: "hapo:brainstorm uses a structured question framework",
-      file: "src/claude/skills/brainstorm/SKILL.md",
-      assert: (content) =>
-        content.includes("## Discovery Question Framework") &&
-        content.includes("`references/question-framework.md`") &&
-        content.includes("Generate questions from scout evidence") &&
-        content.includes("decision register") &&
-        content.includes("technical facts"),
-    },
-    {
-      label: "hapo:brainstorm question framework covers domains and decision logging",
-      file: "src/claude/skills/brainstorm/references/question-framework.md",
-      assert: (content) =>
-        content.includes("## Domain Matrix") &&
-        content.includes("### Browser Extension") &&
-        content.includes("### AI / LLM") &&
-        content.includes("## Ask / Do Not Ask") &&
-        content.includes("## Decision Register") &&
-        content.includes("Do not write \"user selected\""),
-    },
-    {
       label: "Claude runtime template exposes process-first Specs truth",
       file: "src/claude/CLAUDE.md",
       assert: (content) =>
@@ -2615,7 +3135,7 @@ async function runStaticSemanticTests() {
   }
 
   return checks.length + specs21Tests + implementationReadinessTests
-    + processTaskStatusTests + adaptiveCoverageTests;
+    + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests;
 }
 
 function runSkillCatalogTests() {
