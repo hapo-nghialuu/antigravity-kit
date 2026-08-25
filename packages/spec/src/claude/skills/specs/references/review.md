@@ -26,19 +26,22 @@ evidence.
 | Scope Auditor | Is new state scoped to the right lifetime and owner? | constructors, writers, cleanup, and existing equivalents |
 | Contract Verifier | Are all consumers and compatibility surfaces covered? | caller/test/export/config/help inventory |
 
-Scale the review to the number of independent work groups:
+Keep Fact Checker as the baseline. Assign every remaining material CP risk to a
+named reviewer lens; a critical row includes both relevant security-adversary and
+failure-mode coverage, and nonmaterial lenses are not added. Scale reviewer count
+to independent work groups:
 
 | Groups | Reviewers | Roles | Claim budget |
 |---|---:|---|---:|
-| 1-2 | 2 | Fact Checker plus the highest-risk role | about 5 per group |
-| 3-5 | 3 | Fact Checker, Contract Verifier, one risk role | about 10 per group |
-| 6+ | 4 | all roles | at least 15 total |
+| 1-2 | 2 | Fact Checker plus all matching material lenses | about 5 per group |
+| 3-5 | 3 | Fact Checker plus all matching material lenses | about 10 per group |
+| 6+ | 4 | Fact Checker plus all matching material lenses | at least 15 total |
 
-The table is a sizing guide, not permission to skip a material boundary.
+Reviewer count is fixed by the table, not lens count. Give each reviewer a distinct primary lens; when material lenses exceed reviewers, combine related named lenses on one reviewer and keep every material lens assigned.
 
 ## B2 — fresh-context red team
 
-Use reviewers that did not author the plan and give each one a distinct lens:
+Use reviewers that did not author the plan and assign these lenses from affected CP rows:
 
 - **Security adversary:** authorization bypass, injection, secret exposure,
   unsafe path and trust-boundary transitions.
@@ -101,8 +104,8 @@ A repair that adds user semantics or scope returns to C1.
 After any accepted finding or user edit:
 
 1. Reread every file in `specs/<feature>/`.
-2. List deltas: renamed terms, changed decisions, removed assumptions, task
-   order, ownership, dependencies, acceptance IDs, and commands.
+2. List accepted deltas; rederive affected CP rows using the canonical delta list
+   in the templates before task status.
 3. Search every delta and its old spelling across the whole feature packet.
 4. Reconcile the plan table, task details, examples, acceptance mapping, and
    verification commands.

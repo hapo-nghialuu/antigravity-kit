@@ -17,8 +17,10 @@ removes product decisions from implementation. The output is Markdown under
 - existing plans or decisions explicitly placed in scope;
 - the three human-gate decisions from `hapo:specs`.
 
-If the change is clear, isolated, reversible, and one or two files, recommend
-direct implementation instead of manufacturing a plan.
+Read `skills/specs/SKILL.md` and `skills/specs/references/templates.md` before
+routing; they are the canonical risk and coverage authority. Do not duplicate
+their taxonomy here. Apply their risk-first route before C1 and stop when the
+request qualifies for direct work; hand off when it requires Brainstorm-only exploration.
 
 ## Required process
 
@@ -36,7 +38,7 @@ repeat scope objections later unless new evidence invalidates the decision.
 
 ### 3. Author the flat packet
 
-Read `skills/specs/references/templates.md`, then create its marked flat packet:
+Create the canonical coverage profile and marked flat packet from the references:
 
 ```text
 specs/<feature>/plan.md
@@ -47,7 +49,8 @@ specs/<feature>/task-NN-<slug>.md
 Keep tasks flat beside the plan. Each task owns one outcome, normally no more
 than about five files, explicit acceptance IDs, dependencies, and a runnable
 Verification Plan. Every criterion maps to at least one task and one proof.
-Use EARS sentences for observable acceptance behavior.
+Use EARS sentences; each task references its canonical `CP-NN` rows instead of
+copying their kinds, surfaces, risk, or proof obligations.
 
 Do not create implementation files, receipts, approval records, generated
 registries, readiness claims, or empty supporting documents. Keep every new
@@ -62,7 +65,9 @@ repair for every finding.
 
 Deduplicate and cap findings at 15. Open C2 so the user can accept, reject, or
 revise each one. Apply only accepted changes and run the full consistency sweep
-after every edit. Then derive every task state, not only the first candidate:
+after every edit. Rederive affected CP rows using the canonical delta list in
+the templates. Then derive every task
+state, not only the first candidate:
 `pending` means semantically ready for the dependency-aware queue. Keep a task
 `blocked` while a C1/C2 decision, accepted finding, or `UNKNOWN` closure remains
 open. A named task dependency alone does not make it blocked; write dependencies
@@ -82,7 +87,7 @@ chooses when execution begins.
 - One mutable fact has one home; other files link to it.
 - A task is not a bucket for several independent outcomes.
 - Unknown outcomes become questions, not guessed requirements.
-- Ambiguous rules receive two or three examples before C2.
+- Apply the canonical ambiguity action; examples never decide observable behavior.
 - Ownership overlap or dependency uncertainty prevents a parallel claim.
 - A command that cannot be run from the named work context is not verification.
 - User approval and test proof are different facts; never infer either.

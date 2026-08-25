@@ -1,6 +1,6 @@
 ---
 name: hapo:specs
-description: "Turn a substantial feature idea into a bounded, reviewed plan and executable flat task files, with human decisions at scope, findings, and completion. Use when the work needs durable coordination; skip for a clear one-file or two-file change."
+description: "Turn a substantial or risk-elevated feature idea into a bounded, reviewed plan and executable flat task files, with human decisions at scope, findings, and completion. Use when work needs durable coordination or is not eligible for direct work; skip only when a change is clear, isolated, reversible, routine, and likely limited to one or two files."
 user-invocable: true
 argument-hint: "<feature-description>"
 metadata:
@@ -9,19 +9,23 @@ metadata:
 ---
 # Specs — process-first planning
 
-Quality comes from a short decision process; honesty comes from evidence. Keep
-the human at exactly three gates and let the agent do the work between them.
-The durable output is Markdown that can be read and edited without a compiler.
+Quality comes from a short decision process; honesty comes from evidence. Keep the human at exactly three gates; durable output is editable Markdown.
 
-## Step 0 — decide whether a plan earns its cost
+## Step 0 — classify risk before routing
 
-Work directly when the cause and change are clear, isolated, reversible, and
-likely limited to one or two files. Use this skill when the request crosses
-components, contains a product or architecture choice, has meaningful failure
-risk, or needs several tasks, sessions, or owners.
+Classify material risk before choosing a workflow; user wording never lowers an observed floor.
 
-Do not create a plan merely because this skill was mentioned in surrounding
-documentation. The user must invoke Specs or ask for durable planning.
+- `critical`: auth/secrets/privacy; destructive/irreversible work or possible data loss/corruption; money/privilege/safety; production-state mutation.
+- `elevated`: cross-component contracts, compatibility, concurrency, external integration, or installed/runtime behavior.
+- `routine`: only when no elevated or critical signal applies.
+
+Work directly only when the cause and change are clear, isolated, reversible,
+`routine`, and likely limited to one or two files. Route unresolved user-owned
+observable choices to C1/C2 first; after they settle, route material competing
+technical designs through Brainstorm. Split three or more independent
+subsystems; otherwise use one Specs packet for any material work that does not qualify for direct work or Brainstorm-only exploration. A subsystem is independent only when its outcome, boundary, and verification/deployment path can move through the lifecycle separately.
+
+Do not create a plan merely because documentation mentions this skill; the user must invoke Specs or ask for durable planning.
 
 ## The three human gates
 
@@ -31,9 +35,7 @@ documentation. The user must invoke Specs or ask for durable planning.
 | C2 — Findings | after adversarial review | accept, reject, or revise each deduplicated finding |
 | C3 — Done | after execution | accept completion from current command output and receipts |
 
-Ask once at each gate. Do not ask for routine implementation choices between
-the gates. If new evidence invalidates the scope, return to C1 instead of
-silently expanding it.
+Ask once at each gate. Do not ask for routine implementation choices between them. New evidence that invalidates scope returns to C1.
 
 ## Primary output layout
 
@@ -46,59 +48,44 @@ specs/<feature>/
 └── task-02-<slug>.md
 ```
 
-Task files are flat beside `plan.md`. Do not create a nested task directory.
-Use safe lowercase feature and task slugs. Read
-[`references/templates.md`](references/templates.md) before authoring these
-files.
+Task files are flat beside `plan.md`. Do not create a nested task directory. Use safe lowercase slugs and read [`references/templates.md`](references/templates.md) first.
 
 ## Flow
 
 ### 1. Challenge scope, then open C1
 
-Inspect the repository before drafting. Answer three questions with current
-`path:line` evidence:
+Inspect the repository before drafting. Answer three questions with current `path:line` evidence:
 
 1. What already exists and can be reused?
 2. What is the smallest change set that delivers the requested outcome?
-3. What signals expansion: more than eight touched files, more than two new
-   services/classes, or more than three independent work groups?
+3. What signals expansion: more than eight touched files, more than two new services/classes, or three or more independently deliverable subsystems?
 
 Present the answers and ask the user to EXPAND, KEEP, or CUT. Record the chosen
 scope and explicit exclusions in `plan.md`.
 
 ### 2. Write the plan and task packets
 
-Keep `plan.md` as the short index: C1 decision, EARS acceptance criteria,
-explicit exclusions, and a task table. Every acceptance criterion receives a
-stable ID, and every task row lists the criteria it satisfies.
+Keep `plan.md` as the short index: C1 decision, EARS criteria, exclusions, and task table. Give every criterion a stable ID mapped by task rows.
 
-Make each task small enough for one owner to hold in one reading: one outcome,
-normally no more than about five owned files, explicit dependencies, measurable
-acceptance, and a runnable verification command. A task must deliver usable
-behavior; do not create preparation-only tasks.
+For a Specs route, persist the canonical `## Coverage profile` from
+`references/templates.md`: one `CP-NN` row per observable outcome; tasks reference IDs instead of copying it.
 
-Author exact task state, not prose readiness. `pending` means semantically ready
-for the dependency-aware queue. Use `blocked` while a C1/C2 decision, an
-accepted finding, or `UNKNOWN` closure remains open. A named task dependency
-alone does not change `pending` to `blocked`; the resolver derives which pending
-task is next. Change `blocked` to `pending` only after current evidence closes
-every non-dependency blocker; keep pre-execution Receipts empty.
+Each task has one usable outcome, normally at most about five owned files, explicit dependencies, measurable acceptance, and a runnable verification command; no preparation-only tasks.
 
-When an outcome is uncertain, write a question rather than guessing. When a
-rule remains ambiguous, add two or three concrete examples and resolve the rule
-at C1 or C2.
+Author exact state: `pending` means semantically ready for the dependency-aware queue.
+Use `blocked` while a C1/C2 decision, accepted finding, or `UNKNOWN` closure remains
+open. Dependencies alone do not change `pending`; the resolver queues them. Promote only after current evidence closes every non-dependency blocker; keep pre-execution Receipts empty.
+
+`Required proof` is planned, not executed evidence. Unknown command/caller/environment
+reachability blocks `pending`; known unrun proof does not. Missing, failed, or unavailable
+required evidence blocks `done`/C3; levels never promote. Rederive affected CP rows after accepted scope, outcome, criteria, ownership, dependency, risk, or proof deltas, before status.
+Source/static checks prove the written contract, not live-model adherence.
 
 ### 3. Review adversarially, then open C2
 
-Read [`references/review.md`](references/review.md) and run its fresh-context
-review. Every finding needs a reproducible `path:line` citation and a concrete
-failure scenario. Deduplicate, rank, and cap the list at 15.
+Read [`references/review.md`](references/review.md) and run its fresh-context review. Require reproducible `path:line` plus a failure scenario; deduplicate, rank, and cap at 15.
 
-Ask the user to accept, reject, or revise each finding. Apply only accepted
-decisions. After every plan edit, run the consistency sweep across all plan and
-task files, then rederive every task status rather than only the first candidate.
-Write task dependencies as exact flat task basenames so the queue can derive them.
-Stop after two paper-review rounds; later findings require runtime evidence.
+Ask the user to accept, reject, or revise each finding; apply only accepted decisions. After every edit, sweep all packet files and rederive every status. Dependencies use exact flat task basenames. Stop after two paper rounds; later findings require runtime evidence.
 
 ### 4. Execute one task at a time
 
@@ -127,19 +114,13 @@ it does not invent product approval, review independence, or runtime coverage.
 1. **A1 — Scope once.** Raise scope pressure at C1; reopen only with new proof.
 2. **A2 — Small packets.** One task, one outcome, one owner, one proof command.
 3. **A3 — One fact, one home.** Reference decisions; never copy mutable lists.
-4. **A4 — Files are state.** `plan.md` and flat task files are canonical and
-   hand-editable; indexes are disposable views.
-5. **B1 — Cite the repository.** Codebase claims carry current `path:line`
-   evidence or an explicit `[UNVERIFIED]` marker.
-6. **B2 — Review from fresh context.** The author does not impersonate the
-   independent adversarial reviewer.
-7. **B3 — Sweep after edits.** Search renamed concepts, rejected assumptions,
-   ownership, dependencies, criteria IDs, and copied prose across every file.
-8. **B4 — Stop paper churn.** Two pre-code review rounds maximum; later claims
-   need runtime evidence.
-9. **C1 — State is derived.** Status follows fresh blocker and proof evidence.
-10. **C2 — Rules pay rent.** Add a rule or machine check only when it prevents a
-    cited real incident; reassess rules when the primary model changes.
+4. **A4 — Files are state.** Markdown is canonical; indexes are disposable.
+5. **B1 — Cite the repository.** Use current `path:line` or `[UNVERIFIED]`.
+6. **B2 — Review fresh.** The author does not impersonate the reviewer.
+7. **B3 — Sweep edits.** Reconcile names, decisions, CP rows, ownership, dependencies, criteria, and proof.
+8. **B4 — Stop paper churn.** Two pre-code rounds; later claims need runtime evidence.
+9. **C1 — Derive state.** Status follows fresh blocker and proof evidence.
+10. **C2 — Rules pay rent.** Require a cited failure; reassess for model changes.
 
 ## Machine boundary
 

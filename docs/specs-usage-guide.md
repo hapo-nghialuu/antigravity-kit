@@ -5,13 +5,26 @@ bằng Markdown thuần. Layout chính là `specs/<feature>/plan.md` kèm các f
 `task-NN-<slug>.md` nằm cạnh nó. Luồng mới không dạy registry cũ; phần đó chỉ
 còn ở legacy adapter.
 
-## Khi nào dùng Specs
+## Routing thích ứng theo risk
 
-| Khi nào | Dùng gì |
+Luôn phân loại material risk trước khi chọn workflow; cách người dùng gọi một
+việc là “nhỏ” hoặc “routine” không được hạ risk floor đã quan sát.
+
+| Route | Điều kiện |
 |---|---|
-| Chỉ 1-2 file, rõ nguyên nhân, reversible, low-risk | Làm trực tiếp |
-| Chạm nhiều component, có lựa chọn product/architecture, hoặc cần nhiều task | Dùng `hapo:specs` |
-| Cần hỏi scope, evidence, hoặc review trước khi code | Dùng `hapo:specs` |
+| Làm trực tiếp | Chỉ khi cause và change đều clear, isolated, reversible, `routine`, và likely giới hạn trong một hoặc hai file |
+| C1/C2 | Còn user-owned observable choice; hỏi và giữ phần bị ảnh hưởng ở `blocked` |
+| Brainstorm | Có material competing technical designs, sau khi user-owned choices đã chốt |
+| Một Specs packet | Material work không đủ điều kiện Direct và không phải Brainstorm-only exploration |
+| Split Specs | Có từ ba independent subsystem trở lên; mỗi subsystem có outcome, boundary và verification/deployment path tự đi qua lifecycle |
+
+Risk floor tối thiểu:
+
+- `critical`: auth/secrets/privacy; destructive/irreversible hoặc nguy cơ mất,
+  hỏng dữ liệu; money/privilege/safety; production-state mutation.
+- `elevated`: cross-component contract, compatibility, concurrency, external
+  integration, hoặc installed/runtime behavior.
+- `routine`: chỉ khi không có signal `critical` hay `elevated`.
 
 ## Ba cổng quyết định
 
@@ -53,11 +66,63 @@ specs/<feature>/
 - EARS acceptance criteria có ID ổn định.
 - Bảng task: mỗi criterion phải map tới ít nhất một task và một proof command.
 
+## Coverage profile
+
+Một Specs route giữ đúng một bảng canonical trong `plan.md`, mỗi row là một
+externally observable outcome:
+
+| ID | Outcome | Change kinds | Material surfaces | Ambiguity/action | Risk/evidence | Required proof |
+|---|---|---|---|---|---|---|
+| CP-01 | Kết quả người dùng hoặc hệ thống quan sát được | Mọi kind liên quan | Mọi surface material | State và action | Risk floor và evidence | Tập `source`/`installed`/`live` cần chứng minh |
+
+Change kinds là tập nhiều giá trị; kind hoặc surface chưa có tên dùng
+`other:<verbatim>` thay vì bị bỏ qua. Mỗi task có `## Coverage` và chỉ tham
+chiếu các `CP-NN` mình sở hữu; không copy profile sang task. Obligations chỉ
+union trong affected rows/tasks. Sau scope, outcome, criteria, ownership,
+dependency, risk hoặc proof delta đã được chấp nhận, rederive affected CP rows
+trước khi derive task status.
+
+## Ambiguity và task status
+
+| State | Hành động bắt buộc | Hệ quả status |
+|---|---|---|
+| `none` | Tiếp tục | Có thể vào `pending` khi các blocker khác đã đóng |
+| `examples-needed` | Thêm ví dụ chỉ để làm rõ rule đã quyết định; nếu ví dụ đổi observable behavior thì promote sang `decision-needed` | Không tự chọn product outcome |
+| `decision-needed` | Hỏi người dùng tại C1/C2 | Affected task giữ `blocked` |
+| `design-needed` | Sau khi user-owned decision đã chốt, chuyển material competing designs sang Brainstorm | Chưa author implementation choice trong task |
+
+`pending` nghĩa là semantic contract và reachability đã biết, chưa có nghĩa
+proof đã chạy. `done` chỉ hợp lệ khi required execution evidence hiện tại PASS
+và inline Receipt canonical đầy đủ.
+
 ### `task-NN-<slug>.md`
 
 - Một `Status:` duy nhất.
 - Một outcome, một owner, một verification plan.
+- Một `## Coverage` tham chiếu chính xác các `CP-NN` của task.
 - Một canonical `## Receipt` ở cuối file khi task đã done.
+
+## Proof lifecycle
+
+`Required proof` trong CP row là planned level set, không phải evidence đã chạy.
+Với từng level cần thiết, task map named probe và reachability tương ứng; một
+command có thể chạy nhiều level probes nếu từng probe được nêu rõ.
+
+- `UNKNOWN` command/caller/environment reachability giữ task ở `blocked`.
+- Known nhưng chưa chạy required proof vẫn có thể ở `pending`.
+- Missing, failed hoặc unavailable required evidence chặn `done` và C3.
+- `source`, `installed` và `live` độc lập; PASS ở level này không promote level
+  khác. Source/static checks chỉ chứng minh written contract, không chứng minh
+  live-model adherence.
+
+## Structural speed và wall-clock
+
+Direct gate, một CP row cho mỗi outcome, affected-row union, giới hạn paper
+review và split theo independent subsystem giúp giảm ceremony theo cấu trúc.
+Chúng không phải số đo thời gian. CafeKit chưa đo wall-clock generation time và
+không công bố SLA cho Specs. Việc đo thời gian thuộc packet riêng
+`specs/specs-session-timing-benchmark/plan.md`; kết quả chỉ được ghi sau một
+benchmark run có evidence.
 
 ### Receipt canonical
 

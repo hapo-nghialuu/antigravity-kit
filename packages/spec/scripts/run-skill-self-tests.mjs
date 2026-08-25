@@ -185,13 +185,25 @@ function markdownBetweenHeadings(content, startHeading, endHeading) {
 }
 
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
+  ["Interaction/UI", "entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior"],
   ["API/CLI", "entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility"],
-  ["Schema", "version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration"],
-  ["State/concurrency", "initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery"],
+  ["Data/schema", "authority/storage/transaction; version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration"],
+  ["Async/state", "initial/terminal states; event + guard + effect + next + error; ordering/concurrency; duplicate/retry; writer/lock acquire/contention/release; cancellation; rollback/recovery"],
   ["Filesystem/security", "authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup"],
+  ["Runtime/deploy", "config/env/flags; registration/packaging; OS/arch; rollout/rollback; health/logging; operator recovery"],
   ["Time/retention", "clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery"],
+  ["AI/model", "provider/model/prompt/tool schema; nondeterminism/bounds; safety/privacy; fallback; cost/token limit; eval oracle"],
   ["Integration/proof", "caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle"],
 ];
+
+function boundaryTableHasRequiredRows(table) {
+  const [header, ...rows] = table;
+  const labels = rows.map((row) => row[0]);
+  return JSON.stringify(header || []) === JSON.stringify(["Boundary", "Required contract when material"])
+    && new Set(labels).size === labels.length
+    && IMPLEMENTATION_READINESS_BOUNDARY_ROWS.every((expected) =>
+      rows.some((row) => JSON.stringify(row) === JSON.stringify(expected)));
+}
 
 const IMPLEMENTATION_READINESS_CLAUSES = {
   noInvention: "Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.",
@@ -200,15 +212,16 @@ const IMPLEMENTATION_READINESS_CLAUSES = {
   proofPlanLines: [
     "- Command: `<exact runnable command>`",
     "- Named probe: <existing concrete probe/test/hook ID; never only a suite label>",
-    "- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>",
+    "- Reachability: <known command/caller/environment per required level; `UNKNOWN` only when the path cannot yet be established>",
     "- Oracle: <externally observable success or failure>",
     "- Counterexample: <material alternative behavior that must make this proof fail>",
     "- Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>",
   ],
   proofTrace: "Trace `Command → Named probe → Reachability → Oracle`.",
-  namedProbeOwnership: "Aggregate suites\nname the owning concrete probe.",
-  proofLevelSeparation: "Proof at `source`/`installed`/`live` stays\nseparate; one level never promotes another.",
+  namedProbeOwnership: "Aggregate suites name the\nowning concrete probe.",
+  proofLevelSeparation: "Levels stay separate and never promote one another.",
   disposableTemplateControls: "Run mutation or destructive\nnegative controls only on disposable copies under a verified temporary root,\nnever tracked worktree or canonical source bytes.",
+  proofLevelMapping: "For every required level in each referenced CP row, map its named probe and\nreachability here; one command may own several explicitly named level probes.",
   disposableReviewControls: "Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.",
   failureSemantics: "`Crash` means abrupt unhandled termination before the claimed catch point; a catchable failure returns/raises an error or exits nonzero. Never use them interchangeably.",
   privacyIdentifiers: "Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.",
@@ -245,15 +258,10 @@ function implementationReadinessContractIssues(input) {
     input.templates,
     "No-invention and conditional boundary contracts",
   );
-  const expectedBoundaryTable = [
-    ["Boundary", "Required contract when material"],
-    ...IMPLEMENTATION_READINESS_BOUNDARY_ROWS,
-  ];
   if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.materialDefinition)
     || !authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices)
-    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 6
-    || boundaryTable.length !== expectedBoundaryTable.length
-    || JSON.stringify(boundaryTable) !== JSON.stringify(expectedBoundaryTable)) {
+    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 9
+    || !boundaryTableHasRequiredRows(boundaryTable)) {
     issues.add("boundary-contract");
   }
 
@@ -269,6 +277,7 @@ function implementationReadinessContractIssues(input) {
     IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
     IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
     IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+    IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping,
   ].map(normalizeMarkdownWhitespace);
   const reviewNegativeControls = normalizeMarkdownWhitespace(
     markdownSectionUnderHeading(input.review, "B2 — fresh-context red team"),
@@ -372,16 +381,23 @@ async function runImplementationReadinessContractTests() {
       from: IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices,
       to: "For every required row, describe the listed choices generally.",
     },
+    boundaryMutation("interaction-accessibility", "Interaction/UI", [
+      ["input/focus/keyboard; ", ""],
+      ["accessibility; ", ""],
+    ]),
     boundaryMutation("api-success-and-error-semantics", "API/CLI", [
       ["success output; ", ""],
       ["error/status/exit; ", ""],
     ]),
-    boundaryMutation("schema-shape-and-unknown-fields", "Schema", [
+    boundaryMutation("schema-shape-and-unknown-fields", "Data/schema", [
       ["exact keys/nesting/types; ", ""],
       ["unknown-field behavior; ", ""],
     ]),
-    boundaryMutation("state-lock-lifecycle", "State/concurrency", [
-      ["writer/lock acquire/contention/release", "writer/lock"],
+    boundaryMutation("schema-enum-and-format", "Data/schema", [
+      ["enum/format/", ""],
+    ]),
+    boundaryMutation("state-lock-lifecycle", "Async/state", [
+      ["writer/lock acquire/contention/release; ", "writer/lock; "],
     ]),
     boundaryMutation("filesystem-segment-grammar", "Filesystem/security", [
       ["trusted/untrusted segment grammar; ", ""],
@@ -389,10 +405,18 @@ async function runImplementationReadinessContractTests() {
     boundaryMutation("filesystem-stale-lock-reclaim", "Filesystem/security", [
       ["lock/stale reclaim; ", ""],
     ]),
+    boundaryMutation("runtime-rollout-and-recovery", "Runtime/deploy", [
+      ["rollout/rollback; ", ""],
+      ["operator recovery", ""],
+    ]),
     boundaryMutation("retention-clock-and-endpoints", "Time/retention", [
       ["clock source; ", ""],
       ["unit/precision/timezone; ", ""],
       ["endpoints and inclusion/comparator; ", ""],
+    ]),
+    boundaryMutation("ai-model-safety-and-eval", "AI/model", [
+      ["safety/privacy; ", ""],
+      ["eval oracle", ""],
     ]),
     boundaryMutation("proof-level-partition", "Integration/proof", [
       ["proof level (`source`/`installed`/`live`)", "proof level"],
@@ -438,6 +462,13 @@ async function runImplementationReadinessContractTests() {
       source: "review",
       from: IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls,
       to: "Run mutation or destructive negative controls against the available project copy.",
+    },
+    {
+      name: "required-proof-level-mapping",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping,
+      to: "Map one required proof level to one probe; other levels may remain implicit.",
     },
     {
       name: "artifact-path-and-digest-or-ephemeral",
@@ -510,16 +541,424 @@ async function runImplementationReadinessContractTests() {
     }
   }
 
+  const integrationRow = IMPLEMENTATION_READINESS_BOUNDARY_ROWS
+    .find(([label]) => label === "Integration/proof");
+  const integrationLine = `| ${integrationRow.join(" | ")} |`;
+  const extendedTemplates = baseline.templates.replace(
+    integrationLine,
+    `${integrationLine}\n| other:domain-specific | task-specific material choices and observable oracle |`,
+  );
+  if (extendedTemplates === baseline.templates
+    || implementationReadinessContractIssues({ ...baseline, templates: extendedTemplates }).length > 0) {
+    fail("an additional other:<verbatim> material boundary must remain valid");
+  }
+
   console.log(`✔ hapo:specs implementation-readiness checker rejects ${mutations.length} gate-specific source mutations`);
   return mutations.length + 1;
 }
 
+const ADAPTIVE_COVERAGE_PROFILE_HEADER = [
+  "ID", "Outcome", "Change kinds", "Material surfaces", "Ambiguity/action",
+  "Risk/evidence", "Required proof",
+];
+
+const ADAPTIVE_COVERAGE_PROFILE_ROW = [
+  "CP-01", "<externally observable outcome>", "<all kinds>", "<all material surfaces>",
+  "<state + action>", "<level + evidence>", "<source/installed/live set>",
+];
+
+const ADAPTIVE_COVERAGE_AMBIGUITY_ROWS = [
+  ["State", "Required action"],
+  ["`none`", "proceed"],
+  ["`examples-needed`", "add two or three examples only for an already decided rule; promote to `decision-needed` if an example changes observable behavior"],
+  ["`decision-needed`", "ask the user at C1/C2 and keep affected tasks blocked"],
+  ["`design-needed`", "after user-owned decisions settle, route material competing technical designs through Brainstorm"],
+];
+
+const ADAPTIVE_REVIEWER_ROWS = [
+  ["Groups", "Reviewers", "Roles", "Claim budget"],
+  ["1-2", "2", "Fact Checker plus all matching material lenses", "about 5 per group"],
+  ["3-5", "3", "Fact Checker plus all matching material lenses", "about 10 per group"],
+  ["6+", "4", "Fact Checker plus all matching material lenses", "at least 15 total"],
+];
+
+const ADAPTIVE_GUIDE_ROUTE_ROWS = [
+  ["Route", "Điều kiện"],
+  ["Làm trực tiếp", "Chỉ khi cause và change đều clear, isolated, reversible, `routine`, và likely giới hạn trong một hoặc hai file"],
+  ["C1/C2", "Còn user-owned observable choice; hỏi và giữ phần bị ảnh hưởng ở `blocked`"],
+  ["Brainstorm", "Có material competing technical designs, sau khi user-owned choices đã chốt"],
+  ["Một Specs packet", "Material work không đủ điều kiện Direct và không phải Brainstorm-only exploration"],
+  ["Split Specs", "Có từ ba independent subsystem trở lên; mỗi subsystem có outcome, boundary và verification/deployment path tự đi qua lifecycle"],
+];
+
+const ADAPTIVE_GUIDE_AMBIGUITY_ROWS = [
+  ["State", "Hành động bắt buộc", "Hệ quả status"],
+  ["`none`", "Tiếp tục", "Có thể vào `pending` khi các blocker khác đã đóng"],
+  ["`examples-needed`", "Thêm ví dụ chỉ để làm rõ rule đã quyết định; nếu ví dụ đổi observable behavior thì promote sang `decision-needed`", "Không tự chọn product outcome"],
+  ["`decision-needed`", "Hỏi người dùng tại C1/C2", "Affected task giữ `blocked`"],
+  ["`design-needed`", "Sau khi user-owned decision đã chốt, chuyển material competing designs sang Brainstorm", "Chưa author implementation choice trong task"],
+];
+
+const ADAPTIVE_GUIDE_CLAUSES = {
+  riskFloor: "Luôn phân loại material risk trước khi chọn workflow; cách người dùng gọi một việc là “nhỏ” hoặc “routine” không được hạ risk floor đã quan sát.",
+  critical: "`critical`: auth/secrets/privacy; destructive/irreversible hoặc nguy cơ mất, hỏng dữ liệu; money/privilege/safety; production-state mutation.",
+  elevated: "`elevated`: cross-component contract, compatibility, concurrency, external integration, hoặc installed/runtime behavior.",
+  profileReference: "Mỗi task có `## Coverage` và chỉ tham chiếu các `CP-NN` mình sở hữu; không copy profile sang task.",
+  openCoverage: "Change kinds là tập nhiều giá trị; kind hoặc surface chưa có tên dùng `other:<verbatim>` thay vì bị bỏ qua.",
+  plannedProof: "`Required proof` trong CP row là planned level set, không phải evidence đã chạy.",
+  unknownBlocks: "`UNKNOWN` command/caller/environment reachability giữ task ở `blocked`.",
+  knownUnrun: "Known nhưng chưa chạy required proof vẫn có thể ở `pending`.",
+  executionBlocks: "Missing, failed hoặc unavailable required evidence chặn `done` và C3.",
+  proofSeparation: "`source`, `installed` và `live` độc lập; PASS ở level này không promote level khác.",
+  staticLimit: "Source/static checks chỉ chứng minh written contract, không chứng minh live-model adherence.",
+  timingBoundary: "CafeKit chưa đo wall-clock generation time và không công bố SLA cho Specs.",
+  timingPacket: "`specs/specs-session-timing-benchmark/plan.md`",
+};
+
+function adaptiveUsageGuideIssues(content) {
+  const issues = new Set();
+  const normalized = normalizeMarkdownWhitespace(content);
+  const has = (clause) => normalized.includes(normalizeMarkdownWhitespace(clause));
+  const routeTable = markdownTableUnderHeading(content, "Routing thích ứng theo risk");
+  if (JSON.stringify(routeTable) !== JSON.stringify(ADAPTIVE_GUIDE_ROUTE_ROWS)
+    || !has(ADAPTIVE_GUIDE_CLAUSES.riskFloor)
+    || !has(ADAPTIVE_GUIDE_CLAUSES.critical)
+    || !has(ADAPTIVE_GUIDE_CLAUSES.elevated)) {
+    issues.add("routing-and-risk");
+  }
+
+  const profileTable = markdownTableUnderHeading(content, "Coverage profile");
+  if (JSON.stringify(profileTable[0] || []) !== JSON.stringify(ADAPTIVE_COVERAGE_PROFILE_HEADER)
+    || profileTable.length !== 2 || profileTable[1].length !== ADAPTIVE_COVERAGE_PROFILE_HEADER.length
+    || !has(ADAPTIVE_GUIDE_CLAUSES.profileReference)
+    || !has(ADAPTIVE_GUIDE_CLAUSES.openCoverage)
+    || !normalized.includes("affected rows/tasks")) {
+    issues.add("coverage-profile");
+  }
+
+  const ambiguityTable = markdownTableUnderHeading(content, "Ambiguity và task status");
+  if (JSON.stringify(ambiguityTable) !== JSON.stringify(ADAPTIVE_GUIDE_AMBIGUITY_ROWS)
+    || !normalized.includes("`pending` nghĩa là semantic contract và reachability đã biết")
+    || !normalized.includes("`done` chỉ hợp lệ khi required execution evidence hiện tại PASS")) {
+    issues.add("ambiguity-and-status");
+  }
+
+  for (const clause of [
+    ADAPTIVE_GUIDE_CLAUSES.plannedProof,
+    ADAPTIVE_GUIDE_CLAUSES.unknownBlocks,
+    ADAPTIVE_GUIDE_CLAUSES.knownUnrun,
+    ADAPTIVE_GUIDE_CLAUSES.executionBlocks,
+    ADAPTIVE_GUIDE_CLAUSES.proofSeparation,
+    ADAPTIVE_GUIDE_CLAUSES.staticLimit,
+  ]) {
+    if (!has(clause)) issues.add("proof-lifecycle");
+  }
+
+  const numericTiming = /(?:[≤<>]=?\s*)?\d+(?:[.,]\d+)?\s*(?:ms|milliseconds?|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|giây|phút|giờ)\b/i;
+  const isoTiming = /\bP(?:(?:\d+(?:[.,]\d+)?[YMWD])+(?:T(?:\d+(?:[.,]\d+)?[HMS])+)?|T(?:\d+(?:[.,]\d+)?[HMS])+)\b/i;
+  if (!has(ADAPTIVE_GUIDE_CLAUSES.timingBoundary)
+    || !has(ADAPTIVE_GUIDE_CLAUSES.timingPacket)
+    || numericTiming.test(content)
+    || isoTiming.test(content)) {
+    issues.add("timing-claim");
+  }
+  return [...issues].sort();
+}
+
+function adaptiveUsageGuideContractValid(content) {
+  if (adaptiveUsageGuideIssues(content).length > 0) return false;
+  const mutations = [
+    [ADAPTIVE_GUIDE_ROUTE_ROWS[5].join(" | "), "Split Specs | Một monolithic packet cho mọi subsystem", "routing-and-risk"],
+    ["`critical`: auth/secrets/privacy", "`critical`: chỉ production deployment", "routing-and-risk"],
+    ["| ID | Outcome | Change kinds | Material surfaces | Ambiguity/action | Risk/evidence | Required proof |", "| ID | Outcome | Change kinds | Material surfaces | Risk/evidence | Required proof |", "coverage-profile"],
+    ["Mỗi task có `## Coverage`", "Mỗi task copy toàn bộ Coverage profile", "coverage-profile"],
+    [ADAPTIVE_GUIDE_AMBIGUITY_ROWS[2].join(" | "), "`examples-needed` | Dùng ví dụ để tự chọn observable behavior | Có thể vào `pending`", "ambiguity-and-status"],
+    [ADAPTIVE_GUIDE_CLAUSES.knownUnrun, "Known nhưng chưa chạy required proof giữ task ở `blocked`.", "proof-lifecycle"],
+    ["`source`, `installed` và `live` độc lập", "`source` PASS tự động promote `installed` và `live`", "proof-lifecycle"],
+    ["CafeKit chưa đo wall-clock generation time", "CafeKit công bố SLA generation cho Specs", "timing-claim"],
+  ];
+  for (const [from, to, expected] of mutations) {
+    const anchor = content.indexOf(from);
+    if (anchor < 0 || content.indexOf(from, anchor + from.length) >= 0) return false;
+    const mutated = `${content.slice(0, anchor)}${to}${content.slice(anchor + from.length)}`;
+    if (!adaptiveUsageGuideIssues(mutated).includes(expected)) return false;
+  }
+  for (const timingClaim of [
+    "Specs hoàn thành trong 5 phút.",
+    "SLA p95 ≤ 300 s.",
+    "SLA: 5m.",
+    "SLA PT5M.",
+    "SLA P3D.",
+  ]) {
+    if (!adaptiveUsageGuideIssues(`${content}\n${timingClaim}\n`).includes("timing-claim")) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const ADAPTIVE_COVERAGE_CLAUSES = {
+  riskFirst: "Classify material risk before choosing a workflow; user wording never lowers an observed floor.",
+  criticalFloor: "`critical`: auth/secrets/privacy; destructive/irreversible work or possible data loss/corruption; money/privilege/safety; production-state mutation.",
+  elevatedFloor: "`elevated`: cross-component contracts, compatibility, concurrency, external integration, or installed/runtime behavior.",
+  frontmatterGate: "skip only when a change is clear, isolated, reversible, routine, and likely limited to one or two files.",
+  directGate: "Work directly only when the cause and change are clear, isolated, reversible,\n`routine`, and likely limited to one or two files.",
+  splitRoute: "Split three or more independent\nsubsystems; otherwise use one Specs packet for any material work that does not qualify for direct work or Brainstorm-only exploration.",
+  independentSubsystem: "A subsystem is independent only when its outcome, boundary, and verification/deployment path can move through the lifecycle separately.",
+  profileAuthority: "For a Specs route, `plan.md` owns one `## Coverage profile` row per externally observable outcome; direct and Brainstorm-only routes do not persist it.",
+  openKinds: "Change kinds are multi-valued (`add`, `modify`, `fix`, `refactor`, `remove`, `migrate`, `integrate`), and unfamiliar kinds or surfaces use `other:<verbatim>` rather than disappearing.",
+  scopedUnion: "Each task references its CP IDs; authoring, review, edge, and proof obligations union only inside affected rows/tasks.",
+  profileRederivation: "Rederive affected CP rows after any accepted scope, outcome, criteria, ownership, dependency, risk, or proof delta before task status.",
+  plannedProof: "`Required proof` is a planned level set, not execution\nevidence: known but unrun proof may be `pending`; `UNKNOWN` reachability blocks\n`pending`; missing, failed, or unavailable required evidence blocks `done`/C3.",
+  proofSeparation: "Levels stay separate and never promote one another.",
+  liveLimit: "Source/static checks prove the written contract, not live-model adherence.",
+  specMakerAuthority: "they are the canonical risk and coverage authority. Do not duplicate\ntheir taxonomy here.",
+  specMakerAmbiguity: "Apply the canonical ambiguity action; examples never decide observable behavior.",
+  specMakerRoute: "Apply their risk-first route before C1 and stop when the\nrequest qualifies for direct work; hand off when it requires Brainstorm-only exploration.",
+  reviewRisk: "Keep Fact Checker as the baseline. Assign every remaining material CP risk to a\nnamed reviewer lens; a critical row includes both relevant security-adversary and\nfailure-mode coverage, and nonmaterial lenses are not added.",
+  reviewCapacity: "Reviewer count is fixed by the table, not lens count. Give each reviewer a distinct primary lens; when material lenses exceed reviewers, combine related named lenses on one reviewer and keep every material lens assigned.",
+};
+
+const SPECS_BUNDLE_FILES = [
+  "src/claude/skills/specs/SKILL.md",
+  "src/claude/skills/specs/references/review.md",
+  "src/claude/skills/specs/references/templates.md",
+  "src/claude/skills/specs/templates/design.md",
+  "src/claude/skills/specs/templates/requirements-init.md",
+  "src/claude/skills/specs/templates/requirements.md",
+  "src/claude/skills/specs/templates/research.md",
+  "src/claude/skills/specs/templates/spec-state.json",
+  "src/claude/skills/specs/templates/task.md",
+];
+
+const ADAPTIVE_OWNED_BASELINE_LINES = new Map([
+  ["src/claude/skills/specs/SKILL.md", 170],
+  ["src/claude/skills/specs/references/review.md", 124],
+  ["src/claude/skills/specs/references/templates.md", 202],
+]);
+
+function adaptiveCoverageContractIssues(input) {
+  const expectedKeys = ["review", "skill", "specMaker", "templates"];
+  const keys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)
+    || expectedKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("adaptive-coverage checker expects skill, specMaker, templates, and review UTF-8 strings");
+  }
+
+  const issues = new Set();
+  const skill = normalizeMarkdownWhitespace(input.skill);
+  const templates = normalizeMarkdownWhitespace(input.templates);
+  const review = normalizeMarkdownWhitespace(input.review);
+  const specMaker = normalizeMarkdownWhitespace(input.specMaker);
+  const has = (source, clause) => source.includes(normalizeMarkdownWhitespace(clause));
+
+  const riskClauses = [
+    ADAPTIVE_COVERAGE_CLAUSES.riskFirst,
+    ADAPTIVE_COVERAGE_CLAUSES.criticalFloor,
+    ADAPTIVE_COVERAGE_CLAUSES.elevatedFloor,
+    ADAPTIVE_COVERAGE_CLAUSES.frontmatterGate,
+    ADAPTIVE_COVERAGE_CLAUSES.directGate,
+    ADAPTIVE_COVERAGE_CLAUSES.splitRoute,
+    ADAPTIVE_COVERAGE_CLAUSES.independentSubsystem,
+  ];
+  const riskDowngrade = /\buser\b.{0,80}\b(?:may|can)\b.{0,80}\blower\b.{0,40}\brisk\b/i;
+  const riskyDirectOverride = /\b(?:exception|even if|regardless)\b.{0,160}\b(?:auth|secret|privacy|destructive|irreversible|data loss|corruption|production[- ]state|critical)\b.{0,160}\b(?:direct|work directly|go direct)\b/i;
+  if (riskClauses.some((clause) => !has(skill, clause))
+    || riskDowngrade.test(skill) || riskyDirectOverride.test(skill)) {
+    issues.add("risk-first-routing");
+  }
+
+  const profileTable = markdownTableUnderHeading(input.templates, "Coverage profile");
+  const profileHeadingCount = (input.templates.match(/^## Coverage profile\s*$/gm) || []).length;
+  const taskReferencesCoverage = /## Coverage\s*\n- <exact `CP-NN` IDs owned by this task>/.test(input.templates);
+  if (JSON.stringify(profileTable[0] || []) !== JSON.stringify(ADAPTIVE_COVERAGE_PROFILE_HEADER)
+    || profileHeadingCount !== 1 || profileTable.length !== 2
+    || JSON.stringify(profileTable[1]) !== JSON.stringify(ADAPTIVE_COVERAGE_PROFILE_ROW)
+    || !taskReferencesCoverage
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.profileAuthority)
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.openKinds)) {
+    issues.add("coverage-profile-shape");
+  }
+
+  const ambiguityTable = markdownTableUnderHeading(input.templates, "Example Mapping rule");
+  if (JSON.stringify(ambiguityTable) !== JSON.stringify(ADAPTIVE_COVERAGE_AMBIGUITY_ROWS)
+    || !templates.includes("retention of 30 versus 90 days is `decision-needed`")) {
+    issues.add("ambiguity-actions");
+  }
+
+  const globalCeremony = /\b(?:critical|security|failure|proof|review|edge|obligations?|lenses?)\b[^.!?\n]{0,120}\b(?:union|apply|spread|require)\w*\b[^.!?\n]{0,120}\b(?:all|every)\s+(?:cp\s+)?(?:rows?|outcomes?|tasks?)\b|\b(?:union|apply|spread)\w*\b[^.!?\n]{0,120}\b(?:all|every)\s+(?:cp\s+)?(?:rows?|outcomes?|tasks?)\b/i;
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.scopedUnion)
+    || globalCeremony.test(templates)
+    || !review.includes("nonmaterial lenses are not added")) {
+    issues.add("scoped-coverage");
+  }
+
+  const rederiveSources = [templates, skill, specMaker, review];
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.profileRederivation)
+    || rederiveSources.some((source) => !/rederive affected cp rows?/.test(source.toLowerCase()))) {
+    issues.add("profile-lifecycle");
+  }
+
+  const statusMatrix = markdownTableUnderHeading(input.templates, "Status matrix");
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.plannedProof)
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.proofSeparation)
+    || !has(templates, IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping)
+    || !has(skill, ADAPTIVE_COVERAGE_CLAUSES.liveLimit)
+    || !statusMatrix.some((row) => row[0] === "accepted finding open or `UNKNOWN` reachability" && row[1] === "`blocked`")) {
+    issues.add("proof-lifecycle");
+  }
+
+  const reviewerRowsPresent = ADAPTIVE_REVIEWER_ROWS.every((row) =>
+    input.review.includes(`| ${row.join(" | ")} |`));
+  if (!has(review, ADAPTIVE_COVERAGE_CLAUSES.reviewRisk)
+    || !has(review, ADAPTIVE_COVERAGE_CLAUSES.reviewCapacity)
+    || !reviewerRowsPresent) {
+    issues.add("reviewer-routing");
+  }
+  if (!specMaker.includes("skills/specs/SKILL.md")
+    || !specMaker.includes("skills/specs/references/templates.md")
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerAuthority)
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerAmbiguity)
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerRoute)) {
+    issues.add("spec-maker-authority");
+  }
+
+  const boundaryTable = markdownTableUnderHeading(input.templates, "No-invention and conditional boundary contracts");
+  if (!boundaryTableHasRequiredRows(boundaryTable)) {
+    issues.add("adaptive-boundary-lenses");
+  }
+  return [...issues].sort();
+}
+
+async function specsBundleLineDeltas() {
+  const rows = [];
+  for (const relativePath of SPECS_BUNDLE_FILES) {
+    const content = await readFile(join(packageRoot, relativePath), "utf8");
+    const lines = content.split("\n");
+    const current = content.endsWith("\n") ? lines.length - 1 : lines.length;
+    const ownedBaseline = ADAPTIVE_OWNED_BASELINE_LINES.get(relativePath);
+    rows.push({
+      relativePath,
+      current,
+      delta: ownedBaseline === undefined ? null : current - ownedBaseline,
+    });
+  }
+  return rows;
+}
+
+async function runAdaptiveCoverageContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] hapo:specs adaptive coverage contract: ${message}`);
+  };
+  const baseline = {
+    skill: await readFile(join(packageRoot, "src/claude/skills/specs/SKILL.md"), "utf8"),
+    specMaker: await readFile(join(packageRoot, "src/claude/agents/spec-maker.md"), "utf8"),
+    templates: await readFile(join(packageRoot, "src/claude/skills/specs/references/templates.md"), "utf8"),
+    review: await readFile(join(packageRoot, "src/claude/skills/specs/references/review.md"), "utf8"),
+  };
+  const baselineIssues = adaptiveCoverageContractIssues(baseline);
+  if (baselineIssues.length > 0) fail(`intact sources returned ${baselineIssues.join(", ")}`);
+
+  const mutations = [
+    ["frontmatter-risk-bypass", "skill", ADAPTIVE_COVERAGE_CLAUSES.frontmatterGate,
+      "skip for any clear one-file or two-file change.", ["risk-first-routing"]],
+    ["destructive-routine-direct", "skill", ADAPTIVE_COVERAGE_CLAUSES.directGate,
+      "Work directly when the change is routine and likely limited to one or two files.", ["risk-first-routing"]],
+    ["destructive-direct-exception", "skill", ADAPTIVE_COVERAGE_CLAUSES.directGate,
+      `${ADAPTIVE_COVERAGE_CLAUSES.directGate} Exception: destructive one-file work labeled routine may go direct.`, ["risk-first-routing"]],
+    ["user-risk-downgrade", "skill", ADAPTIVE_COVERAGE_CLAUSES.riskFirst,
+      `${ADAPTIVE_COVERAGE_CLAUSES.riskFirst} A user may lower critical risk to routine.`, ["risk-first-routing"]],
+    ["four-subsystem-split", "skill", ADAPTIVE_COVERAGE_CLAUSES.splitRoute,
+      "Split four or more independent subsystems; otherwise use one Specs packet for substantial work.", ["risk-first-routing"]],
+    ["forced-single-kind", "templates", ADAPTIVE_COVERAGE_CLAUSES.openKinds,
+      "Choose one primary change kind and ignore unfamiliar kinds or surfaces.", ["coverage-profile-shape"]],
+    ["missing-profile-column", "templates", "| ID | Outcome | Change kinds | Material surfaces | Ambiguity/action | Risk/evidence | Required proof |",
+      "| ID | Outcome | Change kinds | Material surfaces | Risk/evidence | Required proof |", ["coverage-profile-shape"]],
+    ["duplicate-profile-heading", "templates", "## Coverage profile\n",
+      "## Coverage profile\n\n## Coverage profile\n", ["coverage-profile-shape"]],
+    ["truncated-profile-row", "templates", `| ${ADAPTIVE_COVERAGE_PROFILE_ROW.join(" | ")} |`,
+      "| CP-01 | <externally observable outcome> |", ["coverage-profile-shape"]],
+    ["examples-promote-to-design", "templates", `| ${ADAPTIVE_COVERAGE_AMBIGUITY_ROWS[2].join(" | ")} |`,
+      "| `examples-needed` | add examples and promote to `design-needed` if behavior changes |", ["ambiguity-actions"]],
+    ["examples-select-retention", "templates", "retention of 30 versus 90 days is\n`decision-needed`",
+      "retention of 30 versus 90 days may remain\n`examples-needed`", ["ambiguity-actions"]],
+    ["global-critical-ceremony", "templates", ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      "Each task copies its CP values; authoring, review, edge, and proof obligations union across every task.", ["scoped-coverage"]],
+    ["scoped-union-contradiction", "templates", ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      `${ADAPTIVE_COVERAGE_CLAUSES.scopedUnion} Exception: critical proof obligations apply across every CP row.`, ["scoped-coverage"]],
+    ["stale-profile-after-c2", "templates", ADAPTIVE_COVERAGE_CLAUSES.profileRederivation,
+      "Keep existing coverage rows after accepted plan changes.", ["profile-lifecycle"]],
+    ["planned-proof-blocks-start", "templates", ADAPTIVE_COVERAGE_CLAUSES.plannedProof,
+      "`Required proof` is execution evidence: known but unrun proof blocks `pending`; `UNKNOWN` may proceed; missing evidence may still reach `done`/C3.", ["proof-lifecycle"]],
+    ["source-promotes-live", "templates", ADAPTIVE_COVERAGE_CLAUSES.proofSeparation,
+      "Source proof may promote installed and live proof.", ["proof-lifecycle"]],
+    ["unmapped-proof-level", "templates", IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping,
+      "A task may map only one required proof level to its probe.", ["proof-lifecycle"]],
+    ["critical-reviewer-omitted", "review", ADAPTIVE_COVERAGE_CLAUSES.reviewRisk,
+      "Keep Fact Checker as the baseline and choose any remaining reviewer; critical rows need no matching risk role.", ["reviewer-routing", "scoped-coverage"]],
+    ["reviewer-lens-overflow", "review", ADAPTIVE_COVERAGE_CLAUSES.reviewCapacity,
+      "Each reviewer owns exactly one lens; skip excess material lenses when the fixed reviewer count is full.", ["reviewer-routing"]],
+    ["spec-maker-local-taxonomy", "specMaker", ADAPTIVE_COVERAGE_CLAUSES.specMakerAuthority,
+      "this agent owns a separate risk and coverage taxonomy.", ["spec-maker-authority"]],
+    ["spec-maker-examples-decide", "specMaker", ADAPTIVE_COVERAGE_CLAUSES.specMakerAmbiguity,
+      "Use examples to settle every ambiguous observable behavior.", ["spec-maker-authority"]],
+    ["spec-maker-skips-brainstorm", "specMaker", ADAPTIVE_COVERAGE_CLAUSES.specMakerRoute,
+      "Apply the risk-first route before C1 and stop only for direct work.", ["spec-maker-authority"]],
+    ["static-proves-live", "skill", ADAPTIVE_COVERAGE_CLAUSES.liveLimit,
+      "Source/static checks prove live-model adherence.", ["proof-lifecycle"]],
+  ];
+  for (const [name, source, from, to, expected] of mutations) {
+    const anchor = baseline[source].indexOf(from);
+    if (anchor < 0) fail(`${name} mutation anchor is absent from real source`);
+    if (baseline[source].indexOf(from, anchor + from.length) >= 0) {
+      fail(`${name} mutation anchor is not unique in real source`);
+    }
+    const weakened = `${baseline[source].slice(0, anchor)}${to}${baseline[source].slice(anchor + from.length)}`;
+    const actual = adaptiveCoverageContractIssues({ ...baseline, [source]: weakened });
+    if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) {
+      fail(`${name} expected ${JSON.stringify([...expected].sort())} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  const integrationRow = IMPLEMENTATION_READINESS_BOUNDARY_ROWS
+    .find(([label]) => label === "Integration/proof");
+  const integrationLine = `| ${integrationRow.join(" | ")} |`;
+  const validVariants = [
+    ["open material surface", baseline.templates.replace(
+      integrationLine,
+      `${integrationLine}\n| other:domain-specific | task-specific material choices and observable oracle |`,
+    )],
+    ["task CP reference requirement", baseline.templates.replace(
+      ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      `${ADAPTIVE_COVERAGE_CLAUSES.scopedUnion} Require every task to reference a CP row.`,
+    )],
+  ];
+  for (const [name, templates] of validVariants) {
+    if (templates === baseline.templates
+      || adaptiveCoverageContractIssues({ ...baseline, templates }).length > 0) {
+      fail(`${name} must remain valid`);
+    }
+  }
+
+  const deltas = await specsBundleLineDeltas();
+  const total = deltas.reduce((sum, row) => sum + row.current, 0);
+  if (total > 750) fail(`bundle line budget is ${total}/750`);
+  const changed = deltas.filter(({ delta }) => delta !== null && delta !== 0)
+    .map(({ relativePath, delta }) => `${relativePath} ${delta >= 0 ? "+" : ""}${delta}`)
+    .join(", ");
+  console.log(`✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: ${changed}; total ${total}/750`);
+  console.log(`✔ hapo:specs adaptive coverage checker rejects ${mutations.length} semantic weakenings`);
+  return mutations.length + 2;
+}
+
 const PROCESS_TASK_STATUS_CLAUSES = {
   skill: [
-    "`pending` means semantically ready\nfor the dependency-aware queue.",
-    "Use `blocked` while a C1/C2 decision, an\naccepted finding, or `UNKNOWN` closure remains open.",
-    "A named task dependency\nalone does not change `pending` to `blocked`; the resolver derives which pending\ntask is next.",
-    "Change `blocked` to `pending` only after current evidence closes\nevery non-dependency blocker",
+    "`pending` means semantically ready for the dependency-aware queue.",
+    "Use `blocked` while a C1/C2 decision, accepted finding, or `UNKNOWN` closure remains\nopen.",
+    "Dependencies alone do not change `pending`; the resolver queues them.",
+    "Promote only after current evidence closes every non-dependency blocker",
   ],
   templates: [
     "Use only direct-child task basenames or `none` under `## Dependencies`; keep `## Receipt` empty until execution produces canonical proof.",
@@ -536,7 +975,7 @@ const PROCESS_TASK_STATUS_CLAUSES = {
 const PROCESS_TASK_STATUS_MATRIX = [
   ["Status condition", "Persisted state"],
   ["C1/C2 decision open", "`blocked`"],
-  ["accepted finding open or `UNKNOWN`", "`blocked`"],
+  ["accepted finding open or `UNKNOWN` reachability", "`blocked`"],
   ["every non-dependency blocker closed", "`pending`"],
   ["named task dependency not done", "keep `pending`; queue gates it"],
 ];
@@ -1054,6 +1493,7 @@ async function runSpecs21ContractTests() {
 async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
+  const adaptiveCoverageTests = await runAdaptiveCoverageContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -2007,14 +2447,15 @@ async function runStaticSemanticTests() {
         content.includes("measurable threshold or observation"),
     },
     {
-      label: "templates map ambiguous rules through examples instead of guesses",
+      label: "templates route ambiguity without guessing outcomes",
       file: "src/claude/skills/specs/references/templates.md",
       assert: (content) => {
         const normalized = content.replace(/\s+/g, " ");
-        return normalized.includes("When the expected outcome is uncertain, write a question") &&
-          normalized.includes("two or three examples") &&
-          normalized.includes("zero executed tests") &&
-          normalized.includes("earlier session");
+        return normalized.includes("Classify ambiguity in every affected CP row") &&
+          ["`none`", "`examples-needed`", "`decision-needed`", "`design-needed`"]
+            .every((token) => normalized.includes(token)) &&
+          normalized.includes("two or three examples only for an already decided rule") &&
+          normalized.includes("retention of 30 versus 90 days is `decision-needed`");
       },
     },
     {
@@ -2063,9 +2504,9 @@ async function runStaticSemanticTests() {
       assert: (content) => {
         const norm = content.toLowerCase().replace(/\s+/g, " ");
         return norm.includes("one or two files") &&
-          norm.includes("do not create a plan merely because this skill was mentioned") &&
+          norm.includes("do not create a plan merely because documentation mentions this skill") &&
           norm.includes("placeholder or remembered output is not evidence") &&
-          content.includes("Two pre-code review rounds maximum");
+          norm.includes("two pre-code rounds; later claims need runtime evidence");
       },
     },
     {
@@ -2100,6 +2541,11 @@ async function runStaticSemanticTests() {
         ["C1 — Scope", "C2 — Findings", "C3 — Done"].every((gate) => content.includes(gate)) &&
         ["Verification: PASS", "Command:", "Exit: 0", "Base:", "Head:"]
           .every((field) => content.includes(field)),
+    },
+    {
+      label: "specs-usage-guide documents adaptive routing without timing claims",
+      file: "../../docs/specs-usage-guide.md",
+      assert: (content) => adaptiveUsageGuideContractValid(content),
     },
     {
       // Installed Codex projection is verified via transform, not raw source path (behavioral)
@@ -2168,7 +2614,8 @@ async function runStaticSemanticTests() {
     console.log(`✔ ${check.label}`);
   }
 
-  return checks.length + specs21Tests + implementationReadinessTests + processTaskStatusTests;
+  return checks.length + specs21Tests + implementationReadinessTests
+    + processTaskStatusTests + adaptiveCoverageTests;
 }
 
 function runSkillCatalogTests() {

@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -8,6 +9,7 @@ const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 
 const {
+  convertCodexAgentContent,
   normalizeCodexBody,
   transformManagedCodexContent,
   upsertManagedCodexBlock
@@ -29,14 +31,28 @@ const MANIFEST = JSON.parse(
   fs.readFileSync(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'), 'utf8')
 );
 const SPECS_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/specs');
+const SPEC_MAKER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/spec-maker.md');
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
+  ['Interaction/UI', 'entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior'],
   ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
-  ['Schema', 'version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration'],
-  ['State/concurrency', 'initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery'],
+  ['Data/schema', 'authority/storage/transaction; version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration'],
+  ['Async/state', 'initial/terminal states; event + guard + effect + next + error; ordering/concurrency; duplicate/retry; writer/lock acquire/contention/release; cancellation; rollback/recovery'],
   ['Filesystem/security', 'authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup'],
+  ['Runtime/deploy', 'config/env/flags; registration/packaging; OS/arch; rollout/rollback; health/logging; operator recovery'],
   ['Time/retention', 'clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery'],
+  ['AI/model', 'provider/model/prompt/tool schema; nondeterminism/bounds; safety/privacy; fallback; cost/token limit; eval oracle'],
   ['Integration/proof', 'caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle']
 ];
+
+function boundaryTableHasRequiredRows(table) {
+  const [header, ...rows] = table;
+  const labels = rows.map((row) => row[0]);
+  return JSON.stringify(header || []) === JSON.stringify(['Boundary', 'Required contract when material'])
+    && new Set(labels).size === labels.length
+    && IMPLEMENTATION_READINESS_BOUNDARY_ROWS.every((expected) =>
+      rows.some((row) => JSON.stringify(row) === JSON.stringify(expected)));
+}
+
 const IMPLEMENTATION_READINESS_CLAUSES = {
   noInvention: 'Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.',
   materialDefinition: 'A boundary is material when the task creates, changes, or depends on it and a different choice changes an external observation, security, durable data, compatibility, or proof reachability. Require only the matching material row; omit nonmaterial categories.',
@@ -44,15 +60,16 @@ const IMPLEMENTATION_READINESS_CLAUSES = {
   proofPlanLines: [
     '- Command: `<exact runnable command>`',
     '- Named probe: <existing concrete probe/test/hook ID; never only a suite label>',
-    '- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>',
+    '- Reachability: <known command/caller/environment per required level; `UNKNOWN` only when the path cannot yet be established>',
     '- Oracle: <externally observable success or failure>',
     '- Counterexample: <material alternative behavior that must make this proof fail>',
     '- Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>'
   ],
   proofTrace: 'Trace `Command → Named probe → Reachability → Oracle`.',
-  namedProbeOwnership: 'Aggregate suites\nname the owning concrete probe.',
-  proofLevelSeparation: 'Proof at `source`/`installed`/`live` stays\nseparate; one level never promotes another.',
+  namedProbeOwnership: 'Aggregate suites name the\nowning concrete probe.',
+  proofLevelSeparation: 'Levels stay separate and never promote one another.',
   disposableTemplateControls: 'Run mutation or destructive\nnegative controls only on disposable copies under a verified temporary root,\nnever tracked worktree or canonical source bytes.',
+  proofLevelMapping: 'For every required level in each referenced CP row, map its named probe and\nreachability here; one command may own several explicitly named level probes.',
   disposableReviewControls: 'Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.',
   failureSemantics: '`Crash` means abrupt unhandled termination before the claimed catch point; a catchable failure returns/raises an error or exits nonzero. Never use them interchangeably.',
   privacyIdentifiers: 'Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.',
@@ -61,6 +78,48 @@ const IMPLEMENTATION_READINESS_CLAUSES = {
   closureTransition: 'An accepted finding transitions `accepted → repaired → PASS|FAIL|UNKNOWN`.',
   unknownBlocks: 'Only `PASS` closes it; `FAIL` remains open for the remaining paper-review round; `UNKNOWN` blocks implementation handoff.',
   scopeReturnsToC1: 'A repair that adds user semantics or scope returns to C1.'
+};
+const ADAPTIVE_COVERAGE_PROFILE_HEADER = [
+  'ID', 'Outcome', 'Change kinds', 'Material surfaces', 'Ambiguity/action',
+  'Risk/evidence', 'Required proof'
+];
+const ADAPTIVE_COVERAGE_PROFILE_ROW = [
+  'CP-01', '<externally observable outcome>', '<all kinds>', '<all material surfaces>',
+  '<state + action>', '<level + evidence>', '<source/installed/live set>'
+];
+const ADAPTIVE_COVERAGE_AMBIGUITY_ROWS = [
+  ['State', 'Required action'],
+  ['`none`', 'proceed'],
+  ['`examples-needed`', 'add two or three examples only for an already decided rule; promote to `decision-needed` if an example changes observable behavior'],
+  ['`decision-needed`', 'ask the user at C1/C2 and keep affected tasks blocked'],
+  ['`design-needed`', 'after user-owned decisions settle, route material competing technical designs through Brainstorm']
+];
+const ADAPTIVE_REVIEWER_ROWS = [
+  ['Groups', 'Reviewers', 'Roles', 'Claim budget'],
+  ['1-2', '2', 'Fact Checker plus all matching material lenses', 'about 5 per group'],
+  ['3-5', '3', 'Fact Checker plus all matching material lenses', 'about 10 per group'],
+  ['6+', '4', 'Fact Checker plus all matching material lenses', 'at least 15 total']
+];
+const ADAPTIVE_COVERAGE_CLAUSES = {
+  riskFirst: 'Classify material risk before choosing a workflow; user wording never lowers an observed floor.',
+  criticalFloor: '`critical`: auth/secrets/privacy; destructive/irreversible work or possible data loss/corruption; money/privilege/safety; production-state mutation.',
+  elevatedFloor: '`elevated`: cross-component contracts, compatibility, concurrency, external integration, or installed/runtime behavior.',
+  frontmatterGate: 'skip only when a change is clear, isolated, reversible, routine, and likely limited to one or two files.',
+  directGate: 'Work directly only when the cause and change are clear, isolated, reversible,\n`routine`, and likely limited to one or two files.',
+  splitRoute: 'Split three or more independent\nsubsystems; otherwise use one Specs packet for any material work that does not qualify for direct work or Brainstorm-only exploration.',
+  independentSubsystem: 'A subsystem is independent only when its outcome, boundary, and verification/deployment path can move through the lifecycle separately.',
+  profileAuthority: 'For a Specs route, `plan.md` owns one `## Coverage profile` row per externally observable outcome; direct and Brainstorm-only routes do not persist it.',
+  openKinds: 'Change kinds are multi-valued (`add`, `modify`, `fix`, `refactor`, `remove`, `migrate`, `integrate`), and unfamiliar kinds or surfaces use `other:<verbatim>` rather than disappearing.',
+  scopedUnion: 'Each task references its CP IDs; authoring, review, edge, and proof obligations union only inside affected rows/tasks.',
+  profileRederivation: 'Rederive affected CP rows after any accepted scope, outcome, criteria, ownership, dependency, risk, or proof delta before task status.',
+  plannedProof: '`Required proof` is a planned level set, not execution\nevidence: known but unrun proof may be `pending`; `UNKNOWN` reachability blocks\n`pending`; missing, failed, or unavailable required evidence blocks `done`/C3.',
+  proofSeparation: 'Levels stay separate and never promote one another.',
+  liveLimit: 'Source/static checks prove the written contract, not live-model adherence.',
+  specMakerAuthority: 'they are the canonical risk and coverage authority. Do not duplicate\ntheir taxonomy here.',
+  specMakerAmbiguity: 'Apply the canonical ambiguity action; examples never decide observable behavior.',
+  specMakerRoute: 'Apply their risk-first route before C1 and stop when the\nrequest qualifies for direct work; hand off when it requires Brainstorm-only exploration.',
+  reviewRisk: 'Keep Fact Checker as the baseline. Assign every remaining material CP risk to a\nnamed reviewer lens; a critical row includes both relevant security-adversary and\nfailure-mode coverage, and nonmaterial lenses are not added.',
+  reviewCapacity: 'Reviewer count is fixed by the table, not lens count. Give each reviewer a distinct primary lens; when material lenses exceed reviewers, combine related named lenses on one reviewer and keep every material lens assigned.'
 };
 const V3_SPECS_BUNDLE = [
   'SKILL.md',
@@ -132,6 +191,13 @@ function parseGeneratedTomlString(content, key) {
   const match = content.match(new RegExp(`^${key} = (.+)$`, 'm'));
   assert.ok(match, `missing TOML key: ${key}`);
   return JSON.parse(match[1]);
+}
+
+function replaceGeneratedTomlString(content, key, value) {
+  const pattern = new RegExp(`^${key} = .+$`, 'gm');
+  const matches = [...content.matchAll(pattern)];
+  assert.equal(matches.length, 1, `expected exactly one TOML key: ${key}`);
+  return content.replace(pattern, `${key} = ${JSON.stringify(value)}`);
 }
 
 function renderCanonicalVerificationExample(template) {
@@ -227,14 +293,23 @@ function markdownBetweenHeadings(content, startHeading, endHeading) {
   return value.slice(startIndex + startMarker.length, endIndex);
 }
 
-function implementationReadinessIssues(templates, review) {
-  if (typeof templates !== 'string' || typeof review !== 'string') {
+function implementationReadinessIssues(input) {
+  const keys = input && typeof input === 'object' && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (keys.join(',') !== 'review,templates'
+    || typeof input.templates !== 'string' || typeof input.review !== 'string') {
     throw new TypeError('implementation-readiness checker expects templates and review UTF-8 strings');
   }
 
   const issues = new Set();
+  const { templates, review } = input;
   const authoring = markdownSection(templates, 'No-invention and conditional boundary contracts');
   if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.noInvention)) {
+    issues.add('no-invention');
+  }
+  const contradictoryNoInvention = /\b(?:exception|however)\b.{0,160}\bimplementation handoff\b.{0,80}\b(?:may|can)\s+(?:proceed|continue)\b.{0,160}\bunresolved\b/i;
+  if (contradictoryNoInvention.test(normalizeMarkdownWhitespace(authoring))) {
     issues.add('no-invention');
   }
 
@@ -242,15 +317,10 @@ function implementationReadinessIssues(templates, review) {
     templates,
     'No-invention and conditional boundary contracts'
   );
-  const expectedBoundaryTable = [
-    ['Boundary', 'Required contract when material'],
-    ...IMPLEMENTATION_READINESS_BOUNDARY_ROWS
-  ];
   if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.materialDefinition)
     || !authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices)
-    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 6
-    || boundaryTable.length !== expectedBoundaryTable.length
-    || JSON.stringify(boundaryTable) !== JSON.stringify(expectedBoundaryTable)) {
+    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 9
+    || !boundaryTableHasRequiredRows(boundaryTable)) {
     issues.add('boundary-contract');
   }
 
@@ -265,7 +335,8 @@ function implementationReadinessIssues(templates, review) {
     IMPLEMENTATION_READINESS_CLAUSES.proofTrace,
     IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
     IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
-    IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls
+    IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+    IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping
   ].map(normalizeMarkdownWhitespace);
   const reviewNegativeControls = normalizeMarkdownWhitespace(
     markdownSection(review, 'B2 — fresh-context red team')
@@ -305,9 +376,107 @@ function implementationReadinessIssues(templates, review) {
   return [...issues].sort();
 }
 
+function adaptiveCoverageIssues(input) {
+  const expectedKeys = ['review', 'skill', 'specMaker', 'templates'];
+  const keys = input && typeof input === 'object' && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)
+    || expectedKeys.some((key) => typeof input[key] !== 'string')) {
+    throw new TypeError('adaptive-coverage checker expects skill, specMaker, templates, and review UTF-8 strings');
+  }
+
+  const issues = new Set();
+  const skill = normalizeMarkdownWhitespace(input.skill);
+  const templates = normalizeMarkdownWhitespace(input.templates);
+  const review = normalizeMarkdownWhitespace(input.review);
+  const specMaker = normalizeMarkdownWhitespace(input.specMaker);
+  const has = (source, clause) => source.includes(normalizeMarkdownWhitespace(clause));
+
+  const riskClauses = [
+    ADAPTIVE_COVERAGE_CLAUSES.riskFirst,
+    ADAPTIVE_COVERAGE_CLAUSES.criticalFloor,
+    ADAPTIVE_COVERAGE_CLAUSES.elevatedFloor,
+    ADAPTIVE_COVERAGE_CLAUSES.frontmatterGate,
+    ADAPTIVE_COVERAGE_CLAUSES.directGate,
+    ADAPTIVE_COVERAGE_CLAUSES.splitRoute,
+    ADAPTIVE_COVERAGE_CLAUSES.independentSubsystem
+  ];
+  const riskDowngrade = /\buser\b.{0,80}\b(?:may|can)\b.{0,80}\blower\b.{0,40}\brisk\b/i;
+  const riskyDirectOverride = /\b(?:exception|even if|regardless)\b.{0,160}\b(?:auth|secret|privacy|destructive|irreversible|data loss|corruption|production[- ]state|critical)\b.{0,160}\b(?:direct|work directly|go direct)\b/i;
+  if (riskClauses.some((clause) => !has(skill, clause))
+    || riskDowngrade.test(skill) || riskyDirectOverride.test(skill)) {
+    issues.add('risk-first-routing');
+  }
+
+  const profileTable = markdownTableUnderHeading(input.templates, 'Coverage profile');
+  const profileHeadingCount = (input.templates.match(/^## Coverage profile\s*$/gm) || []).length;
+  const taskReferencesCoverage = /## Coverage\s*\n- <exact `CP-NN` IDs owned by this task>/.test(input.templates);
+  if (JSON.stringify(profileTable[0] || []) !== JSON.stringify(ADAPTIVE_COVERAGE_PROFILE_HEADER)
+    || profileHeadingCount !== 1 || profileTable.length !== 2
+    || JSON.stringify(profileTable[1]) !== JSON.stringify(ADAPTIVE_COVERAGE_PROFILE_ROW)
+    || !taskReferencesCoverage
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.profileAuthority)
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.openKinds)) {
+    issues.add('coverage-profile-shape');
+  }
+
+  const ambiguityTable = markdownTableUnderHeading(input.templates, 'Example Mapping rule');
+  if (JSON.stringify(ambiguityTable) !== JSON.stringify(ADAPTIVE_COVERAGE_AMBIGUITY_ROWS)
+    || !templates.includes('retention of 30 versus 90 days is `decision-needed`')) {
+    issues.add('ambiguity-actions');
+  }
+
+  const globalCeremony = /\b(?:critical|security|failure|proof|review|edge|obligations?|lenses?)\b[^.!?\n]{0,120}\b(?:union|apply|spread|require)\w*\b[^.!?\n]{0,120}\b(?:all|every)\s+(?:cp\s+)?(?:rows?|outcomes?|tasks?)\b|\b(?:union|apply|spread)\w*\b[^.!?\n]{0,120}\b(?:all|every)\s+(?:cp\s+)?(?:rows?|outcomes?|tasks?)\b/i;
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.scopedUnion)
+    || globalCeremony.test(templates)
+    || !review.includes('nonmaterial lenses are not added')) {
+    issues.add('scoped-coverage');
+  }
+
+  const rederiveSources = [templates, skill, specMaker, review];
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.profileRederivation)
+    || rederiveSources.some((source) => !/rederive affected cp rows?/.test(source.toLowerCase()))) {
+    issues.add('profile-lifecycle');
+  }
+
+  const statusMatrix = markdownTableUnderHeading(input.templates, 'Status matrix');
+  if (!has(templates, ADAPTIVE_COVERAGE_CLAUSES.plannedProof)
+    || !has(templates, ADAPTIVE_COVERAGE_CLAUSES.proofSeparation)
+    || !has(templates, IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping)
+    || !has(skill, ADAPTIVE_COVERAGE_CLAUSES.liveLimit)
+    || !statusMatrix.some((row) => row[0] === 'accepted finding open or `UNKNOWN` reachability' && row[1] === '`blocked`')) {
+    issues.add('proof-lifecycle');
+  }
+
+  const reviewerRowsPresent = ADAPTIVE_REVIEWER_ROWS.every((row) =>
+    input.review.includes(`| ${row.join(' | ')} |`));
+  if (!has(review, ADAPTIVE_COVERAGE_CLAUSES.reviewRisk)
+    || !has(review, ADAPTIVE_COVERAGE_CLAUSES.reviewCapacity)
+    || !reviewerRowsPresent) {
+    issues.add('reviewer-routing');
+  }
+  if (!specMaker.includes('skills/specs/SKILL.md')
+    || !specMaker.includes('skills/specs/references/templates.md')
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerAuthority)
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerAmbiguity)
+    || !has(specMaker, ADAPTIVE_COVERAGE_CLAUSES.specMakerRoute)) {
+    issues.add('spec-maker-authority');
+  }
+
+  const boundaryTable = markdownTableUnderHeading(
+    input.templates,
+    'No-invention and conditional boundary contracts'
+  );
+  if (!boundaryTableHasRequiredRows(boundaryTable)) {
+    issues.add('adaptive-boundary-lenses');
+  }
+  return [...issues].sort();
+}
+
 function authoringProjectionIssues(files) {
   const issues = [];
-  issues.push(...implementationReadinessIssues(files.templates, files.review));
+  issues.push(...implementationReadinessIssues({ templates: files.templates, review: files.review }));
   const foreignRuntimeBoundary = 'If you are Claude Code or any other runtime, ignore this entire Codex block';
   if (!files.skill.includes('Task files are flat beside `plan.md`')
     || !files.skill.includes('Do not create a nested task directory.')) {
@@ -379,10 +548,15 @@ function canonicalInstalledSpecsRoot(projectRoot, installedRoot) {
 function readInstalledAuthoringProjection(projectRoot, installedRoot) {
   const canonicalRoot = canonicalInstalledSpecsRoot(projectRoot, installedRoot);
   const read = (relative) => fs.readFileSync(path.join(canonicalRoot, relative), 'utf8');
+  const specMakerToml = fs.readFileSync(
+    path.join(projectRoot, '.codex/agents/spec_maker.toml'),
+    'utf8'
+  );
   return {
     skill: read('SKILL.md'),
     review: read('references/review.md'),
     templates: read('references/templates.md'),
+    specMaker: parseGeneratedTomlString(specMakerToml, 'developer_instructions'),
     legacyTemplates: V3_SPECS_BUNDLE.filter((relative) => relative.startsWith('templates/')).map(read).join('\n'),
     codex: [
       fs.readFileSync(path.join(projectRoot, 'AGENTS.md'), 'utf8'),
@@ -395,21 +569,40 @@ function installedAuthoringProjectionIssues(projectRoot, installedRoot) {
   return authoringProjectionIssues(readInstalledAuthoringProjection(projectRoot, installedRoot));
 }
 
-function assertInstalledMutationTarget(projectRoot, installedRoot, relative) {
+function installedAdaptiveCoverageIssues(projectRoot, installedRoot) {
+  const { skill, specMaker, templates, review } = readInstalledAuthoringProjection(
+    projectRoot,
+    installedRoot
+  );
+  return adaptiveCoverageIssues({ skill, specMaker, templates, review });
+}
+
+function assertDisposableInstalledMutationTarget({
+  projectRoot,
+  installedScope,
+  targetPath,
+  expectedTargetPath,
+  canonicalSourcePaths,
+  scopeLabel
+}) {
   const canonicalProject = fs.realpathSync(projectRoot);
-  const canonicalInstalled = canonicalInstalledSpecsRoot(projectRoot, installedRoot);
-  const targetPath = path.join(canonicalInstalled, relative);
+  const canonicalScope = fs.realpathSync(installedScope);
   const targetLstat = fs.lstatSync(targetPath);
   assert.equal(targetLstat.isSymbolicLink(), false, 'installed mutation target must not be a symlink');
   assert.equal(targetLstat.isFile(), true, 'installed mutation target must be a regular file');
   const canonicalTarget = fs.realpathSync(targetPath);
-  const installedRelative = path.relative(canonicalInstalled, canonicalTarget);
+  assert.equal(
+    canonicalTarget,
+    fs.realpathSync(expectedTargetPath),
+    `installed mutation target must be the exact ${scopeLabel} projection`
+  );
+  const scopeRelative = path.relative(canonicalScope, canonicalTarget);
   const projectRelative = path.relative(canonicalProject, canonicalTarget);
   assert.ok(
-    installedRelative && installedRelative !== '..'
-      && !installedRelative.startsWith(`..${path.sep}`)
-      && !path.isAbsolute(installedRelative),
-    'installed mutation target must stay inside .agents/skills/specs'
+    scopeRelative && scopeRelative !== '..'
+      && !scopeRelative.startsWith(`..${path.sep}`)
+      && !path.isAbsolute(scopeRelative),
+    `installed mutation target must stay inside ${scopeLabel}`
   );
   assert.ok(
     projectRelative && projectRelative !== '..'
@@ -417,28 +610,86 @@ function assertInstalledMutationTarget(projectRoot, installedRoot, relative) {
       && !path.isAbsolute(projectRelative),
     'installed mutation target must stay inside the disposable project'
   );
-  const canonicalSource = fs.realpathSync(path.join(SPECS_SOURCE_ROOT, relative));
-  assert.notEqual(
-    canonicalTarget,
-    canonicalSource,
-    'installed mutation target must not resolve to canonical source'
+  assert.ok(
+    Array.isArray(canonicalSourcePaths) && canonicalSourcePaths.length > 0,
+    'installed mutation guard requires the full canonical source set'
   );
   const targetStat = fs.statSync(canonicalTarget);
-  const sourceStat = fs.statSync(canonicalSource);
-  assert.notDeepEqual(
-    [targetStat.dev, targetStat.ino],
-    [sourceStat.dev, sourceStat.ino],
-    'installed mutation target must not share an inode with canonical source'
-  );
+  for (const sourcePath of canonicalSourcePaths) {
+    const canonicalSource = fs.realpathSync(sourcePath);
+    assert.notEqual(
+      canonicalTarget,
+      canonicalSource,
+      'installed mutation target must not resolve to any canonical source'
+    );
+    const sourceStat = fs.statSync(canonicalSource);
+    assert.notDeepEqual(
+      [targetStat.dev, targetStat.ino],
+      [sourceStat.dev, sourceStat.ino],
+      `installed mutation target must not share an inode with canonical source set: ${sourcePath}`
+    );
+  }
+  assert.equal(targetStat.nlink, 1, 'installed mutation target must have exactly one hard link');
   return canonicalTarget;
 }
 
+function assertInstalledMutationTarget(projectRoot, installedRoot, relative) {
+  const canonicalInstalled = canonicalInstalledSpecsRoot(projectRoot, installedRoot);
+  const targetPath = path.join(canonicalInstalled, relative);
+  return assertDisposableInstalledMutationTarget({
+    projectRoot,
+    installedScope: canonicalInstalled,
+    targetPath,
+    expectedTargetPath: path.join(projectRoot, '.agents/skills/specs', relative),
+    canonicalSourcePaths: canonicalProjectionSourcePaths(),
+    scopeLabel: '.agents/skills/specs'
+  });
+}
+
+function assertInstalledSpecMakerMutationTarget(projectRoot) {
+  const installedScope = path.join(projectRoot, '.codex/agents');
+  const targetPath = path.join(installedScope, 'spec_maker.toml');
+  return assertDisposableInstalledMutationTarget({
+    projectRoot,
+    installedScope,
+    targetPath,
+    expectedTargetPath: targetPath,
+    canonicalSourcePaths: canonicalProjectionSourcePaths(),
+    scopeLabel: '.codex/agents'
+  });
+}
+
+function canonicalProjectionSourcePaths() {
+  return [
+    ...V3_SPECS_BUNDLE.map((relative) => path.join(SPECS_SOURCE_ROOT, relative)),
+    SPEC_MAKER_SOURCE_PATH
+  ];
+}
+
+function canonicalProjectionSourceBytes() {
+  const sourcePaths = canonicalProjectionSourcePaths();
+  return new Map(sourcePaths.map((sourcePath) => [
+    sourcePath,
+    fs.readFileSync(sourcePath)
+  ]));
+}
+
+function sha256(content) {
+  return createHash('sha256').update(content).digest('hex');
+}
+
 function assertCanonicalSpecsSourceBytesUnchanged(sourceBytes) {
-  for (const [relative, expected] of sourceBytes) {
+  for (const [sourcePath, expected] of sourceBytes) {
+    const actual = fs.readFileSync(sourcePath);
     assert.deepEqual(
-      fs.readFileSync(path.join(SPECS_SOURCE_ROOT, relative)),
+      actual,
       expected,
-      `canonical Specs source bytes changed during installed mutation: ${relative}`
+      `canonical source bytes changed during installed mutation: ${path.relative(PACKAGE_ROOT, sourcePath)}`
+    );
+    assert.equal(
+      sha256(actual),
+      sha256(expected),
+      `canonical source SHA changed during installed mutation: ${path.relative(PACKAGE_ROOT, sourcePath)}`
     );
   }
 }
@@ -457,34 +708,94 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
     const actual = fs.readFileSync(path.join(installedRoot, relative), 'utf8');
     assert.equal(actual, expected, `Codex Specs projection drifted: ${relative}`);
   }
+  const sourceSpecMaker = fs.readFileSync(SPEC_MAKER_SOURCE_PATH, 'utf8');
+  const installedSpecMakerPath = path.join(root, '.codex/agents/spec_maker.toml');
+  assert.equal(
+    fs.readFileSync(installedSpecMakerPath, 'utf8'),
+    convertCodexAgentContent(sourceSpecMaker, path.basename(SPEC_MAKER_SOURCE_PATH)),
+    'Codex spec_maker projection drifted'
+  );
   for (const relative of OBSOLETE_SPECS_FILES) {
     assert.equal(fs.existsSync(path.join(installedRoot, relative)), false, `obsolete Specs file installed: ${relative}`);
   }
 
   const files = readInstalledAuthoringProjection(root, installedRoot);
-  const sourceBytes = new Map(V3_SPECS_BUNDLE.map((relative) => [
-    relative,
-    fs.readFileSync(path.join(SPECS_SOURCE_ROOT, relative))
-  ]));
+  const sourceBytes = canonicalProjectionSourceBytes();
   assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), []);
+  assert.deepEqual(installedAdaptiveCoverageIssues(root, installedRoot), []);
   assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
 
   if (process.platform !== 'win32') {
-    const relative = 'references/templates.md';
-    const installedPath = path.join(installedRoot, relative);
-    const backupPath = `${installedPath}.cafekit-backup`;
-    const sourcePath = path.join(SPECS_SOURCE_ROOT, relative);
-    fs.renameSync(installedPath, backupPath);
+    for (const [installedPath, sourcePath, assertTarget] of [
+      [
+        path.join(installedRoot, 'references/templates.md'),
+        path.join(SPECS_SOURCE_ROOT, 'references/templates.md'),
+        () => assertInstalledMutationTarget(root, installedRoot, 'references/templates.md')
+      ],
+      [
+        installedSpecMakerPath,
+        SPEC_MAKER_SOURCE_PATH,
+        () => assertInstalledSpecMakerMutationTarget(root)
+      ]
+    ]) {
+      const backupPath = `${installedPath}.cafekit-backup`;
+      fs.renameSync(installedPath, backupPath);
+      try {
+        fs.linkSync(sourcePath, installedPath);
+        assert.throws(assertTarget, /must not share an inode with canonical source/);
+        assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+      } finally {
+        try { fs.unlinkSync(installedPath); } catch { /* best-effort disposable cleanup */ }
+        fs.renameSync(backupPath, installedPath);
+      }
+    }
+
+    const crossSourceRoot = path.join(root, 'cross-source-native-control');
+    const crossSourceProject = path.join(crossSourceRoot, 'project');
+    const crossSourceScope = path.join(crossSourceProject, '.agents/skills/specs');
+    const crossSourceTarget = path.join(crossSourceScope, 'target-a.md');
+    const crossSourcePaths = [
+      path.join(crossSourceRoot, 'sources/source-a.md'),
+      path.join(crossSourceRoot, 'sources/source-b.md')
+    ];
+    fs.mkdirSync(crossSourceScope, { recursive: true });
+    fs.mkdirSync(path.dirname(crossSourcePaths[0]), { recursive: true });
+    fs.writeFileSync(crossSourceTarget, 'native installed target A\n');
+    fs.writeFileSync(crossSourcePaths[0], 'native canonical source A\n');
+    fs.writeFileSync(crossSourcePaths[1], 'native canonical source B\n');
+    const targetBytes = fs.readFileSync(crossSourceTarget);
+    const sourceState = new Map(crossSourcePaths.map((sourcePath) => {
+      const bytes = fs.readFileSync(sourcePath);
+      return [sourcePath, { bytes, sha: sha256(bytes) }];
+    }));
+    assert.notEqual(crossSourcePaths[0], crossSourcePaths[1], 'cross-source control requires A != B');
+    fs.unlinkSync(crossSourceTarget);
+    fs.linkSync(crossSourcePaths[1], crossSourceTarget);
     try {
-      fs.linkSync(sourcePath, installedPath);
       assert.throws(
-        () => assertInstalledMutationTarget(root, installedRoot, relative),
-        /must not share an inode with canonical source/
+        () => fs.writeFileSync(
+          assertDisposableInstalledMutationTarget({
+            projectRoot: crossSourceProject,
+            installedScope: crossSourceScope,
+            targetPath: crossSourceTarget,
+            expectedTargetPath: crossSourceTarget,
+            canonicalSourcePaths: crossSourcePaths,
+            scopeLabel: '.agents/skills/specs'
+          }),
+          'forbidden native cross-source mutation\n'
+        ),
+        /must not share an inode with canonical source set/
       );
-      assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
     } finally {
-      try { fs.unlinkSync(installedPath); } catch { /* best-effort disposable cleanup */ }
-      fs.renameSync(backupPath, installedPath);
+      fs.unlinkSync(crossSourceTarget);
+      fs.writeFileSync(crossSourceTarget, targetBytes);
+      fs.writeFileSync(crossSourcePaths[1], sourceState.get(crossSourcePaths[1]).bytes);
+    }
+    assert.deepEqual(fs.readFileSync(crossSourceTarget), targetBytes, 'cross-source control must restore exact target bytes');
+    for (const [sourcePath, expected] of sourceState) {
+      const actual = fs.readFileSync(sourcePath);
+      assert.deepEqual(actual, expected.bytes, 'cross-source rejection must preserve every source byte');
+      assert.equal(sha256(actual), expected.sha, 'cross-source rejection must preserve every source SHA');
     }
   }
 
@@ -515,6 +826,13 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
       to: 'Before implementation handoff, note ambiguous choices without blocking handoff.'
     },
     {
+      name: 'no-invention-contradictory-override',
+      issue: 'no-invention',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.noInvention,
+      to: `${IMPLEMENTATION_READINESS_CLAUSES.noInvention}\n\nException: implementation handoff may proceed with an unresolved material choice.`
+    },
+    {
       name: 'material-boundary-definition',
       issue: 'boundary-contract',
       relative: 'references/templates.md',
@@ -528,16 +846,23 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
       from: IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices,
       to: 'For every required row, describe the listed choices generally.'
     },
+    boundaryMutation('interaction-accessibility', 'Interaction/UI', [
+      ['input/focus/keyboard; ', ''],
+      ['accessibility; ', '']
+    ]),
     boundaryMutation('api-success-and-error-semantics', 'API/CLI', [
       ['success output; ', ''],
       ['error/status/exit; ', '']
     ]),
-    boundaryMutation('schema-shape-and-unknown-fields', 'Schema', [
+    boundaryMutation('schema-shape-and-unknown-fields', 'Data/schema', [
       ['exact keys/nesting/types; ', ''],
       ['unknown-field behavior; ', '']
     ]),
-    boundaryMutation('state-lock-lifecycle', 'State/concurrency', [
-      ['writer/lock acquire/contention/release', 'writer/lock']
+    boundaryMutation('schema-enum-and-format', 'Data/schema', [
+      ['enum/format/', '']
+    ]),
+    boundaryMutation('state-lock-lifecycle', 'Async/state', [
+      ['writer/lock acquire/contention/release; ', 'writer/lock; ']
     ]),
     boundaryMutation('filesystem-segment-grammar', 'Filesystem/security', [
       ['trusted/untrusted segment grammar; ', '']
@@ -545,10 +870,18 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
     boundaryMutation('filesystem-stale-lock-reclaim', 'Filesystem/security', [
       ['lock/stale reclaim; ', '']
     ]),
+    boundaryMutation('runtime-rollout-and-recovery', 'Runtime/deploy', [
+      ['rollout/rollback; ', ''],
+      ['operator recovery', '']
+    ]),
     boundaryMutation('retention-clock-and-endpoints', 'Time/retention', [
       ['clock source; ', ''],
       ['unit/precision/timezone; ', ''],
       ['endpoints and inclusion/comparator; ', '']
+    ]),
+    boundaryMutation('ai-model-safety-and-eval', 'AI/model', [
+      ['safety/privacy; ', ''],
+      ['eval oracle', '']
     ]),
     boundaryMutation('proof-level-partition', 'Integration/proof', [
       ['proof level (`source`/`installed`/`live`)', 'proof level']
@@ -594,6 +927,13 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
       relative: 'references/review.md',
       from: IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls,
       to: 'Run mutation or destructive negative controls against the available project copy.'
+    },
+    {
+      name: 'required-proof-level-mapping',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping,
+      to: 'Map one required proof level to one probe; other levels may remain implicit.'
     },
     {
       name: 'artifact-path-and-digest-or-ephemeral',
@@ -652,6 +992,7 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
       to: 'Any privacy/security claim names the sensitive data at risk.'
     }
   ];
+  assert.equal(readinessMutations.length, 30, 'installed readiness mutation set must match canonical source');
 
   for (const { name, issue, relative, from, to } of readinessMutations) {
     const target = assertInstalledMutationTarget(root, installedRoot, relative);
@@ -675,6 +1016,152 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
     assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
   }
 
+  const integrationRow = IMPLEMENTATION_READINESS_BOUNDARY_ROWS
+    .find(([label]) => label === 'Integration/proof');
+  const integrationLine = `| ${integrationRow.join(' | ')} |`;
+  const templatesTarget = assertInstalledMutationTarget(
+    root,
+    installedRoot,
+    'references/templates.md'
+  );
+  const templatesBytes = fs.readFileSync(templatesTarget, 'utf8');
+  const extendedTemplates = templatesBytes.replace(
+    integrationLine,
+    `${integrationLine}\n| other:domain-specific | task-specific material choices and observable oracle |`
+  );
+  assert.notEqual(extendedTemplates, templatesBytes, 'open-boundary positive control must change installed templates');
+  try {
+    fs.writeFileSync(assertInstalledMutationTarget(root, installedRoot, 'references/templates.md'), extendedTemplates);
+    assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), []);
+    assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+  } finally {
+    fs.writeFileSync(assertInstalledMutationTarget(root, installedRoot, 'references/templates.md'), templatesBytes);
+  }
+  assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), [], 'open-boundary restore');
+  assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+
+  const adaptiveMutations = [
+    ['frontmatter-risk-bypass', 'skill', ADAPTIVE_COVERAGE_CLAUSES.frontmatterGate,
+      'skip for any clear one-file or two-file change.', ['risk-first-routing']],
+    ['destructive-routine-direct', 'skill', ADAPTIVE_COVERAGE_CLAUSES.directGate,
+      'Work directly when the change is routine and likely limited to one or two files.', ['risk-first-routing']],
+    ['destructive-direct-exception', 'skill', ADAPTIVE_COVERAGE_CLAUSES.directGate,
+      `${ADAPTIVE_COVERAGE_CLAUSES.directGate} Exception: destructive one-file work labeled routine may go direct.`, ['risk-first-routing']],
+    ['user-risk-downgrade', 'skill', ADAPTIVE_COVERAGE_CLAUSES.riskFirst,
+      `${ADAPTIVE_COVERAGE_CLAUSES.riskFirst} A user may lower critical risk to routine.`, ['risk-first-routing']],
+    ['four-subsystem-split', 'skill', ADAPTIVE_COVERAGE_CLAUSES.splitRoute,
+      'Split four or more independent subsystems; otherwise use one Specs packet for substantial work.', ['risk-first-routing']],
+    ['forced-single-kind', 'templates', ADAPTIVE_COVERAGE_CLAUSES.openKinds,
+      'Choose one primary change kind and ignore unfamiliar kinds or surfaces.', ['coverage-profile-shape']],
+    ['missing-profile-column', 'templates', '| ID | Outcome | Change kinds | Material surfaces | Ambiguity/action | Risk/evidence | Required proof |',
+      '| ID | Outcome | Change kinds | Material surfaces | Risk/evidence | Required proof |', ['coverage-profile-shape']],
+    ['duplicate-profile-heading', 'templates', '## Coverage profile\n',
+      '## Coverage profile\n\n## Coverage profile\n', ['coverage-profile-shape']],
+    ['truncated-profile-row', 'templates', `| ${ADAPTIVE_COVERAGE_PROFILE_ROW.join(' | ')} |`,
+      '| CP-01 | <externally observable outcome> |', ['coverage-profile-shape']],
+    ['examples-promote-to-design', 'templates', `| ${ADAPTIVE_COVERAGE_AMBIGUITY_ROWS[2].join(' | ')} |`,
+      '| `examples-needed` | add examples and promote to `design-needed` if behavior changes |', ['ambiguity-actions']],
+    ['examples-select-retention', 'templates', 'retention of 30 versus 90 days is\n`decision-needed`',
+      'retention of 30 versus 90 days may remain\n`examples-needed`', ['ambiguity-actions']],
+    ['global-critical-ceremony', 'templates', ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      'Each task copies its CP values; authoring, review, edge, and proof obligations union across every task.', ['scoped-coverage']],
+    ['scoped-union-contradiction', 'templates', ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      `${ADAPTIVE_COVERAGE_CLAUSES.scopedUnion} Exception: critical proof obligations apply across every CP row.`, ['scoped-coverage']],
+    ['stale-profile-after-c2', 'templates', ADAPTIVE_COVERAGE_CLAUSES.profileRederivation,
+      'Keep existing coverage rows after accepted plan changes.', ['profile-lifecycle']],
+    ['planned-proof-blocks-start', 'templates', ADAPTIVE_COVERAGE_CLAUSES.plannedProof,
+      '`Required proof` is execution evidence: known but unrun proof blocks `pending`; `UNKNOWN` may proceed; missing evidence may still reach `done`/C3.', ['proof-lifecycle']],
+    ['source-promotes-live', 'templates', ADAPTIVE_COVERAGE_CLAUSES.proofSeparation,
+      'Source proof may promote installed and live proof.', ['proof-lifecycle']],
+    ['unmapped-proof-level', 'templates', IMPLEMENTATION_READINESS_CLAUSES.proofLevelMapping,
+      'A task may map only one required proof level to its probe.', ['proof-lifecycle']],
+    ['critical-reviewer-omitted', 'review', ADAPTIVE_COVERAGE_CLAUSES.reviewRisk,
+      'Keep Fact Checker as the baseline and choose any remaining reviewer; critical rows need no matching risk role.', ['reviewer-routing', 'scoped-coverage']],
+    ['reviewer-lens-overflow', 'review', ADAPTIVE_COVERAGE_CLAUSES.reviewCapacity,
+      'Each reviewer owns exactly one lens; skip excess material lenses when the fixed reviewer count is full.', ['reviewer-routing']],
+    ['spec-maker-local-taxonomy', 'specMaker', ADAPTIVE_COVERAGE_CLAUSES.specMakerAuthority,
+      'this agent owns a separate risk and coverage taxonomy.', ['spec-maker-authority']],
+    ['spec-maker-examples-decide', 'specMaker', ADAPTIVE_COVERAGE_CLAUSES.specMakerAmbiguity,
+      'Use examples to settle every ambiguous observable behavior.', ['spec-maker-authority']],
+    ['spec-maker-skips-brainstorm', 'specMaker', ADAPTIVE_COVERAGE_CLAUSES.specMakerRoute,
+      'Apply the risk-first route before C1 and stop only for direct work.', ['spec-maker-authority']],
+    ['static-proves-live', 'skill', ADAPTIVE_COVERAGE_CLAUSES.liveLimit,
+      'Source/static checks prove live-model adherence.', ['proof-lifecycle']]
+  ];
+  assert.equal(adaptiveMutations.length, 23, 'installed adaptive mutation set must match canonical source');
+
+  const adaptiveTarget = (source) => {
+    if (source === 'specMaker') {
+      const target = assertInstalledSpecMakerMutationTarget(root);
+      const bytes = fs.readFileSync(target);
+      const content = bytes.toString('utf8');
+      return {
+        target,
+        bytes,
+        content: parseGeneratedTomlString(content, 'developer_instructions'),
+        render: (value) => replaceGeneratedTomlString(content, 'developer_instructions', value)
+      };
+    }
+    const relative = {
+      skill: 'SKILL.md',
+      templates: 'references/templates.md',
+      review: 'references/review.md'
+    }[source];
+    assert.ok(relative, `unknown adaptive mutation source: ${source}`);
+    const target = assertInstalledMutationTarget(root, installedRoot, relative);
+    const bytes = fs.readFileSync(target);
+    return { target, bytes, content: bytes.toString('utf8'), render: (value) => value };
+  };
+
+  for (const [name, source, from, to, expected] of adaptiveMutations) {
+    const targetState = adaptiveTarget(source);
+    const anchorIndex = targetState.content.indexOf(from);
+    assert.ok(anchorIndex >= 0, `${name} mutation anchor must exist in installed bytes`);
+    assert.equal(
+      targetState.content.indexOf(from, anchorIndex + from.length),
+      -1,
+      `${name} mutation anchor must be unique in installed bytes`
+    );
+    const weakened = `${targetState.content.slice(0, anchorIndex)}${to}${targetState.content.slice(anchorIndex + from.length)}`;
+    try {
+      fs.writeFileSync(adaptiveTarget(source).target, targetState.render(weakened));
+      assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+      assert.deepEqual(installedAdaptiveCoverageIssues(root, installedRoot), [...expected].sort(), name);
+    } finally {
+      fs.writeFileSync(adaptiveTarget(source).target, targetState.bytes);
+    }
+    assert.deepEqual(fs.readFileSync(adaptiveTarget(source).target), targetState.bytes, `${name} byte restore`);
+    assert.deepEqual(installedAdaptiveCoverageIssues(root, installedRoot), [], `${name} restore`);
+    assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+  }
+
+  const intactAdaptive = readInstalledAuthoringProjection(root, installedRoot);
+  const adaptivePositiveControls = [
+    ['open material surface', intactAdaptive.templates.replace(
+      integrationLine,
+      `${integrationLine}\n| other:domain-specific | task-specific material choices and observable oracle |`
+    )],
+    ['task CP reference requirement', intactAdaptive.templates.replace(
+      ADAPTIVE_COVERAGE_CLAUSES.scopedUnion,
+      `${ADAPTIVE_COVERAGE_CLAUSES.scopedUnion} Require every task to reference a CP row.`
+    )]
+  ];
+  for (const [name, templates] of adaptivePositiveControls) {
+    assert.notEqual(templates, intactAdaptive.templates, `${name} positive control must change installed templates`);
+    const target = assertInstalledMutationTarget(root, installedRoot, 'references/templates.md');
+    const original = fs.readFileSync(target);
+    try {
+      fs.writeFileSync(target, templates);
+      assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+      assert.deepEqual(installedAdaptiveCoverageIssues(root, installedRoot), [], name);
+    } finally {
+      fs.writeFileSync(assertInstalledMutationTarget(root, installedRoot, 'references/templates.md'), original);
+    }
+    assert.deepEqual(fs.readFileSync(target), original, `${name} byte restore`);
+    assert.deepEqual(installedAdaptiveCoverageIssues(root, installedRoot), [], `${name} restore`);
+    assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+  }
+
   const mutations = [
     ['skill', (value) => value.replace('Task files are flat beside `plan.md`', 'Task files may be nested')],
     ['review', (value) => value.replace('list at 15', 'list without a cap')],
@@ -685,6 +1172,12 @@ function assertInstalledAuthoringProjection(root, installedRoot) {
     const changed = { ...files, [key]: mutate(files[key]) };
     assert.notDeepEqual(authoringProjectionIssues(changed), []);
   }
+  assert.equal(
+    fs.readFileSync(installedSpecMakerPath, 'utf8'),
+    convertCodexAgentContent(sourceSpecMaker, path.basename(SPEC_MAKER_SOURCE_PATH)),
+    'Codex spec_maker projection must be byte-exact after mutation restores'
+  );
+  assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
 }
 
 test('Codex payload transform emits native skill and subagent syntax', () => {
@@ -1110,7 +1603,7 @@ test('Codex Windows hook launchers stay project-bound without Git from nested cw
   });
 });
 
-test('Codex fresh install is exact while refresh and upgrade preserve existing files', () => {
+test('Codex installed Specs and spec-maker reject adaptive coverage mutations', () => {
   inTempProject((root) => {
     const userInstructions = '# User rules\n\nKeep this exact.\n';
     fs.writeFileSync(path.join(root, 'AGENTS.md'), userInstructions);

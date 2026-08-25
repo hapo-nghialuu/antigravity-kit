@@ -27,6 +27,11 @@ Specs-Contract: process-first-ready-v1
 ## Out of scope
 - <deliberate exclusion>
 
+## Coverage profile
+| ID | Outcome | Change kinds | Material surfaces | Ambiguity/action | Risk/evidence | Required proof |
+|---|---|---|---|---|---|---|
+| CP-01 | <externally observable outcome> | <all kinds> | <all material surfaces> | <state + action> | <level + evidence> | <source/installed/live set> |
+
 ## Acceptance criteria
 | ID | EARS criterion | Proof |
 |---|---|---|
@@ -60,6 +65,9 @@ Status: blocked
 - In: <exact behavior>
 - Out: <nearby behavior deliberately excluded>
 
+## Coverage
+- <exact `CP-NN` IDs owned by this task>
+
 ## Ownership
 - Modify: `src/a.ts`
 - Create: `test/a.test.ts`
@@ -74,7 +82,7 @@ Status: blocked
 ## Verification Plan
 - Command: `<exact runnable command>`
 - Named probe: <existing concrete probe/test/hook ID; never only a suite label>
-- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>
+- Reachability: <known command/caller/environment per required level; `UNKNOWN` only when the path cannot yet be established>
 - Oracle: <externally observable success or failure>
 - Counterexample: <material alternative behavior that must make this proof fail>
 - Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>
@@ -83,18 +91,22 @@ Status: blocked
 <!-- Fill only after execution; see canonical form below. -->
 ````
 
-Trace `Command → Named probe → Reachability → Oracle`. Aggregate suites
-name the owning concrete probe. Proof at `source`/`installed`/`live` stays
-separate; one level never promotes another. Run mutation or destructive
+Trace `Command → Named probe → Reachability → Oracle`. Aggregate suites name the
+owning concrete probe. `Required proof` is a planned level set, not execution
+evidence: known but unrun proof may be `pending`; `UNKNOWN` reachability blocks
+`pending`; missing, failed, or unavailable required evidence blocks `done`/C3.
+Levels stay separate and never promote one another. Run mutation or destructive
 negative controls only on disposable copies under a verified temporary root,
 never tracked worktree or canonical source bytes.
+For every required level in each referenced CP row, map its named probe and
+reachability here; one command may own several explicitly named level probes.
 
 ## Status matrix
 
 | Status condition | Persisted state |
 |---|---|
 | C1/C2 decision open | `blocked` |
-| accepted finding open or `UNKNOWN` | `blocked` |
+| accepted finding open or `UNKNOWN` reachability | `blocked` |
 | every non-dependency blocker closed | `pending` |
 | named task dependency not done | keep `pending`; queue gates it |
 Use only direct-child task basenames or `none` under `## Dependencies`; keep `## Receipt` empty until execution produces canonical proof.
@@ -138,33 +150,37 @@ Avoid implementation detail unless it is a user-approved contract. Replace
 
 ## Example Mapping rule
 
-When the expected outcome is uncertain, write a question and take it to C1 or
-C2; do not guess. When a rule is ambiguous, add two or three examples:
+Classify ambiguity in every affected CP row:
 
-```text
-Rule: A done task has fresh executable proof.
-Example: command exits 0 and reports 3 tests passed -> done may be proposed.
-Example: command exits 0 but reports 0 tests -> remains unfinished.
-Example: output is copied from an earlier session -> remains unfinished.
-Question: which environment owns the authoritative integration run?
-```
+| State | Required action |
+|---|---|
+| `none` | proceed |
+| `examples-needed` | add two or three examples only for an already decided rule; promote to `decision-needed` if an example changes observable behavior |
+| `decision-needed` | ask the user at C1/C2 and keep affected tasks blocked |
+| `design-needed` | after user-owned decisions settle, route material competing technical designs through Brainstorm |
 
-Keep examples only until they clarify a rule or acceptance criterion.
+Do not let examples choose a product outcome: retention of 30 versus 90 days is
+`decision-needed`. Keep examples only until they clarify the decided rule.
 
 ## No-invention and conditional boundary contracts
 
 Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.
+
+For a Specs route, `plan.md` owns one `## Coverage profile` row per externally observable outcome; direct and Brainstorm-only routes do not persist it. Change kinds are multi-valued (`add`, `modify`, `fix`, `refactor`, `remove`, `migrate`, `integrate`), and unfamiliar kinds or surfaces use `other:<verbatim>` rather than disappearing. Each task references its CP IDs; authoring, review, edge, and proof obligations union only inside affected rows/tasks. Rederive affected CP rows after any accepted scope, outcome, criteria, ownership, dependency, risk, or proof delta before task status.
 
 A boundary is material when the task creates, changes, or depends on it and a different choice changes an external observation, security, durable data, compatibility, or proof reachability. Require only the matching material row; omit nonmaterial categories.
 For every required row, name each listed choice exactly; labels such as “JSON”, “local path”, “locked”, or “timestamped” alone remain unresolved.
 
 | Boundary | Required contract when material |
 |---|---|
+| Interaction/UI | entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior |
 | API/CLI | entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility |
-| Schema | version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration |
-| State/concurrency | initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery |
+| Data/schema | authority/storage/transaction; version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration |
+| Async/state | initial/terminal states; event + guard + effect + next + error; ordering/concurrency; duplicate/retry; writer/lock acquire/contention/release; cancellation; rollback/recovery |
 | Filesystem/security | authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup |
+| Runtime/deploy | config/env/flags; registration/packaging; OS/arch; rollout/rollback; health/logging; operator recovery |
 | Time/retention | clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery |
+| AI/model | provider/model/prompt/tool schema; nondeterminism/bounds; safety/privacy; fallback; cost/token limit; eval oracle |
 | Integration/proof | caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle |
 
 ## Twelve edge-case dimensions
@@ -194,7 +210,7 @@ Before C2 confirm:
 - dependencies are acyclic and refer to real task numbers;
 - commands are runnable from the named work context;
 - negative, recovery, and reachability probes exist where risk requires them;
-- examples settle ambiguous rules rather than adding prose;
+- every ambiguity follows its required action; examples only clarify decided rules;
 - the latest consistency sweep reports zero unresolved contradictions.
 
 Stop expanding when a fresh reviewer finds no new material failure with new
