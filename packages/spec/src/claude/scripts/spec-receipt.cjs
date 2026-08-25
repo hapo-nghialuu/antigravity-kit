@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { annotatedMarkdownLines } = require('./spec-resolver.cjs');
 
 const EVIDENCE_HEADINGS = new Set([
   'Evidence',
@@ -67,21 +68,46 @@ function evidenceBody(text, policy = {}) {
 }
 
 function workflowReceiptBody(text, policy = {}) {
-  const lines = String(text || '').split('\n');
+  const lines = annotatedMarkdownLines(text);
   const starts = [];
   for (let index = 0; index < lines.length; index += 1) {
-    if (/^##\s+Receipt\s*$/.test(lines[index])) starts.push(index + 1);
+    if (lines[index].outsideFence && /^##\s+Receipt\s*$/.test(lines[index].line)) starts.push(index + 1);
   }
   if (starts.length !== 1) return null;
 
   const start = starts[0];
   let end = lines.length;
   for (let index = start; index < lines.length; index += 1) {
-    const heading = lines[index].match(/^(#{1,6})\s+/);
-    const tap = typeof policy.isTapMetadataHeading === 'function' && policy.isTapMetadataHeading(lines[index]);
+    if (!lines[index].outsideFence) continue;
+    const heading = lines[index].line.match(/^(#{1,6})\s+/);
+    const tap = typeof policy.isTapMetadataHeading === 'function' && policy.isTapMetadataHeading(lines[index].line);
     if (heading && heading[1].length <= 2 && !tap) { end = index; break; }
   }
-  return lines.slice(start, end).join('\n');
+  return lines.slice(start, end).map(({ line }) => line).join('\n');
+}
+
+function workflowCanonicalValidationBody(body) {
+  return annotatedMarkdownLines(body)
+    .filter(({ outsideFence }) => outsideFence)
+    .map(({ line }) => line)
+    .join('\n');
+}
+
+function hasNonEmptyFencedBlock(body) {
+  let open = false;
+  let nonEmpty = false;
+  for (const { line, fenceEvent } of annotatedMarkdownLines(body)) {
+    if (fenceEvent === 'open') {
+      open = true;
+      nonEmpty = false;
+    } else if (fenceEvent === 'close') {
+      if (open && nonEmpty) return true;
+      open = false;
+    } else if (open && line.trim() !== '') {
+      nonEmpty = true;
+    }
+  }
+  return false;
 }
 
 function fieldValues(body, name) {
@@ -105,22 +131,14 @@ function normalizedCommand(value) {
 function workflowVerificationCommand(taskText) {
   const sections = [];
   let current = null;
-  let fence = null;
-  for (const line of String(taskText || '').split('\n')) {
-    const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
-    if (marker) {
-      const kind = marker[1][0];
-      if (fence === null) fence = kind;
-      else if (fence === kind) fence = null;
-      continue;
-    }
-    if (fence !== null) continue;
-    if (fence === null && /^##\s+Verification Plan\s*$/.test(line)) {
+  for (const { line, outsideFence } of annotatedMarkdownLines(taskText)) {
+    if (!outsideFence) continue;
+    if (/^##\s+Verification Plan\s*$/.test(line)) {
       current = [];
       sections.push(current);
       continue;
     }
-    if (fence === null && current && /^#{1,2}\s+/.test(line)) {
+    if (current && /^#{1,2}\s+/.test(line)) {
       current = null;
       continue;
     }
@@ -227,7 +245,10 @@ function checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy) 
   }
 
   const taskText = taskFile.bytes.toString('utf8');
-  const statusLines = [...taskText.matchAll(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/gim)];
+  const statusLines = annotatedMarkdownLines(taskText)
+    .filter(({ outsideFence }) => outsideFence)
+    .map(({ line }) => line.match(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/i))
+    .filter(Boolean);
   const body = workflowReceiptBody(taskText, policy);
   const failures = [];
   if (statusLines.length !== 1 || statusLines[0][1].toLowerCase().replaceAll('-', '_') !== 'done') {
@@ -236,12 +257,15 @@ function checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy) 
   if (body === null) {
     failures.push('missing_receipt');
   } else {
+    const canonicalBody = workflowCanonicalValidationBody(body);
     const options = typeof policy?.receiptValidatorOptions === 'function'
       ? policy.receiptValidatorOptions({}, { runtimeContext, requireProvenanceBinding: true })
       : { requireProvenanceBinding: true };
-    failures.push(...canonicalFailures(body, {}, runtimeContext, policy));
-    failures.push(...workflowCommandFailures(taskText, body));
-    if (!/```[^\n]*\n[\s\S]*?\S[\s\S]*?\n```/m.test(body)) failures.push('command_output');
+    failures.push(...canonicalFailures(canonicalBody, {}, runtimeContext, policy));
+    failures.push(...canonicalFailures(body, {}, runtimeContext, policy)
+      .filter((failure) => ['placeholder', 'verification_state', 'exit_result'].includes(failure)));
+    failures.push(...workflowCommandFailures(taskText, canonicalBody));
+    if (!hasNonEmptyFencedBlock(body)) failures.push('command_output');
     if (!options.expectedProvenance) failures.push('provenance');
   }
   return {
@@ -254,6 +278,36 @@ function checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy) 
     taskPath,
     failures: [...new Set(failures)],
   };
+}
+
+function workflowProofSignature(taskPath, proof) {
+  const hash = crypto.createHash('sha256');
+  hash.update('cafekit-workflow-proof-v1\0');
+  hash.update(String(taskPath));
+  hash.update('\0');
+  hash.update(proof.taskFile?.bytes || Buffer.alloc(0));
+  hash.update('\0');
+  hash.update(proof.receiptBytes || Buffer.alloc(0));
+  hash.update('\0');
+  hash.update(String(proof.status || 'unknown'));
+  return hash.digest('hex');
+}
+
+function workflowDependencyProofState(featureDir, taskRegistry, runtimeContext, policy) {
+  const tasks = {};
+  for (const taskPath of Object.keys(taskRegistry || {}).sort()) {
+    const done = taskRegistry[taskPath]?.status === 'done';
+    const proof = checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy);
+    const valid = proof.failures.length === 0;
+    tasks[taskPath] = {
+      done,
+      valid,
+      eligible: done && valid,
+      signature: workflowProofSignature(taskPath, proof),
+      failures: [...proof.failures],
+    };
+  }
+  return tasks;
 }
 
 function checkWorkflowReceiptSet(candidates, projectRoot, runtimeSession, policy) {
@@ -298,5 +352,6 @@ module.exports = {
   evidenceBody,
   readTaskProof,
   safeRead,
+  workflowDependencyProofState,
   workflowReceiptBody,
 };

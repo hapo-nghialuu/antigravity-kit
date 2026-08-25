@@ -132,13 +132,30 @@ try {
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
+  const featureDir = path.join(specsPath, featureName);
   const taskStatusByPath = new Map(taskEntries.map(([taskPath, task]) => [taskPath, task?.status || 'pending']));
+  const dependencyProof = processWorkflow
+    ? RECEIPT.workflowDependencyProofState(featureDir, taskRegistry, runtimeContext, POLICY)
+    : {};
+  const taskState = taskEntries.map(([taskPath, task]) => [
+    taskPath,
+    task?.status || 'pending',
+    [...(Array.isArray(task?.dependencies) ? task.dependencies : [])].sort(),
+  ]).sort(([left], [right]) => left.localeCompare(right));
+  const proofState = Object.entries(dependencyProof).map(([taskPath, proof]) => [
+    taskPath,
+    proof.done,
+    proof.valid,
+    proof.eligible,
+    proof.signature,
+  ]);
   const nextUnblocked = taskEntries.find(([, task]) => {
     const status = task?.status || 'pending';
     const deps = Array.isArray(task?.dependencies) ? task.dependencies : [];
-    return status === 'pending' && deps.every((dep) => taskStatusByPath.get(dep) === 'done');
+    return resolved.queueReady !== false && status === 'pending' && deps.every((dep) => (
+      processWorkflow ? dependencyProof[dep]?.eligible === true : taskStatusByPath.get(dep) === 'done'
+    ));
   });
-  const featureDir = path.join(specsPath, featureName);
   const featureReceiptPresent = !processWorkflow
     && RECEIPT.safeRead(featureDir, 'feature-receipt.md').status === 'ok';
 
@@ -157,6 +174,10 @@ try {
     Head: runtimeContext.head,
     contextId: runtimeContext.context_id,
     phase,
+    workflowContract: resolved.workflowContract || null,
+    queueReady: resolved.queueReady !== false,
+    taskState,
+    proofState,
     done: taskCounts.done || 0,
     total: taskEntries.length,
     featureReceiptPresent,
@@ -170,7 +191,10 @@ try {
 
   if (stateKey && lastKey === stateKey) {
     const stateTarget = processWorkflow ? 'task Markdown' : '`spec.json`';
-    console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync ${stateTarget} when state changes.\n`);
+    const migration = processWorkflow && resolved.queueReady === false
+      ? ' Add `Specs-Contract: process-first-ready-v1` after the plan title before tasks can enter Next.'
+      : '';
+    console.log(`\n> 🔵 Spec \`${featureName}\` @ \`${phase}\` (${taskCounts.done || 0}/${taskEntries.length} tasks done). Tollgate active — sync ${stateTarget} when state changes.${migration}\n`);
     process.exit(0);
   }
 
@@ -194,6 +218,9 @@ try {
     lines.push(`- Flash verification pending: ${flashTasks.map((taskPath) => `\`${taskPath}\``).join(', ')}. A PASS proof keeps the persisted task in_progress until explicit sync-finalize.`);
   }
   if (processWorkflow) {
+    if (resolved.queueReady === false) {
+      lines.push('- Migration required: add `Specs-Contract: process-first-ready-v1` after the plan title before tasks can enter Next.');
+    }
     lines.push('- Sync each flat task `Status:` only after verified work; task proof belongs in that task\'s inline `## Receipt`.');
     lines.push(`- Workflow source: \`specs/${featureName}/plan.md\`; Stop revalidates every task currently marked done.`);
   } else {

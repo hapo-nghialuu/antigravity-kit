@@ -4,10 +4,47 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '../..');
+const PACKAGE_VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')).version;
+const OLD_FIXTURE_VERSION = '0.14.1';
+const NO_INVENTION_ANCHOR = 'Before implementation handoff, apply the **no-invention gate**:';
+const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
+  ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
+  ['Schema', 'version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration'],
+  ['State/concurrency', 'initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery'],
+  ['Filesystem/security', 'authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup'],
+  ['Time/retention', 'clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery'],
+  ['Integration/proof', 'caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle'],
+];
+const IMPLEMENTATION_READINESS_CLAUSES = {
+  noInvention: 'Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.',
+  materialDefinition: 'A boundary is material when the task creates, changes, or depends on it and a different choice changes an external observation, security, durable data, compatibility, or proof reachability. Require only the matching material row; omit nonmaterial categories.',
+  exactBoundaryChoices: 'For every required row, name each listed choice exactly; labels such as “JSON”, “local path”, “locked”, or “timestamped” alone remain unresolved.',
+  proofPlanLines: [
+    '- Command: `<exact runnable command>`',
+    '- Named probe: <existing concrete probe/test/hook ID; never only a suite label>',
+    '- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>',
+    '- Oracle: <externally observable success or failure>',
+    '- Counterexample: <material alternative behavior that must make this proof fail>',
+    '- Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>',
+  ],
+  proofTrace: 'Trace `Command → Named probe → Reachability → Oracle`.',
+  namedProbeOwnership: 'Aggregate suites\nname the owning concrete probe.',
+  proofLevelSeparation: 'Proof at `source`/`installed`/`live` stays\nseparate; one level never promotes another.',
+  disposableTemplateControls: 'Run mutation or destructive\nnegative controls only on disposable copies under a verified temporary root,\nnever tracked worktree or canonical source bytes.',
+  disposableReviewControls: 'Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.',
+  failureSemantics: '`Crash` means abrupt unhandled termination before the claimed catch point; a catchable failure returns/raises an error or exits nonzero. Never use them interchangeably.',
+  privacyIdentifiers: 'Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.',
+  freshReplay: 'After applying an accepted C2 finding, a fresh-context closure pass records and freshly replays its original counterexample after the repair under this exact review-log header:',
+  distinctRepairProof: '`Repaired at` cites the repair edit; `Proved at` must cite distinct evidence from the fresh replay, never the repair-edit citation.',
+  closureTransition: 'An accepted finding transitions `accepted → repaired → PASS|FAIL|UNKNOWN`.',
+  unknownBlocks: 'Only `PASS` closes it; `FAIL` remains open for the remaining paper-review round; `UNKNOWN` blocks implementation handoff.',
+  scopeReturnsToC1: 'A repair that adds user semantics or scope returns to C1.',
+};
 const REQUIRED_PAYLOAD = [
   'bin/install.js',
   'src/claude/migration-manifest.json',
@@ -33,8 +70,14 @@ const FORBIDDEN_PAYLOAD = [
   /^src\/\.codex(?:\/|$)/,
 ];
 const RUNTIMES = {
-  claude: { root: '.claude', rules: '.claude/hooks/rules.cjs' },
-  codex: { root: '.codex', rules: '.codex/hooks/rules.cjs' },
+  claude: {
+    root: '.claude', rules: '.claude/hooks/rules.cjs', specs: '.claude/skills/specs',
+    manifest: '.claude/cafekit-manifest.json', templatesManifestPath: 'skills/specs/references/templates.md'
+  },
+  codex: {
+    root: '.codex', rules: '.codex/hooks/rules.cjs', specs: '.agents/skills/specs',
+    manifest: '.codex/cafekit-manifest.json', templatesManifestPath: '.agents/skills/specs/references/templates.md'
+  },
 };
 
 function npmPack(args, cwd) {
@@ -131,6 +174,434 @@ function runInstaller(installer, root, platforms, lang) {
     env: { ...process.env, HOME: path.join(root, 'home'), PATH: '/usr/bin:/bin' },
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  return result;
+}
+
+function markdownTableUnderHeading(content, heading) {
+  const lines = markdownSectionUnderHeading(content, heading).split('\n');
+  const tableStart = lines.findIndex((line) => line.trim().startsWith('|'));
+  if (tableStart < 0) return [];
+  const rows = [];
+  for (let index = tableStart; index < lines.length && lines[index].trim().startsWith('|'); index += 1) {
+    const cells = lines[index].split('|').slice(1, -1).map((cell) => cell.trim());
+    if (cells.every((cell) => /^:?-+:?$/.test(cell))) continue;
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function markdownSectionUnderHeading(content, heading) {
+  const lines = String(content).split('\n');
+  const headingIndex = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (headingIndex < 0) return '';
+  const nextHeadingIndex = lines.findIndex(
+    (line, index) => index > headingIndex && /^##\s+/.test(line)
+  );
+  return lines.slice(headingIndex + 1, nextHeadingIndex < 0 ? undefined : nextHeadingIndex).join('\n');
+}
+
+function normalizeMarkdownWhitespace(content) {
+  return String(content).replace(/\s+/g, ' ').trim();
+}
+
+function markdownBetweenHeadings(content, startHeading, endHeading) {
+  const value = String(content);
+  const startMarker = `## ${startHeading}`;
+  const endMarker = `## ${endHeading}`;
+  const startIndex = value.indexOf(startMarker);
+  const endIndex = value.indexOf(endMarker, startIndex + startMarker.length);
+  if (startIndex < 0 || endIndex < 0) return '';
+  return value.slice(startIndex + startMarker.length, endIndex);
+}
+
+function implementationReadinessContractIssues(input) {
+  const keys = input && typeof input === 'object' && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (keys.join(',') !== 'review,templates'
+    || typeof input.templates !== 'string' || typeof input.review !== 'string') {
+    throw new TypeError('implementation-readiness checker expects exactly templates and review UTF-8 strings');
+  }
+
+  const issues = new Set();
+  const authoring = markdownSectionUnderHeading(
+    input.templates,
+    'No-invention and conditional boundary contracts'
+  );
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.noInvention)) {
+    issues.add('no-invention');
+  }
+
+  const boundaryTable = markdownTableUnderHeading(
+    input.templates,
+    'No-invention and conditional boundary contracts'
+  );
+  const expectedBoundaryTable = [
+    ['Boundary', 'Required contract when material'],
+    ...IMPLEMENTATION_READINESS_BOUNDARY_ROWS,
+  ];
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.materialDefinition)
+    || !authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices)
+    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 6
+    || boundaryTable.length !== expectedBoundaryTable.length
+    || JSON.stringify(boundaryTable) !== JSON.stringify(expectedBoundaryTable)) {
+    issues.add('boundary-contract');
+  }
+
+  const proof = markdownSectionUnderHeading(input.templates, 'Verification Plan');
+  const proofPlanLines = proof.split('\n').map((line) => line.trim()).filter((line) => line.startsWith('- '));
+  const normalizedProofContract = normalizeMarkdownWhitespace(markdownBetweenHeadings(
+    input.templates,
+    'Verification Plan',
+    'Canonical inline Receipt'
+  ));
+  const normalizedProofClauses = [
+    IMPLEMENTATION_READINESS_CLAUSES.proofTrace,
+    IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
+    IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
+    IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+  ].map(normalizeMarkdownWhitespace);
+  const reviewNegativeControls = normalizeMarkdownWhitespace(
+    markdownSectionUnderHeading(input.review, 'B2 — fresh-context red team')
+  );
+  if (JSON.stringify(proofPlanLines) !== JSON.stringify(IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines)
+    || normalizedProofClauses.some((clause) => !normalizedProofContract.includes(clause))
+    || !reviewNegativeControls.includes(normalizeMarkdownWhitespace(
+      IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls
+    ))) {
+    issues.add('proof-chain');
+  }
+
+  const failureGuidance = markdownSectionUnderHeading(input.templates, 'Twelve edge-case dimensions');
+  if (!failureGuidance.includes(IMPLEMENTATION_READINESS_CLAUSES.failureSemantics)) {
+    issues.add('failure-semantics');
+  }
+
+  const evidenceRules = markdownSectionUnderHeading(input.review, 'B1 — evidence rule');
+  if (!evidenceRules.includes(IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers)) {
+    issues.add('privacy-identifiers');
+  }
+
+  const closure = markdownSectionUnderHeading(input.review, 'Accepted-repair closure');
+  const normalizedClosure = normalizeMarkdownWhitespace(closure);
+  const closureHeader = markdownTableUnderHeading(input.review, 'Accepted-repair closure')[0] || [];
+  if (JSON.stringify(closureHeader) !== JSON.stringify([
+    'ID', 'Decision', 'Original counterexample', 'Repaired at', 'Proved at', 'Replay', 'Closure',
+  ])
+    || !normalizedClosure.includes(normalizeMarkdownWhitespace(IMPLEMENTATION_READINESS_CLAUSES.freshReplay))
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.closureTransition)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.unknownBlocks)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.scopeReturnsToC1)) {
+    issues.add('repair-closure');
+  }
+
+  return [...issues].sort();
+}
+
+function installedSpecsReadinessIssues(project, installedRoot, expectedRelative) {
+  assert.equal(path.isAbsolute(project), true, 'project root must be absolute');
+  assert.equal(path.isAbsolute(installedRoot), true, 'installed Specs root must be absolute');
+  const canonicalProject = fs.realpathSync(project);
+  const canonicalInstalled = fs.realpathSync(installedRoot);
+  const relative = path.relative(canonicalProject, canonicalInstalled);
+  assert.ok(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), 'installed Specs root must stay inside project');
+  assert.equal(canonicalInstalled, fs.realpathSync(path.join(canonicalProject, expectedRelative)), 'checker must use the native installed Specs root');
+  return implementationReadinessContractIssues({
+    templates: fs.readFileSync(path.join(canonicalInstalled, 'references/templates.md'), 'utf8'),
+    review: fs.readFileSync(path.join(canonicalInstalled, 'references/review.md'), 'utf8'),
+  });
+}
+
+function assertInstalledSpecsReadiness(project, platform, expected = []) {
+  const runtime = RUNTIMES[platform];
+  assert.ok(runtime, `unknown platform: ${platform}`);
+  const installedRoot = path.join(project, runtime.specs);
+  const issues = installedSpecsReadinessIssues(project, installedRoot, runtime.specs);
+  assert.deepEqual(issues, expected, `${platform} installed Specs readiness issues`);
+  return issues;
+}
+
+function sha256(content) {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function assertContainedRealpath(root, target, label) {
+  const canonicalRoot = fs.realpathSync(root);
+  const canonicalTarget = fs.realpathSync(target);
+  const relative = path.relative(canonicalRoot, canonicalTarget);
+  assert.ok(
+    relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative),
+    `${label} must stay inside ${canonicalRoot}`
+  );
+  return canonicalTarget;
+}
+
+function installedMutationContext(tempRoot, project, platform, packageRoot = PACKAGE_ROOT) {
+  const runtime = RUNTIMES[platform];
+  assert.ok(runtime, `unknown platform: ${platform}`);
+  const canonicalTempRoot = assertContainedRealpath(os.tmpdir(), tempRoot, `${platform} mkdtemp root`);
+  assert.match(path.basename(canonicalTempRoot), /^cafekit-package-matrix-/, `${platform} mutation root must be the verified matrix mkdtemp`);
+  const canonicalProject = assertContainedRealpath(canonicalTempRoot, project, `${platform} packed project`);
+  const nativeInstalledRoot = path.join(canonicalProject, runtime.specs);
+  const canonicalInstalledRoot = assertContainedRealpath(
+    canonicalProject,
+    nativeInstalledRoot,
+    `${platform} native installed Specs root`
+  );
+  const installedRelatives = {
+    templates: 'references/templates.md',
+    review: 'references/review.md',
+  };
+  const installedPaths = {
+    templates: path.join(nativeInstalledRoot, installedRelatives.templates),
+    review: path.join(nativeInstalledRoot, installedRelatives.review),
+  };
+  const sourcePaths = {
+    templates: path.join(packageRoot, 'src/claude/skills/specs/references/templates.md'),
+    review: path.join(packageRoot, 'src/claude/skills/specs/references/review.md'),
+  };
+  for (const source of Object.keys(sourcePaths)) sourcePaths[source] = fs.realpathSync(sourcePaths[source]);
+  const sourceHashes = Object.fromEntries(
+    Object.entries(sourcePaths).map(([source, sourcePath]) => [source, sha256(fs.readFileSync(sourcePath))])
+  );
+  const assertSourceHashes = (stage) => {
+    for (const source of Object.keys(sourcePaths)) {
+      assert.equal(
+        sha256(fs.readFileSync(sourcePaths[source])),
+        sourceHashes[source],
+        `${platform} PACKAGE_ROOT ${source} SHA changed ${stage}`
+      );
+    }
+  };
+  const assertSafeInstalledTarget = (source, stage) => {
+    assert.ok(Object.hasOwn(installedPaths, source), `${platform} unknown installed mutation source: ${source}`);
+    assertSourceHashes(`before ${stage}`);
+
+    const currentTempRoot = assertContainedRealpath(os.tmpdir(), tempRoot, `${platform} ${stage} mkdtemp root`);
+    assert.equal(currentTempRoot, canonicalTempRoot, `${platform} ${stage} mutation root changed`);
+    const currentProject = assertContainedRealpath(currentTempRoot, project, `${platform} ${stage} packed project`);
+    assert.equal(currentProject, canonicalProject, `${platform} ${stage} packed project changed`);
+    const currentInstalledRoot = assertContainedRealpath(
+      currentProject,
+      nativeInstalledRoot,
+      `${platform} ${stage} native installed Specs root`
+    );
+    assert.equal(currentInstalledRoot, canonicalInstalledRoot, `${platform} ${stage} native installed Specs root changed`);
+
+    const target = installedPaths[source];
+    const targetMetadata = fs.lstatSync(target);
+    assert.equal(
+      targetMetadata.isSymbolicLink(),
+      false,
+      `${platform} ${stage} target must be a regular non-symlink file`
+    );
+    assert.equal(targetMetadata.isFile(), true, `${platform} ${stage} target must be a regular non-symlink file`);
+    const canonicalTarget = assertContainedRealpath(
+      currentInstalledRoot,
+      target,
+      `${platform} ${stage} installed ${source} mutation target`
+    );
+    assert.equal(
+      assertContainedRealpath(currentProject, target, `${platform} ${stage} disposable project target`),
+      canonicalTarget
+    );
+    assert.equal(
+      canonicalTarget,
+      path.join(currentInstalledRoot, installedRelatives[source]),
+      `${platform} ${stage} target must remain at its exact native installed path`
+    );
+    assert.notEqual(canonicalTarget, sourcePaths[source], `${platform} ${stage} target must not be package source`);
+
+    const installedIdentity = fs.statSync(target);
+    const sourceIdentity = fs.statSync(sourcePaths[source]);
+    assert.ok(
+      installedIdentity.dev !== sourceIdentity.dev || installedIdentity.ino !== sourceIdentity.ino,
+      `${platform} ${stage} target must not share (dev, ino) with package source`
+    );
+    return target;
+  };
+  const writeInstalled = (source, content, stage) => {
+    const target = assertSafeInstalledTarget(source, stage);
+    fs.writeFileSync(target, content);
+    assertSourceHashes(`immediately after ${stage}`);
+  };
+  for (const source of Object.keys(installedPaths)) {
+    assertSafeInstalledTarget(source, `${source} context creation`);
+  }
+  return { installedPaths, assertSafeInstalledTarget, writeInstalled, assertSourceHashes };
+}
+
+test('installed mutation guard rejects post-context symlink and hardlink before source bytes change', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-package-matrix-'));
+  const trackedSources = {
+    templates: path.join(PACKAGE_ROOT, 'src/claude/skills/specs/references/templates.md'),
+    review: path.join(PACKAGE_ROOT, 'src/claude/skills/specs/references/review.md'),
+  };
+  const trackedHashes = Object.fromEntries(
+    Object.entries(trackedSources).map(([source, sourcePath]) => [source, sha256(fs.readFileSync(sourcePath))])
+  );
+  try {
+    for (const topology of ['symlink', 'hardlink']) {
+      const packageRoot = path.join(root, `${topology}-package-source`);
+      const project = path.join(root, `${topology}-project`);
+      const sourceDirectory = path.join(packageRoot, 'src/claude/skills/specs/references');
+      const installedDirectory = path.join(project, RUNTIMES.claude.specs, 'references');
+      fs.mkdirSync(sourceDirectory, { recursive: true });
+      fs.mkdirSync(installedDirectory, { recursive: true });
+      for (const file of ['templates.md', 'review.md']) {
+        fs.writeFileSync(path.join(sourceDirectory, file), `${topology} disposable source ${file}\n`);
+        fs.writeFileSync(path.join(installedDirectory, file), `${topology} disposable installed ${file}\n`);
+      }
+
+      const context = installedMutationContext(root, project, 'claude', packageRoot);
+      const sourcePath = path.join(sourceDirectory, 'templates.md');
+      const target = context.installedPaths.templates;
+      const sourceBytes = fs.readFileSync(sourcePath);
+      const sourceHash = sha256(sourceBytes);
+      fs.unlinkSync(target);
+      if (topology === 'symlink') {
+        fs.symlinkSync(sourcePath, target);
+        assert.equal(fs.lstatSync(target).isSymbolicLink(), true, 'symlink control must change target topology');
+      } else {
+        fs.linkSync(sourcePath, target);
+        const sourceIdentity = fs.statSync(sourcePath);
+        const installedIdentity = fs.statSync(target);
+        assert.deepEqual(
+          [installedIdentity.dev, installedIdentity.ino],
+          [sourceIdentity.dev, sourceIdentity.ino],
+          'hardlink control must share source identity'
+        );
+      }
+
+      assert.throws(
+        () => context.writeInstalled('templates', 'forbidden installed mutation\n', `${topology} regression`),
+        topology === 'symlink' ? /regular non-symlink file/ : /must not share \(dev, ino\)/
+      );
+      assert.deepEqual(fs.readFileSync(sourcePath), sourceBytes, `${topology} rejection must preserve source bytes`);
+      assert.equal(sha256(fs.readFileSync(sourcePath)), sourceHash, `${topology} rejection must preserve source SHA`);
+      context.assertSourceHashes(`after rejected ${topology} write`);
+    }
+    for (const [source, sourcePath] of Object.entries(trackedSources)) {
+      assert.equal(
+        sha256(fs.readFileSync(sourcePath)),
+        trackedHashes[source],
+        `tracked PACKAGE_ROOT ${source} SHA must remain unchanged`
+      );
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function assertInstalledReadinessMutationsDetected(tempRoot, project, platform) {
+  const context = installedMutationContext(tempRoot, project, platform);
+  const baseline = Object.fromEntries(
+    Object.entries(context.installedPaths).map(([source, target]) => [source, fs.readFileSync(target, 'utf8')])
+  );
+  const apiBoundary = IMPLEMENTATION_READINESS_BOUNDARY_ROWS.find(([label]) => label === 'API/CLI');
+  assert.ok(apiBoundary, 'API/CLI boundary contract must exist');
+  const mutations = [
+    {
+      name: 'no-invention-blocking', issue: 'no-invention', source: 'templates',
+      from: IMPLEMENTATION_READINESS_CLAUSES.noInvention,
+      to: 'Before implementation handoff, note ambiguous choices without blocking handoff.',
+    },
+    {
+      name: 'api-success-and-error-semantics', issue: 'boundary-contract', source: 'templates',
+      from: `| ${apiBoundary[0]} | ${apiBoundary[1]} |`,
+      to: `| ${apiBoundary[0]} | ${apiBoundary[1].replace('success output; ', '').replace('error/status/exit; ', '')} |`,
+    },
+    {
+      name: 'concrete-named-probe', issue: 'proof-chain', source: 'templates',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[1],
+      to: '- Named probe: <suite label>',
+    },
+    {
+      name: 'artifact-path-and-digest-or-ephemeral', issue: 'proof-chain', source: 'templates',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[5],
+      to: '- Artifacts: <required artifact path, or none>',
+    },
+    {
+      name: 'distinct-repair-and-proof-evidence', issue: 'repair-closure', source: 'review',
+      from: IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof,
+      to: '`Repaired at` and `Proved at` may cite the same repair edit.',
+    },
+    {
+      name: 'crash-versus-catchable-failure', issue: 'failure-semantics', source: 'templates',
+      from: IMPLEMENTATION_READINESS_CLAUSES.failureSemantics,
+      to: 'Crash and catchable failure both mean an error occurred.',
+    },
+    {
+      name: 'privacy-identifier-surface', issue: 'privacy-identifiers', source: 'review',
+      from: IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers,
+      to: 'Any privacy/security claim names the sensitive data at risk.',
+    },
+  ];
+  assertInstalledSpecsReadiness(project, platform);
+  for (const mutation of mutations) {
+    const anchorIndex = baseline[mutation.source].indexOf(mutation.from);
+    assert.notEqual(anchorIndex, -1, `${platform} ${mutation.name} mutation anchor must exist`);
+    assert.equal(
+      baseline[mutation.source].indexOf(mutation.from, anchorIndex + mutation.from.length),
+      -1,
+      `${platform} ${mutation.name} mutation anchor must be unique`
+    );
+    const weakened = `${baseline[mutation.source].slice(0, anchorIndex)}${mutation.to}${baseline[mutation.source].slice(anchorIndex + mutation.from.length)}`;
+    try {
+      context.writeInstalled(mutation.source, weakened, `${mutation.name} mutation`);
+      assertInstalledSpecsReadiness(project, platform, [mutation.issue]);
+    } finally {
+      context.writeInstalled(mutation.source, baseline[mutation.source], `${mutation.name} restoration`);
+    }
+    assertInstalledSpecsReadiness(project, platform);
+  }
+}
+
+function assertPristineUpgradeAndUserPreservation(installer, tempRoot, project, platform) {
+  const runtime = RUNTIMES[platform];
+  const context = installedMutationContext(tempRoot, project, platform);
+  const templatesPath = context.installedPaths.templates;
+  const manifestPath = path.join(project, runtime.manifest);
+  const metadataPath = path.join(project, runtime.root, 'cafekit.json');
+  const baseline = fs.readFileSync(templatesPath, 'utf8');
+  const weakened = baseline.replace(NO_INVENTION_ANCHOR, '');
+  assert.notEqual(weakened, baseline, `${platform} old fixture mutation must apply`);
+  try {
+    context.writeInstalled('templates', weakened, 'pristine-upgrade mutation');
+    const oldManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert.ok(oldManifest.files[runtime.templatesManifestPath], `${platform} templates ownership record missing`);
+    oldManifest.files[runtime.templatesManifestPath] = {
+      ...oldManifest.files[runtime.templatesManifestPath], sha256: sha256(weakened), version: OLD_FIXTURE_VERSION
+    };
+    writeJson(manifestPath, oldManifest);
+    const oldMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    oldMetadata.version = OLD_FIXTURE_VERSION;
+    writeJson(metadataPath, oldMetadata);
+
+    runInstaller(installer, project, [platform], null);
+    context.assertSourceHashes('immediately after pristine-upgrade installer');
+    context.assertSafeInstalledTarget('templates', 'after pristine-upgrade installer');
+    assert.equal(fs.readFileSync(templatesPath, 'utf8'), baseline, `${platform} pristine old gate must upgrade`);
+    assert.equal(JSON.parse(fs.readFileSync(metadataPath, 'utf8')).version, PACKAGE_VERSION);
+    const upgradedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert.equal(upgradedManifest.files[runtime.templatesManifestPath].sha256, sha256(baseline));
+    assert.equal(upgradedManifest.files[runtime.templatesManifestPath].version, PACKAGE_VERSION);
+    assertInstalledSpecsReadiness(project, platform);
+
+    context.writeInstalled('templates', weakened, 'user-preservation mutation after installer');
+    const manifestBeforePreservedRerun = fs.readFileSync(manifestPath, 'utf8');
+    const preserved = runInstaller(installer, project, [platform], null);
+    context.assertSourceHashes('immediately after user-preservation installer');
+    context.assertSafeInstalledTarget('templates', 'after user-preservation installer');
+    assert.equal(fs.readFileSync(templatesPath, 'utf8'), weakened, `${platform} user edit must be preserved`);
+    assert.equal(fs.readFileSync(manifestPath, 'utf8'), manifestBeforePreservedRerun, `${platform} user-modified manifest must stay unchanged`);
+    assert.match(`${preserved.stdout}\n${preserved.stderr}`, /preserved \(user-modified\): Skill: specs/);
+    assertInstalledSpecsReadiness(project, platform, ['no-invention']);
+  } finally {
+    context.writeInstalled('templates', baseline, 'upgrade and user-preservation restoration');
+  }
+  assertInstalledSpecsReadiness(project, platform);
 }
 
 function createProvenanceFixture(root) {
@@ -592,10 +1063,11 @@ test('entry accepts only the boolean true discriminator', () => {
 }
 
 function taskProjection({ id, title, ownedPath, criterion, verificationRef, role, artifact = false }) {
+  const artifactPath = `artifacts/${id}.json`;
   const anchors = typedAnchorTable([
     { id: `A-${id}-01`, type: 'file', target: ownedPath, role: 'owner', access: 'write', action: 'modify' },
     ...(artifact ? [{
-      id: `A-${id}-02`, type: 'artifact', target: `artifacts/${id}.json`,
+      id: `A-${id}-02`, type: 'artifact', target: artifactPath,
       role: 'verifier', access: 'write', action: 'create',
     }] : []),
     {
@@ -636,7 +1108,7 @@ ${anchors}
 - **Verification ref:** ${verificationRef}
 - **Task role:** ${role}
 - **Command:** \`node --test test/entry.test.js\`
-- **Expected:** Exit code 0 and the criterion-specific state is observed.
+- **Expected:** Exit code 0 and the criterion-specific state is observed.${artifact ? ` The artifact \`${artifactPath}\` must exist, and SHA-256 over its current bytes must match the recorded digest.` : ''}
 - **Negative path:** Invalid input returns the named rejected state.
 - **Reachability:** \`src/entry.js\` is reached by the installed test command.
 `;
@@ -647,7 +1119,7 @@ function createTaskFixture(paths, root, feature) {
   const fixture = materializeSpecState(paths, root, feature);
   fs.writeFileSync(path.join(fixture.featureDir, 'requirements.md'), requirementsProjection({ proof: true }));
   fs.writeFileSync(path.join(fixture.featureDir, 'design.md'), designProjection({
-    expected: 'exit 0, status enabled, and verifier artifact `artifacts/R1-02.json`',
+    expected: 'exit 0, status enabled, and verifier artifact `artifacts/R1-02.json` whose SHA-256 over current bytes matches the recorded digest',
     taskful: true,
   }));
   const taskOne = 'tasks/task-R1-01-implement.md';
@@ -684,7 +1156,7 @@ function createTaskFixture(paths, root, feature) {
   }, {
     criterion: 'R1.2', case_kind: 'failure',
     scenario: 'The verification command completes without producing its proof artifact.',
-    expected: 'The verification criterion remains unsatisfied until the artifact exists.',
+    expected: 'The verification criterion remains unsatisfied until `artifacts/R1-02.json` exists and its SHA-256 over current bytes matches the recorded digest.',
     decision_refs: ['D1', 'I1', 'C1'], verification_ref: 'V1',
   }]);
   return fixture;
@@ -858,6 +1330,11 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
           assertHookLanguage(project, platform, lang, `${project}-${matrixCase.name}-${lang || 'none'}`);
           assertInstalledScripts(project, platform);
           assertTransforms(project, platform);
+          assertInstalledSpecsReadiness(project, platform);
+          if (matrixCase.platforms.length === 1 && lang === null) {
+            assertInstalledReadinessMutationsDetected(root, project, platform);
+            assertPristineUpgradeAndUserPreservation(installer, root, project, platform);
+          }
         }
         if (matrixCase.platforms.includes('claude') && matrixCase.platforms.includes('codex')) {
           assertCombinedInstructionIsolation(project);
@@ -871,6 +1348,7 @@ test('packed tarball installer matrix proves locale, transforms, paths, and reru
           const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
             .filter((file) => !before[file] || !after[file] || !before[file].equals(after[file]));
           assert.deepEqual(changed, [], `${matrixCase.name} rerun must be byte-idempotent`);
+          for (const platform of matrixCase.platforms) assertInstalledSpecsReadiness(project, platform);
           assertCombinedInstructionIsolation(project);
           assert.match(fs.readFileSync(path.join(project, 'AGENTS.md'), 'utf8'), /User matrix note\nKeep this exact\./);
           assert.match(fs.readFileSync(path.join(project, 'CLAUDE.md'), 'utf8'), /User Claude matrix note\nKeep this exact\./);

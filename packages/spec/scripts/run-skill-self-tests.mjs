@@ -148,10 +148,8 @@ function markdownBoldBulletFields(content) {
 }
 
 function markdownTableUnderHeading(content, heading) {
-  const lines = String(content).split("\n");
-  const headingIndex = lines.findIndex((line) => line.trim() === `## ${heading}`);
-  if (headingIndex < 0) return [];
-  const tableStart = lines.findIndex((line, index) => index > headingIndex && line.trim().startsWith("|"));
+  const lines = markdownSectionUnderHeading(content, heading).split("\n");
+  const tableStart = lines.findIndex((line) => line.trim().startsWith("|"));
   if (tableStart < 0) return [];
   const rows = [];
   for (let index = tableStart; index < lines.length && lines[index].trim().startsWith("|"); index += 1) {
@@ -160,6 +158,548 @@ function markdownTableUnderHeading(content, heading) {
     rows.push(cells);
   }
   return rows;
+}
+
+function markdownSectionUnderHeading(content, heading) {
+  const lines = String(content).split("\n");
+  const headingIndex = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (headingIndex < 0) return "";
+  const nextHeadingIndex = lines.findIndex(
+    (line, index) => index > headingIndex && /^##\s+/.test(line),
+  );
+  return lines.slice(headingIndex + 1, nextHeadingIndex < 0 ? undefined : nextHeadingIndex).join("\n");
+}
+
+function normalizeMarkdownWhitespace(content) {
+  return String(content).replace(/\s+/g, " ").trim();
+}
+
+function markdownBetweenHeadings(content, startHeading, endHeading) {
+  const value = String(content);
+  const startMarker = `## ${startHeading}`;
+  const endMarker = `## ${endHeading}`;
+  const startIndex = value.indexOf(startMarker);
+  const endIndex = value.indexOf(endMarker, startIndex + startMarker.length);
+  if (startIndex < 0 || endIndex < 0) return "";
+  return value.slice(startIndex + startMarker.length, endIndex);
+}
+
+const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
+  ["API/CLI", "entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility"],
+  ["Schema", "version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration"],
+  ["State/concurrency", "initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery"],
+  ["Filesystem/security", "authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup"],
+  ["Time/retention", "clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery"],
+  ["Integration/proof", "caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle"],
+];
+
+const IMPLEMENTATION_READINESS_CLAUSES = {
+  noInvention: "Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.",
+  materialDefinition: "A boundary is material when the task creates, changes, or depends on it and a different choice changes an external observation, security, durable data, compatibility, or proof reachability. Require only the matching material row; omit nonmaterial categories.",
+  exactBoundaryChoices: "For every required row, name each listed choice exactly; labels such as “JSON”, “local path”, “locked”, or “timestamped” alone remain unresolved.",
+  proofPlanLines: [
+    "- Command: `<exact runnable command>`",
+    "- Named probe: <existing concrete probe/test/hook ID; never only a suite label>",
+    "- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>",
+    "- Oracle: <externally observable success or failure>",
+    "- Counterexample: <material alternative behavior that must make this proof fail>",
+    "- Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>",
+  ],
+  proofTrace: "Trace `Command → Named probe → Reachability → Oracle`.",
+  namedProbeOwnership: "Aggregate suites\nname the owning concrete probe.",
+  proofLevelSeparation: "Proof at `source`/`installed`/`live` stays\nseparate; one level never promotes another.",
+  disposableTemplateControls: "Run mutation or destructive\nnegative controls only on disposable copies under a verified temporary root,\nnever tracked worktree or canonical source bytes.",
+  disposableReviewControls: "Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.",
+  failureSemantics: "`Crash` means abrupt unhandled termination before the claimed catch point; a catchable failure returns/raises an error or exits nonzero. Never use them interchangeably.",
+  privacyIdentifiers: "Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.",
+  freshReplay: "After applying an accepted C2 finding, a fresh-context closure pass records and freshly replays its original counterexample after the repair under this exact review-log header:",
+  distinctRepairProof: "`Repaired at` cites the repair edit; `Proved at` must cite distinct evidence from the fresh replay, never the repair-edit citation.",
+  closureTransition: "An accepted finding transitions `accepted → repaired → PASS|FAIL|UNKNOWN`.",
+  unknownBlocks: "Only `PASS` closes it; `FAIL` remains open for the remaining paper-review round; `UNKNOWN` blocks implementation handoff.",
+  scopeReturnsToC1: "A repair that adds user semantics or scope returns to C1.",
+};
+
+function implementationReadinessContractIssues(input) {
+  const keys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (keys.join(",") !== "review,templates"
+    || typeof input.templates !== "string" || typeof input.review !== "string") {
+    throw new TypeError("implementation-readiness checker expects exactly templates and review UTF-8 strings");
+  }
+
+  const issues = new Set();
+  const authoring = markdownSectionUnderHeading(
+    input.templates,
+    "No-invention and conditional boundary contracts",
+  );
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.noInvention)) {
+    issues.add("no-invention");
+  }
+  const contradictoryNoInvention = /\b(?:exception|however)\b.{0,160}\bimplementation handoff\b.{0,80}\b(?:may|can)\s+(?:proceed|continue)\b.{0,160}\bunresolved\b/i;
+  if (contradictoryNoInvention.test(normalizeMarkdownWhitespace(authoring))) {
+    issues.add("no-invention");
+  }
+
+  const boundaryTable = markdownTableUnderHeading(
+    input.templates,
+    "No-invention and conditional boundary contracts",
+  );
+  const expectedBoundaryTable = [
+    ["Boundary", "Required contract when material"],
+    ...IMPLEMENTATION_READINESS_BOUNDARY_ROWS,
+  ];
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.materialDefinition)
+    || !authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices)
+    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 6
+    || boundaryTable.length !== expectedBoundaryTable.length
+    || JSON.stringify(boundaryTable) !== JSON.stringify(expectedBoundaryTable)) {
+    issues.add("boundary-contract");
+  }
+
+  const proof = markdownSectionUnderHeading(input.templates, "Verification Plan");
+  const proofPlanLines = proof.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- "));
+  const normalizedProofContract = normalizeMarkdownWhitespace(markdownBetweenHeadings(
+    input.templates,
+    "Verification Plan",
+    "Canonical inline Receipt",
+  ));
+  const normalizedProofClauses = [
+    IMPLEMENTATION_READINESS_CLAUSES.proofTrace,
+    IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
+    IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
+    IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+  ].map(normalizeMarkdownWhitespace);
+  const reviewNegativeControls = normalizeMarkdownWhitespace(
+    markdownSectionUnderHeading(input.review, "B2 — fresh-context red team"),
+  );
+  if (JSON.stringify(proofPlanLines) !== JSON.stringify(IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines)
+    || normalizedProofClauses.some((clause) => !normalizedProofContract.includes(clause))
+    || !reviewNegativeControls.includes(normalizeMarkdownWhitespace(
+      IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls,
+    ))) {
+    issues.add("proof-chain");
+  }
+
+  const failureGuidance = markdownSectionUnderHeading(input.templates, "Twelve edge-case dimensions");
+  if (!failureGuidance.includes(IMPLEMENTATION_READINESS_CLAUSES.failureSemantics)) {
+    issues.add("failure-semantics");
+  }
+
+  const evidenceRules = markdownSectionUnderHeading(input.review, "B1 — evidence rule");
+  if (!evidenceRules.includes(IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers)) {
+    issues.add("privacy-identifiers");
+  }
+
+  const closure = markdownSectionUnderHeading(input.review, "Accepted-repair closure");
+  const normalizedClosure = normalizeMarkdownWhitespace(closure);
+  const closureHeader = markdownTableUnderHeading(input.review, "Accepted-repair closure")[0] || [];
+  if (JSON.stringify(closureHeader) !== JSON.stringify([
+    "ID", "Decision", "Original counterexample", "Repaired at", "Proved at", "Replay", "Closure",
+  ])
+    || !normalizedClosure.includes(normalizeMarkdownWhitespace(IMPLEMENTATION_READINESS_CLAUSES.freshReplay))
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.closureTransition)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.unknownBlocks)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.scopeReturnsToC1)) {
+    issues.add("repair-closure");
+  }
+
+  return [...issues].sort();
+}
+
+async function runImplementationReadinessContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] Specs implementation-readiness contract: ${message}`);
+  };
+  const baseline = {
+    templates: await readFile(
+      join(packageRoot, "src/claude/skills/specs/references/templates.md"),
+      "utf8",
+    ),
+    review: await readFile(
+      join(packageRoot, "src/claude/skills/specs/references/review.md"),
+      "utf8",
+    ),
+  };
+  const baselineIssues = implementationReadinessContractIssues(baseline);
+  if (baselineIssues.length > 0) fail(`intact sources returned ${baselineIssues.join(", ")}`);
+
+  const boundaryMutation = (name, boundary, replacements) => {
+    const row = IMPLEMENTATION_READINESS_BOUNDARY_ROWS.find(([label]) => label === boundary);
+    if (!row) fail(`${name} references unknown boundary ${boundary}`);
+    let weakened = row[1];
+    for (const [from, to] of replacements) {
+      const next = weakened.replace(from, to);
+      if (next === weakened) fail(`${name} weakening anchor is absent from ${boundary}`);
+      weakened = next;
+    }
+    return {
+      name,
+      issue: "boundary-contract",
+      source: "templates",
+      from: `| ${row[0]} | ${row[1]} |`,
+      to: `| ${row[0]} | ${weakened} |`,
+    };
+  };
+
+  const mutations = [
+    {
+      name: "no-invention-blocking",
+      issue: "no-invention",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.noInvention,
+      to: "Before implementation handoff, note ambiguous choices without blocking handoff.",
+    },
+    {
+      name: "no-invention-contradictory-override",
+      issue: "no-invention",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.noInvention,
+      to: `${IMPLEMENTATION_READINESS_CLAUSES.noInvention}\n\nException: implementation handoff may proceed with an unresolved material choice.`,
+    },
+    {
+      name: "material-boundary-definition",
+      issue: "boundary-contract",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.materialDefinition,
+      to: "A boundary is material when it seems relevant to the task.",
+    },
+    {
+      name: "exact-boundary-choices",
+      issue: "boundary-contract",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices,
+      to: "For every required row, describe the listed choices generally.",
+    },
+    boundaryMutation("api-success-and-error-semantics", "API/CLI", [
+      ["success output; ", ""],
+      ["error/status/exit; ", ""],
+    ]),
+    boundaryMutation("schema-shape-and-unknown-fields", "Schema", [
+      ["exact keys/nesting/types; ", ""],
+      ["unknown-field behavior; ", ""],
+    ]),
+    boundaryMutation("state-lock-lifecycle", "State/concurrency", [
+      ["writer/lock acquire/contention/release", "writer/lock"],
+    ]),
+    boundaryMutation("filesystem-segment-grammar", "Filesystem/security", [
+      ["trusted/untrusted segment grammar; ", ""],
+    ]),
+    boundaryMutation("filesystem-stale-lock-reclaim", "Filesystem/security", [
+      ["lock/stale reclaim; ", ""],
+    ]),
+    boundaryMutation("retention-clock-and-endpoints", "Time/retention", [
+      ["clock source; ", ""],
+      ["unit/precision/timezone; ", ""],
+      ["endpoints and inclusion/comparator; ", ""],
+    ]),
+    boundaryMutation("proof-level-partition", "Integration/proof", [
+      ["proof level (`source`/`installed`/`live`)", "proof level"],
+    ]),
+    {
+      name: "concrete-named-probe",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[1],
+      to: "- Named probe: <suite label>",
+    },
+    {
+      name: "aggregate-suite-probe-owner",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
+      to: "Aggregate suites may cite only the suite label.",
+    },
+    {
+      name: "reachability-levels",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[2],
+      to: "- Reachability: <entrypoint or consumer>",
+    },
+    {
+      name: "proof-level-separation",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
+      to: "Proof may be promoted between source, installed, and live levels.",
+    },
+    {
+      name: "disposable-template-negative-controls",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+      to: "Run mutation or destructive negative controls against the available project copy.",
+    },
+    {
+      name: "disposable-review-negative-controls",
+      issue: "proof-chain",
+      source: "review",
+      from: IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls,
+      to: "Run mutation or destructive negative controls against the available project copy.",
+    },
+    {
+      name: "artifact-path-and-digest-or-ephemeral",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[5],
+      to: "- Artifacts: <required artifact path, or none>",
+    },
+    {
+      name: "proof-counterexample",
+      issue: "proof-chain",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[4],
+      to: "- Counterexample: <example>",
+    },
+    {
+      name: "repair-and-proof-columns",
+      issue: "repair-closure",
+      source: "review",
+      from: "| ID | Decision | Original counterexample | Repaired at | Proved at | Replay | Closure |",
+      to: "| ID | Decision | Original counterexample | Repaired at | Evidence | Replay | Closure |",
+    },
+    {
+      name: "fresh-original-counterexample-replay",
+      issue: "repair-closure",
+      source: "review",
+      from: "After applying an accepted C2 finding, a fresh-context closure pass records and\nfreshly replays its original counterexample after the repair under this exact review-log header:",
+      to: "After applying an accepted C2 finding, record the repair under this review-log header:",
+    },
+    {
+      name: "distinct-repair-and-proof-evidence",
+      issue: "repair-closure",
+      source: "review",
+      from: IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof,
+      to: "`Repaired at` and `Proved at` may cite the same repair edit.",
+    },
+    {
+      name: "unknown-blocks-handoff",
+      issue: "repair-closure",
+      source: "review",
+      from: IMPLEMENTATION_READINESS_CLAUSES.unknownBlocks,
+      to: "`PASS` closes it; `FAIL` and `UNKNOWN` may continue to implementation handoff.",
+    },
+    {
+      name: "crash-versus-catchable-failure",
+      issue: "failure-semantics",
+      source: "templates",
+      from: IMPLEMENTATION_READINESS_CLAUSES.failureSemantics,
+      to: "Crash and catchable failure both mean an error occurred.",
+    },
+    {
+      name: "privacy-identifier-surface",
+      issue: "privacy-identifiers",
+      source: "review",
+      from: IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers,
+      to: "Any privacy/security claim names the sensitive data at risk.",
+    },
+  ];
+  for (const { name, issue, source, from, to } of mutations) {
+    const anchorIndex = baseline[source].indexOf(from);
+    if (anchorIndex < 0) fail(`${name} mutation anchor is absent from real source`);
+    if (baseline[source].indexOf(from, anchorIndex + from.length) >= 0) {
+      fail(`${name} mutation anchor is not unique in real source`);
+    }
+    const mutatedSource = `${baseline[source].slice(0, anchorIndex)}${to}${baseline[source].slice(anchorIndex + from.length)}`;
+    const mutated = { ...baseline, [source]: mutatedSource };
+    const actual = implementationReadinessContractIssues(mutated);
+    if (JSON.stringify(actual) !== JSON.stringify([issue])) {
+      fail(`${name} expected ${issue} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  console.log(`✔ hapo:specs implementation-readiness checker rejects ${mutations.length} gate-specific source mutations`);
+  return mutations.length + 1;
+}
+
+const PROCESS_TASK_STATUS_CLAUSES = {
+  skill: [
+    "`pending` means semantically ready\nfor the dependency-aware queue.",
+    "Use `blocked` while a C1/C2 decision, an\naccepted finding, or `UNKNOWN` closure remains open.",
+    "A named task dependency\nalone does not change `pending` to `blocked`; the resolver derives which pending\ntask is next.",
+    "Change `blocked` to `pending` only after current evidence closes\nevery non-dependency blocker",
+  ],
+  templates: [
+    "Use only direct-child task basenames or `none` under `## Dependencies`; keep `## Receipt` empty until execution produces canonical proof.",
+  ],
+  specMaker: [
+    "Keep every new\ntask `Status: blocked` while C2 is open",
+    "`pending` means semantically ready for the dependency-aware queue.",
+    "Keep a task\n`blocked` while a C1/C2 decision, accepted finding, or `UNKNOWN` closure remains\nopen.",
+    "A named task dependency alone does not make it blocked; write dependencies\nas exact flat task basenames and let the resolver derive the next pending task.",
+    "Move `blocked` to `pending` only when current evidence closes every non-dependency\nblocker.",
+  ],
+};
+
+const PROCESS_TASK_STATUS_MATRIX = [
+  ["Status condition", "Persisted state"],
+  ["C1/C2 decision open", "`blocked`"],
+  ["accepted finding open or `UNKNOWN`", "`blocked`"],
+  ["every non-dependency blocker closed", "`pending`"],
+  ["named task dependency not done", "keep `pending`; queue gates it"],
+];
+
+function processTaskStatusContractIssues(input) {
+  const expectedKeys = ["skill", "specMaker", "templates"];
+  const keys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)
+    || expectedKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("process-task-status checker expects exactly skill, specMaker, and templates UTF-8 strings");
+  }
+
+  const issues = new Set();
+  const containsClause = (source, clause) => normalizeMarkdownWhitespace(source)
+    .includes(normalizeMarkdownWhitespace(clause));
+  for (const [source, clauses] of Object.entries(PROCESS_TASK_STATUS_CLAUSES)) {
+    if (clauses.some((clause) => !containsClause(input[source], clause))) {
+      issues.add(`${source}-status-contract`);
+    }
+  }
+
+  const taskTemplate = markdownSectionUnderHeading(input.templates, "`task-NN-*.md` template");
+  const taskStatuses = [...taskTemplate.matchAll(/^Status:\s*(\S+)\s*$/gm)].map((match) => match[1]);
+  const statusMatrix = markdownTableUnderHeading(input.templates, "Status matrix");
+  const taskTable = markdownTableUnderHeading(input.templates, "Tasks");
+  const taskRows = taskTable.slice(1);
+  if (taskStatuses.length !== 1 || taskStatuses[0] !== "blocked"
+    || taskRows.length === 0 || taskRows.some((row) => row.at(-1) !== "blocked")) {
+    issues.add("template-default-blocked");
+  }
+  if (JSON.stringify(statusMatrix) !== JSON.stringify(PROCESS_TASK_STATUS_MATRIX)) {
+    issues.add("status-matrix");
+  }
+
+  const unconditionalAllPending = /(?:leave|keep|set|mark)\s+(?:all|every)\s+new\s+tasks?\s+(?:`status:\s*)?pending`?/i;
+  if (Object.values(input).some((source) => unconditionalAllPending.test(
+    normalizeMarkdownWhitespace(source),
+  ))) {
+    issues.add("unconditional-all-pending");
+  }
+  const contradictoryStatusOverride = (source) => normalizeMarkdownWhitespace(source)
+    .split(/(?<=[.!?])\s+/)
+    .some((sentence) => {
+      const gateStillOpen = /\bC[12]\b.{0,60}\b(?:open|unresolved|remains?\s+open)\b/i.test(sentence)
+        || /\bunresolved\b.{0,40}\bC[12]\b/i.test(sentence)
+        || /\b(?:before|until)\b.{0,30}\bC[12]\b.{0,30}\b(?:closes?|resolved)\b/i.test(sentence);
+      return gateStillOpen
+        && /\b(?:pending|dispatch(?:able)?|handoff)\b/i.test(sentence)
+        && !/\bblocked\b/i.test(sentence);
+    });
+  if (Object.values(input).some(contradictoryStatusOverride)) {
+    issues.add("contradictory-status-override");
+  }
+
+  return [...issues].sort();
+}
+
+async function runProcessTaskStatusContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] Specs process-task status contract: ${message}`);
+  };
+  const baseline = {
+    skill: await readFile(join(packageRoot, "src/claude/skills/specs/SKILL.md"), "utf8"),
+    templates: await readFile(
+      join(packageRoot, "src/claude/skills/specs/references/templates.md"),
+      "utf8",
+    ),
+    specMaker: await readFile(join(packageRoot, "src/claude/agents/spec-maker.md"), "utf8"),
+  };
+  const baselineIssues = processTaskStatusContractIssues(baseline);
+  if (baselineIssues.length > 0) fail(`intact sources returned ${baselineIssues.join(", ")}`);
+
+  const mutations = [
+    {
+      name: "pending-means-queue-ready",
+      source: "skill",
+      from: PROCESS_TASK_STATUS_CLAUSES.skill[0],
+      to: "`pending` means drafted and waiting.",
+      issues: ["skill-status-contract"],
+    },
+    {
+      name: "semantic-blockers-stay-blocked",
+      source: "skill",
+      from: PROCESS_TASK_STATUS_CLAUSES.skill[1],
+      to: "Use `blocked` only when an implementation command fails.",
+      issues: ["skill-status-contract"],
+    },
+    {
+      name: "task-template-default-blocked",
+      source: "templates",
+      from: "Status: blocked\n\n## Outcome",
+      to: "Status: pending\n\n## Outcome",
+      issues: ["template-default-blocked"],
+    },
+    {
+      name: "task-template-rejects-duplicate-status",
+      source: "templates",
+      from: "Status: blocked\n\n## Outcome",
+      to: "Status: blocked\nStatus: pending\n\n## Outcome",
+      issues: ["template-default-blocked"],
+    },
+    {
+      name: "task-table-rejects-mixed-default-statuses",
+      source: "templates",
+      from: "| 01 | <one outcome> | AC-01 | `src/example.ts` | - | blocked |",
+      to: "| 01 | <one outcome> | AC-01 | `src/example.ts` | - | blocked |\n| 02 | <later outcome> | AC-01 | `src/later.ts` | task-01-example.md | pending |",
+      issues: ["template-default-blocked"],
+    },
+    {
+      name: "current-evidence-transition",
+      source: "templates",
+      from: "| every non-dependency blocker closed | `pending` |",
+      to: "| every non-dependency blocker closed | `blocked` |",
+      issues: ["status-matrix"],
+    },
+    {
+      name: "reject-unconditional-all-pending",
+      source: "specMaker",
+      from: PROCESS_TASK_STATUS_CLAUSES.specMaker[0],
+      to: "Leave every new task `Status: pending` while C2 is open",
+      issues: ["contradictory-status-override", "specMaker-status-contract", "unconditional-all-pending"],
+    },
+    {
+      name: "reject-contradictory-status-override",
+      source: "skill",
+      from: PROCESS_TASK_STATUS_CLAUSES.skill[1],
+      to: `${PROCESS_TASK_STATUS_CLAUSES.skill[1]}\n\nException: a task with an unresolved C2 decision may remain pending.`,
+      issues: ["contradictory-status-override"],
+    },
+    {
+      name: "reject-c2-open-pending-paraphrase",
+      source: "skill",
+      from: PROCESS_TASK_STATUS_CLAUSES.skill[1],
+      to: `${PROCESS_TASK_STATUS_CLAUSES.skill[1]}\n\nHowever, while C2 remains open, a task can stay pending.`,
+      issues: ["contradictory-status-override"],
+    },
+    {
+      name: "reject-before-c2-close-pending-paraphrase",
+      source: "skill",
+      from: PROCESS_TASK_STATUS_CLAUSES.skill[1],
+      to: `${PROCESS_TASK_STATUS_CLAUSES.skill[1]}\n\nA task can be pending before C2 closes.`,
+      issues: ["contradictory-status-override"],
+    },
+  ];
+
+  for (const { name, source, from, to, issues } of mutations) {
+    const anchorIndex = baseline[source].indexOf(from);
+    if (anchorIndex < 0) fail(`${name} mutation anchor is absent from real source`);
+    if (baseline[source].indexOf(from, anchorIndex + from.length) >= 0) {
+      fail(`${name} mutation anchor is not unique in real source`);
+    }
+    const mutatedSource = `${baseline[source].slice(0, anchorIndex)}${to}${baseline[source].slice(anchorIndex + from.length)}`;
+    const actual = processTaskStatusContractIssues({ ...baseline, [source]: mutatedSource });
+    const expected = [...issues].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      fail(`${name} expected ${JSON.stringify(expected)} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  console.log(`✔ hapo:specs process-task status checker rejects ${mutations.length} semantic weakenings`);
+  return mutations.length + 1;
 }
 
 function outsideLegacySections(content) {
@@ -512,6 +1052,8 @@ async function runSpecs21ContractTests() {
 }
 
 async function runStaticSemanticTests() {
+  const processTaskStatusTests = await runProcessTaskStatusContractTests();
+  const implementationReadinessTests = await runImplementationReadinessContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -552,7 +1094,7 @@ async function runStaticSemanticTests() {
         content.includes("### 3. Author the flat packet") &&
         content.includes("specs/<feature>/plan.md") &&
         content.includes("Do not create implementation files, receipts, approval records") &&
-        content.includes("Leave every new\ntask `Status: pending`"),
+        content.includes("Keep every new\ntask `Status: blocked` while C2 is open"),
     },
     {
       label: "installer syncs spec-state template and drops init template",
@@ -668,7 +1210,9 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("specs/<feature>/plan.md") &&
         content.includes("task-01-<slug>.md") &&
-        content.includes("Leave every new\ntask `Status: pending`") &&
+        content.includes("`pending` means semantically ready for the dependency-aware queue") &&
+        content.includes("write dependencies") &&
+        content.includes("exact flat task basenames") &&
         content.includes("Do not start Develop"),
     },
     {
@@ -792,6 +1336,11 @@ async function runStaticSemanticTests() {
         content.includes("| # | Task | Criteria | Primary ownership | Dependencies | Status |") &&
         content.includes("task-NN-<slug>.md") &&
         content.includes("## Verification Plan"),
+    },
+    {
+      label: "hapo:specs plan template carries the queue-ready contract marker on line two",
+      file: "src/claude/skills/specs/references/templates.md",
+      assert: (content) => /^# <Feature name>\nSpecs-Contract: process-first-ready-v1$/m.test(content),
     },
     {
       label: "hapo:specs templates carry EARS, Example Mapping, and edge-case saturation",
@@ -1538,7 +2087,8 @@ async function runStaticSemanticTests() {
         return norm.includes("it is not an implementation and does not authorize work") &&
           norm.includes("do not create implementation files, receipts") &&
           norm.includes("do not start develop") &&
-          norm.includes("leave every new task `status: pending`");
+          norm.includes("keep every new task `status: blocked` while c2 is open") &&
+          !norm.includes("leave every new task `status: pending`");
       },
     },
     {
@@ -1618,7 +2168,7 @@ async function runStaticSemanticTests() {
     console.log(`✔ ${check.label}`);
   }
 
-  return checks.length + specs21Tests;
+  return checks.length + specs21Tests + implementationReadinessTests + processTaskStatusTests;
 }
 
 function runSkillCatalogTests() {

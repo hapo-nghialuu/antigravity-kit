@@ -77,6 +77,13 @@ normally no more than about five owned files, explicit dependencies, measurable
 acceptance, and a runnable verification command. A task must deliver usable
 behavior; do not create preparation-only tasks.
 
+Author exact task state, not prose readiness. `pending` means semantically ready
+for the dependency-aware queue. Use `blocked` while a C1/C2 decision, an
+accepted finding, or `UNKNOWN` closure remains open. A named task dependency
+alone does not change `pending` to `blocked`; the resolver derives which pending
+task is next. Change `blocked` to `pending` only after current evidence closes
+every non-dependency blocker; keep pre-execution Receipts empty.
+
 When an outcome is uncertain, write a question rather than guessing. When a
 rule remains ambiguous, add two or three concrete examples and resolve the rule
 at C1 or C2.
@@ -89,15 +96,16 @@ failure scenario. Deduplicate, rank, and cap the list at 15.
 
 Ask the user to accept, reject, or revise each finding. Apply only accepted
 decisions. After every plan edit, run the consistency sweep across all plan and
-task files. Stop after two paper-review rounds; later findings require runtime
-evidence.
+task files, then rederive every task status rather than only the first candidate.
+Write task dependencies as exact flat task basenames so the queue can derive them.
+Stop after two paper-review rounds; later findings require runtime evidence.
 
 ### 4. Execute one task at a time
 
-An implementation workflow owns execution. It selects one unblocked task,
-changes its single `Status:` field to `in_progress`, respects owned paths, runs
-the task's verification, and appends a real inline `## Receipt` only after the
-command finishes.
+An implementation workflow owns execution. It selects one unblocked task with
+`Status: pending`, changes its single `Status:` field to `in_progress`, respects
+owned paths, runs the task's verification, and appends a real inline `## Receipt`
+only after the command finishes.
 
 Parallel work is allowed only for tasks with disjoint write ownership and
 satisfied dependencies. One file has one writer in a wave. The controller is
@@ -129,7 +137,7 @@ it does not invent product approval, review independence, or runtime coverage.
    ownership, dependencies, criteria IDs, and copied prose across every file.
 8. **B4 — Stop paper churn.** Two pre-code review rounds maximum; later claims
    need runtime evidence.
-9. **C1 — Done is derived.** Status follows fresh proof, never confidence.
+9. **C1 — State is derived.** Status follows fresh blocker and proof evidence.
 10. **C2 — Rules pay rent.** Add a rule or machine check only when it prevents a
     cited real incident; reassess rules when the primary model changes.
 
@@ -140,6 +148,8 @@ more regular flat `task-*.md` files inside one direct feature directory. The
 Stop gate revalidates every done task's inline Receipt and provenance. The old
 task-scaffold guard remains limited to the older nested layout; flat v3 tasks
 do not invoke that kernel path.
+
+The resolver projects exact `Status:` values; it does not infer blockers from prose.
 
 These checks are a final safety net, not a substitute for C1-C3 judgment. Do
 not add a new schema, approval field, readiness bit, or review state to make the

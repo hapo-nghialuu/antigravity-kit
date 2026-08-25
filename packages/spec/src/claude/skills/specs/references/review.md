@@ -15,6 +15,7 @@ evidence.
   list the first ten plus the total.
 - Label an unresolved external or runtime claim `[UNVERIFIED]` and name the
   command, document, or environment that would settle it.
+- Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.
 
 ## Reviewer roles
 
@@ -51,6 +52,7 @@ Use reviewers that did not author the plan and give each one a distinct lens:
 Prompt them to break the plan. For every finding require: severity, exact plan
 location, concrete counterexample, repository evidence, and the smallest repair.
 Ignore style-only feedback.
+Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.
 
 ## Four red-team lenses
 
@@ -80,6 +82,19 @@ Present C2 as a table:
 
 The user chooses accept, reject, or revise. Do not apply findings before that
 decision. Record the result in the plan review log.
+
+## Accepted-repair closure
+
+After applying an accepted C2 finding, a fresh-context closure pass records and
+freshly replays its original counterexample after the repair under this exact review-log header:
+
+| ID | Decision | Original counterexample | Repaired at | Proved at | Replay | Closure |
+|---|---|---|---|---|---|---|
+
+`Repaired at` cites the repair edit; `Proved at` must cite distinct evidence from the fresh replay, never the repair-edit citation.
+An accepted finding transitions `accepted → repaired → PASS|FAIL|UNKNOWN`.
+Only `PASS` closes it; `FAIL` remains open for the remaining paper-review round; `UNKNOWN` blocks implementation handoff.
+A repair that adds user semantics or scope returns to C1.
 
 ## B3 — consistency sweep
 

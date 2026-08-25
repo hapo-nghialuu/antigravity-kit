@@ -70,14 +70,136 @@ function candidateError(reason, code = 'malformed') {
 
 const WORKFLOW_STATUSES = new Set(['pending', 'in_progress', 'paused', 'blocked', 'done']);
 const WORKFLOW_TASK_NAME = /^task-[A-Za-z0-9][A-Za-z0-9._-]*\.md$/;
+const WORKFLOW_CONTRACT = 'process-first-ready-v1';
+
+function annotatedMarkdownLines(content) {
+  let fence = null;
+  return String(content || '').split(/\r?\n/).map((line, index) => {
+    const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    const outsideFence = fence === null && !fenceMatch;
+    let fenceEvent = null;
+    if (fenceMatch) {
+      const marker = fenceMatch[1];
+      if (!fence) {
+        fence = { char: marker[0], length: marker.length };
+        fenceEvent = 'open';
+      } else if (marker[0] === fence.char && marker.length >= fence.length && fenceMatch[2].trim() === '') {
+        fence = null;
+        fenceEvent = 'close';
+      }
+    }
+    return { index, line, outsideFence, fenceEvent };
+  });
+}
+
+function workflowPlanContract(content) {
+  const markers = annotatedMarkdownLines(content)
+    .filter(({ line, outsideFence }) => outsideFence && /^\s*Specs-Contract\s*:/i.test(line))
+    .map(({ line }) => line);
+  if (markers.length === 0) return { workflowContract: null, queueReady: false };
+  if (markers.length !== 1 || markers[0] !== `Specs-Contract: ${WORKFLOW_CONTRACT}`) {
+    throw candidateError(`plan.md must contain exactly one Specs-Contract: ${WORKFLOW_CONTRACT} marker`);
+  }
+  return { workflowContract: WORKFLOW_CONTRACT, queueReady: true };
+}
 
 function workflowTaskStatus(content, taskName) {
-  const matches = String(content || '').matchAll(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/gim);
-  const values = [...matches].map((match) => match[1].toLowerCase().replaceAll('-', '_'));
+  const values = annotatedMarkdownLines(content)
+    .filter(({ outsideFence }) => outsideFence)
+    .map(({ line }) => line.match(/^\s*(?:\*\*)?Status(?:\*\*)?\s*:\s*(?:\*\*)?\s*([A-Za-z_-]+)(?:\*\*)?\s*$/i))
+    .filter(Boolean)
+    .map((match) => match[1].toLowerCase().replaceAll('-', '_'));
   if (values.length !== 1 || !WORKFLOW_STATUSES.has(values[0])) {
     throw candidateError(`${taskName} must contain exactly one supported Status field`);
   }
   return values[0];
+}
+
+function workflowTaskNumericPrefix(taskName) {
+  const match = taskName.match(/^task-(\d+)(?:-|\.md$)/);
+  return match ? match[1].replace(/^0+(?=\d)/, '') : null;
+}
+
+function workflowTaskDependencies(content, taskName, taskNames, queueReady) {
+  const lines = annotatedMarkdownLines(content);
+  let sectionStart = -1;
+  let sectionEnd = lines.length;
+  let sectionCount = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!lines[index].outsideFence) continue;
+
+    const heading = lines[index].line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (!heading || heading[1].length > 2) continue;
+    const title = heading[2].trim().toLowerCase();
+    if (heading[1].length === 2 && title === 'dependencies') {
+      sectionCount += 1;
+      if (sectionStart < 0) sectionStart = index + 1;
+      continue;
+    }
+    if (sectionStart >= 0 && sectionEnd === lines.length) sectionEnd = index;
+  }
+
+  if (!queueReady && sectionCount === 0) return [];
+  if (sectionCount !== 1 || sectionStart < 0) {
+    throw candidateError(`${taskName} must contain exactly one ## Dependencies section`);
+  }
+
+  const entries = lines.slice(sectionStart, sectionEnd)
+    .filter(({ outsideFence }) => outsideFence)
+    .map(({ line }) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const bullet = line.match(/^-\s+(.+?)\s*$/);
+      if (!bullet) throw candidateError(`${taskName} Dependencies must contain only bullet entries`);
+      const value = bullet[1].replace(/^`([^`]+)`$/, '$1').trim();
+      if (!value) throw candidateError(`${taskName} contains an empty dependency`);
+      return value;
+    });
+
+  if (entries.length === 1 && entries[0].toLowerCase() === 'none') return [];
+  if (entries.length === 0 || entries.some((entry) => entry.toLowerCase() === 'none')) {
+    throw candidateError(`${taskName} must use either - none or exact task basenames`);
+  }
+  const resolved = entries.map((entry) => {
+    if (WORKFLOW_TASK_NAME.test(entry)) return entry;
+    const legacy = !queueReady && entry.match(/^(?:Task\s+)?(\d+)$/i);
+    if (!legacy) throw candidateError(`${taskName} dependencies must be exact flat task basenames`);
+    const numericId = legacy[1].replace(/^0+(?=\d)/, '');
+    const matches = taskNames.filter((candidate) => workflowTaskNumericPrefix(candidate) === numericId);
+    if (matches.length !== 1) {
+      throw candidateError(`${taskName} legacy dependency ${entry} maps to ${matches.length} task basenames`);
+    }
+    return matches[0];
+  });
+  if (new Set(resolved).size !== resolved.length) {
+    throw candidateError(`${taskName} contains duplicate dependencies`);
+  }
+  return resolved;
+}
+
+function assertAcyclicWorkflow(tasks) {
+  const dependencies = new Map(tasks.map((task) => [task.path, [...task.dependencies].sort()]));
+  const state = new Map();
+  const stack = [];
+
+  function visit(taskPath) {
+    state.set(taskPath, 'visiting');
+    stack.push(taskPath);
+    for (const dependency of dependencies.get(taskPath) || []) {
+      if (state.get(dependency) === 'visiting') {
+        const start = stack.indexOf(dependency);
+        throw candidateError(`dependency cycle detected: ${[...stack.slice(start), dependency].join(' -> ')}`);
+      }
+      if (state.get(dependency) !== 'visited') visit(dependency);
+    }
+    stack.pop();
+    state.set(taskPath, 'visited');
+  }
+
+  for (const taskPath of [...dependencies.keys()].sort()) {
+    if (!state.has(taskPath)) visit(taskPath);
+  }
 }
 
 function inspectWorkflowFeature(specsDir, canonicalSpecs, requestedName) {
@@ -114,6 +236,7 @@ function inspectWorkflowFeature(specsDir, canonicalSpecs, requestedName) {
   if (planLstat.isSymbolicLink() || !planLstat.isFile() || fs.realpathSync(planFile) !== planFile) {
     throw candidateError('plan.md must be a regular non-symlink file in the workflow feature directory');
   }
+  const { workflowContract, queueReady } = workflowPlanContract(fs.readFileSync(planFile, 'utf8'));
 
   const taskNames = fs.readdirSync(canonicalFeature, { withFileTypes: true })
     .filter((entry) => WORKFLOW_TASK_NAME.test(entry.name))
@@ -129,12 +252,26 @@ function inspectWorkflowFeature(specsDir, canonicalSpecs, requestedName) {
     if (taskLstat.isSymbolicLink() || !taskLstat.isFile() || fs.realpathSync(taskFile) !== taskFile) {
       throw candidateError(`${taskName} must be a regular non-symlink file in the workflow feature directory`);
     }
+    const taskContent = fs.readFileSync(taskFile, 'utf8');
     return {
       path: taskName,
-      status: workflowTaskStatus(fs.readFileSync(taskFile, 'utf8'), taskName),
+      status: workflowTaskStatus(taskContent, taskName),
+      dependencies: workflowTaskDependencies(taskContent, taskName, taskNames, queueReady),
     };
   });
-  const taskRegistry = Object.fromEntries(tasks.map((task) => [task.path, { status: task.status }]));
+  const taskNameSet = new Set(taskNames);
+  for (const task of tasks) {
+    if (task.dependencies.includes(task.path)) {
+      throw candidateError(`${task.path} cannot depend on itself`);
+    }
+    const missing = task.dependencies.find((dependency) => !taskNameSet.has(dependency));
+    if (missing) throw candidateError(`${task.path} references missing dependency ${missing}`);
+  }
+  assertAcyclicWorkflow(tasks);
+  const taskRegistry = Object.fromEntries(tasks.map((task) => [task.path, {
+    status: task.status,
+    dependencies: task.dependencies,
+  }]));
   const allTasksDone = tasks.every((task) => task.status === 'done');
   return {
     layoutKind: 'process-v3',
@@ -147,6 +284,8 @@ function inspectWorkflowFeature(specsDir, canonicalSpecs, requestedName) {
     taskRegistry,
     tasks,
     allTasksDone,
+    workflowContract,
+    queueReady,
   };
 }
 
@@ -778,6 +917,7 @@ function refineWorkflowGateResolution(resolved) {
 }
 
 module.exports = {
+  annotatedMarkdownLines,
   specsDirectory,
   findAllActiveSpecs,
   findAllSpecCandidates,

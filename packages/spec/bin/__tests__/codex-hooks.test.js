@@ -138,6 +138,219 @@ function inHookFixture(run, options = {}) {
   }
 }
 
+function processTaskContent(title, status, dependency = 'none') {
+  return [
+    `# ${title}`, '', `Status: ${status}`, '',
+    '## Dependencies', '', `- ${dependency}`, '',
+    '## Verification Plan', '', '- Command: node --test', '',
+  ].join('\n');
+}
+
+function canonicalProcessTask(root, title, dependency = 'none') {
+  const context = workflowRuntimeContext(root, 'auth', 'session-auth-state');
+  return [
+    processTaskContent(title, 'done', dependency),
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${context.base}`, `Head: ${context.head}`,
+    '```text', 'node --test', '1 test passed', '```', '',
+  ].join('\n');
+}
+
+function inInstalledProcessSpecStateFixture(run) {
+  return inHookFixture((root, hooks) => {
+    const feature = path.join(root, 'specs', 'auth');
+    fs.mkdirSync(feature, { recursive: true });
+    fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\nSpecs-Contract: process-first-ready-v1\n');
+
+    const writeTask = (basename, title, status, dependency = 'none') => {
+      fs.writeFileSync(
+        path.join(feature, basename),
+        processTaskContent(title, status, dependency),
+      );
+    };
+    const runState = () => runHook(path.join(hooks, 'spec-state.cjs'), root, {
+      cwd: root,
+      featureName: 'auth',
+      session_id: 'session-auth-state',
+      hook_event_name: 'UserPromptSubmit',
+      prompt: 'Continue',
+    });
+    const findCacheFile = () => {
+      const cacheDir = path.join(hooks, '.logs');
+      const cacheNames = fs.existsSync(cacheDir)
+        ? fs.readdirSync(cacheDir).filter((file) => file.startsWith('tollgate-'))
+        : [];
+      assert.equal(cacheNames.length, 1, 'one installed session cache must exist');
+      return path.join(cacheDir, cacheNames[0]);
+    };
+    return run({
+      feature,
+      findCacheFile,
+      hooks,
+      root,
+      runState,
+      writePlan: (content) => fs.writeFileSync(path.join(feature, 'plan.md'), content),
+      writeTask,
+    });
+  });
+}
+
+test('Codex installed spec-state re-evaluates a standalone task when blocked becomes pending', () => {
+  inInstalledProcessSpecStateFixture(({ findCacheFile, hooks, runState, writeTask }) => {
+    writeTask('task-01-auth.md', 'Task 01: auth', 'blocked');
+
+    const blocked = runState();
+    assert.equal(blocked.status, 0, blocked.stderr);
+    assert.match(blocked.stdout, /Spec state changed: `auth`/);
+    assert.doesNotMatch(blocked.stdout, /Next unblocked/);
+    const cacheFile = findCacheFile();
+    assert.ok(cacheFile.startsWith(`${hooks}${path.sep}`), 'cache must stay inside temporary installed hooks');
+    const blockedCache = fs.readFileSync(cacheFile, 'utf8');
+
+    writeTask('task-01-auth.md', 'Task 01: auth', 'pending');
+    const pending = runState();
+    assert.equal(pending.status, 0, pending.stderr);
+    assert.match(pending.stdout, /Spec state changed: `auth`/);
+    assert.match(pending.stdout, /Next unblocked: `task-01-auth\.md`/);
+    assert.notEqual(fs.readFileSync(cacheFile, 'utf8'), blockedCache, 'state cache must change');
+  });
+});
+
+test('Codex installed spec-state requires current canonical dependency proof and keys receipt mutations', () => {
+  inInstalledProcessSpecStateFixture(({ feature, findCacheFile, hooks, root, runState, writeTask }) => {
+    const predecessor = 'task-01-semantic-review.md';
+    const dependent = 'task-02-implementation.md';
+    writeTask(predecessor, 'Task 01: semantic review', 'blocked');
+    writeTask(dependent, 'Task 02: implementation', 'pending', predecessor);
+    const dependentPath = path.join(feature, dependent);
+    const unchangedDependent = fs.readFileSync(dependentPath, 'utf8');
+
+    const blocked = runState();
+    assert.equal(blocked.status, 0, blocked.stderr);
+    assert.match(blocked.stdout, /Tasks: 0 done \/ 2 total/);
+    assert.doesNotMatch(blocked.stdout, /Next unblocked/);
+    const cacheFile = findCacheFile();
+    assert.ok(cacheFile.startsWith(`${hooks}${path.sep}`), 'cache must stay inside temporary installed hooks');
+    const blockedCache = fs.readFileSync(cacheFile, 'utf8');
+
+    writeTask(predecessor, 'Task 01: semantic review', 'done');
+    const missing = runState();
+    assert.equal(missing.status, 0, missing.stderr);
+    assert.doesNotMatch(missing.stdout, /Next unblocked/);
+    const missingCache = fs.readFileSync(cacheFile, 'utf8');
+    assert.notEqual(missingCache, blockedCache, 'done without proof must change cached proof state');
+
+    fs.appendFileSync(path.join(feature, predecessor), '\n## Receipt\n\nVerification: PASS\n');
+    const malformed = runState();
+    assert.equal(malformed.status, 0, malformed.stderr);
+    assert.doesNotMatch(malformed.stdout, /Next unblocked/);
+
+    fs.writeFileSync(path.join(feature, predecessor), canonicalProcessTask(root, 'Task 01: semantic review'));
+    const ready = runState();
+    assert.equal(ready.status, 0, ready.stderr);
+    assert.match(ready.stdout, /Next unblocked: `task-02-implementation\.md`/);
+    const readyCache = fs.readFileSync(cacheFile, 'utf8');
+    assert.notEqual(readyCache, missingCache, 'canonical proof must change cached proof state');
+
+    fs.writeFileSync(
+      path.join(feature, predecessor),
+      fs.readFileSync(path.join(feature, predecessor), 'utf8').replace('Verification: PASS', 'Verification: FAIL'),
+    );
+    const mutated = runState();
+    assert.equal(mutated.status, 0, mutated.stderr);
+    assert.doesNotMatch(mutated.stdout, /Next unblocked/);
+    assert.notEqual(fs.readFileSync(cacheFile, 'utf8'), readyCache, 'receipt-only mutation must change cache');
+    assert.equal(fs.readFileSync(dependentPath, 'utf8'), unchangedDependent, 'dependent must remain pending');
+  });
+});
+
+test('Codex installed spec-state keeps unversioned pending packets out of Next with migration guidance', () => {
+  inInstalledProcessSpecStateFixture(({ feature, runState, writePlan, writeTask }) => {
+    const fencedMarkerPlan = '# Auth plan\n\n```markdown\nSpecs-Contract: process-first-ready-v1\n```\n';
+    writePlan(fencedMarkerPlan);
+    writeTask('task-01-auth.md', 'Task 01: auth', 'pending');
+    const taskBytes = fs.readFileSync(path.join(feature, 'task-01-auth.md'));
+    const result = runState();
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /Next unblocked/);
+    assert.match(result.stdout, /Migration required: add `Specs-Contract: process-first-ready-v1`/);
+    const cached = runState();
+    assert.equal(cached.status, 0, cached.stderr);
+    assert.doesNotMatch(cached.stdout, /Next unblocked/);
+    assert.match(cached.stdout, /Add `Specs-Contract: process-first-ready-v1`/);
+
+    writePlan(fencedMarkerPlan.replace('# Auth plan\n', '# Auth plan\nSpecs-Contract: process-first-ready-v1\n'));
+    const marked = runState();
+    assert.equal(marked.status, 0, marked.stderr);
+    assert.match(marked.stdout, /Spec state changed: `auth`/);
+    assert.match(marked.stdout, /Next unblocked: `task-01-auth\.md`/);
+    assert.deepEqual(fs.readFileSync(path.join(feature, 'task-01-auth.md')), taskBytes, 'marker-only transition must not change task bytes');
+  });
+});
+
+test('Codex resolver ignores fenced workflow annotations and rejects fenced-only Status', () => {
+  inInstalledProcessSpecStateFixture(({ feature, root, runState, writePlan, writeTask }) => {
+    const resolver = require(path.join(root, '.codex', 'scripts', 'spec-resolver.cjs'));
+    const trailingFence = resolver.annotatedMarkdownLines([
+      '```markdown', '``` trailing', 'Specs-Contract: process-first-ready-v1',
+      'Status: done', '## Receipt', '```',
+    ].join('\n'));
+    assert.deepEqual(trailingFence.slice(2, 5).map(({ outsideFence }) => outsideFence), [false, false, false]);
+    const fourSpaceFence = resolver.annotatedMarkdownLines('    ```markdown\nStatus: pending');
+    assert.equal(fourSpaceFence[1].outsideFence, true);
+    writePlan('# Auth plan\nSpecs-Contract: process-first-ready-v1\n');
+    fs.writeFileSync(path.join(feature, 'task-01-fenced-only.md'), [
+      '# Task 01', '', '```markdown', 'Status: done', '```', '',
+      '## Dependencies', '', '- none', '', '## Verification Plan', '', '- Command: node --test', '',
+    ].join('\n'));
+    const malformed = resolver.resolveWorkflowCandidate({ projectRoot: root, runtime: {}, explicitFeature: 'auth' });
+    assert.equal(malformed.error, 'explicit_malformed');
+    assert.match(malformed.reason, /must contain exactly one supported Status field/);
+
+    fs.rmSync(path.join(feature, 'task-01-fenced-only.md'));
+    writeTask('task-01-dependent.md', 'Task 01: dependent', 'pending', 'task-02-predecessor.md');
+    fs.writeFileSync(path.join(feature, 'task-02-predecessor.md'), [
+      '# Task 02', '', 'Status: pending', '', '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '~~~~markdown', 'Status: done', '## Dependencies', '- task-01-dependent.md', '## Receipt',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0', '```text', 'fake pass', '```', '~~~~', '',
+    ].join('\n'));
+    const result = runState();
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Next unblocked: `task-02-predecessor\.md`/);
+    assert.doesNotMatch(result.stdout, /Next unblocked: `task-01-dependent\.md`/);
+  });
+});
+
+test('Codex resolver accepts unique legacy task numbers, rejects ambiguity, and rejects exact cycles', () => {
+  inInstalledProcessSpecStateFixture(({ feature, root, writePlan, writeTask }) => {
+    const resolver = require(path.join(root, '.codex', 'scripts', 'spec-resolver.cjs'));
+    writePlan('# Auth plan\n');
+    writeTask('task-01-a.md', 'Task 01: a', 'pending');
+    writeTask('task-02-b.md', 'Task 02: b', 'pending', '01');
+    fs.writeFileSync(path.join(feature, 'task-03-c.md'), '# Task 03: c\n\nStatus: pending\n');
+    const unique = resolver.resolveWorkflowCandidate({ projectRoot: root, runtime: {}, explicitFeature: 'auth' });
+    assert.deepEqual(unique.taskRegistry['task-02-b.md'].dependencies, ['task-01-a.md']);
+    assert.deepEqual(unique.taskRegistry['task-03-c.md'].dependencies, []);
+    assert.equal(unique.workflowContract, null);
+    assert.equal(unique.queueReady, false);
+
+    writeTask('task-01-second.md', 'Task 01: second', 'pending');
+    const ambiguous = resolver.resolveWorkflowCandidate({ projectRoot: root, runtime: {}, explicitFeature: 'auth' });
+    assert.equal(ambiguous.error, 'explicit_malformed');
+    assert.match(ambiguous.reason, /legacy dependency 01 maps to 2 task basenames/);
+
+    fs.rmSync(path.join(feature, 'task-01-second.md'));
+    fs.rmSync(path.join(feature, 'task-03-c.md'));
+    writePlan('# Auth plan\nSpecs-Contract: process-first-ready-v1\n');
+    writeTask('task-01-a.md', 'Task 01: a', 'pending', 'task-02-b.md');
+    writeTask('task-02-b.md', 'Task 02: b', 'pending', 'task-01-a.md');
+    const cycle = resolver.resolveWorkflowCandidate({ projectRoot: root, runtime: {}, explicitFeature: 'auth' });
+    assert.equal(cycle.error, 'explicit_malformed');
+    assert.match(cycle.reason, /dependency cycle detected: task-01-a\.md -> task-02-b\.md -> task-01-a\.md/);
+  });
+});
+
 test('Codex privacy approval is exact, session-bound, and reusable within its window', () => {
   inHookFixture((root, hooks) => {
     const nested = path.join(root, 'packages', 'app');
@@ -434,6 +647,7 @@ test('Codex completion gate validates explicit process-v3 inline Receipt', () =>
     fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\n');
     fs.writeFileSync(taskFile, [
       '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
     ].join('\n'));
 
@@ -452,6 +666,33 @@ test('Codex completion gate validates explicit process-v3 inline Receipt', () =>
     const context = workflowRuntimeContext(root);
     fs.writeFileSync(taskFile, [
       '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '', '```text', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`, 'pass: 1', '```', '',
+    ].join('\n'));
+    const fencedFields = runHook(gate, nested, payload);
+    assert.equal(fencedFields.status, 0, fencedFields.stderr);
+    assert.match(JSON.parse(fencedFields.stdout).reason, /verification_state/);
+    assert.match(JSON.parse(fencedFields.stdout).reason, /command/);
+    assert.match(JSON.parse(fencedFields.stdout).reason, /provenance/);
+
+    fs.writeFileSync(taskFile, [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${context.base}`, `Head: ${context.head}`,
+      '````text', '$ node --test', 'pass: 1', '```', '',
+    ].join('\n'));
+    const malformedOutputFence = runHook(gate, nested, payload);
+    assert.equal(malformedOutputFence.status, 0, malformedOutputFence.stderr);
+    assert.match(JSON.parse(malformedOutputFence.stdout).reason, /command_output/);
+
+    fs.writeFileSync(taskFile, [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
       '## Receipt', '',
       'Verification: PASS', 'Command: node --test', 'Exit: 0',
@@ -472,6 +713,7 @@ test('Codex process-v3 Receipt command must match the exact Verification Plan co
     const context = workflowRuntimeContext(root);
     fs.writeFileSync(path.join(feature, 'task-01-auth.md'), [
       '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: pnpm test', '',
       '## Receipt', '', 'Verification: PASS', 'Command: true', 'Exit: 0',
       `Base: ${context.base}`, `Head: ${context.head}`,
@@ -501,6 +743,7 @@ test('Codex process-v3 Stop ignores a completed packet when one packet remains a
     const context = workflowRuntimeContext(root);
     fs.writeFileSync(path.join(completed, 'task-01-auth.md'), [
       '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
       '## Receipt', '',
       'Verification: PASS', 'Command: node --test', 'Exit: 0',
@@ -509,6 +752,7 @@ test('Codex process-v3 Stop ignores a completed packet when one packet remains a
     ].join('\n'));
     fs.writeFileSync(path.join(active, 'task-01-active.md'), [
       '# Task 01: active', '', 'Status: pending', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
     ].join('\n'));
 
@@ -532,6 +776,7 @@ test('Codex process-v3 Stop accepts two completed packets with valid Receipts', 
       const context = workflowRuntimeContext(root, featureName);
       fs.writeFileSync(path.join(feature, `task-01-${featureName}.md`), [
         `# Task 01: ${featureName}`, '', 'Status: done', '',
+        '## Dependencies', '', '- none', '',
         '## Verification Plan', '', '- Command: node --test', '',
         '## Receipt', '',
         'Verification: PASS', 'Command: node --test', 'Exit: 0',

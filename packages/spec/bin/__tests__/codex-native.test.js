@@ -29,6 +29,39 @@ const MANIFEST = JSON.parse(
   fs.readFileSync(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'), 'utf8')
 );
 const SPECS_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/specs');
+const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
+  ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
+  ['Schema', 'version; exact keys/nesting/types; required/optional; enum/format/bounds/cardinality; unknown-field behavior; compatibility/migration'],
+  ['State/concurrency', 'initial/terminal states; event + guard + effect + next + error; ordering; duplicate/retry; writer/lock acquire/contention/release; rollback/recovery'],
+  ['Filesystem/security', 'authoritative root; trusted/untrusted segment grammar; lexical + canonical containment and symlink policy; flags/mode; temp/rename/fsync; lock/stale reclaim; crash cleanup'],
+  ['Time/retention', 'clock source; unit/precision/timezone; endpoints and inclusion/comparator; anomaly behavior; expiry/purge/recovery'],
+  ['Integration/proof', 'caller; export/registration; packaging/config; native path/consumer; proof level (`source`/`installed`/`live`); observable failure oracle']
+];
+const IMPLEMENTATION_READINESS_CLAUSES = {
+  noInvention: 'Before implementation handoff, apply the **no-invention gate**: if two implementations conform to the packet text yet can produce different externally observable output, state, error, security, or compatibility behavior, surface the missing choice as an explicit C1 or C2 question and block handoff.',
+  materialDefinition: 'A boundary is material when the task creates, changes, or depends on it and a different choice changes an external observation, security, durable data, compatibility, or proof reachability. Require only the matching material row; omit nonmaterial categories.',
+  exactBoundaryChoices: 'For every required row, name each listed choice exactly; labels such as “JSON”, “local path”, “locked”, or “timestamped” alone remain unresolved.',
+  proofPlanLines: [
+    '- Command: `<exact runnable command>`',
+    '- Named probe: <existing concrete probe/test/hook ID; never only a suite label>',
+    '- Reachability: <real entrypoint/caller at each `source`/`installed`/`live` level; `UNKNOWN` if unexecuted>',
+    '- Oracle: <externally observable success or failure>',
+    '- Counterexample: <material alternative behavior that must make this proof fail>',
+    '- Artifacts: <required artifact path plus digest algorithm/comparison rule, or explicitly ephemeral with cleanup rule>'
+  ],
+  proofTrace: 'Trace `Command → Named probe → Reachability → Oracle`.',
+  namedProbeOwnership: 'Aggregate suites\nname the owning concrete probe.',
+  proofLevelSeparation: 'Proof at `source`/`installed`/`live` stays\nseparate; one level never promotes another.',
+  disposableTemplateControls: 'Run mutation or destructive\nnegative controls only on disposable copies under a verified temporary root,\nnever tracked worktree or canonical source bytes.',
+  disposableReviewControls: 'Run mutation or destructive negative controls only on disposable copies below a verified temporary root, never tracked worktree or canonical source bytes.',
+  failureSemantics: '`Crash` means abrupt unhandled termination before the claimed catch point; a catchable failure returns/raises an error or exits nonzero. Never use them interchangeably.',
+  privacyIdentifiers: 'Any privacy/security claim names the exact identifier surface at risk, such as an env var, header, path, token class, or field name; generic “sensitive data” is insufficient.',
+  freshReplay: 'After applying an accepted C2 finding, a fresh-context closure pass records and freshly replays its original counterexample after the repair under this exact review-log header:',
+  distinctRepairProof: '`Repaired at` cites the repair edit; `Proved at` must cite distinct evidence from the fresh replay, never the repair-edit citation.',
+  closureTransition: 'An accepted finding transitions `accepted → repaired → PASS|FAIL|UNKNOWN`.',
+  unknownBlocks: 'Only `PASS` closes it; `FAIL` remains open for the remaining paper-review round; `UNKNOWN` blocks implementation handoff.',
+  scopeReturnsToC1: 'A repair that adds user semantics or scope returns to C1.'
+};
 const V3_SPECS_BUNDLE = [
   'SKILL.md',
   'references/review.md',
@@ -159,8 +192,122 @@ function assertInstalledVerificationModel(grounderPath, designTemplate) {
   }
 }
 
-function installedAuthoringProjectionIssues(files) {
+function markdownSection(content, heading) {
+  const lines = String(content).split('\n');
+  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (start < 0) return '';
+  const end = lines.findIndex((line, index) => index > start && /^##\s+/.test(line));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n');
+}
+
+function markdownTableUnderHeading(content, heading) {
+  const lines = markdownSection(content, heading).split('\n');
+  const tableStart = lines.findIndex((line) => line.trim().startsWith('|'));
+  if (tableStart < 0) return [];
+  const rows = [];
+  for (let index = tableStart; index < lines.length && lines[index].trim().startsWith('|'); index += 1) {
+    const cells = lines[index].split('|').slice(1, -1).map((cell) => cell.trim());
+    if (cells.every((cell) => /^:?-+:?$/.test(cell))) continue;
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function normalizeMarkdownWhitespace(content) {
+  return String(content).replace(/\s+/g, ' ').trim();
+}
+
+function markdownBetweenHeadings(content, startHeading, endHeading) {
+  const value = String(content);
+  const startMarker = `## ${startHeading}`;
+  const endMarker = `## ${endHeading}`;
+  const startIndex = value.indexOf(startMarker);
+  const endIndex = value.indexOf(endMarker, startIndex + startMarker.length);
+  if (startIndex < 0 || endIndex < 0) return '';
+  return value.slice(startIndex + startMarker.length, endIndex);
+}
+
+function implementationReadinessIssues(templates, review) {
+  if (typeof templates !== 'string' || typeof review !== 'string') {
+    throw new TypeError('implementation-readiness checker expects templates and review UTF-8 strings');
+  }
+
+  const issues = new Set();
+  const authoring = markdownSection(templates, 'No-invention and conditional boundary contracts');
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.noInvention)) {
+    issues.add('no-invention');
+  }
+
+  const boundaryTable = markdownTableUnderHeading(
+    templates,
+    'No-invention and conditional boundary contracts'
+  );
+  const expectedBoundaryTable = [
+    ['Boundary', 'Required contract when material'],
+    ...IMPLEMENTATION_READINESS_BOUNDARY_ROWS
+  ];
+  if (!authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.materialDefinition)
+    || !authoring.includes(IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices)
+    || IMPLEMENTATION_READINESS_BOUNDARY_ROWS.length !== 6
+    || boundaryTable.length !== expectedBoundaryTable.length
+    || JSON.stringify(boundaryTable) !== JSON.stringify(expectedBoundaryTable)) {
+    issues.add('boundary-contract');
+  }
+
+  const proof = markdownSection(templates, 'Verification Plan');
+  const proofPlanLines = proof.split('\n').map((line) => line.trim()).filter((line) => line.startsWith('- '));
+  const normalizedProofContract = normalizeMarkdownWhitespace(markdownBetweenHeadings(
+    templates,
+    'Verification Plan',
+    'Canonical inline Receipt'
+  ));
+  const normalizedProofClauses = [
+    IMPLEMENTATION_READINESS_CLAUSES.proofTrace,
+    IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
+    IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
+    IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls
+  ].map(normalizeMarkdownWhitespace);
+  const reviewNegativeControls = normalizeMarkdownWhitespace(
+    markdownSection(review, 'B2 — fresh-context red team')
+  );
+  if (JSON.stringify(proofPlanLines) !== JSON.stringify(IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines)
+    || normalizedProofClauses.some((clause) => !normalizedProofContract.includes(clause))
+    || !reviewNegativeControls.includes(normalizeMarkdownWhitespace(
+      IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls
+    ))) {
+    issues.add('proof-chain');
+  }
+
+  const failureGuidance = markdownSection(templates, 'Twelve edge-case dimensions');
+  if (!failureGuidance.includes(IMPLEMENTATION_READINESS_CLAUSES.failureSemantics)) {
+    issues.add('failure-semantics');
+  }
+
+  const evidenceRules = markdownSection(review, 'B1 — evidence rule');
+  if (!evidenceRules.includes(IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers)) {
+    issues.add('privacy-identifiers');
+  }
+
+  const closure = markdownSection(review, 'Accepted-repair closure');
+  const normalizedClosure = normalizeMarkdownWhitespace(closure);
+  const closureHeader = markdownTableUnderHeading(review, 'Accepted-repair closure')[0] || [];
+  if (JSON.stringify(closureHeader) !== JSON.stringify([
+    'ID', 'Decision', 'Original counterexample', 'Repaired at', 'Proved at', 'Replay', 'Closure'
+  ])
+    || !normalizedClosure.includes(normalizeMarkdownWhitespace(IMPLEMENTATION_READINESS_CLAUSES.freshReplay))
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.closureTransition)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.unknownBlocks)
+    || !closure.includes(IMPLEMENTATION_READINESS_CLAUSES.scopeReturnsToC1)) {
+    issues.add('repair-closure');
+  }
+
+  return [...issues].sort();
+}
+
+function authoringProjectionIssues(files) {
   const issues = [];
+  issues.push(...implementationReadinessIssues(files.templates, files.review));
   const foreignRuntimeBoundary = 'If you are Claude Code or any other runtime, ignore this entire Codex block';
   if (!files.skill.includes('Task files are flat beside `plan.md`')
     || !files.skill.includes('Do not create a nested task directory.')) {
@@ -211,11 +358,93 @@ function installedAuthoringProjectionIssues(files) {
     || !files.codex.includes('C1') || !files.codex.includes('C2') || !files.codex.includes('C3')) {
     issues.push('codex-process-v3');
   }
-  return issues;
+  return [...new Set(issues)].sort();
 }
 
-function assertInstalledAuthoringProjection(root) {
-  const installedRoot = path.join(root, '.agents/skills/specs');
+function canonicalInstalledSpecsRoot(projectRoot, installedRoot) {
+  assert.equal(path.isAbsolute(projectRoot), true, 'project root must be absolute');
+  assert.equal(path.isAbsolute(installedRoot), true, 'installed Specs root must be absolute');
+  const canonicalProject = fs.realpathSync(projectRoot);
+  const canonicalInstalled = fs.realpathSync(installedRoot);
+  const relative = path.relative(canonicalProject, canonicalInstalled);
+  assert.ok(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), 'installed Specs root must stay inside project');
+  assert.equal(
+    canonicalInstalled,
+    fs.realpathSync(path.join(canonicalProject, '.agents/skills/specs')),
+    'checker must read the native installed Codex Specs root'
+  );
+  return canonicalInstalled;
+}
+
+function readInstalledAuthoringProjection(projectRoot, installedRoot) {
+  const canonicalRoot = canonicalInstalledSpecsRoot(projectRoot, installedRoot);
+  const read = (relative) => fs.readFileSync(path.join(canonicalRoot, relative), 'utf8');
+  return {
+    skill: read('SKILL.md'),
+    review: read('references/review.md'),
+    templates: read('references/templates.md'),
+    legacyTemplates: V3_SPECS_BUNDLE.filter((relative) => relative.startsWith('templates/')).map(read).join('\n'),
+    codex: [
+      fs.readFileSync(path.join(projectRoot, 'AGENTS.md'), 'utf8'),
+      fs.readFileSync(path.join(projectRoot, '.codex/rules/state-sync.md'), 'utf8')
+    ].join('\n')
+  };
+}
+
+function installedAuthoringProjectionIssues(projectRoot, installedRoot) {
+  return authoringProjectionIssues(readInstalledAuthoringProjection(projectRoot, installedRoot));
+}
+
+function assertInstalledMutationTarget(projectRoot, installedRoot, relative) {
+  const canonicalProject = fs.realpathSync(projectRoot);
+  const canonicalInstalled = canonicalInstalledSpecsRoot(projectRoot, installedRoot);
+  const targetPath = path.join(canonicalInstalled, relative);
+  const targetLstat = fs.lstatSync(targetPath);
+  assert.equal(targetLstat.isSymbolicLink(), false, 'installed mutation target must not be a symlink');
+  assert.equal(targetLstat.isFile(), true, 'installed mutation target must be a regular file');
+  const canonicalTarget = fs.realpathSync(targetPath);
+  const installedRelative = path.relative(canonicalInstalled, canonicalTarget);
+  const projectRelative = path.relative(canonicalProject, canonicalTarget);
+  assert.ok(
+    installedRelative && installedRelative !== '..'
+      && !installedRelative.startsWith(`..${path.sep}`)
+      && !path.isAbsolute(installedRelative),
+    'installed mutation target must stay inside .agents/skills/specs'
+  );
+  assert.ok(
+    projectRelative && projectRelative !== '..'
+      && !projectRelative.startsWith(`..${path.sep}`)
+      && !path.isAbsolute(projectRelative),
+    'installed mutation target must stay inside the disposable project'
+  );
+  const canonicalSource = fs.realpathSync(path.join(SPECS_SOURCE_ROOT, relative));
+  assert.notEqual(
+    canonicalTarget,
+    canonicalSource,
+    'installed mutation target must not resolve to canonical source'
+  );
+  const targetStat = fs.statSync(canonicalTarget);
+  const sourceStat = fs.statSync(canonicalSource);
+  assert.notDeepEqual(
+    [targetStat.dev, targetStat.ino],
+    [sourceStat.dev, sourceStat.ino],
+    'installed mutation target must not share an inode with canonical source'
+  );
+  return canonicalTarget;
+}
+
+function assertCanonicalSpecsSourceBytesUnchanged(sourceBytes) {
+  for (const [relative, expected] of sourceBytes) {
+    assert.deepEqual(
+      fs.readFileSync(path.join(SPECS_SOURCE_ROOT, relative)),
+      expected,
+      `canonical Specs source bytes changed during installed mutation: ${relative}`
+    );
+  }
+}
+
+function assertInstalledAuthoringProjection(root, installedRoot) {
+  canonicalInstalledSpecsRoot(root, installedRoot);
   const relativeFiles = (directory) => allFiles(directory, () => true)
     .map((file) => path.relative(directory, file).split(path.sep).join('/'))
     .sort();
@@ -232,21 +461,220 @@ function assertInstalledAuthoringProjection(root) {
     assert.equal(fs.existsSync(path.join(installedRoot, relative)), false, `obsolete Specs file installed: ${relative}`);
   }
 
-  const read = (relative) => fs.readFileSync(path.join(installedRoot, relative), 'utf8');
-  const files = {
-    skill: read('SKILL.md'),
-    review: read('references/review.md'),
-    templates: read('references/templates.md'),
-    legacyTemplates: V3_SPECS_BUNDLE
-      .filter((relative) => relative.startsWith('templates/'))
-      .map(read)
-      .join('\n'),
-    codex: [
-      fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'),
-      fs.readFileSync(path.join(root, '.codex/rules/state-sync.md'), 'utf8')
-    ].join('\n')
+  const files = readInstalledAuthoringProjection(root, installedRoot);
+  const sourceBytes = new Map(V3_SPECS_BUNDLE.map((relative) => [
+    relative,
+    fs.readFileSync(path.join(SPECS_SOURCE_ROOT, relative))
+  ]));
+  assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), []);
+  assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+
+  if (process.platform !== 'win32') {
+    const relative = 'references/templates.md';
+    const installedPath = path.join(installedRoot, relative);
+    const backupPath = `${installedPath}.cafekit-backup`;
+    const sourcePath = path.join(SPECS_SOURCE_ROOT, relative);
+    fs.renameSync(installedPath, backupPath);
+    try {
+      fs.linkSync(sourcePath, installedPath);
+      assert.throws(
+        () => assertInstalledMutationTarget(root, installedRoot, relative),
+        /must not share an inode with canonical source/
+      );
+      assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+    } finally {
+      try { fs.unlinkSync(installedPath); } catch { /* best-effort disposable cleanup */ }
+      fs.renameSync(backupPath, installedPath);
+    }
+  }
+
+  const boundaryMutation = (name, boundary, replacements) => {
+    const row = IMPLEMENTATION_READINESS_BOUNDARY_ROWS.find(([label]) => label === boundary);
+    assert.ok(row, `${name} references unknown boundary ${boundary}`);
+    let weakened = row[1];
+    for (const [from, to] of replacements) {
+      const next = weakened.replace(from, to);
+      assert.notEqual(next, weakened, `${name} weakening anchor must exist in ${boundary}`);
+      weakened = next;
+    }
+    return {
+      name,
+      issue: 'boundary-contract',
+      relative: 'references/templates.md',
+      from: `| ${row[0]} | ${row[1]} |`,
+      to: `| ${row[0]} | ${weakened} |`
+    };
   };
-  assert.deepEqual(installedAuthoringProjectionIssues(files), []);
+
+  const readinessMutations = [
+    {
+      name: 'no-invention-blocking',
+      issue: 'no-invention',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.noInvention,
+      to: 'Before implementation handoff, note ambiguous choices without blocking handoff.'
+    },
+    {
+      name: 'material-boundary-definition',
+      issue: 'boundary-contract',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.materialDefinition,
+      to: 'A boundary is material when it seems relevant to the task.'
+    },
+    {
+      name: 'exact-boundary-choices',
+      issue: 'boundary-contract',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.exactBoundaryChoices,
+      to: 'For every required row, describe the listed choices generally.'
+    },
+    boundaryMutation('api-success-and-error-semantics', 'API/CLI', [
+      ['success output; ', ''],
+      ['error/status/exit; ', '']
+    ]),
+    boundaryMutation('schema-shape-and-unknown-fields', 'Schema', [
+      ['exact keys/nesting/types; ', ''],
+      ['unknown-field behavior; ', '']
+    ]),
+    boundaryMutation('state-lock-lifecycle', 'State/concurrency', [
+      ['writer/lock acquire/contention/release', 'writer/lock']
+    ]),
+    boundaryMutation('filesystem-segment-grammar', 'Filesystem/security', [
+      ['trusted/untrusted segment grammar; ', '']
+    ]),
+    boundaryMutation('filesystem-stale-lock-reclaim', 'Filesystem/security', [
+      ['lock/stale reclaim; ', '']
+    ]),
+    boundaryMutation('retention-clock-and-endpoints', 'Time/retention', [
+      ['clock source; ', ''],
+      ['unit/precision/timezone; ', ''],
+      ['endpoints and inclusion/comparator; ', '']
+    ]),
+    boundaryMutation('proof-level-partition', 'Integration/proof', [
+      ['proof level (`source`/`installed`/`live`)', 'proof level']
+    ]),
+    {
+      name: 'concrete-named-probe',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[1],
+      to: '- Named probe: <suite label>'
+    },
+    {
+      name: 'aggregate-suite-probe-owner',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.namedProbeOwnership,
+      to: 'Aggregate suites may cite only the suite label.'
+    },
+    {
+      name: 'reachability-levels',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[2],
+      to: '- Reachability: <entrypoint or consumer>'
+    },
+    {
+      name: 'proof-level-separation',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofLevelSeparation,
+      to: 'Proof may be promoted between source, installed, and live levels.'
+    },
+    {
+      name: 'disposable-template-negative-controls',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.disposableTemplateControls,
+      to: 'Run mutation or destructive negative controls against the available project copy.'
+    },
+    {
+      name: 'disposable-review-negative-controls',
+      issue: 'proof-chain',
+      relative: 'references/review.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.disposableReviewControls,
+      to: 'Run mutation or destructive negative controls against the available project copy.'
+    },
+    {
+      name: 'artifact-path-and-digest-or-ephemeral',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[5],
+      to: '- Artifacts: <required artifact path, or none>'
+    },
+    {
+      name: 'proof-counterexample',
+      issue: 'proof-chain',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.proofPlanLines[4],
+      to: '- Counterexample: <example>'
+    },
+    {
+      name: 'repair-and-proof-columns',
+      issue: 'repair-closure',
+      relative: 'references/review.md',
+      from: '| ID | Decision | Original counterexample | Repaired at | Proved at | Replay | Closure |',
+      to: '| ID | Decision | Original counterexample | Repaired at | Evidence | Replay | Closure |'
+    },
+    {
+      name: 'fresh-original-counterexample-replay',
+      issue: 'repair-closure',
+      relative: 'references/review.md',
+      from: 'After applying an accepted C2 finding, a fresh-context closure pass records and\nfreshly replays its original counterexample after the repair under this exact review-log header:',
+      to: 'After applying an accepted C2 finding, record the repair under this review-log header:'
+    },
+    {
+      name: 'distinct-repair-and-proof-evidence',
+      issue: 'repair-closure',
+      relative: 'references/review.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.distinctRepairProof,
+      to: '`Repaired at` and `Proved at` may cite the same repair edit.'
+    },
+    {
+      name: 'unknown-blocks-handoff',
+      issue: 'repair-closure',
+      relative: 'references/review.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.unknownBlocks,
+      to: '`PASS` closes it; `FAIL` and `UNKNOWN` may continue to implementation handoff.'
+    },
+    {
+      name: 'crash-versus-catchable-failure',
+      issue: 'failure-semantics',
+      relative: 'references/templates.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.failureSemantics,
+      to: 'Crash and catchable failure both mean an error occurred.'
+    },
+    {
+      name: 'privacy-identifier-surface',
+      issue: 'privacy-identifiers',
+      relative: 'references/review.md',
+      from: IMPLEMENTATION_READINESS_CLAUSES.privacyIdentifiers,
+      to: 'Any privacy/security claim names the sensitive data at risk.'
+    }
+  ];
+
+  for (const { name, issue, relative, from, to } of readinessMutations) {
+    const target = assertInstalledMutationTarget(root, installedRoot, relative);
+    const installedBytes = fs.readFileSync(target, 'utf8');
+    const anchorIndex = installedBytes.indexOf(from);
+    assert.ok(anchorIndex >= 0, `${name} mutation anchor must exist in installed bytes`);
+    assert.equal(
+      installedBytes.indexOf(from, anchorIndex + from.length),
+      -1,
+      `${name} mutation anchor must be unique in installed bytes`
+    );
+    const weakened = `${installedBytes.slice(0, anchorIndex)}${to}${installedBytes.slice(anchorIndex + from.length)}`;
+    try {
+      fs.writeFileSync(assertInstalledMutationTarget(root, installedRoot, relative), weakened);
+      assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+      assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), [issue], name);
+    } finally {
+      fs.writeFileSync(assertInstalledMutationTarget(root, installedRoot, relative), installedBytes);
+    }
+    assert.deepEqual(installedAuthoringProjectionIssues(root, installedRoot), [], `${name} restore`);
+    assertCanonicalSpecsSourceBytesUnchanged(sourceBytes);
+  }
+
   const mutations = [
     ['skill', (value) => value.replace('Task files are flat beside `plan.md`', 'Task files may be nested')],
     ['review', (value) => value.replace('list at 15', 'list without a cap')],
@@ -255,7 +683,7 @@ function assertInstalledAuthoringProjection(root) {
   ];
   for (const [key, mutate] of mutations) {
     const changed = { ...files, [key]: mutate(files[key]) };
-    assert.notDeepEqual(installedAuthoringProjectionIssues(changed), []);
+    assert.notDeepEqual(authoringProjectionIssues(changed), []);
   }
 }
 
@@ -715,7 +1143,20 @@ test('Codex fresh install is exact while refresh and upgrade preserve existing f
       path.join(root, '.codex/scripts/spec-ground.cjs'),
       installedDesign
     );
-    assertInstalledAuthoringProjection(root);
+    const installedSpecsRoot = path.join(root, '.agents/skills/specs');
+    assert.throws(
+      () => installedAuthoringProjectionIssues(root, '.agents/skills/specs'),
+      /must be absolute/
+    );
+    assert.throws(
+      () => installedAuthoringProjectionIssues(root, SPECS_SOURCE_ROOT),
+      /must stay inside project/
+    );
+    assert.throws(
+      () => installedAuthoringProjectionIssues(root, path.dirname(root)),
+      /must stay inside project/
+    );
+    assertInstalledAuthoringProjection(root, installedSpecsRoot);
 
     const installedTask = fs.readFileSync(
       path.join(root, '.agents/skills/specs/templates/task.md'), 'utf8'
@@ -845,6 +1286,7 @@ test('Codex fresh install is exact while refresh and upgrade preserve existing f
 
     const sameVersion = install(root);
     assert.equal(sameVersion.status, 0, `${sameVersion.stdout}\n${sameVersion.stderr}`);
+    assert.deepEqual(installedAuthoringProjectionIssues(root, installedSpecsRoot), []);
     assert.match(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
     assert.equal(
       fs.existsSync(obsoleteSpecsRule),
@@ -859,6 +1301,7 @@ test('Codex fresh install is exact while refresh and upgrade preserve existing f
 
     const upgrade = install(root);
     assert.equal(upgrade.status, 0, `${upgrade.stdout}\n${upgrade.stderr}`);
+    assert.deepEqual(installedAuthoringProjectionIssues(root, installedSpecsRoot), []);
     assert.match(fs.readFileSync(questionSkill, 'utf8'), /USER-CODEX-SENTINEL/);
     assert.equal(
       fs.existsSync(obsoleteSpecsRule),

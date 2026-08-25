@@ -99,6 +99,10 @@ function makeWorkflowFixture(receiptLines = [], plannedCommand = 'node --test') 
     '',
     'Status: done',
     '',
+    '## Dependencies',
+    '',
+    '- none',
+    '',
     '## Verification Plan',
     '',
     `- Command: ${plannedCommand}`,
@@ -1318,10 +1322,80 @@ test('32. process-v3 requires Receipt heading and runtime-bound provenance', () 
   }
 });
 
+test('32b. process-v3 ignores a Receipt heading and proof contained only in a fence', () => {
+  const dir = makeWorkflowFixture([
+    '~~~~markdown', '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', 'pass: 1', '```', '~~~~',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'fenced-only process-v3 Receipt must block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /missing_receipt/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('32c. process-v3 ignores canonical Receipt fields contained only in its output fence', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', '```text', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, 'pass: 1', '```',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'fenced-only canonical fields must block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /verification_state/);
+    assert.match(body.reason, /command/);
+    assert.match(body.reason, /provenance/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('32d. process-v3 preserves explicit failures from the Receipt output fence', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test',
+    'exit code: 1', 'FAIL', '```',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'explicit fenced output failure must block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /verification_state/);
+    assert.match(body.reason, /exit_result/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('32e. process-v3 rejects output whose closing fence is shorter than its opener', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '````text', '$ node --test',
+    'pass: 1', '```',
+  ]);
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body, 'malformed output fence must block');
+    assert.strictEqual(body.decision, 'block');
+    assert.match(body.reason, /command_output/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('33. process-v3 done task with canonical inline Receipt passes', () => {
   const dir = makeWorkflowFixture([
     '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
-    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test', 'pass: 1', '```',
+    `Base: ${VALID_BASE}`, `Head: ${VALID_HEAD}`, '```text', '$ node --test',
+    'Status: pending', '## Receipt', 'pass: 1', '```',
   ]);
   try {
     clearCache();
@@ -1360,6 +1434,7 @@ test('35. process-v3 Stop ignores a completed packet when one packet remains act
     fs.writeFileSync(path.join(activeDir, 'plan.md'), '# Active plan\n');
     fs.writeFileSync(path.join(activeDir, 'task-01-active.md'), [
       '# Task 01: active', '', 'Status: pending', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
     ].join('\n'));
     clearCache();
@@ -1389,6 +1464,7 @@ test('36. process-v3 Stop accepts two completed packets with valid Receipts', ()
     });
     fs.writeFileSync(path.join(otherDir, 'task-01-other.md'), [
       '# Task 01: other', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
       '## Verification Plan', '', '- Command: node --test', '',
       '## Receipt', '',
       'Verification: PASS', 'Command: node --test', 'Exit: 0',

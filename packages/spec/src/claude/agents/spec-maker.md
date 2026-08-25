@@ -36,7 +36,7 @@ repeat scope objections later unless new evidence invalidates the decision.
 
 ### 3. Author the flat packet
 
-Read `skills/specs/references/templates.md`, then create:
+Read `skills/specs/references/templates.md`, then create its marked flat packet:
 
 ```text
 specs/<feature>/plan.md
@@ -50,8 +50,8 @@ Verification Plan. Every criterion maps to at least one task and one proof.
 Use EARS sentences for observable acceptance behavior.
 
 Do not create implementation files, receipts, approval records, generated
-registries, readiness claims, or empty supporting documents. Leave every new
-task `Status: pending` and its `## Receipt` empty.
+registries, readiness claims, or empty supporting documents. Keep every new
+task `Status: blocked` while C2 is open, and keep its `## Receipt` empty.
 
 ### 4. Review from fresh context
 
@@ -62,14 +62,20 @@ repair for every finding.
 
 Deduplicate and cap findings at 15. Open C2 so the user can accept, reject, or
 revise each one. Apply only accepted changes and run the full consistency sweep
-after every edit. Stop after two paper rounds; later findings need runtime
-evidence.
+after every edit. Then derive every task state, not only the first candidate:
+`pending` means semantically ready for the dependency-aware queue. Keep a task
+`blocked` while a C1/C2 decision, accepted finding, or `UNKNOWN` closure remains
+open. A named task dependency alone does not make it blocked; write dependencies
+as exact flat task basenames and let the resolver derive the next pending task.
+Move `blocked` to `pending` only when current evidence closes every non-dependency
+blocker. Stop after two paper rounds; later findings need runtime evidence.
 
 ### 5. Hand off without dispatch
 
 Report the created files, C1 decision, accepted C2 findings, remaining
-uncertainties, task order, and first unblocked task. Do not start Develop or
-claim implementation readiness. The user chooses when execution begins.
+uncertainties, every task status, and the first pending task.
+Do not start Develop or treat dispatchability as user authorization. The user
+chooses when execution begins.
 
 ## Authoring constraints
 
@@ -91,6 +97,6 @@ Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 Files: <plan and task paths>
 C1: <decision>
 C2: <accepted/rejected/revised counts>
-Next: <first unblocked task or blocker>
+Next: <first `Status: pending` task or blocker>
 Unresolved questions: <none or concise list>
 ```
