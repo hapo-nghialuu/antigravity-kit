@@ -44,51 +44,10 @@ Packed Claude and Codex installs preserve the same adaptive Specs contract, its 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: beab376bdb63517d477f1489974ab1225a03258d
-Head: 10633c5a8ab047b6815b7c36a42c3199878fa9fe2047ce4864bba35be0032f3d
+Base: f140c16d4e2538374f2b6fa6a77dcaf3ddb852a9
+Head: 9a09e392255389c870d38d257895a48eb7442be5cd71fdb71a839b62be272c74
 ```text
 > @haposoft/cafekit@0.16.0-rc.8 test
 > node scripts/run-skill-self-tests.mjs
-
-✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
-✔ specs-usage-guide documents adaptive routing without timing claims
-✔ Codex installed Specs and spec-maker reject adaptive coverage mutations (5834.833583ms)
-✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (90597.739333ms)
-﹣ packed Codex live host E2E via codex binary (opt-in) (0.894334ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
-
-ℹ tests 338
-ℹ suites 0
-ℹ pass 337
-ℹ fail 0
-ℹ cancelled 0
-ℹ skipped 1
-ℹ todo 0
-ℹ duration_ms 167030.420042
-
-ℹ tests 189
-ℹ suites 0
-ℹ pass 189
-ℹ fail 0
-ℹ cancelled 0
-ℹ skipped 0
-ℹ todo 0
-ℹ duration_ms 458923.618625
-
-ℹ tests 42
-ℹ suites 13
-ℹ pass 42
-ℹ fail 0
-ℹ cancelled 0
-ℹ skipped 0
-ℹ todo 0
-ℹ duration_ms 10778.177584
-
-[skill-test] pdf bounding-box tests
-..........
-----------------------------------------------------------------------
-Ran 10 tests in 0.000s
-
-OK
-
-[skill-test] PASS: 884 tests executed
+[skill-test] PASS: 885 tests executed
 ```

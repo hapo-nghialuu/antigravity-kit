@@ -72,17 +72,11 @@ teaches it without inventing runtime or speed evidence.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: beab376bdb63517d477f1489974ab1225a03258d
-Head: 10633c5a8ab047b6815b7c36a42c3199878fa9fe2047ce4864bba35be0032f3d
+Base: f140c16d4e2538374f2b6fa6a77dcaf3ddb852a9
+Head: 9a09e392255389c870d38d257895a48eb7442be5cd71fdb71a839b62be272c74
 
 ```text
-✔ hapo:develop plan-native continuous contract is complete and bounded
-✔ hapo:develop plan-native checker rejects semantic weakenings
-✔ specs-usage-guide documents plan-native Develop without timing or live-adherence claims
-✔ Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries (7814.83325ms)
-✔ Claude installed Develop preserves plan-native execution and references (993.276375ms)
-✔ Codex installed Develop preserves plan-native execution and references (1050.033958ms)
-Package Node: 338 tests, 337 pass, 1 opt-in live-host skip
-Hook behavioral: 189 tests, 189 pass
-[skill-test] PASS: 884 tests executed
+> @haposoft/cafekit@0.16.0-rc.8 test
+> node scripts/run-skill-self-tests.mjs
+[skill-test] PASS: 885 tests executed
 ```

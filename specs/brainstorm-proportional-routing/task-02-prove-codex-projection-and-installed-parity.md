@@ -50,15 +50,10 @@ Claude and Codex receive the same proportional Brainstorm contract, and Codex's 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: beab376bdb63517d477f1489974ab1225a03258d
-Head: 10633c5a8ab047b6815b7c36a42c3199878fa9fe2047ce4864bba35be0032f3d
+Base: f140c16d4e2538374f2b6fa6a77dcaf3ddb852a9
+Head: 9a09e392255389c870d38d257895a48eb7442be5cd71fdb71a839b62be272c74
 ```text
-✔ hapo:brainstorm proportional routing contract is complete and bounded; src/claude/skills/brainstorm/SKILL.md=150 (-38), src/claude/skills/brainstorm/references/question-framework.md=155 (-77), src/claude/agents/brainstormer.md=57 (-29); total 362/506
-✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=70
-✔ Codex payload transform keeps structured user-input grammar across determiners (5.620375ms)
-✔ Codex structured-input corpus oracle stays differential and production-aware (53.31025ms)
-✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity (1234.93175ms)
-✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (90597.739333ms)
-﹣ packed Codex live host E2E via codex binary (opt-in) (0.894334ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
-[skill-test] PASS: 884 tests executed
+> @haposoft/cafekit@0.16.0-rc.8 test
+> node scripts/run-skill-self-tests.mjs
+[skill-test] PASS: 885 tests executed
 ```
