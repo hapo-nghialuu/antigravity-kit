@@ -1532,6 +1532,20 @@ test('runtime provenance derives exact Git evidence, CLI context, and stale/forg
       'valid-shaped arbitrary SHA values must not bind',
     );
 
+    fs.writeFileSync(specFile, JSON.stringify({
+      status: 'in_progress',
+      feature_name: 'demo',
+      task_registry: {},
+      receipt_refresh: true,
+    }));
+    const specCommit = spawnSync('git', ['-C', root, 'add', 'specs/demo/spec.json'], { encoding: 'utf8' });
+    assert.equal(specCommit.status, 0, specCommit.stderr);
+    const commitReceipt = spawnSync('git', ['-C', root, 'commit', '-qm', 'refresh spec receipt'], { encoding: 'utf8' });
+    assert.equal(commitReceipt.status, 0, commitReceipt.stderr);
+    const afterSpecOnlyCommit = PROVENANCE_HELPER.deriveRuntimeContext(input);
+    assert.equal(afterSpecOnlyCommit.base, initial.base, 'spec-only commits must not stale receipt Base');
+    assert.equal(afterSpecOnlyCommit.head, initial.head, 'spec-only commits must not stale receipt Head');
+
     const cli = spawnSync(process.execPath, [
       path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'), '--json',
       '--project-root', root, '--specs-root', specsRoot, '--spec-file', specFile,

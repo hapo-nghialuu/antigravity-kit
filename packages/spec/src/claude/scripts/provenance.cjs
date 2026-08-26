@@ -83,9 +83,18 @@ function oneLine(value, label) {
   return output.replace(/\n$/, '');
 }
 
-function gitBase(root) {
-  const output = oneLine(runGit(root, ['rev-parse', 'HEAD'], 'git rev-parse HEAD')).toLowerCase();
-  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(output)) fail('malformed_git_output', 'git rev-parse HEAD did not return a commit id');
+function gitBase(root, specsRoot) {
+  const specsRelative = path.relative(root, specsRoot).split(path.sep).join('/');
+  const sourceHistory = decode(runGit(
+    root,
+    ['log', '-1', '--format=%H', '--', '.', `:(exclude,literal)${specsRelative}`],
+    'git log source base',
+  )).trim();
+  const output = (sourceHistory || oneLine(
+    runGit(root, ['rev-list', '--max-parents=0', '--reverse', 'HEAD'], 'git rev-list root'),
+    'git rev-list root',
+  ).split('\n')[0]).toLowerCase();
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(output)) fail('malformed_git_output', 'git source base did not return a commit id');
   return output;
 }
 
@@ -211,11 +220,11 @@ function identity(input) {
 
 function deriveRuntimeProvenance(input) {
   const current = identity(input);
-  const base = gitBase(current.root);
+  const base = gitBase(current.root, current.specsRoot);
   const first = manifest(current.root, current.specsRoot);
   const head = manifestDigest(first);
   const second = manifest(current.root, current.specsRoot);
-  if (JSON.stringify(first) !== JSON.stringify(second) || gitBase(current.root) !== base) fail('worktree_race', 'checkout changed during provenance capture');
+  if (JSON.stringify(first) !== JSON.stringify(second) || gitBase(current.root, current.specsRoot) !== base) fail('worktree_race', 'checkout changed during provenance capture');
   const stable = {
     schema_version: CONTEXT_SCHEMA_VERSION,
     project_root: current.root,
