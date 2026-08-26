@@ -25,6 +25,8 @@ All notable changes to CafeKit are documented here, following
 - **OpenCode support** (2026-08-19): gỡ đường cài, plugin runtime `src/opencode`, dependency, test và tài liệu OpenCode. Bản cuối hỗ trợ OpenCode là 0.16.x. Các entry lịch sử bên dưới giữ nguyên vì ghi lại sự thật đã xảy ra tại thời điểm đó.
 
 ### Changed
+- **Plan-native Develop execution** (2026-08-26): `hapo:develop` now selects the first dependency-ready task in plan order and continues sequentially until a real blocker or C3; exact-task, interrupted-resume, worktree parallel, Flash, Receipt, and final-Head stabilization contracts now have source and installed-runtime coverage.
+- **Specs timing benchmark archived** (2026-08-26): the unimplemented recorder/benchmark proposal was explicitly CUT and moved to a dated archive; its two tasks remain `blocked`, all material questions/findings remain unresolved, and no timing result or execution Receipt is claimed.
 - **Specs process-first v3 swap** (2026-08-19): tài liệu `hapo:specs` chuyển sang packet phẳng `specs/<feature>/plan.md` + `task-NN-<slug>.md`, dùng C1/C2/C3 và inline `## Receipt` làm đường chính; legacy adapter chỉ còn là nhánh tương thích.
 - **Archived semantic spec** (2026-08-19): `specs/cafekit-semantic-eval-firewall` được chuyển vào `specs/archive/` như tư liệu lịch sử.
 - **Claude prune follow-up** (2026-08-19): bản cài Claude prune các file payload spec cũ bằng migration manifest. Known limitation: bản upgrade của Codex vẫn còn 15 file mồ côi từ bundle cũ, nhưng fresh install đi đúng inventory mong đợi.

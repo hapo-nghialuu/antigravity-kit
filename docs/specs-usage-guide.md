@@ -120,9 +120,10 @@ command có thể chạy nhiều level probes nếu từng probe được nêu r
 Direct gate, một CP row cho mỗi outcome, affected-row union, giới hạn paper
 review và split theo independent subsystem giúp giảm ceremony theo cấu trúc.
 Chúng không phải số đo thời gian. CafeKit chưa đo wall-clock generation time và
-không công bố SLA cho Specs. Việc đo thời gian thuộc packet riêng
-`specs/specs-session-timing-benchmark/plan.md`; kết quả chỉ được ghi sau một
-benchmark run có evidence.
+không công bố SLA cho Specs. Đề xuất recorder/benchmark ban đầu tại
+`specs/specs-session-timing-benchmark/plan.md` đã được người dùng CUT và lưu làm tư liệu tại
+`specs/archive/specs-session-timing-benchmark-v2-cut-20260826/plan.md`; không có
+kết quả timing hay execution Receipt nào được tạo.
 
 ### Receipt canonical
 
