@@ -18,8 +18,8 @@ All notable changes to CafeKit are documented here, following
 ## [Unreleased]
 
 ### Fixed
-- **Docs sync after workflow-state commits** (2026-08-26): Claude and Codex docs-sync hooks now exclude the configured Specs root as well as docs, so committing plans or refreshed Receipts does not create a false source-change warning; real source commits still invalidate `.sync_hash`.
-- **Receipt provenance after spec-only commits** (2026-08-26): runtime `Base` now follows the latest commit that changes content outside the configured Specs root, matching the existing worktree `Head` exclusion. Committing refreshed process-first Receipts no longer invalidates those same Receipts on the next Stop.
+- **Docs sync after workflow-state commits** (2026-08-26): Claude and Codex docs-sync hooks now exclude the configured Specs root as well as docs, so committing plans or refreshed Receipts does not create a false source-change warning; behavioral coverage proves both runtimes stay silent for Specs-only commits and still report real source changes.
+- **Receipt provenance after spec-only commits** (2026-08-26): runtime `Base` now follows the latest commit that changes content outside the configured Specs root, matching the existing worktree `Head` exclusion. Committing refreshed process-first Receipts no longer invalidates those same Receipts on the next Stop, including deterministic fallback for repositories whose reachable history has multiple Specs-only roots.
 - **Codex managed-block ownership** (2026-08-20): native `src/codex/AGENTS.md` is installed verbatim so its foreign-runtime ignore clause cannot be inverted by the generic Claude-to-Codex converter; fresh and rerun installer tests now assert the exact actor on both sides of the boundary.
 - **Process-v3 Stop proof binding** (2026-08-20): Claude and Codex now require each inline Receipt command to match the task's exact Verification Plan command. A single unfinished packet wins over completed history, while an all-completed packet set is revalidated without a permanent `multiple_persisted` Stop lock.
 
