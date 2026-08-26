@@ -10,6 +10,12 @@ Specs-Contract: process-first-ready-v1
 - Expansion signals: none. The proposal stays below eight touched files, adds one CLI module and no service/class, and has two work groups.
 - User decision: **KEEP** the opt-in recorder; **CUT** telemetry, automatic hooks, B1 schema changes, kernel/parser changes, and any implicit execution.
 
+## Final scope decision (CUT — 2026-08-26)
+
+- User decision: do not implement the timing recorder or run the timing benchmark.
+- Both tasks remain `blocked`; Q-01–Q-07 and F-01–F-08 remain unresolved, and no execution Receipt exists.
+- Archive this packet as historical planning evidence. This decision does not change or roll back the completed Develop behavior.
+
 ## Out of scope
 
 - Persisting prompts, transcripts, or secret values. Any additional metadata choice remains unresolved in Q-02 and is not authorized before C2.
@@ -77,4 +83,4 @@ Tasks are sequential because Task 02 proves the Task 01 artifact through install
 
 ## Handoff state
 
-**Execution readiness: BLOCKED.** Both tasks remain `blocked` and are not dispatchable. Implementation must not start until Q-01–Q-07 and F-01–F-08 receive explicit C2 decisions and every accepted finding has a distinct repair citation plus fresh replay proof. Current first unblocked task: none.
+**Execution readiness: ARCHIVED — CUT by user.** Both tasks remain `blocked` and are not dispatchable. No implementation or benchmark run is authorized. Q-01–Q-07 and F-01–F-08 remain recorded as unresolved historical findings; no Receipt exists. Current first unblocked task: none.
