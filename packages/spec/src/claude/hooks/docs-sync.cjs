@@ -14,7 +14,7 @@
 try {
   const fs = require('fs');
   const path = require('path');
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
   const { loadConfig } = require('./lib/config.cjs');
 
   // Đọc stdin theo chuẩn hook
@@ -24,6 +24,9 @@ try {
   const config = loadConfig({ cwd, includeProject: false, includeAssertions: false, includeLocale: false });
 
   const docsDir = path.join(cwd, config.paths?.docs || 'docs');
+  const specsDir = path.join(cwd, config.paths?.specs || 'specs');
+  const docsRelative = path.relative(cwd, docsDir).replace(/\\/g, '/');
+  const specsRelative = path.relative(cwd, specsDir).replace(/\\/g, '/');
   
   // Xác định dự án đã có cốt lõi code hay chưa?
   const hasCode = fs.existsSync(path.join(cwd, 'src')) ||
@@ -46,16 +49,18 @@ try {
     lines.push('> Source exists but `docs/` does not. Create baseline docs first:');
     lines.push('> 1. `docs/system-architecture.md` — system architecture and flows');
     lines.push('> 2. `docs/project-overview-pdr.md` — overview, goals, features');
-    lines.push('> 3. Write current hash to `docs/.sync_hash` via `git log -1 --format="%H" -- . ":(exclude)docs"`');
+    lines.push('> 3. Write the latest non-docs/non-Specs source hash to `docs/.sync_hash`.');
     lines.push('');
   }
   // Case 2: docs exist — check continuous sync vs source-only git hash
   else {
     try {
       // Latest SOURCE-only hash (ignore docs-only commits)
-      const currentHash = execSync('git log -1 --format="%H" -- . ":(exclude)docs"', { 
-        cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] 
-      }).trim();
+      const currentHash = execFileSync('git', [
+        'log', '-1', '--format=%H', '--', '.',
+        `:(exclude,literal)${docsRelative}`,
+        `:(exclude,literal)${specsRelative}`,
+      ], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 
       if (currentHash) {
         const syncTrackingFile = path.join(docsDir, '.sync_hash');

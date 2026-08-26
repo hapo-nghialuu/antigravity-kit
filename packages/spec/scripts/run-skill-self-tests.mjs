@@ -3248,10 +3248,17 @@ async function runStaticSemanticTests() {
     },
     {
       label: "docs sync respects runtime docs path",
-      file: "src/claude/hooks/docs-sync.cjs",
-      assert: (content) =>
-        content.includes("loadConfig({ cwd") &&
-        content.includes("config.paths?.docs || 'docs'"),
+      files: [
+        "src/claude/hooks/docs-sync.cjs",
+        "src/codex/hooks/docs-sync.cjs",
+      ],
+      assertParts: ([claudeHook, codexHook]) =>
+        claudeHook.includes("loadConfig({ cwd") &&
+        claudeHook.includes("config.paths?.docs || 'docs'") &&
+        claudeHook.includes("config.paths?.specs || 'specs'") &&
+        codexHook.includes("runtime.paths?.docs") &&
+        codexHook.includes("runtime.paths?.specs") &&
+        [claudeHook, codexHook].every((content) => content.includes(":(exclude,literal)")),
     },
     {
       label: "hapo:specs SKILL stays lean after slim-flow diet",

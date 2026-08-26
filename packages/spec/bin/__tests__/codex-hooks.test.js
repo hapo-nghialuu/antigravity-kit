@@ -156,6 +156,48 @@ function canonicalProcessTask(root, title, dependency = 'none') {
   ].join('\n');
 }
 
+test('Codex docs sync ignores committed Specs state but reports source changes', () => {
+  inHookFixture((root, hooks) => {
+    const docsDir = path.join(root, 'docs');
+    fs.mkdirSync(docsDir, { recursive: true });
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"docs-sync-fixture"}\n');
+    fs.writeFileSync(path.join(docsDir, 'project-overview-pdr.md'), '# Fixture\n');
+    let result = spawnSync('git', ['-C', root, 'add', 'package.json', 'docs/project-overview-pdr.md'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'commit', '-qm', 'source baseline'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    const sourceBase = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+    fs.writeFileSync(path.join(docsDir, '.sync_hash'), `${sourceBase}\n`);
+    result = spawnSync('git', ['-C', root, 'add', 'docs/.sync_hash'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'commit', '-qm', 'sync docs'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+
+    const featureDir = path.join(root, 'specs', 'demo');
+    fs.mkdirSync(featureDir, { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'plan.md'), '# Completed packet\n');
+    result = spawnSync('git', ['-C', root, 'add', 'specs/demo/plan.md'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'commit', '-qm', 'refresh receipt state'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+
+    const payload = { cwd: root, session_id: 'docs-sync-session', hook_event_name: 'SessionStart' };
+    const afterSpecCommit = runHook(path.join(hooks, 'docs-sync.cjs'), root, payload);
+    assert.equal(afterSpecCommit.status, 0, afterSpecCommit.stderr);
+    assert.equal(afterSpecCommit.stdout, '', 'spec-only commits must not stale docs sync');
+
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'app.js'), 'module.exports = true;\n');
+    result = spawnSync('git', ['-C', root, 'add', 'src/app.js'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'commit', '-qm', 'change source'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    const afterSourceCommit = runHook(path.join(hooks, 'docs-sync.cjs'), root, payload);
+    assert.equal(afterSourceCommit.status, 0, afterSourceCommit.stderr);
+    assert.match(afterSourceCommit.stdout, /Docs sync needed/);
+  });
+});
+
 function inInstalledProcessSpecStateFixture(run) {
   return inHookFixture((root, hooks) => {
     const feature = path.join(root, 'specs', 'auth');

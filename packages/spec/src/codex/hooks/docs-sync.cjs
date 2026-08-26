@@ -11,11 +11,14 @@ const {
   resolveProjectPath
 } = require('./lib/hook-context.cjs');
 
-function latestSourceHash(projectRoot, docsRelative) {
+function latestSourceHash(projectRoot, excludedRelatives) {
   try {
     return execFileSync(
       'git',
-      ['log', '-1', '--format=%H', '--', '.', `:(exclude)${docsRelative}`],
+      [
+        'log', '-1', '--format=%H', '--', '.',
+        ...excludedRelatives.map((relative) => `:(exclude,literal)${relative}`)
+      ],
       {
         cwd: projectRoot,
         encoding: 'utf8',
@@ -32,7 +35,9 @@ try {
   if (!payload) process.exit(0);
   const { projectRoot, runtime } = getHookContext(payload);
   const docsDir = resolveProjectPath(projectRoot, runtime.paths?.docs, 'docs');
+  const specsDir = resolveProjectPath(projectRoot, runtime.paths?.specs, 'specs');
   const docsRelative = path.relative(projectRoot, docsDir).replace(/\\/g, '/');
+  const specsRelative = path.relative(projectRoot, specsDir).replace(/\\/g, '/');
   const hasCode = [
     'src', 'app', 'lib', 'package.json', 'index.js', 'main.py'
   ].some((candidate) => fs.existsSync(path.join(projectRoot, candidate)));
@@ -46,7 +51,7 @@ try {
       '> Create baseline architecture and project-overview docs, then record the source Git hash in `docs/.sync_hash`.'
     );
   } else {
-    const currentHash = latestSourceHash(projectRoot, docsRelative);
+    const currentHash = latestSourceHash(projectRoot, [docsRelative, specsRelative]);
     const trackingFile = path.join(docsDir, '.sync_hash');
     const previousHash = fs.existsSync(trackingFile)
       ? fs.readFileSync(trackingFile, 'utf8').trim()
