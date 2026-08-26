@@ -33,6 +33,16 @@ Before completion, verify:
 zero-test, stale, copied, or marker-only proof is unfinished. A review PASS
 cannot replace execution evidence.
 
+## Shared captured runs
+
+A shared command may prove several tasks only from one fresh captured run. For
+each task, map the exact command, current Head, required proof level, oracle, one
+uniquely named probe, and that probe's executed/pass count. Every mapped probe
+must execute at least once and all executions must pass. Duplicate probe names,
+ambiguous ownership/counts, skip, skipped, todo, cancel, canceled, cancelled, or
+remembered output cannot close any mapped task. Source, installed, and live proof
+levels remain distinct; never promote evidence from a lower level.
+
 ## Review focus
 
 Check task Outcome, Scope, Acceptance, Dependencies, Verification Plan, changed
@@ -62,6 +72,22 @@ after three failed repair rounds: stop and request user direction
 unfinished for state synchronization. Never retry an unchanged environment to
 manufacture a green result.
 
+## Final-Head fixed point
+
+Before C3, repeat within the same three-round repair cap:
+
+1. Capture runtime Head and list every `done` task whose Receipt is stale or
+   bound to a different Head.
+2. Run each stale task's exact proof freshly and let only the controller replace
+   its inline Receipt. If proof changes any non-Specs byte, stop as BLOCKED;
+   remediation must settle those bytes before proof can bind them.
+3. Capture runtime Head again and rescan all `done` Receipts.
+
+Stop only when consecutive Head captures are identical and every `done` Receipt
+names that current Head. A single pass, remembered result, copied Receipt, or
+proof promoted from another level is not a fixed point. If Head keeps moving or
+the repair cap is reached, report the blocker instead of opening C3.
+
 ## Flash gate
 
 With explicit `--flash`, run only a cheap available preflight and a basic
@@ -75,9 +101,10 @@ Status: in_progress
 Blocker: awaiting /hapo:test <feature>
 ```
 
-Flash does not write a PASS receipt, mark done, unblock dependents, or report
-production readiness. Trusted sync-finalize may promote only after fresh proof
-passes the same receipt contract above.
+Flash does not write a PASS receipt, mark done, unblock dependents, chain, or
+report production readiness. Only a later explicit non-Flash invocation may
+recover it: discard Flash output as canonical evidence, inspect current bytes
+and the owned diff, and run fresh proof under the same sync-finalize contract.
 
 ## Docs impact and C3
 

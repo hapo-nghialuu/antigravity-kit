@@ -44,6 +44,13 @@ const BRAINSTORM_SOURCE_PATHS = [
   BRAINSTORM_REFERENCE_SOURCE_PATH,
   BRAINSTORM_AGENT_SOURCE_PATH
 ];
+const DEVELOP_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/develop');
+const DEVELOP_BUNDLE = [
+  'SKILL.md',
+  'references/quality-gate.md',
+  'references/parallel-waves.md',
+  'references/subagent-patterns.md'
+];
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
   ['Interaction/UI', 'entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior'],
   ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
@@ -2347,6 +2354,35 @@ test('Codex installed Brainstorm skill reference and agent preserve proportional
       assert.deepEqual(fs.readFileSync(target), original, `${mutation.name} byte restore`);
       assert.deepEqual(brainstormProjectionIssues(readInstalledBrainstormProjection(root)), []);
       assertCanonicalBrainstormSourceBytesUnchanged(sourceBytes);
+    }
+  });
+});
+
+test('Codex installed Develop preserves plan-native execution and references', () => {
+  inTempProject((root) => {
+    const sourceBytes = new Map(DEVELOP_BUNDLE.map((relative) => [
+      path.join(DEVELOP_SOURCE_ROOT, relative),
+      fs.readFileSync(path.join(DEVELOP_SOURCE_ROOT, relative))
+    ]));
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedRoot = path.join(root, '.agents/skills/develop');
+    for (const relative of DEVELOP_BUNDLE) {
+      const sourcePath = path.join(DEVELOP_SOURCE_ROOT, relative);
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath),
+        `Codex Develop projection drifted: ${relative}`
+      );
+    }
+    const installedSkill = fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8');
+    assert.match(installedSkill, /\$hapo-develop <feature>/);
+    assert.match(installedSkill, /\.codex\/scripts\/workflow-policy\.cjs/);
+    assert.doesNotMatch(installedSkill, /\/hapo:develop|\.claude\/scripts/);
+    assert.equal(fs.existsSync(path.join(root, '.claude/skills/develop')), false);
+    for (const [sourcePath, expected] of sourceBytes) {
+      assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
     }
   });
 });

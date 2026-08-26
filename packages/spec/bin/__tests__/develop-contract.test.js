@@ -12,6 +12,8 @@ const PACKAGE_ROOT = path.join(__dirname, '../..');
 const POLICY_PATH = path.join(PACKAGE_ROOT, 'src/claude/scripts/workflow-policy.cjs');
 const POLICY = require(POLICY_PATH);
 const PROVENANCE_HELPER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/provenance.cjs'));
+const RESOLVER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-resolver.cjs'));
+const RECEIPTS = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-receipt.cjs'));
 const FINAL_STATE = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-final-state.cjs'));
 const VALIDATOR = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/validate-spec-output.cjs'));
 const GROUNDER = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-ground.cjs'));
@@ -27,6 +29,8 @@ const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
 const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
 const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
 const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/parallel-waves.md');
+const DEVELOP_REFERENCES = ['quality-gate.md', 'parallel-waves.md', 'subagent-patterns.md'];
+const INSTALLER = path.join(PACKAGE_ROOT, 'bin/install.js');
 const SYNC_PROTOCOLS = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/references/sync-protocols.md');
 const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
 const RUNTIME_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-policy-runtime-'));
@@ -74,6 +78,14 @@ function installClaudeRuntimeClosure(fixtureRoot, entry = 'hooks/spec-gate.cjs')
     fs.copyFileSync(path.join(hooksRoot, hook), target);
   }
   return path.join(destinationRoot, entry);
+}
+
+function installClaude(root) {
+  return spawnSync(process.execPath, [INSTALLER, '--platform', 'claude', '--yes'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, PATH: '/usr/bin:/bin' },
+  });
 }
 
 function markdownLegacyRegions(content) {
@@ -795,10 +807,10 @@ test('R7 Develop and Sync surfaces teach process-v3 and isolate hierarchical Leg
 
   const develop = regionsByName.get('develop').primary;
   assert.match(develop, /`specs\/<feature>\/plan\.md` plus flat `task-NN-\*\.md`/i);
-  assert.match(develop, /selects one unblocked task at a time/i);
+  assert.match(develop, /one unblocked task at a time/i);
   assert.match(develop, /Outcome and Acceptance/i);
   assert.match(develop, /Verification Plan/);
-  assert.match(develop, /final `## Receipt`/i);
+  assert.match(develop, /final inline `## Receipt`/i);
 
   const sync = regionsByName.get('sync').primary;
   assert.match(sync, /<task-NN-slug\.md>/i);
@@ -807,16 +819,121 @@ test('R7 Develop and Sync surfaces teach process-v3 and isolate hierarchical Leg
   assert.match(sync, /current inline Receipt/i);
 
   const waves = regionsByName.get('parallel waves').primary;
-  assert.match(waves, /plan task table[\s\S]*flat task's[\s\S]*`## Dependencies`/i);
-  assert.match(waves, /acceptance, Verification Plan/i);
+  assert.match(waves, /dependencies from the plan table and each task/i);
+  assert.match(waves, /acceptance, proof command/i);
   assert.match(waves, /one file has one writer per wave/i);
-  assert.match(waves, /writes inline Receipts and Status updates one task at a\s+time/i);
+  assert.match(waves, /writes inline Receipts and Status one task at a time/i);
 
   const protocols = regionsByName.get('sync protocols').primary;
   assert.match(protocols, /`plan\.md` and flat `task-\*\.md` files/i);
   assert.match(protocols, /acceptance IDs/i);
   assert.match(protocols, /current inline Receipt/i);
   assert.match(legacyCorpus, /sync-finalize/i);
+});
+
+test('Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries', () => {
+  const develop = markdownLegacyRegions(read(DEVELOP)).primary;
+  const quality = read(GATE);
+  const waves = markdownLegacyRegions(read(PARALLEL_WAVES)).primary;
+  const dispatch = read(path.join(path.dirname(PARALLEL_WAVES), 'subagent-patterns.md'));
+
+  for (const clause of [
+    /first dependency-valid `pending` row in `plan\.md` order/i,
+    /Specific-task\s+mode never touches a sibling/i,
+    /More than one `in_progress`/i,
+    /For an interrupted `in_progress` task/i,
+    /only the controller writes Status or Receipt/i,
+    /do not research, replan, or add a routine user gate/i,
+  ]) assert.match(develop, clause);
+  assert.match(quality, /consecutive Head captures are identical/i);
+  assert.match(quality, /skip, skipped, todo, cancel, canceled, cancelled/i);
+  assert.match(quality, /exact command, current Head, required proof level, oracle/i);
+  assert.match(waves, /every commit[\s\S]*complete changed tree/i);
+  assert.match(waves, /handoff metadata cannot substitute/i);
+  assert.match(develop, /later explicit non-Flash invocation may recover/i);
+  assert.match(dispatch, /controller alone writes Status and inline Receipt/i);
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-plan-native-'));
+  try {
+    const featureDir = path.join(root, 'specs', 'ordered');
+    fs.mkdirSync(featureDir, { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'plan.md'), '# Ordered\nSpecs-Contract: process-first-ready-v1\n');
+    const task = (status, dependencies, receipt = '<!-- Fill only after execution. -->') =>
+      `# Task\n\nStatus: ${status}\n\n## Dependencies\n\n${dependencies}\n\n## Verification Plan\n\n- Command: \`node --test\`\n\n## Receipt\n\n${receipt}\n`;
+    fs.writeFileSync(path.join(featureDir, 'task-01-first.md'), task('pending', '- none'));
+    fs.writeFileSync(path.join(featureDir, 'task-02-second.md'), task('pending', '- task-01-first.md'));
+    initFixtureGit(root);
+
+    let candidate = RESOLVER.resolveWorkflowCandidate({ projectRoot: root, explicitFeature: 'ordered' });
+    assert.equal(candidate.queueReady, true);
+    assert.deepEqual(Object.keys(candidate.taskRegistry), ['task-01-first.md', 'task-02-second.md']);
+    let runtime = PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root, specsRoot: path.join(root, 'specs'), specFile: candidate.planFile,
+      featureName: 'ordered', runtimeSession: 'plan-native-test',
+    });
+    const preMutationHead = runtime.head;
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'app.js'), 'later worktree mutation\n');
+    runtime = PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root, specsRoot: path.join(root, 'specs'), specFile: candidate.planFile,
+      featureName: 'ordered', runtimeSession: 'plan-native-test',
+    });
+    assert.notEqual(runtime.head, preMutationHead, 'a later non-Spec mutation must stale the earlier Head');
+    const stableRuntime = PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root, specsRoot: path.join(root, 'specs'), specFile: candidate.planFile,
+      featureName: 'ordered', runtimeSession: 'plan-native-test',
+    });
+    assert.equal(stableRuntime.head, runtime.head, 'unchanged consecutive captures must reach a fixed point');
+    let dependencies = RECEIPTS.workflowDependencyProofState(featureDir, candidate.taskRegistry, runtime, POLICY);
+    assert.equal(dependencies['task-01-first.md'].eligible, false);
+
+    const receipt = `Verification: PASS\nCommand: node --test\nExit: 0\nBase: ${runtime.base}\nHead: ${runtime.head}\n\n\`\`\`text\n1 test passed\n\`\`\``;
+    fs.writeFileSync(path.join(featureDir, 'task-01-first.md'), task('done', '- none', receipt));
+    candidate = RESOLVER.resolveWorkflowCandidate({ projectRoot: root, explicitFeature: 'ordered' });
+    runtime = PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root, specsRoot: path.join(root, 'specs'), specFile: candidate.planFile,
+      featureName: 'ordered', runtimeSession: 'plan-native-test',
+    });
+    assert.deepEqual(RECEIPTS.checkWorkflowTaskReceipt(
+      featureDir, 'task-01-first.md', runtime, POLICY,
+    ).failures, []);
+    dependencies = RECEIPTS.workflowDependencyProofState(featureDir, candidate.taskRegistry, runtime, POLICY);
+    assert.equal(dependencies['task-01-first.md'].eligible, true);
+    assert.equal(candidate.taskRegistry['task-02-second.md'].dependencies[0], 'task-01-first.md');
+
+    fs.writeFileSync(path.join(featureDir, 'task-01-first.md'), task('in_progress', '- none'));
+    fs.writeFileSync(path.join(featureDir, 'task-02-second.md'), task('in_progress', '- task-01-first.md'));
+    candidate = RESOLVER.resolveWorkflowCandidate({ projectRoot: root, explicitFeature: 'ordered' });
+    assert.equal(Object.values(candidate.taskRegistry).filter(({ status }) => status === 'in_progress').length, 2);
+
+    fs.writeFileSync(path.join(featureDir, 'task-01-first.md'), task('paused', '- none'));
+    fs.writeFileSync(path.join(featureDir, 'task-02-second.md'), task('blocked', '- task-01-first.md'));
+    candidate = RESOLVER.resolveWorkflowCandidate({ projectRoot: root, explicitFeature: 'ordered' });
+    assert.equal(candidate.taskRegistry['task-01-first.md'].status, 'paused');
+    assert.equal(candidate.taskRegistry['task-02-second.md'].status, 'blocked');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Claude installed Develop preserves plan-native execution and references', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-claude-develop-'));
+  try {
+    const result = installClaude(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const sourceRoot = path.dirname(DEVELOP);
+    const installedRoot = path.join(root, '.claude/skills/develop');
+    for (const relative of ['SKILL.md', ...DEVELOP_REFERENCES.map((name) => `references/${name}`)]) {
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        fs.readFileSync(path.join(sourceRoot, relative), 'utf8'),
+        `Claude Develop projection drifted: ${relative}`,
+      );
+    }
+    assert.equal(fs.existsSync(path.join(root, '.agents/skills/develop')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('canonical verdict adapter handles completion and unfinished decisions', () => {
@@ -1595,26 +1712,27 @@ test('flash selective promotion - only specific task is promoted, not blanket', 
 test('parallel waves require immutable provenance receipts and safe recovery', () => {
   const waves = markdownLegacyRegions(read(PARALLEL_WAVES)).primary;
   assert.match(waves, /only for explicit parallel execution/i);
-  assert.match(waves, /worktree isolation[\s\S]*fall back to the sequential loop/i);
+  assert.match(waves, /isolated worktree support[\s\S]*fall back to the sequential loop/i);
   assert.match(waves, /Clamp `--parallel N` to 1\.\.5; default to 3/i);
-  assert.match(waves, /clean destination[\s\S]*base_sha[\s\S]*base compatibility/i);
-  assert.match(waves, /parallel consent[\s\S]*worker commits[\s\S]*controller cherry-picks/i);
+  assert.match(waves, /clean destination[\s\S]*base_sha[\s\S]*incompatible bases/i);
+  assert.match(waves, /consent for worker commits and controller cherry-picks/i);
   for (const field of ['base_sha', 'head_sha', 'branch', 'worktree_path', 'commit_range']) {
     assert.match(waves, new RegExp(`\\b${field}\\b`));
   }
-  assert.match(waves, /git diff(?: --stat)? [^\\n]*(?:BASE_SHA|base_sha)[^\\n]*(?:HEAD_SHA|head_sha)/i);
-  assert.match(waves, /new commit|new commits|Every fix is a new commit/i);
-  assert.match(waves, /plan task table[\s\S]*flat task's[\s\S]*Dependencies/i);
+  assert.match(waves, /git rev-list --reverse <base_sha>\.\.<head_sha>/i);
+  assert.match(waves, /git diff --name-status <base_sha>\.\.<head_sha>/i);
+  assert.match(waves, /code\/spec repair[\s\S]*new commit/i);
+  assert.match(waves, /dependencies from the plan table and each task/i);
   for (const sharedSurface of ['registry', 'lockfile', 'manifest', 'generated output', 'migration', 'export barrel']) {
     assert.match(waves, new RegExp(sharedSurface, 'i'));
   }
   assert.match(waves, /One file has one writer per wave/i);
-  assert.match(waves, /controller owns[\s\S]*state and evidence synchronization/i);
-  assert.match(waves, /authorization covers worker commits/i);
+  assert.match(waves, /only the controller writes state\/proof/i);
+  assert.match(waves, /commit only with user authorization/i);
   assert.match(waves, /blocked or failed worker keeps[\s\S]*worktree and branch/i);
   assert.match(waves, /Never[\s\S]*force-delete[\s\S]*merge success or explicit discard authorization/i);
-  assert.match(waves, /git cherry-pick <worker-commit>/i);
-  assert.match(waves, /On conflict, abort the cherry-pick[\s\S]*retain its[\s\S]*worktree\/branch/i);
+  assert.match(waves, /git cherry-pick <next-worker-commit>/i);
+  assert.match(waves, /On conflict, abort the pick[\s\S]*retain its branch\/worktree/i);
   assert.match(waves, /cleanup_authorization: merged-release/i);
   assert.match(waves, /affected integration|final.*integration/i);
   for (const category of ['baseline', 'environment', 'spec', 'code']) {

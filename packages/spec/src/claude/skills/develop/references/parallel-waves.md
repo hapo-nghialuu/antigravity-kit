@@ -1,102 +1,75 @@
 # Parallel waves — `hapo:develop --parallel`
 
-Load this reference only for explicit parallel execution. The goal is bounded
-concurrency with immutable provenance and one state writer.
+Load this reference only for explicit parallel execution. The goal is bounded concurrency with immutable provenance and one state writer.
 
 ## Preconditions
 
-1. Confirm the work context is a Git repository and worktree isolation is
-   available. Otherwise state why and fall back to the sequential loop.
+1. Confirm Git and isolated worktree support; otherwise state why and fall back to the sequential loop.
 2. Respect `.claude/runtime.json` `develop.parallel: false` when present.
 3. Clamp `--parallel N` to 1..5; default to 3.
-4. Require a clean destination and record its exact `base_sha`. Stop without
-   mutation if cleanliness or base compatibility fails.
-5. Confirm whether the user's parallel consent also authorizes worker commits
-   and controller cherry-picks before creating worktrees.
+4. Require a clean destination; record exact `base_sha` and stop on incompatible bases.
+5. Confirm consent for worker commits and controller cherry-picks before creating worktrees.
 
-Every task receipt for a wave records:
+Range facts belong only in controller handoff metadata, never the inline Receipt:
 
 ```text
 base_sha: <destination commit before dispatch>
-head_sha: <worker or integrated commit>
+head_sha: <worker commit at handoff>
 branch: <worker branch>
-worktree_path: <path>
+worktree_path: <isolated worktree>
 commit_range: <base_sha>..<head_sha>
 retention: retained|released
 cleanup_authorization: pending|explicit-discard|merged-release
 ```
 
-Test and review commands inspect `git diff <base_sha>..<head_sha>`, never an
-ambient working-tree diff. A fix creates a new commit and advances Head.
+The final inline Receipt instead receives fresh runtime Base/Head, exact command, exit, and output after integration; handoff metadata cannot substitute for it.
 
-## Build a wave
+## Build and dispatch a wave
 
-Read dependencies from the plan task table and each flat task's
-`## Dependencies`. A candidate is ready only when all named dependencies are
-done with valid Receipts.
+Read dependencies from the plan table and each task. A candidate is ready only when every named dependency is `done` with a valid current Receipt.
+Add tasks in plan order up to the cap. Exclude normalized path overlap or a shared mutable registry, lockfile, manifest, generated output, migration, or export barrel.
+Uncertain overlap is a conflict. One file has one writer per wave.
 
-Add ready tasks in plan order up to the cap, excluding a task when it shares a
-write target with an earlier task or touches the same mutable registry,
-lockfile, manifest, generated output, migration, or export barrel. Normalize
-paths. Uncertain overlap is a conflict, not an invitation to guess.
+Each worker receives the complete task-local brief from `subagent-patterns.md`, exact owned paths, worktree, acceptance, proof command, and these constraints:
 
-One file has one writer per wave. If no safe wave remains, use the sequential
-loop and state the dependency or ownership conflict.
-
-## Dispatch
-
-Each worker receives the complete task packet, work context, exact owned paths,
-acceptance, Verification Plan, dependencies, and these constraints:
-
-1. Work only in the assigned isolated worktree.
-2. Do not edit `plan.md`, task Status, or `## Receipt`; the controller owns
-   state and evidence synchronization.
-3. Do not touch a path outside granted ownership or undo another worker's edit.
-4. Run task-local prechecks and report exact commands and exits.
-5. Commit only when the user's authorization covers worker commits.
-6. Return status plus branch, worktree, Base, Head, range, and retention.
+1. Edit only granted paths in the assigned worktree; never undo another worker.
+2. Do not edit `plan.md`, Status, or `## Receipt`; only the controller writes state/proof.
+3. Report exact precheck commands/exits; commit only with user authorization.
+4. Return status plus branch, worktree, Base, Head, complete range, owned-path tree, and retention.
 
 A blocked or failed worker keeps its identifiable worktree and branch. Never
 force-delete it without merge success or explicit discard authorization.
 
-## Verify before integration
+## Prove the full handoff
 
-Inside each worktree, run the task's proof through `quality-gate.md` against the
-immutable commit range. A task with missing proof, overlap, or unresolved High
-or Critical finding is not eligible to integrate. Three failed repair rounds
-collapse only that task; siblings may finish but do not erase its blocker.
+Before integration, enumerate every commit with `git rev-list --reverse <base_sha>..<head_sha>`
+and the complete changed tree with `git diff --name-status <base_sha>..<head_sha>`.
+Reject an empty, discontinuous, partial, or base-incompatible range; duplicate/missing commits; and every path outside Ownership.
+Test/review the complete immutable range through `quality-gate.md`; unresolved High/Critical findings block that task.
 
 ## Integrate sequentially
 
-Apply accepted worker commits one at a time in plan order:
+In plan order, apply every enumerated worker commit, in range order:
 
 ```bash
-git cherry-pick <worker-commit>
+git cherry-pick <next-worker-commit>
 ```
 
-On conflict, abort the cherry-pick, mark the task blocked, and retain its
-worktree/branch. After success, update the receipt range to the integrated Head.
-Release a worktree only after recording `cleanup_authorization: merged-release`.
+After each pick, verify the destination contains that source commit's patch. After the last, compare the integrated owned-path tree with the worker tree.
+Any missing/extra commit or path stops before post-merge proof. On conflict, abort the pick, block that task, and retain its branch/worktree.
+Release only after recording `cleanup_authorization: merged-release` in handoff metadata.
 
 ## Post-merge proof
 
-After the wave's last integration, run an affected integration command derived
-from the tasks and repository contract. Record command, exit, Base, Head,
-range, and output. Failure blocks the next wave.
+Only after complete range/tree integration, run the affected integration command
+against the fresh runtime Base/Head. Failure blocks the next wave; classify it as
+`baseline`, `environment`, `spec`, or `code`. Do not blind-retry: code/spec repair
+creates a new commit and repeats the full range/tree audit; other classes remain blockers.
 
-Classify a failure before acting:
-
-- `baseline`: reproduces from the recorded Base;
-- `environment`: required tool, service, permission, or dependency unavailable;
-- `spec`: acceptance or evidence contract is wrong or incomplete;
-- `code`: implementation or integration regression.
-
-Do not blind-retry. Fix code/spec with a new commit and rerun affected proof;
-record baseline/environment as blockers.
-
-After the final wave, run the feature-level integration and reachability proof.
-The controller then writes inline Receipts and Status updates one task at a
-time. Worker reports are evidence inputs, not permission to claim done.
+After the final wave, run feature integration and reachability proof. The controller
+then writes inline Receipts and Status one task at a time. Worker reports and range
+metadata are inputs, not completion authority; incomplete workers cannot be hidden
+by successful siblings.
 
 ## Legacy workflow compatibility
 

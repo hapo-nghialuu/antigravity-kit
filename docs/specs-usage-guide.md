@@ -146,8 +146,24 @@ Receipt không hợp lệ nếu thiếu fenced output, thiếu `Exit: 0`, thiế
 
 ## Develop và Sync
 
-- `hapo:develop` chọn một task chưa block trong packet hiện tại, set
-  `Status: in_progress`, implement, verify và dừng sau task đó.
+- `hapo:develop <feature>` tái dùng C1/C2 đã duyệt, chọn task đầu tiên có
+  dependency hợp lệ theo thứ tự trong `plan.md`, rồi tiếp tục tuần tự tới blocker
+  thật hoặc C3. Không hỏi lại ở mỗi task.
+- `hapo:develop <feature> task-NN-<slug>.md` chỉ làm đúng task được chỉ định,
+  không chạm sibling và dừng ngay sau sync thành công.
+- Trạng thái `paused`, `blocked`, dependency không hợp lệ, nhiều task
+  `in_progress`, hoặc concurrent drift đều fail-stop. Một task `in_progress` bị
+  gián đoạn chỉ resume phần Acceptance còn thiếu và phải chạy proof mới.
+- `--parallel` chỉ dùng worktree tách biệt, tích hợp đủ commit range và owned-path
+  tree; SHA handoff của worker không thay thế runtime `Head` trong Receipt.
+- `--flash` giữ task ở `in_progress` với `FLASH_UNVERIFIED`, không chain và không
+  được promote cho tới một lần non-Flash rõ ràng chạy fresh canonical proof.
+- Trước C3, Develop lặp lại proof của Receipt stale cho tới khi hai lần capture
+  `Head` liên tiếp giống nhau và mọi task `done` cùng bind vào `Head` hiện tại.
+- Các số như số test, số named probe, số file và line budget là structural
+  metrics, không phải đo wall-clock hay cam kết tốc độ. Source/installed checks
+  cũng không chứng minh hành vi model thật; live-model adherence là
+  `[UNVERIFIED]` nếu chưa có host invocation.
 - `hapo:sync` chỉ cập nhật observed state của task file và receipt.
 - `sync-finalize` chỉ dùng để promote một task flash/unverified sau khi có fresh
   canonical PASS.

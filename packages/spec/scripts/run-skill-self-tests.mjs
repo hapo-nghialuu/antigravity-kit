@@ -1697,6 +1697,362 @@ function outsideLegacySections(content) {
   return kept.join("\n");
 }
 
+const DEVELOP_PLAN_NATIVE_PATHS = {
+  skill: "src/claude/skills/develop/SKILL.md",
+  quality: "src/claude/skills/develop/references/quality-gate.md",
+  parallel: "src/claude/skills/develop/references/parallel-waves.md",
+  dispatch: "src/claude/skills/develop/references/subagent-patterns.md",
+  sync: "src/claude/skills/sync/SKILL.md",
+  syncProtocols: "src/claude/skills/sync/references/sync-protocols.md",
+};
+
+function developPlanNativeContractIssues(input) {
+  const sameOrderedStrings = (left, right) => left.length === right.length
+    && left.every((value, index) => value === right[index]);
+  const expectedKeys = Object.keys(DEVELOP_PLAN_NATIVE_PATHS).sort();
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (!sameOrderedStrings(actualKeys, expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("develop plan-native checker expects exactly six UTF-8 source strings");
+  }
+
+  const issues = new Set();
+  const { skill, quality, parallel, dispatch, sync, syncProtocols } = input;
+  const normalized = Object.fromEntries(
+    Object.entries({ skill, quality, parallel, dispatch })
+      .map(([key, value]) => [key, normalizeMarkdownWhitespace(value)]),
+  );
+  const hasAllClauses = (source, clauses) => clauses.every((clause) =>
+    normalized[source].includes(normalizeMarkdownWhitespace(clause)));
+  const requireClauses = (issue, clausesBySource) => {
+    if (Object.entries(clausesBySource).some(([source, clauses]) =>
+      !hasAllClauses(source, clauses))) {
+      issues.add(issue);
+    }
+  };
+
+  requireClauses("accepted-fast-path", { skill: [
+    "When line two is `Specs-Contract: process-first-ready-v1`, reuse the accepted C1/C2.",
+    "Perform only a narrow freshness scout for target revision, scope drift, ownership conflict, and dependency/state changes.",
+    "Reopen C1 only for evidenced scope drift; do not research, replan, or add a routine user gate before a real blocker or C3.",
+    "live-model adherence is `[UNVERIFIED]` without a host invocation.",
+    "Load the plan index into working context once.",
+  ] });
+
+  requireClauses("current-byte-selection", { skill: [
+    "More than one `in_progress` | Fail-stop; name every active task.",
+    "Exactly one `in_progress` | Resume exactly that task.",
+    "`paused` stops chaining; report and stop, never skip past it.",
+    "`blocked` is not dependency-valid.",
+    "Select the first dependency-valid `pending` row in `plan.md` order.",
+    "Start only the exact pending target when dependencies are valid.",
+    "Specific-task mode never touches a sibling and returns after its successful sync without chaining or C3.",
+  ] });
+  if (/\bspecific-task mode\b.{0,160}\b(?:may|can|will)\b.{0,120}\b(?:touch|edit|mutate)\b.{0,40}\bsibling\b/i.test(normalized.skill)
+    || /\bspecific-task mode\b.{0,160}\b(?:may|can|will)\b.{0,120}\b(?:chain|open|enter)\b.{0,40}\b(?:task|C3)\b/i.test(normalized.skill)) {
+    issues.add("current-byte-selection");
+  }
+
+  requireClauses("interrupted-recovery", { skill: [
+    "Concurrent Develop invocations are unsupported; detected state, task, or owned-path drift stops before any Status or Receipt write.",
+    "For an interrupted `in_progress` task, preserve and inspect current owned changes; discard ephemeral, remembered, or prior-attempt proof; compare unmet Acceptance against current task bytes and owned diff.",
+    "Do not blindly replay a non-idempotent mutation.",
+    "Resume only unmet work, then run fresh verification.",
+  ] });
+  if (/\b(?:detected|writer)\b.{0,80}\bdrift\b.{0,120}\b(?:may|can)\b.{0,120}\b(?:ignore|continue|write|mutate)/i.test(normalized.skill)) {
+    issues.add("interrupted-recovery");
+  }
+
+  requireClauses("task-local-brief", { dispatch: [
+    "Build the brief from current bytes after loading the plan index once. Include only:",
+    "the task's referenced coverage-profile rows;",
+    "Outcome, Scope, Ownership, Acceptance, Dependencies, and Verification Plan;",
+    "owned code, its entrypoints/consumers, and explicit exclusions;",
+    "Do not forward unrelated plan rows, sibling task bodies, ambient repository history, old proof, or a full session transcript.",
+    "Reread the active task before mutation and after sync; a current-byte mismatch returns to the controller.",
+  ] });
+
+  requireClauses("final-head-fixed-point", { quality: [
+    "Before C3, repeat within the same three-round repair cap:",
+    "Capture runtime Head and list every `done` task whose Receipt is stale or bound to a different Head.",
+    "If proof changes any non-Specs byte, stop as BLOCKED;",
+    "Stop only when consecutive Head captures are identical and every `done` Receipt names that current Head.",
+    "A single pass, remembered result, copied Receipt, or proof promoted from another level is not a fixed point.",
+  ] });
+
+  requireClauses("shared-run-attribution", { quality: [
+    "A shared command may prove several tasks only from one fresh captured run.",
+    "map the exact command, current Head, required proof level, oracle, one uniquely named probe, and that probe's executed/pass count.",
+    "Every mapped probe must execute at least once and all executions must pass.",
+    "Duplicate probe names, ambiguous ownership/counts, skip, skipped, todo, cancel, canceled, cancelled, or remembered output cannot close any mapped task.",
+    "Source, installed, and live proof levels remain distinct; never promote evidence from a lower level.",
+  ] });
+
+  requireClauses("complete-parallel-integration", { parallel: [
+    "Range facts belong only in controller handoff metadata, never the inline Receipt:",
+    "The final inline Receipt instead receives fresh runtime Base/Head, exact command, exit, and output after integration; handoff metadata cannot substitute for it.",
+    "`git rev-list --reverse <base_sha>..<head_sha>`",
+    "`git diff --name-status <base_sha>..<head_sha>`",
+    "Reject an empty, discontinuous, partial, or base-incompatible range; duplicate/missing commits; and every path outside Ownership.",
+    "After the last, compare the integrated owned-path tree with the worker tree.",
+    "Any missing/extra commit or path stops before post-merge proof.",
+  ] });
+
+  requireClauses("non-flash-recovery", {
+    skill: [
+      "stop this invocation without chaining.",
+      "Only a later explicit non-Flash invocation may recover the task.",
+      "It treats Flash output as ephemeral, inspects current bytes and the owned diff, and obtains fresh canonical proof through the trusted sync-finalize path.",
+    ],
+    quality: [
+      "Only a later explicit non-Flash invocation may recover it:",
+      "discard Flash output as canonical evidence, inspect current bytes and the owned diff, and run fresh proof under the same sync-finalize contract.",
+    ],
+  });
+
+  requireClauses("controller-only-state-proof", {
+    dispatch: [
+      "The controller alone writes Status and inline Receipt.",
+      "Neither handoff is itself an inline Receipt; only the controller may validate and synchronize it.",
+    ],
+    parallel: [
+      "Do not edit `plan.md`, Status, or `## Receipt`; only the controller writes state/proof.",
+    ],
+  });
+
+  const expectedHint = "argument-hint: \"[feature-name|specs-directory-path] [task-file] [--flash] [--parallel [N]] [--notes]\"";
+  const expectedUsage = [
+    "/hapo:develop <feature>",
+    "/hapo:develop specs/<feature>",
+    "/hapo:develop <feature> task-02-<slug>.md",
+    "/hapo:develop <feature> --flash",
+    "/hapo:develop <feature> --parallel [N]",
+    "/hapo:develop <feature> --notes",
+  ];
+  const usageLines = markdownSectionUnderHeading(skill, "Usage and pre-state guard")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^(?:\/hapo:develop|\$hapo-develop)\b/.test(line));
+  const modeHeadings = [...markdownSectionUnderHeading(skill, "Modes").matchAll(/^###\s+(.+?)\s*$/gm)]
+    .map((match) => match[1]);
+  if (!/^name:\s*hapo:develop\s*$/m.test(skill)
+    || !skill.includes(expectedHint)
+    || !sameOrderedStrings(usageLines, expectedUsage)
+    || !sameOrderedStrings(modeHeadings, [
+      "Sequential feature or specific task", "Parallel (`--parallel [N]`)", "Flash (`--flash`)",
+    ])) issues.add("public-mode-drift");
+
+  const primaryCorpus = [skill, quality, parallel, dispatch]
+    .map(outsideLegacySections)
+    .join("\n");
+  if (/\[(?:LIVE_)?VERIFIED\]/i.test(primaryCorpus)
+    || /\b(?:live-model adherence|live behavior)\s+(?:is|are|has been)\s+(?:verified|proven|guaranteed)\b/i.test(primaryCorpus)
+    || /\b(?:runtime|parser)\s+(?:enforces|guarantees|implements)\b/i.test(primaryCorpus)) {
+    issues.add("live-or-runtime-claim");
+  }
+  if (/\b(?:wall[- ]clock|timing benchmark|latency|\d+\s*(?:seconds?|minutes?))\b/i.test(primaryCorpus)) {
+    issues.add("timing-claim");
+  }
+
+  const legacyHeadingCount = [skill, quality, parallel, dispatch]
+    .filter((value) => value.includes("## Legacy workflow compatibility")).length;
+  if (legacyHeadingCount !== 4
+    || /semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(primaryCorpus)) {
+    issues.add("legacy-isolation");
+  }
+
+  const lineCount = (value) => value.trimEnd().split("\n").length;
+  const skillLines = lineCount(skill);
+  const coreLines = [skill, parallel, sync, syncProtocols]
+    .reduce((total, value) => total + lineCount(value), 0);
+  if (skillLines < 140 || skillLines > 200 || coreLines > 400) issues.add("context-budget");
+
+  return [...issues].sort();
+}
+
+function replaceDevelopClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`expected one Develop mutation anchor: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runDevelopPlanNativeContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] Develop plan-native contract: ${message}`);
+  };
+  const mutateClause = (name, source, issue, from, to) => ({
+    name, source, issue, from, to,
+  });
+  const specificTaskBoundary = "Specific-task\nmode never touches a sibling and returns after its successful sync without chaining or C3.";
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(DEVELOP_PLAN_NATIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = developPlanNativeContractIssues(baseline);
+  if (baselineIssues.length > 0) fail(`intact sources returned ${baselineIssues.join(", ")}`);
+
+  const mutations = [
+    mutateClause(
+      "paused-is-skipped",
+      "skill",
+      "current-byte-selection",
+      "`paused` stops chaining; report and stop, never skip past it.",
+      "Skip a paused row and continue the queue.",
+    ),
+    mutateClause(
+      "selection-leaves-plan-order",
+      "skill",
+      "current-byte-selection",
+      "Select the first dependency-valid `pending` row in `plan.md` order.",
+      "Select any dependency-valid pending row in worker completion order.",
+    ),
+    mutateClause(
+      "interrupted-action-replayed-blindly",
+      "skill",
+      "interrupted-recovery",
+      "Do not blindly replay a non-idempotent\nmutation.",
+      "Repeat every interrupted mutation from the beginning.",
+    ),
+    mutateClause(
+      "multiple-active-resumes-first",
+      "skill",
+      "current-byte-selection",
+      "More than one `in_progress` | Fail-stop; name every active task.",
+      "More than one `in_progress` | Resume the first active task.",
+    ),
+    ...[
+      ["specific-task-touches-sibling", "Specific-task\nmode never touches a sibling and returns after its successful sync without chaining or C3. Specific-task mode may touch a sibling after sync."],
+      ["specific-task-chains", "Specific-task\nmode never touches a sibling and returns after its successful sync without chaining or C3. Specific-task mode may chain to the next task after sync."],
+      ["specific-task-opens-c3", "Specific-task\nmode never touches a sibling and returns after its successful sync without chaining or C3. Specific-task mode may open C3 after sync."],
+    ].map(([name, to]) => mutateClause(
+      name,
+      "skill",
+      "current-byte-selection",
+      specificTaskBoundary,
+      to,
+    )),
+    mutateClause(
+      "writer-drift-allows-state-write",
+      "skill",
+      "interrupted-recovery",
+      "detected state, task, or owned-path drift stops\nbefore any Status or Receipt write.",
+      "detected state, task, or owned-path drift stops\nbefore any Status or Receipt write. Detected writer drift may be ignored and Status or Receipt writes may continue.",
+    ),
+    mutateClause(
+      "shared-run-accepts-skips",
+      "quality",
+      "shared-run-attribution",
+      "Duplicate probe names,\nambiguous ownership/counts, skip, skipped, todo, cancel, canceled, cancelled, or\nremembered output cannot close any mapped task.",
+      "Skipped and cancelled probes may inherit the suite result.",
+    ),
+    mutateClause(
+      "shared-run-allows-duplicate-probes",
+      "quality",
+      "shared-run-attribution",
+      "one\nuniquely named probe, and that probe's executed/pass count.",
+      "one reusable probe name without task-local counts.",
+    ),
+    mutateClause(
+      "head-stops-after-one-pass",
+      "quality",
+      "final-head-fixed-point",
+      "Stop only when consecutive Head captures are identical and every `done` Receipt\nnames that current Head.",
+      "Stop after one stale-Receipt proof pass even when Head moves.",
+    ),
+    mutateClause(
+      "partial-worker-range-integrates",
+      "parallel",
+      "complete-parallel-integration",
+      "Reject an empty, discontinuous, partial, or base-incompatible range; duplicate/missing commits; and every path outside Ownership.",
+      "Integrate any available subset of the worker range.",
+    ),
+    mutateClause(
+      "flash-chains",
+      "skill",
+      "non-flash-recovery",
+      "stop this invocation without chaining.",
+      "continue with the next task after the preflight.",
+    ),
+    {
+      name: "new-public-mode", source: "skill", issue: "public-mode-drift",
+      mutate: (value) => replaceDevelopClauseOnce(
+        value,
+        "## Task cycle",
+        "### Resume (`--resume`)\n\nResume automatically.\n\n## Task cycle",
+      ),
+    },
+    mutateClause(
+      "canonical-source-name-drifts",
+      "skill",
+      "public-mode-drift",
+      "name: hapo:develop",
+      "name: hapo-develop",
+    ),
+    mutateClause(
+      "canonical-usage-drifts-to-codex",
+      "skill",
+      "public-mode-drift",
+      "/hapo:develop specs/<feature>",
+      "$hapo-develop specs/<feature>",
+    ),
+    mutateClause(
+      "live-adherence-promoted",
+      "skill",
+      "live-or-runtime-claim",
+      "live-model adherence is `[UNVERIFIED]` without a host invocation.",
+      "live-model adherence is [VERIFIED] by this static contract.",
+    ),
+    mutateClause(
+      "task-brief-loads-siblings",
+      "dispatch",
+      "task-local-brief",
+      "Do not forward unrelated plan rows, sibling task bodies, ambient repository\nhistory, old proof, or a full session transcript.",
+      "Forward all sibling tasks and repository history for convenience.",
+    ),
+    mutateClause(
+      "worker-writes-receipt",
+      "parallel",
+      "controller-only-state-proof",
+      "Do not edit `plan.md`, Status, or `## Receipt`; only the controller writes state/proof.",
+      "Workers may write Status and Receipt before handoff.",
+    ),
+    mutateClause(
+      "range-metadata-substitutes-receipt",
+      "parallel",
+      "complete-parallel-integration",
+      "handoff metadata cannot substitute for it.",
+      "handoff metadata may substitute for runtime Base/Head.",
+    ),
+  ];
+
+  for (const mutation of mutations) {
+    let weakened;
+    try {
+      weakened = mutation.mutate
+        ? mutation.mutate(baseline[mutation.source])
+        : replaceDevelopClauseOnce(baseline[mutation.source], mutation.from, mutation.to);
+    } catch (error) {
+      fail(`${mutation.name} mutation anchor failed: ${error.message}`);
+    }
+    const actual = developPlanNativeContractIssues({
+      ...baseline,
+      [mutation.source]: weakened,
+    });
+    if (!actual.includes(mutation.issue)) {
+      fail(`${mutation.name} expected ${mutation.issue} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  console.log("✔ hapo:develop plan-native continuous contract is complete and bounded");
+  console.log("✔ hapo:develop plan-native checker rejects semantic weakenings");
+  return mutations.length + 1;
+}
+
 function authoringInstructionIssues(sources) {
   const issues = [];
   const skill = sources.get("skill") || "";
@@ -2035,6 +2391,7 @@ async function runStaticSemanticTests() {
   const implementationReadinessTests = await runImplementationReadinessContractTests();
   const adaptiveCoverageTests = await runAdaptiveCoverageContractTests();
   const brainstormContractTests = await runBrainstormContractTests();
+  const developPlanNativeTests = await runDevelopPlanNativeContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -3068,6 +3425,41 @@ async function runStaticSemanticTests() {
       assert: (content) => adaptiveUsageGuideContractValid(content),
     },
     {
+      label: "specs-usage-guide documents plan-native Develop without timing or live-adherence claims",
+      files: [
+        "../../docs/specs-usage-guide.md",
+        "bin/__tests__/develop-contract.test.js",
+        "bin/__tests__/codex-native.test.js",
+      ],
+      assertParts: ([guide, developTests, codexTests]) => {
+        const normalized = guide.replace(/\s+/g, " ");
+        const guideContract = [
+          "hapo:develop <feature>",
+          "task-NN-<slug>.md",
+          "paused",
+          "blocked",
+          "in_progress",
+          "--parallel",
+          "commit range",
+          "owned-path",
+          "--flash",
+          "FLASH_UNVERIFIED",
+          "hai lần capture",
+          "structural metrics",
+          "[UNVERIFIED]",
+        ].every((clause) => normalized.includes(clause)) &&
+          !/đo (?:được )?\d+\s*(?:ms|s|giây|phút)|live-model (?:PASS|đã xác minh)/i.test(normalized);
+        const developNames = [
+          "Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries",
+          "Claude installed Develop preserves plan-native execution and references",
+        ];
+        const codexName = "Codex installed Develop preserves plan-native execution and references";
+        return guideContract &&
+          developNames.every((name) => developTests.includes(`test('${name}', () =>`)) &&
+          codexTests.includes(`test('${codexName}', () =>`);
+      },
+    },
+    {
       // Installed Codex projection is verified via transform, not raw source path (behavioral)
       label: "Codex installed projection uses Codex paths (behavioral, temp fixture)",
       files: [
@@ -3126,8 +3518,10 @@ async function runStaticSemanticTests() {
     const parts = await Promise.all(
       targets.map((rel) => readFile(join(packageRoot, rel), "utf8")),
     );
-    const content = parts.join("\n");
-    if (!check.assert(content)) {
+    const valid = check.assertParts
+      ? check.assertParts(parts)
+      : check.assert(parts.join("\n"));
+    if (!valid) {
       console.error(`[FAIL] ${check.label}: ${targets.join(", ")}`);
       process.exit(1);
     }
@@ -3135,7 +3529,8 @@ async function runStaticSemanticTests() {
   }
 
   return checks.length + specs21Tests + implementationReadinessTests
-    + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests;
+    + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
+    + developPlanNativeTests;
 }
 
 function runSkillCatalogTests() {
