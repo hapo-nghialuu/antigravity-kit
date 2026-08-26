@@ -72,16 +72,16 @@ teaches it without inventing runtime or speed evidence.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 3f0bcf0cddf678909d4c1f8b270685dbed844ad6
-Head: 41c828e9c248736a31504051a44a6b80d0cc16dfdca951efa7c23f500efd5adb
+Base: ff4d6d07988f83e001ccf94197dc039464cc5962
+Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
 
 ```text
 ✔ hapo:develop plan-native continuous contract is complete and bounded
 ✔ hapo:develop plan-native checker rejects semantic weakenings
 ✔ specs-usage-guide documents plan-native Develop without timing or live-adherence claims
-✔ Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries
-✔ Claude installed Develop preserves plan-native execution and references
-✔ Codex installed Develop preserves plan-native execution and references
+✔ Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries (7814.83325ms)
+✔ Claude installed Develop preserves plan-native execution and references (993.276375ms)
+✔ Codex installed Develop preserves plan-native execution and references (1050.033958ms)
 Package Node: 337 tests, 336 pass, 1 opt-in live-host skip
 Hook behavioral: 189 tests, 189 pass
 [skill-test] PASS: 883 tests executed

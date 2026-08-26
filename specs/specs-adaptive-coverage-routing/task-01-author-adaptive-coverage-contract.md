@@ -44,8 +44,8 @@ Specs converts a broad or ambiguous request into the smallest correct workflow a
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 8f2961c0c5dfda11d1bff66ac7a59bbc367a62ea
-Head: 943c4b3075b72f7ad1dfd8e359422ebd8570ccbe69b528e921d9256554f64425
+Base: ff4d6d07988f83e001ccf94197dc039464cc5962
+Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
 ```text
 ✔ hapo:specs process-task status checker rejects 10 semantic weakenings
 ✔ hapo:specs implementation-readiness checker rejects 30 gate-specific source mutations
@@ -173,5 +173,5 @@ Head: 943c4b3075b72f7ad1dfd8e359422ebd8570ccbe69b528e921d9256554f64425
 ✔ specs-usage-guide teaches Develop and Sync without leaking v2.1 vocabulary
 ✔ Specs primary flow is file-first while legacy kernel remains isolated
 
-[skill-test] PASS: 201 focused static tests executed
+[skill-test] PASS: 294 focused static tests executed
 ```

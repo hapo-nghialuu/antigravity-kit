@@ -50,16 +50,15 @@ Claude and Codex receive the same proportional Brainstorm contract, and Codex's 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 2e983812b4d13ec83cae83a25e87398fb282d90e
-Head: 6deccd08ea6a9605cd29294897ca9665cdde0802eb53a428351dda105bd2aacd
+Base: ff4d6d07988f83e001ccf94197dc039464cc5962
+Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
 ```text
 ✔ hapo:brainstorm proportional routing contract is complete and bounded; src/claude/skills/brainstorm/SKILL.md=150 (-38), src/claude/skills/brainstorm/references/question-framework.md=155 (-77), src/claude/agents/brainstormer.md=57 (-29); total 362/506
 ✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=70
-✔ Codex payload transform keeps structured user-input grammar across determiners (8.5975ms)
-✔ Codex structured-input corpus oracle stays differential and production-aware (37.958125ms)
-✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity (1429.056209ms)
-✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (69192.204084ms)
-﹣ packed Codex live host E2E via codex binary (opt-in) (1.046959ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
-[skill-test] PASS: 858 tests executed
-Summary: 858 tests; 857 passed; 0 failed; 1 skipped.
+✔ Codex payload transform keeps structured user-input grammar across determiners (5.620375ms)
+✔ Codex structured-input corpus oracle stays differential and production-aware (53.31025ms)
+✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity (1234.93175ms)
+✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (90597.739333ms)
+﹣ packed Codex live host E2E via codex binary (opt-in) (0.894334ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
+[skill-test] PASS: 883 tests executed
 ```

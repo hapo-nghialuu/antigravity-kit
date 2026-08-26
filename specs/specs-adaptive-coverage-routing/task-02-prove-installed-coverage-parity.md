@@ -44,26 +44,26 @@ Packed Claude and Codex installs preserve the same adaptive Specs contract, its 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 8f2961c0c5dfda11d1bff66ac7a59bbc367a62ea
-Head: 943c4b3075b72f7ad1dfd8e359422ebd8570ccbe69b528e921d9256554f64425
+Base: ff4d6d07988f83e001ccf94197dc039464cc5962
+Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
 ```text
 > @haposoft/cafekit@0.16.0-rc.8 test
 > node scripts/run-skill-self-tests.mjs
 
 ✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
 ✔ specs-usage-guide documents adaptive routing without timing claims
-✔ Codex installed Specs and spec-maker reject adaptive coverage mutations (3533.593ms)
-✔ packed Claude and Codex installs preserve adaptive Specs and spec-maker (55261.283583ms)
-﹣ packed Codex live host E2E via codex binary (opt-in) (1.327084ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
+✔ Codex installed Specs and spec-maker reject adaptive coverage mutations (5834.833583ms)
+✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (90597.739333ms)
+﹣ packed Codex live host E2E via codex binary (opt-in) (0.894334ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
 
-ℹ tests 331
+ℹ tests 337
 ℹ suites 0
-ℹ pass 330
+ℹ pass 336
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 1
 ℹ todo 0
-ℹ duration_ms 95868.402834
+ℹ duration_ms 167030.420042
 
 ℹ tests 189
 ℹ suites 0
@@ -72,7 +72,7 @@ Head: 943c4b3075b72f7ad1dfd8e359422ebd8570ccbe69b528e921d9256554f64425
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 125823.565709
+ℹ duration_ms 458923.618625
 
 ℹ tests 42
 ℹ suites 13
@@ -81,7 +81,7 @@ Head: 943c4b3075b72f7ad1dfd8e359422ebd8570ccbe69b528e921d9256554f64425
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 11116.686375
+ℹ duration_ms 10778.177584
 
 [skill-test] pdf bounding-box tests
 ..........
@@ -90,5 +90,5 @@ Ran 10 tests in 0.000s
 
 OK
 
-[skill-test] PASS: 784 tests executed
+[skill-test] PASS: 883 tests executed
 ```
