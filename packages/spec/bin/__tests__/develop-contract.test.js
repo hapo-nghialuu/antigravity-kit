@@ -1653,6 +1653,52 @@ test('runtime provenance derives exact Git evidence, CLI context, and stale/forg
   }
 });
 
+test('runtime provenance chooses a deterministic root when all history is Specs-only and multi-root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-provenance-multi-root-'));
+  const specsRoot = path.join(root, 'specs');
+  const featureRoot = path.join(specsRoot, 'demo');
+  const specFile = path.join(featureRoot, 'spec.json');
+  try {
+    fs.mkdirSync(featureRoot, { recursive: true });
+    fs.writeFileSync(specFile, JSON.stringify({ status: 'in_progress', feature_name: 'demo', task_registry: {} }));
+    for (const args of [
+      ['init', '-q', '-b', 'first-root'],
+      ['config', 'user.email', 'cafekit@example.invalid'],
+      ['config', 'user.name', 'CafeKit Test'],
+      ['add', 'specs/demo/spec.json'],
+      ['commit', '-qm', 'first specs root'],
+      ['checkout', '--orphan', 'unrelated-specs'],
+      ['rm', '-qrf', '.'],
+    ]) {
+      const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+    }
+    const unrelatedSpec = path.join(specsRoot, 'unrelated', 'spec.json');
+    fs.mkdirSync(path.dirname(unrelatedSpec), { recursive: true });
+    fs.writeFileSync(unrelatedSpec, JSON.stringify({ status: 'in_progress', feature_name: 'unrelated', task_registry: {} }));
+    let result = spawnSync('git', ['-C', root, 'add', 'specs/unrelated/spec.json'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'commit', '-qm', 'second specs root'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    result = spawnSync('git', ['-C', root, 'merge', '--allow-unrelated-histories', '-qm', 'merge specs roots', 'first-root'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+
+    const roots = spawnSync('git', ['-C', root, 'rev-list', '--max-parents=0', '--reverse', 'HEAD'], { encoding: 'utf8' });
+    assert.equal(roots.status, 0, roots.stderr);
+    const expectedBase = roots.stdout.trim().split('\n')[0].toLowerCase();
+    const context = PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root,
+      specsRoot,
+      specFile,
+      featureName: 'demo',
+      runtimeSession: 'multi-root-session',
+    });
+    assert.equal(context.base, expectedBase);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('lane traces - Direct, Standard, explicit Strict classification, override, state mutation and completion', () => {
   // Direct: isolated reversible low-risk
   const direct = POLICY.classifyLane({ reversible: true, lowRisk: true, isolated: true, taskCount: 1 });

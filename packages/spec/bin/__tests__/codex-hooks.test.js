@@ -156,7 +156,7 @@ function canonicalProcessTask(root, title, dependency = 'none') {
   ].join('\n');
 }
 
-test('Codex docs sync ignores committed Specs state but reports source changes', () => {
+test('Claude and Codex docs sync ignore committed Specs state but report source changes', () => {
   inHookFixture((root, hooks) => {
     const docsDir = path.join(root, 'docs');
     fs.mkdirSync(docsDir, { recursive: true });
@@ -182,9 +182,15 @@ test('Codex docs sync ignores committed Specs state but reports source changes',
     assert.equal(result.status, 0, result.stderr);
 
     const payload = { cwd: root, session_id: 'docs-sync-session', hook_event_name: 'SessionStart' };
-    const afterSpecCommit = runHook(path.join(hooks, 'docs-sync.cjs'), root, payload);
-    assert.equal(afterSpecCommit.status, 0, afterSpecCommit.stderr);
-    assert.equal(afterSpecCommit.stdout, '', 'spec-only commits must not stale docs sync');
+    const docsSyncHooks = [
+      path.join(hooks, 'docs-sync.cjs'),
+      path.join(PACKAGE_ROOT, 'src/claude/hooks/docs-sync.cjs'),
+    ];
+    for (const hook of docsSyncHooks) {
+      const afterSpecCommit = runHook(hook, root, payload);
+      assert.equal(afterSpecCommit.status, 0, afterSpecCommit.stderr);
+      assert.equal(afterSpecCommit.stdout, '', `${hook}: spec-only commits must not stale docs sync`);
+    }
 
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src', 'app.js'), 'module.exports = true;\n');
@@ -192,9 +198,11 @@ test('Codex docs sync ignores committed Specs state but reports source changes',
     assert.equal(result.status, 0, result.stderr);
     result = spawnSync('git', ['-C', root, 'commit', '-qm', 'change source'], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
-    const afterSourceCommit = runHook(path.join(hooks, 'docs-sync.cjs'), root, payload);
-    assert.equal(afterSourceCommit.status, 0, afterSourceCommit.stderr);
-    assert.match(afterSourceCommit.stdout, /Docs sync needed/);
+    for (const hook of docsSyncHooks) {
+      const afterSourceCommit = runHook(hook, root, payload);
+      assert.equal(afterSourceCommit.status, 0, afterSourceCommit.stderr);
+      assert.match(afterSourceCommit.stdout, /Docs sync needed/);
+    }
   });
 });
 

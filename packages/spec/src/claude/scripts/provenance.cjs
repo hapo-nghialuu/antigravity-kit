@@ -90,10 +90,14 @@ function gitBase(root, specsRoot) {
     ['log', '-1', '--format=%H', '--', '.', `:(exclude,literal)${specsRelative}`],
     'git log source base',
   )).trim();
-  const output = (sourceHistory || oneLine(
+  const roots = sourceHistory ? [] : decode(
     runGit(root, ['rev-list', '--max-parents=0', '--reverse', 'HEAD'], 'git rev-list root'),
     'git rev-list root',
-  ).split('\n')[0]).toLowerCase();
+  ).trim().split('\n');
+  if (!sourceHistory && (roots.length === 0 || roots.some((rootId) => !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i.test(rootId)))) {
+    fail('malformed_git_output', 'git rev-list root did not return commit ids');
+  }
+  const output = (sourceHistory || roots[0]).toLowerCase();
   if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(output)) fail('malformed_git_output', 'git source base did not return a commit id');
   return output;
 }
