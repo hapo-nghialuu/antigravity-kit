@@ -44,8 +44,8 @@ Packed Claude and Codex installs preserve the same adaptive Specs contract, its 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: ff4d6d07988f83e001ccf94197dc039464cc5962
-Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
+Base: beab376bdb63517d477f1489974ab1225a03258d
+Head: 10633c5a8ab047b6815b7c36a42c3199878fa9fe2047ce4864bba35be0032f3d
 ```text
 > @haposoft/cafekit@0.16.0-rc.8 test
 > node scripts/run-skill-self-tests.mjs
@@ -56,9 +56,9 @@ Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
 ✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (90597.739333ms)
 ﹣ packed Codex live host E2E via codex binary (opt-in) (0.894334ms) # opt-in only: set CAFEKIT_CODEX_HOST_E2E=1 to run live Codex host
 
-ℹ tests 337
+ℹ tests 338
 ℹ suites 0
-ℹ pass 336
+ℹ pass 337
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 1
@@ -90,5 +90,5 @@ Ran 10 tests in 0.000s
 
 OK
 
-[skill-test] PASS: 883 tests executed
+[skill-test] PASS: 884 tests executed
 ```

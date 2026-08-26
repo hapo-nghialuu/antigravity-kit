@@ -73,8 +73,8 @@ parallel, shared-proof, and Flash boundaries.
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: ff4d6d07988f83e001ccf94197dc039464cc5962
-Head: c19cd50be0b1433d088f71e6b88697ae78b230f28f883042379d3a8d6b1b3c24
+Base: beab376bdb63517d477f1489974ab1225a03258d
+Head: 10633c5a8ab047b6815b7c36a42c3199878fa9fe2047ce4864bba35be0032f3d
 
 ```text
 ✔ hapo:develop plan-native continuous contract is complete and bounded
