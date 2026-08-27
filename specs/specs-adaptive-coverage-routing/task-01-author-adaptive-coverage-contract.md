@@ -44,8 +44,8 @@ Specs converts a broad or ambiguous request into the smallest correct workflow a
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: f140c16d4e2538374f2b6fa6a77dcaf3ddb852a9
-Head: 9a09e392255389c870d38d257895a48eb7442be5cd71fdb71a839b62be272c74
+Base: a9a7a23a9bee12ee9fe84900e368b81305802f86
+Head: 02b60a3507719b8dfba222da4cbe8429c3c8256a9b71956ded7c91dcf3046213
 ```text
-[skill-test] PASS: 294 focused static tests executed
+[skill-test] PASS: 334 focused static tests executed
 ```
