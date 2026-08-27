@@ -125,6 +125,37 @@ không công bố SLA cho Specs. Đề xuất recorder/benchmark ban đầu tạ
 `specs/archive/specs-session-timing-benchmark-v2-cut-20260826/plan.md`; không có
 kết quả timing hay execution Receipt nào được tạo.
 
+## Test proof handoff
+
+Với process-first packet, `hapo:test` đọc byte hiện tại của `plan.md` và flat
+`task-NN-*.md`, chạy đúng Command cùng từng Named probe trong Verification Plan,
+rồi trả một machine handoff `test-proof-v1`. Test không ghi `Status:` hay inline
+`## Receipt`; Develop controller là writer duy nhất sau khi payload và review đều
+literal `PASS`.
+
+Payload dùng closed schema gồm target, bốn verdict canonical, command/exit/counts,
+Base/Head provenance, proof level, expected/observed, reachability, artifacts,
+branches, raw output, redactions và stable SHA-256 digest. Unknown field/verdict,
+zero-test, required skip, duplicate/missing branch, stale Head, unsafe redaction,
+hoặc `PASS_WITH_WARNINGS` đều không đóng task. `source`, `installed`, `live` vẫn
+tách biệt; source/static PASS không chứng minh live adherence.
+
+Test memory chỉ là context read-only. Proof không tự cài dependency, không tạo
+project-local report/cache/auth state, chỉ cleanup exact Test-owned temp nằm ngoài
+project, và báo tracked/untracked/ignored drift của project command riêng với
+Head. Authenticated UI proof phải bind vào HTTPS/localhost origin, identity,
+permission và action scope; cross-origin redirect hoặc destructive production
+action thiếu fresh consent sẽ `BLOCKED`. Cookie, token, credential và scoped PII
+phải được redact khỏi command, network, log, screenshot và report.
+
+Human report chỉ tóm tắt verdict, command/exit, counts, reachability, proof level,
+drift và next action; full JSON/raw log không bị chép vào report. Đây là contract
+cấu trúc, không phải benchmark thời gian hay tuyên bố model live đã tuân thủ.
+
+Legacy feature có `spec.json`, nested task hoặc receipt riêng tiếp tục dùng
+separate-receipt adapter cũ. Test không tìm hoặc tạo separate receipt cho flat
+process-first task, và không migrate hai layout trong lúc proof.
+
 ### Receipt canonical
 
 ````markdown

@@ -51,6 +51,15 @@ const DEVELOP_BUNDLE = [
   'references/parallel-waves.md',
   'references/subagent-patterns.md'
 ];
+const TEST_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/test');
+const TEST_BUNDLE = [
+  'SKILL.md',
+  'references/execution-strategy.md',
+  'references/failure-triage.md',
+  'references/test-memory.md'
+];
+const TEST_RUNNER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/test-runner.md');
+const CODE_REVIEW_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review');
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
   ['Interaction/UI', 'entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior'],
   ['API/CLI', 'entrypoint/route or command grammar; identity/auth; input/default/normalization; success output; error/status/exit; duplicate/retry/idempotency; compatibility'],
@@ -1493,15 +1502,13 @@ test('Codex structured-input corpus oracle stays differential and production-awa
     'src/claude/agents/spec-maker.md',
     'src/claude/hooks/session.cjs',
     'src/claude/skills/git/SKILL.md',
-    'src/claude/skills/inspect/SKILL.md',
-    'src/claude/skills/test/references/failure-triage.md'
+    'src/claude/skills/inspect/SKILL.md'
   ];
   assert.deepEqual(actualPaths, expectedPaths, 'every source occurrence needs an explicit projection oracle');
 
   const instructionExpectedSnippets = new Map([
     ['src/claude/skills/git/SKILL.md', 'Present options via a structured user-input request — header'],
-    ['src/claude/skills/inspect/SKILL.md', '**Fallback to a structured user-input request:**'],
-    ['src/claude/skills/test/references/failure-triage.md', 'Call a structured user-input request:']
+    ['src/claude/skills/inspect/SKILL.md', '**Fallback to a structured user-input request:**']
   ]);
   for (const [relativePath, expectedSnippet] of instructionExpectedSnippets) {
     const sourcePath = path.join(PACKAGE_ROOT, relativePath);
@@ -2381,6 +2388,62 @@ test('Codex installed Develop preserves plan-native execution and references', (
     assert.match(installedSkill, /\.codex\/scripts\/workflow-policy\.cjs/);
     assert.doesNotMatch(installedSkill, /\/hapo:develop|\.claude\/scripts/);
     assert.equal(fs.existsSync(path.join(root, '.claude/skills/develop')), false);
+    for (const [sourcePath, expected] of sourceBytes) {
+      assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+    }
+  });
+});
+
+test('Codex installed Test preserves plan-native proof and references', () => {
+  inTempProject((root) => {
+    const sourcePaths = [
+      ...TEST_BUNDLE.map((relative) => path.join(TEST_SOURCE_ROOT, relative)),
+      TEST_RUNNER_SOURCE_PATH,
+      path.join(CODE_REVIEW_SOURCE_ROOT, 'SKILL.md')
+    ];
+    const sourceBytes = new Map(sourcePaths.map((sourcePath) => [
+      sourcePath, fs.readFileSync(sourcePath)
+    ]));
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedRoot = path.join(root, '.agents/skills/test');
+    for (const relative of TEST_BUNDLE) {
+      const sourcePath = path.join(TEST_SOURCE_ROOT, relative);
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath),
+        `Codex Test projection drifted: ${relative}`
+      );
+    }
+    const installedSkill = fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8');
+    assert.match(installedSkill, /\$hapo-test/);
+    assert.match(installedSkill, /test-proof-v1/);
+    assert.doesNotMatch(installedSkill, /\/hapo:test/);
+
+    const installedRunnerPath = path.join(root, '.codex/agents/test_runner.toml');
+    assert.equal(
+      fs.readFileSync(installedRunnerPath, 'utf8'),
+      convertCodexAgentContent(
+        fs.readFileSync(TEST_RUNNER_SOURCE_PATH, 'utf8'),
+        path.basename(TEST_RUNNER_SOURCE_PATH)
+      ),
+      'Codex test_runner projection drifted'
+    );
+    const installedRunner = parseGeneratedTomlString(
+      fs.readFileSync(installedRunnerPath, 'utf8'), 'developer_instructions'
+    );
+    assert.match(installedRunner, /test-proof-v1/);
+    assert.match(installedRunner, /sole writer of[\s\S]*Status and inline Receipt/i);
+
+    const reviewSourcePath = path.join(CODE_REVIEW_SOURCE_ROOT, 'SKILL.md');
+    const installedReview = fs.readFileSync(path.join(root, '.agents/skills/code-review/SKILL.md'), 'utf8');
+    assert.equal(installedReview, normalizeCodexBody(
+      fs.readFileSync(reviewSourcePath, 'utf8'), reviewSourcePath
+    ));
+    assert.match(installedReview, /controller-validated `test-proof-v1`/);
+    assert.match(installedReview, /Never create or search for a separate[\s\S]*process-first receipt/i);
+    assert.equal(fs.existsSync(path.join(root, '.claude/skills/test')), false);
     for (const [sourcePath, expected] of sourceBytes) {
       assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
     }

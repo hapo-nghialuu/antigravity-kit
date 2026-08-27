@@ -12,10 +12,10 @@ metadata:
 ---
 # Test — execution proof owner
 
-`hapo:test` is the sole owner of canonical execution proof. It runs real
-commands, records what ran, and emits the receipt consumed by closeout and
-review. Review may consume that receipt but must not run tests, create a second
-receipt, or claim execution proof.
+`hapo:test` executes the smallest adequate real verification and owns the
+canonical execution result. For process-first work it returns one typed proof
+handoff to the controller; it never writes task state or the inline Receipt.
+Review consumes validated proof and never invents or duplicates execution.
 
 ## Usage
 
@@ -25,6 +25,7 @@ receipt, or claim execution proof.
 /hapo:test <scope-or-path>
 /hapo:test <feature-name>
 /hapo:test specs/<feature>
+/hapo:test specs/<feature>/task-NN-<slug>.md
 /hapo:test --ui <url>
 /hapo:test --ui-auth <url>
 /hapo:test --ui-flow <url>
@@ -32,154 +33,153 @@ receipt, or claim execution proof.
 
 ## Hard gates
 
-- Never claim a pass without executing the relevant command.
-- Never mock, stub, delete, weaken, or skip a failing assertion to obtain green.
-- A missing runner, missing required command, or zero executed tests is not
-  `PASS`; report the blocker and keep closeout unfinished.
-- A compile/typecheck failure is a precheck failure even if no test command is
-  available.
-- Preserve the exact command, exit result, provenance, and artifact hashes
-  required by the canonical receipt schema.
+- Never claim a pass without executing the exact relevant command.
+- Never mock, weaken, delete, or skip a failing assertion to obtain green.
+- Missing tooling, a missing command, nonzero exit, or zero executed tests is
+  never `PASS`. Do not auto-install project-local tooling during proof.
+- Preserve exact commands, counts, output, reachability, proof level, Base,
+  Head, artifact hashes, and redaction labels.
+- Source, installed, and live proof are distinct. Live adherence is
+  `[UNVERIFIED]` without a host invocation.
+- Use only `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. Unknown, malformed,
+  partial, contradictory, duplicate, skipped, or stale proof fails closed.
 
-## Scope and policy
+## Target routing
 
-For a feature target, load `spec.json`, `requirements.md`, `design.md`, and
-the active task's exact seven v2.1 sections and typed coordination boundaries
-when that target exists. Compare actual execution against
-`scope_lock`, contracts, completion criteria, runtime reachability, and
-negative-path obligations.
+Classify current filesystem bytes before selecting tests. Use `lstat` so broken
+links count as markers. Never migrate or repair packet state while testing.
 
-Choose depth from `assurance_level`, risk, and blast radius. Lane is derived:
+| Observed state | Route |
+|---|---|
+| Valid regular `plan.md` with `Specs-Contract: process-first-ready-v1`, one or more valid regular flat `task-NN-*.md`, and no legacy marker | Process-first |
+| Any flat marker that is orphaned, malformed, duplicated, symlinked, nonregular, or mixed with a legacy marker | `BLOCKED` |
+| Valid regular legacy root resolving every nested task and separate receipt, with no flat marker | Legacy adapter |
+| Orphan, malformed, symlinked, nonregular, identity-conflicting, or mixed legacy state | `BLOCKED` |
+| No flat or legacy marker | Ordinary non-Spec testing |
 
-- Direct: targeted commands and diff/runtime self-check;
-- Standard: bounded affected suite and feature receipt;
-- Critical: strict commands plus the independent evidence required by the
-  persisted obligations.
-
-Do not infer depth from file count or from the legacy `execution_tier`. That
-field is a read-only compatibility adapter. A task bundle is not required for a
-small Standard feature.
+A flat marker is a direct-child `plan.md` or `task-NN-*.md`. A legacy marker is
+`spec.json`, a nested legacy task, or a separate legacy receipt. See
+`references/execution-strategy.md` for the complete validation truth table.
 
 ## Spec-Aware Mode
 
 <SCOPE-GATE>
-For a feature target, test only the active scope, requirements, completion
-criteria, and reachable runtime surfaces. A missing or orphaned runtime surface
-is a failure even when the command exits successfully.
+For a feature target, test only current accepted scope, the active task's exact
+Verification Plan, and reachable runtime surfaces. Missing or orphaned
+reachability fails even when a command exits successfully.
 </SCOPE-GATE>
 
-Use blast-radius selection by default; `--full` overrides selection, not proof
-requirements. Use UI checks only when a reachable UI surface is in scope.
+For a process-first feature:
+
+1. Read current `plan.md` and flat task bytes. Select only a contained regular
+   task whose dependencies allow proof.
+2. Use the task's exact `Command`, exact unique `Named probes`, `Reachability`,
+   `Oracle`, `Counterexample`, required proof level, and artifact declaration.
+3. Run the smallest adequate proof. `--full` expands scope but cannot weaken
+   the Verification Plan or substitute unrelated green tests.
+4. Return exactly one canonical `test-proof-v1` object. Do not edit `plan.md`,
+   `Status:`, the task's `## Receipt`, or any sibling task.
+5. The Develop controller validates the payload, recomputes its digest, checks
+   current provenance, and alone writes process-first Status and inline Receipt.
 
 ## Execution
 
-1. Detect the project runner and exact commands from repository files and task
-   evidence. Do not invent commands.
-2. Run a cheap compile/typecheck precheck where the project provides one.
-3. Execute the smallest adequate unit, integration, UI, E2E, accessibility,
-   performance, or security proof for the changed surface.
-4. Inspect runtime reachability and declared artifacts when the task creates
-   runtime-facing or generated output.
-5. Preserve raw outcomes and, only after real execution, write one canonical
-   receipt. For a task use `receipts/<task-basename>.md`; never append execution
-   evidence to the task plan. A receipt must not contain secrets or placeholder
-   provenance.
+1. Detect commands from task and repository files; never invent them.
+2. Run a cheap compile or typecheck precheck when the project provides one.
+3. Execute the exact task command and all named probes with real counts.
+4. Inspect negative paths, runtime reachability, and declared artifacts.
+5. Capture tracked, untracked, and ignored project-command drift separately
+   from runtime Head. Never silently clean or hide project changes.
+6. Redact sensitive material, validate the complete proof object, then return a
+   concise human report separately from the machine handoff.
 
-Required proof type follows the behavior, not ceremony:
+Required proof follows the behavior:
 
 | Surface | Adequate proof |
 |---|---|
 | pure logic/parser/validator | unit plus negative path |
-| stateful UI or module wiring | component/integration and mounted path |
+| stateful UI or module wiring | component/integration plus mounted path |
 | API, persistence, provider, or process boundary | real contract/state handoff |
 | complete user workflow | E2E or UI flow |
-| layout or responsive behavior | viewport/visual check |
-| interactive focus/labels/keyboard | accessibility check |
+| layout, focus, labels, keyboard | viewport/visual/accessibility check |
 | regression | reproduction before fix plus passing regression |
 | security/performance | only when requirement, risk, or boundary requires it |
 
-## Canonical receipt
+## Process-first proof handoff
 
-The receipt is execution evidence, not a status marker. It must contain the
-task identity and canonical `tasks/task-*.md` path for task receipts, the actual
-command, a successful exit/result, expected versus observed behavior, applicable
-negative-path and reachability proof, both provenance anchors (`Base` and
-`Head`, or their canonical aliases), and any declared artifact SHA-256. Reject
-`Exit: 1`, conflicting outcomes, empty commands, placeholders, missing
-provenance, zero execution, and failure summaries. No-artifact tasks remain
-compatible; declared artifacts require hashes.
+The machine payload is canonical UTF-8 JSON with exact top-level keys:
 
-Closeout and flash callers must also provide an explicit runtime binding; a
-valid-length `Base`/`Head` pair alone is not identity proof. The minimal adapter
-contract is `const binding = policy.createReceiptBinding({ base, head })`, then
-pass `receipt_binding: binding` to `completionDecision` or include the binding's
-`expectedProvenance` in the flash task. The policy requires that binding and
-compares both receipt anchors before completion or flash promotion.
+```text
+schema_version, target, verdict, command, exit, counts, provenance,
+proof_level, expected, observed, reachability, artifacts, branches,
+raw_output, redactions, payload_sha256
+```
 
-For a normal closeout, emit a receipt that the shared policy validator accepts.
-Legacy task `## Evidence` remains readable, but prefer the separate receipt. If
-both exist and their proof identities conflict, report `FAIL` and do not choose
-one. After all task receipts pass, execute final integration and create
-`feature-receipt.md` exactly once. Taskless Compact/Full specs create that file
-only at final closeout; absence before closeout is normal.
-For `--flash`, emit proof for the current `FLASH_UNVERIFIED` task only. Only explicit trusted sync-finalize may promote it. The
-receipt may make the task eligible for trusted sync-finalize, but it must not
-promote the task, unblock dependents, or fabricate a done state.
+`schema_version` is exactly `test-proof-v1`; unknown keys block. Branch IDs map
+one-to-one to exact unique Named probes. The digest is lowercase SHA-256 of
+stable JSON excluding only `payload_sha256`. Exact field shapes, nullable
+pre-execution `BLOCKED` rules, and aggregation live in
+`references/execution-strategy.md`.
 
-## Verdict and handoff
+Only all required branches passing with exact command, exit 0, executed > 0,
+failed/skipped 0, matching Base/Head, `reachability.status: PASS`, valid artifact
+hashes, and safe redaction can aggregate `PASS`. Aggregate in this order:
+`FAIL` > `BLOCKED` > `PASS_WITH_WARNINGS` > `PASS`.
 
-The shared workflow surface is:
+## Persistent-write and authentication boundary
 
-`PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`
+- `.hapo/test-memory.json` is optional read-only context. Hash absent/present
+  bytes before and after; never create, merge, or update it during proof.
+- Put only Test-owned temporary files outside the project and clean them.
+  Never create Test-owned reports, caches, lazy installs, or auth state.
+- For authenticated UI proof, prefer the project's own auth helper. Otherwise
+  use only an explicitly selected user-controlled profile bound to a confirmed
+  HTTPS or localhost origin, identity, permissions, and action scope.
+- Block cross-origin redirects and destructive production actions without fresh
+  consent. Never ask for, export, paste, or persist cookies or tokens.
+- Redact Authorization, Cookie, Set-Cookie, session tokens, credentials, and
+  scoped PII from commands, headers/bodies, logs, screenshots, and reports.
+  If safe proof is impossible, return `BLOCKED`.
 
-Warnings describe residual, non-blocking concerns; they never replace missing
-execution proof. A legacy diagnostic result such as `NO_TESTS` is normalized by
-the shared adapter to an unfinished outcome and is never treated as `PASS`.
+## Verdict and report
 
 ```markdown
 ## Test Verdict
 
 **Status:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
-**Scope:** [target and selection]
-**Commands:** [exact commands]
+**Scope:** [target and selected proof]
+**Commands:** [exact redacted commands]
 **Exit:** [actual result]
-**Duration:** [measured time]
-**Receipt:** [path or inline canonical receipt]
 
 ### Results
 - Passed: N | Failed: N | Skipped: N | Executed: N
-
-### Scope / reachability
-- Requirements: [covered/uncovered]
-- Runtime reachability: PASS | FAIL | BLOCKED
-- Artifact/provenance checks: PASS | FAIL | BLOCKED
+- Reachability: PASS | FAIL | BLOCKED
+- Proof level: source | installed | live
+- Project-command drift: [tracked/untracked/ignored, or none]
 
 ### Action
-- PASS → give the receipt to the single closeout owner; only literal `PASS` can
-  complete a task.
-- PASS_WITH_WARNINGS → give the receipt to the closeout owner, but keep the
-  task unfinished until a literal `PASS` decision is recorded.
-- FAIL → list exact failures; implementation remains unfinished.
-- BLOCKED → state the changed prerequisite; do not blind-retry.
+- [controller handoff, exact failure, or changed prerequisite]
 ```
 
-The closeout owner calls this workflow once for the current task or feature.
-Do not trigger review from inside the test workflow and do not run a duplicate
-test pass merely because review is requested. Review evaluates correctness,
-security, and spec compliance against this proof.
+Do not place the full JSON payload, secrets, verbose raw logs, or screenshots in
+the concise report. `PASS_WITH_WARNINGS` remains unfinished; only literal
+validated `PASS` may be synchronized by the controller.
 
-## Flash proof
+## Legacy workflow compatibility
 
-When the target contains an in-progress `FLASH_UNVERIFIED` task, test only its
-exact Verification Plan and reachability obligations. On pass, keep the task
-`in_progress`, keep `FLASH_UNVERIFIED`, `dependencyBlocked: true`, and
-`unblocks: false`; return canonical proof to trusted sync-finalize. On failure,
-blocker, or no tests, do not promote any task.
+A valid legacy packet keeps the v2.1 adapter, legacy task resolution, and its
+separate receipt path. Do not write process-first inline proof into it. If
+legacy proof identities conflict or the packet is mixed/malformed, return
+`BLOCKED`; never choose one source or migrate it during unrelated testing.
+
+Flash legacy behavior remains proof-only: testing may make a current
+`FLASH_UNVERIFIED` task eligible for trusted sync-finalize, but never promotes
+state or unblocks dependents itself. Only explicit trusted sync-finalize may
+promote it.
 
 ## References
 
-- `references/execution-strategy.md` — blast-radius and UI selection, loaded
-  only when the default strategy needs detail.
-- `references/failure-triage.md` — failure classification, loaded on failure.
-- `references/test-memory.md` — optional historical context; current receipt
-  evidence always wins.
+- `references/execution-strategy.md` — routing, payload schema, aggregation,
+  blast radius, UI safety, and report separation.
+- `references/failure-triage.md` — failure classification and four verdicts.
+- `references/test-memory.md` — optional read-only historical context.

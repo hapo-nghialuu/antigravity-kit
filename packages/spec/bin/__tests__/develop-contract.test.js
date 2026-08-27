@@ -26,6 +26,9 @@ const SPECS = path.join(PACKAGE_ROOT, 'src/claude/skills/specs/SKILL.md');
 const SCAFFOLD = path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-scaffold.cjs');
 const GATE = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/quality-gate.md');
 const TEST_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/test/SKILL.md');
+const TEST_SOURCE_ROOT = path.dirname(TEST_SKILL);
+const TEST_REFERENCES = ['execution-strategy.md', 'failure-triage.md', 'test-memory.md'];
+const TEST_RUNNER = path.join(PACKAGE_ROOT, 'src/claude/agents/test-runner.md');
 const SYNC_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/SKILL.md');
 const CODE_REVIEW_SKILL = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review/SKILL.md');
 const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/references/parallel-waves.md');
@@ -33,6 +36,7 @@ const DEVELOP_REFERENCES = ['quality-gate.md', 'parallel-waves.md', 'subagent-pa
 const INSTALLER = path.join(PACKAGE_ROOT, 'bin/install.js');
 const SYNC_PROTOCOLS = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/references/sync-protocols.md');
 const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
+const SPECS_USAGE_GUIDE = path.join(PACKAGE_ROOT, '../../docs/specs-usage-guide.md');
 const RUNTIME_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-policy-runtime-'));
 const RUNTIME_SPEC = path.join(RUNTIME_ROOT, 'specs', 'demo', 'spec.json');
 fs.mkdirSync(path.dirname(RUNTIME_SPEC), { recursive: true });
@@ -934,6 +938,162 @@ test('Claude installed Develop preserves plan-native execution and references', 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('Test process-first handoff preserves proof ownership and side-effect boundaries', () => {
+  const skill = read(TEST_SKILL);
+  const strategy = read(path.join(TEST_SOURCE_ROOT, 'references/execution-strategy.md'));
+  const runner = read(TEST_RUNNER);
+  const review = read(CODE_REVIEW_SKILL);
+  const developConsumers = [read(DEVELOP), read(GATE), read(path.join(
+    path.dirname(PARALLEL_WAVES), 'subagent-patterns.md',
+  ))].join('\n');
+
+  const exactKeys = [
+    'schema_version', 'target', 'verdict', 'command', 'exit', 'counts',
+    'provenance', 'proof_level', 'expected', 'observed', 'reachability',
+    'artifacts', 'branches', 'raw_output', 'redactions', 'payload_sha256',
+  ];
+  for (const key of exactKeys) assert.match(strategy, new RegExp(`\\b${key}\\b`));
+  const developHandoffFields = new Map([
+    ['command', /Verification handoff separately contains the fresh command/i],
+    ['exit', /fresh command, exit/i],
+    ['branches', /named probes/i],
+    ['counts', /counts, output/i],
+    ['raw_output', /counts, output/i],
+    ['provenance', /observed Head/i],
+    ['reachability', /runtime reachability/i],
+    ['proof_level', /required proof level/i],
+  ]);
+  for (const [field, sourceClause] of developHandoffFields) {
+    assert.match(developConsumers, sourceClause, `Develop must currently consume ${field}`);
+    assert.ok(exactKeys.includes(field), `test-proof-v1 must preserve Develop field ${field}`);
+  }
+  assert.match(runner, /Emit only `schema_version: "test-proof-v1"`/);
+  assert.match(runner, /sole writer of[\s\S]*Status and inline Receipt/i);
+  assert.match(review, /consume only the controller-validated[\s\S]*`test-proof-v1`[\s\S]*handoff/i);
+  assert.match(review, /Never create or search for a separate[\s\S]*process-first receipt/i);
+  assert.doesNotMatch([skill, strategy, runner].join('\n'), /npm\s+install|inject-auth\.js|--cookies\s|Bearer eyJ/);
+
+  const stable = (value) => {
+    if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+    if (value && typeof value === 'object') return `{${Object.keys(value).sort()
+      .map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
+  };
+  const proof = {
+    schema_version: 'test-proof-v1',
+    target: { feature: 'fixture', task_path: 'specs/fixture/task-01-proof.md' },
+    verdict: 'PASS', command: 'node --test', exit: 0,
+    counts: { executed: 1, passed: 1, failed: 0, skipped: 0 },
+    provenance: { base: 'a'.repeat(40), head: 'b'.repeat(64) },
+    proof_level: 'source', expected: 'named probe passes', observed: 'named probe passed',
+    reachability: { status: 'PASS', evidence: ['test-runner -> controller'] },
+    artifacts: [],
+    branches: [{
+      id: 'fixture named probe', required: true, verdict: 'PASS', command: 'node --test',
+      exit: 0, counts: { executed: 1, passed: 1, failed: 0, skipped: 0 },
+      proof_level: 'source',
+    }],
+    raw_output: '1 test passed', redactions: [],
+  };
+  proof.payload_sha256 = crypto.createHash('sha256').update(stable(proof)).digest('hex');
+  assert.deepEqual(Object.keys(proof).sort(), exactKeys.slice().sort());
+  assert.match(proof.payload_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(proof.counts.executed, proof.branches.reduce(
+    (sum, branch) => sum + branch.counts.executed, 0,
+  ));
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-test-proof-side-effects-'));
+  const absentRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-test-proof-memory-absent-'));
+  const externalTemp = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-test-owned-'));
+  try {
+    fs.mkdirSync(path.join(root, '.hapo'), { recursive: true });
+    const memory = path.join(root, '.hapo/test-memory.json');
+    fs.writeFileSync(memory, '{"known_issues":[]}\n');
+    fs.writeFileSync(path.join(root, '.gitignore'), 'ignored-proof-state/\n');
+    fs.writeFileSync(path.join(root, 'tracked.js'), 'before\n');
+    initFixtureGit(root);
+    const memoryBefore = crypto.createHash('sha256').update(fs.readFileSync(memory)).digest('hex');
+    const command = spawnSync(process.execPath, ['-e', [
+      "const fs=require('node:fs');",
+      "fs.appendFileSync('tracked.js','after\\n');",
+      "fs.writeFileSync('untracked-proof.txt','created by project command\\n');",
+      "fs.mkdirSync('ignored-proof-state',{recursive:true});",
+      "fs.writeFileSync('ignored-proof-state/output.txt','project output\\n');",
+      "console.log('tests 1\\npass 1\\nfail 0\\nskipped 0');",
+    ].join('')], { cwd: root, encoding: 'utf8' });
+    assert.equal(command.status, 0, command.stderr);
+    assert.match(command.stdout, /tests 1/);
+    const drift = spawnSync('git', [
+      '-C', root, 'status', '--porcelain=v1', '--ignored', '--untracked-files=all',
+    ], { encoding: 'utf8' });
+    assert.equal(drift.status, 0, drift.stderr);
+    assert.match(drift.stdout, / M tracked\.js/);
+    assert.match(drift.stdout, /\?\? untracked-proof\.txt/);
+    assert.match(drift.stdout, /!! ignored-proof-state\//);
+    const memoryAfter = crypto.createHash('sha256').update(fs.readFileSync(memory)).digest('hex');
+    assert.equal(memoryAfter, memoryBefore, 'present Test memory must stay byte-identical');
+    for (const relative of ['test-report.md', 'test-cache', 'test-auth.json']) {
+      assert.equal(fs.existsSync(path.join(root, '.hapo', relative)), false, `${relative} must stay absent`);
+    }
+    assert.equal(fs.existsSync(path.join(root, 'node_modules')), false, 'project-local lazy install must stay absent');
+
+    const absentMemory = path.join(absentRoot, '.hapo/test-memory.json');
+    assert.equal(fs.existsSync(absentMemory), false);
+    const noop = spawnSync(process.execPath, ['-e', "console.log('tests 1; pass 1')"], {
+      cwd: absentRoot, encoding: 'utf8',
+    });
+    assert.equal(noop.status, 0, noop.stderr);
+    assert.equal(fs.existsSync(absentMemory), false, 'absent Test memory must stay absent');
+
+    fs.writeFileSync(path.join(externalTemp, 'ephemeral.txt'), 'proof temp\n');
+  } finally {
+    fs.rmSync(externalTemp, { recursive: true, force: true });
+    fs.rmSync(absentRoot, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+  assert.equal(fs.existsSync(externalTemp), false, 'Test-owned external temp must be cleaned');
+});
+
+test('Claude installed Test preserves plan-native proof and references', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-claude-test-proof-'));
+  try {
+    const result = installClaude(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const installedRoot = path.join(root, '.claude/skills/test');
+    for (const relative of ['SKILL.md', ...TEST_REFERENCES.map((name) => `references/${name}`)]) {
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        fs.readFileSync(path.join(TEST_SOURCE_ROOT, relative), 'utf8'),
+        `Claude Test projection drifted: ${relative}`,
+      );
+    }
+    const installedRunner = fs.readFileSync(path.join(root, '.claude/agents/test-runner.md'), 'utf8');
+    assert.equal(installedRunner, fs.readFileSync(TEST_RUNNER, 'utf8'));
+    assert.match(installedRunner, /test-proof-v1/);
+    const installedReview = fs.readFileSync(path.join(root, '.claude/skills/code-review/SKILL.md'), 'utf8');
+    assert.equal(installedReview, fs.readFileSync(CODE_REVIEW_SKILL, 'utf8'));
+    assert.match(installedReview, /controller-validated `test-proof-v1`/);
+    assert.match(installedReview, /Do not load or follow legacy separate-receipt paragraphs/i);
+    assert.equal(fs.existsSync(path.join(root, '.agents/skills/test')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('specs-usage-guide documents Test proof handoff without timing claims', () => {
+  const guide = read(SPECS_USAGE_GUIDE);
+  const section = guide.split('## Test proof handoff')[1]?.split('### Receipt canonical')[0] || '';
+  assert.match(section, /`test-proof-v1`/);
+  assert.match(section, /Test không ghi `Status:` hay inline[\s\S]*Develop controller là writer duy nhất/i);
+  assert.match(section, /tracked\/untracked\/ignored drift/i);
+  assert.match(section, /HTTPS\/localhost origin[\s\S]*fresh consent/i);
+  assert.match(section, /separate-receipt adapter/i);
+  assert.match(section, /không phải benchmark thời gian/i);
+  assert.match(section, /không chứng minh live adherence/i);
+  assert.doesNotMatch(section, /\b\d+(?:\.\d+)?\s*(?:ms|milliseconds?|seconds?|minutes?)\b/i);
+  assert.doesNotMatch(section, /\[(?:LIVE_)?VERIFIED\]/i);
 });
 
 test('canonical verdict adapter handles completion and unfinished decisions', () => {

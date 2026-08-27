@@ -1697,6 +1697,262 @@ function outsideLegacySections(content) {
   return kept.join("\n");
 }
 
+const TEST_PLAN_NATIVE_PATHS = {
+  skill: "src/claude/skills/test/SKILL.md",
+  strategy: "src/claude/skills/test/references/execution-strategy.md",
+  triage: "src/claude/skills/test/references/failure-triage.md",
+  memory: "src/claude/skills/test/references/test-memory.md",
+};
+
+function testPlanNativeContractIssues(input) {
+  const expectedKeys = Object.keys(TEST_PLAN_NATIVE_PATHS).sort();
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("test plan-native checker expects exactly four UTF-8 source strings");
+  }
+
+  const issues = new Set();
+  const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+    key, normalizeMarkdownWhitespace(value),
+  ]));
+  const requireClauses = (issue, clausesBySource) => {
+    const missing = Object.entries(clausesBySource).some(([source, clauses]) =>
+      clauses.some((clause) => !normalized[source].includes(normalizeMarkdownWhitespace(clause))));
+    if (missing) issues.add(issue);
+  };
+
+  requireClauses("routing-truth-table", {
+    skill: [
+      "Use `lstat` so broken links count as markers.",
+      "Any flat marker that is orphaned, malformed, duplicated, symlinked, nonregular, or mixed with a legacy marker",
+      "No flat or legacy marker | Ordinary non-Spec testing",
+    ],
+    strategy: [
+      "A flat task without a plan, a plan without tasks, wrong/missing process marker, malformed or duplicate task fields",
+      "Orphan nested tasks/receipts, absent or schema-invalid root, conflicting identities",
+      "Do not infer that an invalid marker is absent.",
+    ],
+  });
+
+  const exactTopLevelKeys = [
+    "schema_version", "target", "verdict", "command", "exit", "counts",
+    "provenance", "proof_level", "expected", "observed", "reachability",
+    "artifacts", "branches", "raw_output", "redactions", "payload_sha256",
+  ];
+  const schemaBlock = markdownSectionUnderHeading(input.strategy, "4. `test-proof-v1` schema");
+  for (const key of exactTopLevelKeys) {
+    if (!new RegExp(`(?:^|[\\s,])${key}(?:[\\s,]|$)`).test(schemaBlock)) {
+      issues.add("proof-schema");
+    }
+  }
+  requireClauses("proof-schema", { strategy: [
+    "Return canonical UTF-8 JSON with exactly these top-level keys and no others:",
+    "`schema_version`: exactly `test-proof-v1`.",
+    "`target`: exact keys `{feature, task_path}`.",
+    "`task_path` is a contained regular flat task path.",
+    "`verdict`: exactly `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`.",
+    "`exit`: integer; nullable only for pre-execution `BLOCKED`.",
+    "`counts`: exact keys `{executed, passed, failed, skipped}` with nonnegative integers",
+    "`passed + failed + skipped === executed`.",
+    "`provenance`: exact keys `{base, head}`.",
+    "Values are lowercase canonical Git SHAs matching current runtime anchors",
+    "`proof_level`: exactly `source | installed | live`; never promote one level into another.",
+    "`expected`, `observed`, `raw_output`: nonempty redacted strings after any attempted execution.",
+    "`reachability`: exact keys `{status, evidence}`",
+    "status is `PASS | FAIL | BLOCKED`",
+    "evidence is an array of unique nonempty strings.",
+    "`artifacts`: sorted array of exact `{path, sha256}` rows.",
+    "Every path is contained and every digest is lowercase SHA-256.",
+    "`redactions`: unique sorted labels drawn only from `authorization`, `cookie`, `set-cookie`, `credential`, `session-token`, `pii`; never include secret values.",
+    "`payload_sha256`: lowercase SHA-256 of canonical stable JSON after removing only `payload_sha256`.",
+    "`command`: exact task command string; nullable only for pre-execution `BLOCKED`.",
+    "Each row has exact keys:",
+    "id, required, verdict, command, exit, counts, proof_level",
+    "`required` is exactly `true`; branch verdict and proof level use the same closed enums.",
+    "`exit` is an integer; branch counts use the same closed shape.",
+  ] });
+
+  requireClauses("branch-and-aggregate-integrity", { strategy: [
+    "IDs equal the Verification Plan's exact unique Named probes, one row each.",
+    "Reject unknown nested keys, duplicate/missing/extra branch IDs, contradictory aggregate counts, command drift, proof-level promotion, and unsorted rows.",
+    "Attribute each required execution to exactly one branch with no overlap or omission.",
+    "Payload `executed`, `passed`, `failed`, and `skipped` each equal the element-wise sum of that field across every branch",
+    "Aggregate required branches in strict order:",
+    "Only every required branch at literal `PASS` can reach payload `PASS`.",
+    "exit 0, executed > 0, failed 0, skipped 0, matching current provenance",
+  ], skill: [
+    "`FAIL` > `BLOCKED` > `PASS_WITH_WARNINGS` > `PASS`.",
+  ] });
+
+  requireClauses("controller-only-state-proof", { skill: [
+    "Return exactly one canonical `test-proof-v1` object. Do not edit `plan.md`, `Status:`, the task's `## Receipt`, or any sibling task.",
+    "The Develop controller validates the payload, recomputes its digest, checks current provenance, and alone writes process-first Status and inline Receipt.",
+  ], strategy: [
+    "Process-first Status and inline `## Receipt` remain controller-only.",
+  ] });
+
+  requireClauses("side-effect-boundary", { skill: [
+    "Hash absent/present bytes before and after; never create, merge, or update it during proof.",
+    "Put only Test-owned temporary files outside the project and clean them.",
+    "Capture tracked, untracked, and ignored project-command drift separately from runtime Head.",
+  ], strategy: [
+    "Test-owned memory, reports, caches, lazy installs, and auth state must remain byte-for-byte absent/unchanged.",
+  ], memory: [
+    "If absent, continue without creating it.",
+    "Never create, initialize, merge, normalize, rewrite, or delete Test memory.",
+    "Known flaky tests and known issues remain labels only; they cannot downgrade a current required failure, justify a skip, or produce `PASS`.",
+  ] });
+
+  requireClauses("safe-ui-auth-and-redaction", { skill: [
+    "use only an explicitly selected user-controlled profile bound to a confirmed HTTPS or localhost origin, identity, permissions, and action scope.",
+    "Block cross-origin redirects and destructive production actions without fresh consent.",
+    "Never ask for, export, paste, or persist cookies or tokens.",
+  ], strategy: [
+    "Never ask the user to paste credentials, cookies, bearer tokens, session tokens, or local-storage auth; never export or persist them.",
+    "Redact Authorization, Cookie, Set-Cookie, session tokens, credentials, and scoped PII",
+  ] });
+
+  requireClauses("canonical-verdicts", { triage: [
+    "Use only `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`.",
+    "Do not emit `PARTIAL`, `COLLAPSE`, `NO_TESTS`, or an unknown result.",
+    "Failure count never changes the lattice",
+  ] });
+
+  requireClauses("report-proof-separation", { skill: [
+    "return a concise human report separately from the machine handoff.",
+    "Do not place the full JSON payload, secrets, verbose raw logs, or screenshots in the concise report.",
+  ], strategy: [
+    "Do not write a report file during proof.",
+  ] });
+
+  const primaryCorpus = Object.values(input).map(outsideLegacySections).join("\n");
+  if (/npm\s+install|inject-auth\.js|--cookies|Bearer eyJ|<lessons_learned>/i.test(primaryCorpus)) {
+    issues.add("side-effect-boundary");
+  }
+  if (/(?:unknown|extra) (?:keys|fields).{0,40}(?:may|can|are) (?:be )?(?:accepted|allowed|ignored)/i.test(primaryCorpus)) {
+    issues.add("proof-schema");
+  }
+  if (/payload counts.{0,100}(?:may|can).{0,60}(?:differ|overlap|omit)/i.test(primaryCorpus)) {
+    issues.add("branch-and-aggregate-integrity");
+  }
+  if (/mixed (?:packet|state).{0,80}(?:may|can).{0,60}(?:select|choose|prefer|proceed)/i.test(primaryCorpus)) {
+    issues.add("routing-truth-table");
+  }
+  if (/Test may (?:write|edit).{0,60}(?:Status|Receipt)/i.test(primaryCorpus)) {
+    issues.add("controller-only-state-proof");
+  }
+  if (/Test memory (?:may|can) be (?:created|updated|merged)/i.test(primaryCorpus)) {
+    issues.add("side-effect-boundary");
+  }
+  if (/cross-origin.{0,80}(?:may|can|is allowed to).{0,60}(?:reuse|proceed|continue)/i.test(primaryCorpus)
+    || /(?:cookies|tokens|credentials).{0,60}(?:may|can) be (?:pasted|exported|persisted)/i.test(primaryCorpus)) {
+    issues.add("safe-ui-auth-and-redaction");
+  }
+  if (/concise report.{0,80}(?:may|can).{0,50}(?:full JSON|raw logs|screenshots)/i.test(primaryCorpus)) {
+    issues.add("report-proof-separation");
+  }
+  if (/\[(?:LIVE_)?VERIFIED\]/i.test(primaryCorpus)
+    || /live adherence is (?:verified|proven)/i.test(primaryCorpus)) {
+    issues.add("proof-level-promotion");
+  }
+  if (!/Live adherence is\s+`\[UNVERIFIED\]` without a host invocation\./.test(primaryCorpus)) {
+    issues.add("proof-level-promotion");
+  }
+
+  return [...issues].sort();
+}
+
+async function runTestPlanNativeContractTests() {
+  const fail = (message) => {
+    throw new Error(`[FAIL] Test plan-native contract: ${message}`);
+  };
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(TEST_PLAN_NATIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = testPlanNativeContractIssues(baseline);
+  if (baselineIssues.length > 0) fail(`intact sources returned ${baselineIssues.join(", ")}`);
+
+  const mutations = [
+    ["mixed-state-selects-flat", "skill", "routing-truth-table", "or mixed with a legacy marker", "and preferred over a legacy marker"],
+    ["invalid-marker-is-absent", "strategy", "routing-truth-table", "Do not infer that an invalid marker is absent.", "Treat an invalid marker as absent."],
+    ["payload-allows-extra-keys", "strategy", "proof-schema", "with exactly these top-level keys and no others:", "with these suggested top-level keys:"],
+    ["digest-not-recomputed", "strategy", "proof-schema", "only `payload_sha256`.", "the supplied `payload_sha256` too."],
+    ["count-shape-weakened", "strategy", "proof-schema", "`passed + failed + skipped === executed`.", "`passed + failed + skipped <= executed`."],
+    ["task-path-escape", "strategy", "proof-schema", "`task_path` is a contained regular flat task path.", "`task_path` may escape or name a symlink."],
+    ["verdict-enum-expanded", "strategy", "proof-schema", "`verdict`: exactly `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`.", "`verdict` may be any string."],
+    ["exit-type-expanded", "strategy", "proof-schema", "`exit`: integer; nullable only for pre-execution `BLOCKED`.", "`exit` may be any value."],
+    ["provenance-sha-weakened", "strategy", "proof-schema", "Values are lowercase canonical Git\n  SHAs matching current runtime anchors", "Values are arbitrary revision labels"],
+    ["proof-level-expanded", "strategy", "proof-schema", "`proof_level`: exactly `source | installed | live`; never promote one level\n  into another.", "`proof_level` may be any string."],
+    ["empty-output-accepted", "strategy", "proof-schema", "`expected`, `observed`, `raw_output`: nonempty redacted strings after any\n  attempted execution.", "Output strings may be empty after execution."],
+    ["reachability-duplicates", "strategy", "proof-schema", "evidence is an array of unique nonempty strings.", "evidence may contain duplicate or empty strings."],
+    ["reachability-status-expanded", "strategy", "proof-schema", "status is\n  `PASS | FAIL | BLOCKED`", "status may be any string"],
+    ["artifact-order-weakened", "strategy", "proof-schema", "`artifacts`: sorted array of exact `{path, sha256}` rows.", "`artifacts` may be unsorted rows."],
+    ["artifact-containment-weakened", "strategy", "proof-schema", "Every path is\n  contained and every digest is lowercase SHA-256.", "Paths may escape and digests may be short."],
+    ["redaction-enum-expanded", "strategy", "proof-schema", "`redactions`: unique sorted labels drawn only from `authorization`, `cookie`,\n  `set-cookie`, `credential`, `session-token`, `pii`; never include secret values.", "`redactions` may contain arbitrary labels and values."],
+    ["nullable-after-execution", "strategy", "proof-schema", "nullable only for pre-execution\n  `BLOCKED`.", "nullable for any verdict."],
+    ["branch-required-optional", "strategy", "proof-schema", "`required` is exactly `true`", "`required` may be false"],
+    ["branch-enums-expanded", "strategy", "proof-schema", "branch verdict and proof level use the same\n  closed enums.", "branch verdict and proof level may be arbitrary strings."],
+    ["branch-count-shape-expanded", "strategy", "proof-schema", "branch counts\n  use the same closed shape.", "branch counts may have extra keys."],
+    ["duplicate-branch-accepted", "strategy", "branch-and-aggregate-integrity", "duplicate/missing/extra branch IDs", "duplicate branch IDs are merged"],
+    ["branch-overlap-accepted", "strategy", "branch-and-aggregate-integrity", "Attribute each required execution to exactly\none branch with no overlap or omission.", "Executions may appear in several branches."],
+    ["aggregate-counts-not-summed", "strategy", "branch-and-aggregate-integrity", "each equal the element-wise sum of that field across every branch", "may differ from branch totals"],
+    ["zero-tests-pass", "strategy", "branch-and-aggregate-integrity", "executed > 0", "executed >= 0"],
+    ["tester-writes-receipt", "skill", "controller-only-state-proof", "alone writes process-first Status and inline Receipt.", "may delegate process-first Status and inline Receipt writes to Test."],
+    ["memory-created", "memory", "side-effect-boundary", "If absent, continue without creating it.", "If absent, create a default memory file."],
+    ["lazy-install-restored", "strategy", "side-effect-boundary", "Do not auto-install\nmissing runners, packages, browsers, or linters.", "Run npm install for missing browser tooling."],
+    ["profile-cross-origin", "skill", "safe-ui-auth-and-redaction", "Block cross-origin redirects and destructive production actions without fresh\n  consent.", "Allow cross-origin redirects and destructive production actions."],
+    ["partial-verdict", "triage", "canonical-verdicts", "Do not emit `PARTIAL`, `COLLAPSE`, `NO_TESTS`, or an unknown result.", "Emit `PARTIAL` for coverage gaps."],
+    ["report-embeds-proof", "skill", "report-proof-separation", "Do not place the full JSON payload, secrets, verbose raw logs, or screenshots in", "Place the full JSON payload and verbose raw logs in"],
+    ["live-proof-promoted", "skill", "proof-level-promotion", "`[UNVERIFIED]` without a host invocation.", "[VERIFIED] by static inspection."],
+  ];
+
+  for (const [name, source, issue, from, to] of mutations) {
+    let weakened;
+    try {
+      weakened = replaceDevelopClauseOnce(baseline[source], from, to);
+    } catch (error) {
+      fail(`${name} mutation anchor failed: ${error.message}`);
+    }
+    const actual = testPlanNativeContractIssues({ ...baseline, [source]: weakened });
+    if (!actual.includes(issue)) {
+      fail(`${name} expected ${issue} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  const additiveMutations = [
+    ["additive-extra-keys", "strategy", "proof-schema", "Unknown keys may be accepted for forward compatibility."],
+    ["additive-count-divergence", "strategy", "branch-and-aggregate-integrity", "Payload counts may differ from branch totals."],
+    ["additive-mixed-route", "skill", "routing-truth-table", "Mixed packet state may choose process-first."],
+    ["additive-test-writer", "skill", "controller-only-state-proof", "Test may write Status or Receipt after PASS."],
+    ["additive-memory-writer", "memory", "side-effect-boundary", "Test memory may be updated after proof."],
+    ["additive-cross-origin", "skill", "safe-ui-auth-and-redaction", "A cross-origin redirect may proceed with profile reuse."],
+    ["additive-token-paste", "strategy", "safe-ui-auth-and-redaction", "Credentials may be pasted when browser login is difficult."],
+    ["additive-report-raw", "skill", "report-proof-separation", "The concise report may include full JSON and raw logs."],
+  ];
+  for (const [name, source, issue, addition] of additiveMutations) {
+    const legacyMarker = "\n## Legacy workflow compatibility";
+    const value = baseline[source].includes(legacyMarker)
+      ? baseline[source].replace(legacyMarker, `\n${addition}${legacyMarker}`)
+      : `${baseline[source]}\n${addition}\n`;
+    const actual = testPlanNativeContractIssues({
+      ...baseline,
+      [source]: value,
+    });
+    if (!actual.includes(issue)) {
+      fail(`${name} expected ${issue} but returned ${JSON.stringify(actual)}`);
+    }
+  }
+
+  console.log("✔ hapo:test plan-native proof contract is complete and bounded");
+  console.log("✔ hapo:test plan-native checker rejects semantic weakenings");
+  return mutations.length + additiveMutations.length + 1;
+}
+
 const DEVELOP_PLAN_NATIVE_PATHS = {
   skill: "src/claude/skills/develop/SKILL.md",
   quality: "src/claude/skills/develop/references/quality-gate.md",
@@ -2392,6 +2648,7 @@ async function runStaticSemanticTests() {
   const adaptiveCoverageTests = await runAdaptiveCoverageContractTests();
   const brainstormContractTests = await runBrainstormContractTests();
   const developPlanNativeTests = await runDevelopPlanNativeContractTests();
+  const testPlanNativeTests = await runTestPlanNativeContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -3537,7 +3794,7 @@ async function runStaticSemanticTests() {
 
   return checks.length + specs21Tests + implementationReadinessTests
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
-    + developPlanNativeTests;
+    + developPlanNativeTests + testPlanNativeTests;
 }
 
 function runSkillCatalogTests() {

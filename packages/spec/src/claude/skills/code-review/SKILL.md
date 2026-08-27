@@ -20,8 +20,15 @@ owns execution proof; the single closeout owner combines both results.
 ## Input and depth
 
 With no argument, review the pending diff. Supported targets are a PR, commit,
-pending changes, or an explicit path. Load only the spec and references needed
-for the target.
+pending changes, or an explicit path. Load only current target bytes and needed
+references. For a valid process-first target, read `plan.md`, the active flat
+`task-NN-*.md`, and the controller-validated `test-proof-v1` handoff. Mixed,
+orphaned, malformed, symlinked, nonregular, or identity-conflicting packet state
+is `BLOCKED`; review never migrates it.
+
+For process-first proof consumption, this skill's `## Execution-proof boundary`
+is authoritative. Do not load or follow legacy separate-receipt paragraphs from
+references; they apply only after the Legacy route below is selected.
 
 Select review depth from `assurance_level`, risk, and blast radius. Lane is a
 derived view:
@@ -38,10 +45,9 @@ fixed Light/Standard/Deep sequence.
 
 ### 1. Specification compliance
 
-Compare the diff with `scope_lock`, requirements, design contracts, active task
-Outcome/Scope/Anchors and Ownership/Changes/Acceptance/Dependencies/
-`Verification Plan`, typed `coordination.boundaries`, and declared
-runtime reachability. Identify missing behavior,
+For process-first work, compare the diff with current plan scope and the active
+task's Outcome, Scope, Coverage, Ownership, Acceptance, Dependencies,
+Verification Plan, and declared runtime reachability. Identify missing behavior,
 unjustified extras, contract substitution, orphaned outputs, and incorrect
 completion claims. If a design image or document carries requirements, load its
 multimodal reference only when needed; do not guess from a filename.
@@ -69,18 +75,20 @@ provenance is insufficient.
 
 ## Execution-proof boundary
 
-Consume the current canonical receipt when available and report its identity,
-scope, and caveats. Never rerun commands to manufacture proof. If execution
-proof is missing, say `execution proof unavailable` and leave the overall
-closeout to the test owner; do not claim PASS on the feature from review alone.
-A review can still return a correctness verdict when its review inputs are
-complete.
+For process-first work, consume only the controller-validated `test-proof-v1`
+handoff. Require its exact closed schema, stable digest, current Base/Head,
+target task, exact command, exit/counts, raw output, reachability, proof level,
+artifacts, branches, and redactions. Unknown keys/verdicts, duplicate or missing
+branches, stale provenance, zero execution, required skips, unsafe redaction, or
+`PASS_WITH_WARNINGS` remain unfinished. Never create or search for a separate
+process-first receipt; Develop alone writes Status and inline `## Receipt` after
+proof and review are both literal `PASS`.
 
-For new tasks, read proof from `receipts/<task-basename>.md`; use legacy task
-`## Evidence` only as fallback. If both exist and their proof identities
-conflict, fail closed. At feature closeout also consume `feature-receipt.md`.
-Receipt validity never supplies approval, readiness, audit status, or product
-semantics.
+Never rerun commands to manufacture proof. If execution proof is missing or
+invalid, say `execution proof unavailable` and leave closeout unfinished; do not
+claim feature PASS from review alone. A review may still return a correctness
+verdict when its review inputs are complete, but that verdict is not execution
+proof or C3 approval.
 
 ## Verdict
 
@@ -104,7 +112,7 @@ decision is unavailable.
 **Verdict:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
 **Assurance / risk:** [canonical policy input and relevant signals]
-**Execution proof:** consumed | unavailable (owned by hapo:test)
+**Execution proof:** test-proof-v1 consumed | unavailable (owned by hapo:test)
 
 ## Findings
 - [Critical|High|Medium|Low] path:line — issue, failure scenario, evidence,
@@ -119,10 +127,20 @@ decision is unavailable.
 Do not add a test command, a fabricated receipt, or an `Audit: PASS` marker to
 make the review look complete. Return unresolved questions at the end.
 
+## Legacy workflow compatibility
+
+For a valid legacy packet only, retain its current spec/task resolution,
+separate `receipts/<task-basename>.md` fallback, feature receipt, persisted audit
+obligations, and legacy verdict normalization. If separate and embedded legacy
+proof identities conflict, fail closed. Never copy that adapter into a flat
+process-first packet.
+
 ## References
 
-- `references/spec-compliance-review.md` — load for detailed scope checks.
+- `references/spec-compliance-review.md` — load only its detailed scope checks;
+  its separate-receipt paragraph is Legacy-only.
 - `references/pre-landing-checklists.md` — load for the selected risk surface.
 - `references/adversarial-review.md` — load for Critical/adversarial depth.
-- `references/verification-gate.md` — receipt consumption only; execution stays
-  with `hapo:test`.
+- `references/verification-gate.md` — Legacy separate-receipt consumption only;
+  process-first proof uses this skill's execution-proof boundary. Execution
+  always stays with `hapo:test`.
