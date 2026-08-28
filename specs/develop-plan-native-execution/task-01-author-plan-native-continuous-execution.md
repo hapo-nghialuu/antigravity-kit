@@ -73,10 +73,12 @@ parallel, shared-proof, and Flash boundaries.
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: a007c3632c697e7de55ca2c128b4b6c891f459e2
-Head: a27da7683c1274e32aaeda63822f233c5279eef90489b0c94e597b7efaeebe41
+Base: 58442abd1b358d9c742cd7a44d66a6e9856d322e
+Head: 6442f9765d46551ff6c3c41cc6e09d25ede1cc27f634d44a1753840f5f23f888
 
 ```text
-[skill-test] PASS: 379 focused static tests executed
+✔ hapo:develop plan-native continuous contract is complete and bounded
+✔ hapo:develop plan-native checker rejects semantic weakenings
+[skill-test] PASS: 380 focused static tests executed
 Proportional mutations=70; adaptive mutations=43; adaptive groups=10.
 ```
