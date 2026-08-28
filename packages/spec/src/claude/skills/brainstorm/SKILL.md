@@ -22,6 +22,20 @@ implementation authority. Feature or documentation delivery may prepare context
 for a new explicit `hapo:specs` invocation; it never starts Specs implicitly.
 </HARD-GATE>
 
+## Control flags
+
+Parse controls only from the leading consecutive token segment. Accept
+`--deep`, `--visual`, and `--advice` in any order, each at most once. `--` ends
+the control segment. After it or the first content token, every token is user
+content. An unknown or duplicate `--*` inside the leading segment returns usage
+and performs no scout, question, tool call, write, or workflow action.
+
+Parsing identifies controls but does not apply them. Route Direct first, then
+apply controls only to requests that remain in Brainstorm. `--deep` may raise
+non-direct analysis depth but never lower a gate; `--visual` changes presentation
+only; and no control grants persistence, approval, dispatch, or implementation
+authority. Use `-- --dry-run` when literal flag-like content leads the prompt.
+
 ## Front-door routing — before scout or questions
 
 Classify intent first. This routing never waives safety or permission rules.
@@ -47,6 +61,28 @@ Classify intent first. This routing never waives safety or permission rules.
    invoke another workflow without a new explicit request.
 5. **Feature or documentation delivery:** continue through the design workflow.
 
+## Adaptive analysis depth
+
+For every non-direct request, choose the smallest adequate depth from current
+evidence and material risk:
+
+- **Standard:** bounded single-surface work with no material risk signal.
+- **Deep:** critical safety/security risk; public compatibility or data migration;
+  cross-service state or concurrency; costly or irreversible rollback; or
+  unresolved feasibility at a material boundary.
+- With no Deep signal, use Standard. `--deep` raises Standard to Deep. If three
+  or more subsystems are independently deliverable, split them instead of using
+  Deep as a monolithic substitute.
+
+Deep is selective, not a checklist. Apply a lens only when its trigger is
+present and otherwise record `skipped: <reason>`: feasibility for an unresolved
+material boundary; stakeholders for externally affected roles; system boundaries
+for cross-component state; failure isolation for partial or cascading failure
+across boundaries; reversibility and recovery for costly or irreversible failure;
+operability for runtime ownership; migration/rollback for data or public
+compatibility; testability for a material proof gap; and second-order effects
+for downstream behavior or incentives.
+
 ## Contract and evidence
 
 For feature/docs delivery and every bug/failure, resolve four user-owned fields:
@@ -66,6 +102,12 @@ designing. Add a diagram only when it clarifies a material choice or flow.
 Derive technical touchpoints from repository evidence. Ask the user about a
 touchpoint only when its ownership or scope boundary is a product decision that
 cannot be discovered. Keep intent separate from current-state evidence.
+
+On every route, keep feasibility (`confirmed | plausible | unknown |
+infeasible`), confidence (`high | medium | low`), and disposition (`chosen |
+rejected | deferred`) separate and cite evidence or basis. Missing evidence
+forces feasibility `unknown` and confidence `low`. A numeric estimate requires
+range, unit, basis, evidence, and assumptions; otherwise report `unknown`.
 
 If the request spans three or more independently deliverable subsystems, split
 it. A subsystem is independent only when its outcome, boundary, and verification
@@ -103,6 +145,15 @@ deeper pressure-testing. Use researcher only for current external facts the
 repository cannot establish. The controller remains responsible for questions,
 approval, persistence, and handoff.
 
+`--visual` may present inline Mermaid or ASCII for any non-direct analysis and
+falls back to equivalent text when rendering is unavailable. Durable or external
+rendering requires explicit user authority before invocation. `--advice` invokes
+`brainstormer` only after the material-choice gate; if advice is unavailable or
+fails, label it unavailable and continue with controller analysis. Before an
+external visual tool or adviser handoff, minimize context and redact secrets,
+credentials, private keys, access tokens, and unnecessary PII. Neither overlay
+writes, approves, persists, dispatches, or completes work.
+
 ## Delivery design and approval
 
 For feature or documentation delivery:
@@ -133,9 +184,15 @@ satisfy this skill. Before writing, redact live secrets, credentials, private
 keys, access tokens, and unnecessary PII; preserve exact approved meaning with a
 safe placeholder and ownership reference instead of copying the sensitive value.
 
-A durable summary contains the four contract fields, discovered touchpoints,
-options actually evaluated, chosen direction, risks, validation, decision
-register, and unresolved questions.
+The default handoff stays in chat Markdown. Use these exact headings:
+`Target and evidence freshness`, `Outcome`, `Constraints`, `Non-goals`,
+`Acceptance`, `Touchpoints`, `Direction and alternatives`, `Relevant impacts
+and failure behavior`, `Rollout and recovery`, `Proof mapping`, `Decision
+register`, `Assumptions`, and `Open questions`. The first section records target
+identity, current source revision and worktree state or `[UNVERIFIED]`, an
+evidence-as-of value, and what change invalidates the brief. Durable file output
+requires explicit authority and creates no readiness, approval, proof, or
+execution state.
 
 - Feature/docs delivery: provide the approved summary and ask the user to invoke
   `hapo:specs` explicitly in a new request.

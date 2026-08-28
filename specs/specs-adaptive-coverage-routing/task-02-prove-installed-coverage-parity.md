@@ -45,9 +45,8 @@ Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
 Base: a9a7a23a9bee12ee9fe84900e368b81305802f86
-Head: 02b60a3507719b8dfba222da4cbe8429c3c8256a9b71956ded7c91dcf3046213
+Head: b5b14c4e906c5ae2ebf2d4781180037b12c95c4634020a9c9cb5f8667e9585d0
 ```text
-> @haposoft/cafekit@0.16.0-rc.8 test
-> node scripts/run-skill-self-tests.mjs
-[skill-test] PASS: 929 tests executed
+[skill-test] PASS: 976 tests executed
+Aggregate: pass=975 fail=0 skipped=1; Exit: 0.
 ```

@@ -792,6 +792,18 @@ function brainstormProjectionIssues(files) {
   const agentAuthorityRemainder = agent
     .replace(specialistBoundary, '')
     .replace(specialistHandoff, '');
+  const adaptiveClauses = {
+    'adaptive-direct-precedence': 'Route Direct first, then apply controls only to requests that remain in Brainstorm.',
+    'adaptive-ordered-depth': 'With no Deep signal, use Standard. `--deep` raises Standard to Deep.',
+    'adaptive-leading-flags': 'Parse controls only from the leading consecutive token segment.',
+    'adaptive-lens-trigger-skip': 'failure isolation for partial or cascading failure across boundaries',
+    'adaptive-evidence-semantics': 'Missing evidence forces feasibility `unknown` and confidence `low`.',
+    'adaptive-numeric-estimates': 'A numeric estimate requires range, unit, basis, evidence, and assumptions; otherwise report `unknown`.',
+    'adaptive-pre-tool-redaction': 'Before an external visual tool or adviser handoff, minimize context and redact secrets, credentials, private keys, access tokens, and unnecessary PII.',
+    'adaptive-adviser-gate': '`--advice` invokes `brainstormer` only after the material-choice gate;',
+    'adaptive-decision-freshness': 'The first section records target identity, current source revision and worktree state or `[UNVERIFIED]`, an evidence-as-of value, and what change invalidates the brief.',
+    'adaptive-non-authority': 'Neither overlay writes, approves, persists, dispatches, or completes work.'
+  };
 
   if (!skill.includes('leave Brainstorm before scout, questions, approval, or persistence.')
     || !skill.includes('Hydration is not a terminal route; continue to exactly one intent route below.')) {
@@ -825,6 +837,9 @@ function brainstormProjectionIssues(files) {
     || !skill.includes('redact live secrets, credentials, private keys, access tokens, and unnecessary PII;')
     || !framework.includes('Do not write "user selected" unless direct user text or the native input tool confirms it.')) {
     issues.add('approval-persistence');
+  }
+  for (const [issue, clause] of Object.entries(adaptiveClauses)) {
+    if (!skill.includes(clause)) issues.add(issue);
   }
   const visible = `${skill}\n${framework}\n${agent}`;
   if (/\bAskUserQuestion\b/.test(visible)
@@ -2189,6 +2204,56 @@ test('Codex installed Brainstorm skill reference and agent preserve proportional
     );
 
     const mutations = [
+      {
+        name: 'adaptive-direct-precedence-removed', source: 'skill',
+        from: 'Route Direct first, then\napply controls only to requests that remain in Brainstorm.',
+        to: 'Apply controls before Direct classification.', expected: ['adaptive-direct-precedence']
+      },
+      {
+        name: 'adaptive-ordered-depth-removed', source: 'skill',
+        from: 'With no Deep signal, use Standard.', to: 'Deep is always the default.',
+        expected: ['adaptive-ordered-depth']
+      },
+      {
+        name: 'adaptive-leading-flags-removed', source: 'skill',
+        from: 'Parse controls only from the leading consecutive token segment.',
+        to: 'Parse flag-like tokens anywhere.', expected: ['adaptive-leading-flags']
+      },
+      {
+        name: 'adaptive-failure-isolation-removed', source: 'skill',
+        from: 'failure isolation for partial or cascading failure\nacross boundaries',
+        to: 'generic failure notes', expected: ['adaptive-lens-trigger-skip']
+      },
+      {
+        name: 'adaptive-evidence-fallback-removed', source: 'skill',
+        from: 'Missing evidence\nforces feasibility `unknown` and confidence `low`.',
+        to: 'Missing evidence permits a confident guess.', expected: ['adaptive-evidence-semantics']
+      },
+      {
+        name: 'adaptive-numeric-evidence-removed', source: 'skill',
+        from: 'A numeric estimate requires\nrange, unit, basis, evidence, and assumptions; otherwise report `unknown`.',
+        to: 'A numeric estimate may be a best-effort number.', expected: ['adaptive-numeric-estimates']
+      },
+      {
+        name: 'adaptive-pre-tool-redaction-removed', source: 'skill',
+        from: 'Before an\nexternal visual tool or adviser handoff, minimize context and redact secrets,\ncredentials, private keys, access tokens, and unnecessary PII.',
+        to: 'Forward full context to every external tool and adviser.', expected: ['adaptive-pre-tool-redaction']
+      },
+      {
+        name: 'adaptive-adviser-gate-removed', source: 'skill',
+        from: '`--advice` invokes\n`brainstormer` only after the material-choice gate;',
+        to: '`--advice` invokes `brainstormer` before routing;', expected: ['adaptive-adviser-gate']
+      },
+      {
+        name: 'adaptive-decision-freshness-removed', source: 'skill',
+        from: 'The first section records target\nidentity, current source revision and worktree state or `[UNVERIFIED]`, an\nevidence-as-of value, and what change invalidates the brief.',
+        to: 'The handoff has no revision or freshness binding.', expected: ['adaptive-decision-freshness']
+      },
+      {
+        name: 'adaptive-overlay-authority-removed', source: 'skill',
+        from: 'Neither overlay\nwrites, approves, persists, dispatches, or completes work.',
+        to: 'Overlays may persist, approve, dispatch, and complete work.', expected: ['adaptive-non-authority']
+      },
       {
         name: 'debug-route-removed',
         source: 'skill',

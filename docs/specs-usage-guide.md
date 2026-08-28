@@ -26,6 +26,24 @@ Risk floor tối thiểu:
   integration, hoặc installed/runtime behavior.
 - `routine`: chỉ khi không có signal `critical` hay `elevated`.
 
+## Brainstorm thích ứng
+
+Brainstorm mặc định giữ proportional: phân loại Direct trước mọi analysis
+overlay, sau đó yêu cầu non-direct mới chọn độ sâu Standard hoặc Deep nhỏ nhất
+đủ dùng. Chỉ parse control trong leading control segment. Ba exact flag
+single-use `--deep`, `--visual`, `--advice` có thể kết hợp theo mọi thứ tự;
+unknown hoặc duplicate leading `--*` phải dừng với usage và không thực hiện hành
+động. `--` kết thúc control; dùng `/hapo:brainstorm -- --dry-run` khi nội dung
+literal bắt đầu bằng flag.
+
+`--deep` chỉ tăng độ sâu cho non-direct analysis. `--visual` chỉ đổi cách trình
+bày và fallback về text. `--advice` chỉ gọi brainstormer tư vấn sau khi đã có
+material choice. Context gửi external visual tool hoặc adviser phải được minimize
+và redact trước; hai overlay không được write, approve, persist, dispatch hay
+complete công việc. Output mặc định ở chat; ghi file cần explicit user authority.
+Output Brainstorm không phải live proof, cũng không tạo approval hoặc execution
+authority cho Specs/Develop.
+
 ## Ba cổng quyết định
 
 | Cổng | Khi nào | Quyết định của người dùng |

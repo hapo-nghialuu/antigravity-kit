@@ -1174,11 +1174,64 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   touchpoints: "Technical touchpoints are evidence, not a fifth user-owned field.",
   riskSurfaces: "Raise only risks that can change the contract or approval path",
   decisionTruth: "Do not write \"user selected\" unless direct user text or the native input tool confirms it.",
-  specialistGate: "Proceed only when at least two viable architectural paths have materially different consequences.",
+  specialistGate: "Proceed to comparative analysis only when at least two viable architectural paths have materially different consequences.",
   specialistSingle: "If one path is viable, return that conclusion and why alternatives fail the contract; never invent strawmen to fill a quota.",
   specialistBoundary: "Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Hotfix/Develop, or claim approval.",
   specialistHandoff: "Non-bug exploration may end in chat; feature/docs delivery may only prepare a future explicit Specs invocation; bug handoff requires evidenced root cause and the user's explicit fix request.",
+  controlSegment: "Parse controls only from the leading consecutive token segment.",
+  controlGrammar: "Accept `--deep`, `--visual`, and `--advice` in any order, each at most once.",
+  controlTerminator: "`--` ends the control segment.",
+  contentBoundary: "After it or the first content token, every token is user content.",
+  controlReject: "An unknown or duplicate `--*` inside the leading segment returns usage and performs no scout, question, tool call, write, or workflow action.",
+  directBeforeControls: "Route Direct first, then apply controls only to requests that remain in Brainstorm.",
+  depthStandard: "**Standard:** bounded single-surface work with no material risk signal.",
+  depthDeep: "**Deep:** critical safety/security risk; public compatibility or data migration; cross-service state or concurrency; costly or irreversible rollback; or unresolved feasibility at a material boundary.",
+  depthFallback: "With no Deep signal, use Standard. `--deep` raises Standard to Deep.",
+  depthSplit: "If three or more subsystems are independently deliverable, split them instead of using Deep as a monolithic substitute.",
+  lensSkip: "Apply a lens only when its trigger is present and otherwise record `skipped: <reason>`",
+  visualOverlay: "`--visual` may present inline Mermaid or ASCII for any non-direct analysis and falls back to equivalent text when rendering is unavailable.",
+  adviceOverlay: "`--advice` invokes `brainstormer` only after the material-choice gate; if advice is unavailable or fails, label it unavailable and continue with controller analysis.",
+  overlayRedaction: "Before an external visual tool or adviser handoff, minimize context and redact secrets, credentials, private keys, access tokens, and unnecessary PII.",
+  overlayAuthority: "Neither overlay writes, approves, persists, dispatches, or completes work.",
+  feasibilityEnums: "**Feasibility:** `confirmed | plausible | unknown | infeasible`.",
+  confidenceEnums: "**Confidence:** `high | medium | low`.",
+  dispositionEnums: "**Disposition:** `chosen | rejected | deferred`.",
+  evidenceFallback: "Missing evidence forces feasibility `unknown` and confidence `low`",
+  numericEstimate: "A numeric estimate is valid only with range, unit, basis, evidence, and assumptions.",
+  controllerEvidence: "On every route, keep feasibility (`confirmed | plausible | unknown | infeasible`), confidence (`high | medium | low`), and disposition (`chosen | rejected | deferred`) separate and cite evidence or basis.",
+  controllerNumeric: "A numeric estimate requires range, unit, basis, evidence, and assumptions; otherwise report `unknown`.",
+  decisionBrief: "The default handoff stays in chat Markdown.",
+  decisionFreshness: "The first section records target identity, current source revision and worktree state or `[UNVERIFIED]`, an evidence-as-of value, and what change invalidates the brief.",
+  decisionAuthority: "Durable file output requires explicit authority and creates no readiness, approval, proof, or execution state.",
+  adviserRedaction: "Confirm the controller minimized and redacted supplied context.",
+  adviserEvidence: "Keep feasibility (`confirmed | plausible | unknown | infeasible`), confidence (`high | medium | low`), and disposition (`chosen | rejected | deferred`) separate and evidence-backed.",
+  adviserNumeric: "A numeric estimate requires range, unit, basis, evidence, and assumptions; otherwise report `unknown`.",
 };
+
+const BRAINSTORM_DECISION_HEADINGS = [
+  "Target and evidence freshness", "Outcome", "Constraints", "Non-goals",
+  "Acceptance", "Touchpoints", "Direction and alternatives",
+  "Relevant impacts and failure behavior", "Rollout and recovery",
+  "Proof mapping", "Decision register", "Assumptions", "Open questions",
+];
+
+const BRAINSTORM_LENS_TRIGGERS = [
+  "feasibility for an unresolved material boundary",
+  "stakeholders for externally affected roles",
+  "system boundaries for cross-component state",
+  "failure isolation for partial or cascading failure across boundaries",
+  "reversibility and recovery for costly or irreversible failure",
+  "operability for runtime ownership",
+  "migration/rollback for data or public compatibility",
+  "testability for a material proof gap",
+  "second-order effects for downstream behavior or incentives",
+];
+
+const BRAINSTORM_ADAPTIVE_GROUPS = [
+  "direct-precedence", "ordered-depth", "leading-flags", "lens-trigger-skip",
+  "evidence-semantics", "numeric-estimates", "pre-tool-authority-redaction",
+  "adviser-gate-fallback", "decision-brief", "no-persistence-dispatch",
+];
 
 const BRAINSTORM_BASELINE_LINES = {
   skill: 188,
@@ -1220,7 +1273,7 @@ function brainstormIsLocallyNegated(content, index) {
     clausePrefix.lastIndexOf("—"),
   );
   const localPrefix = clausePrefix.slice(localBoundary + 1).trim().toLowerCase();
-  const directNegation = /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*\s*$/;
+  const directNegation = /\b(?:never|do not|does not|must not|may not|should not|will not|cannot|can't|is not|are not|is forbidden to|are forbidden to|is not (?:permitted|allowed) to|are not (?:permitted|allowed) to|not (?:permitted|allowed) to)(?:\s+(?:ever|directly|automatically|implicitly|explicitly|immediately|intentionally|silently))*(?:\s+(?:be|to be))?\s*$/;
   if (directNegation.test(localPrefix)) return true;
   const fullPrefix = clausePrefix.toLowerCase();
   if (/\b(?:but|yet|however|except|instead)\b[^.!?;\n]*$/.test(fullPrefix)) return false;
@@ -1308,6 +1361,88 @@ function brainstormHasDirectCeremony(content) {
   return false;
 }
 
+function brainstormClauseAround(value, index) {
+  const start = Math.max(value.lastIndexOf(".", index - 1), value.lastIndexOf(";", index - 1), value.lastIndexOf("\n", index - 1)) + 1;
+  const endings = [value.indexOf(".", index), value.indexOf(";", index), value.indexOf("\n", index)].filter((entry) => entry >= 0);
+  const end = endings.length > 0 ? Math.min(...endings) : value.length;
+  return value.slice(start, end);
+}
+
+function brainstormHasControlBeforeDirect(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(/\b(?:appl(?:y|ies|ied|ying)|honor(?:s|ed|ing)?|pars(?:e|es|ed|ing)|process(?:es|ed|ing)?|run(?:s|ning)?|ran|activat(?:e|es|ed|ing)|execut(?:e|es|ed|ing))\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    if (/(?:--deep|--visual|--advice|controls?|overlays?)/i.test(clause)
+      && (/(?:before|prior to|ahead of).{0,30}Direct/i.test(clause)
+        || /Direct.{0,80}(?:after|until after).{0,80}(?:--deep|--visual|--advice|controls?|overlays?|appl|honor|pars|process|run|activat|execut)/i.test(clause))
+      && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasSensitiveAdviserTransfer(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(/\b(?:forward(?:s|ed|ing)?|shar(?:e|es|ed|ing)|send(?:s|ing)?|sent|cop(?:y|ies|ied|ying)|transmit(?:s|ted|ting)?|provid(?:e|es|ed|ing)|disclos(?:e|es|ed|ing))\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    if (/(?:advisers?|advisors?|brainstormer|specialist)/i.test(clause)
+      && /(?:credentials?|secrets?|tokens?|private keys?|PII)/i.test(clause)
+      && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasDeepWithoutSignal(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(/\b(?:default|use|uses|used|using|selects?|selected|chooses?|chosen|allows?|allowed)\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    const action = match[0].toLowerCase();
+    const actionTargetsDeep = action === "default"
+      ? /\bDeep\b.{0,30}\bdefault\b/i.test(clause)
+      : new RegExp(`\\b${match[0]}\\b.{0,30}\\bDeep\\b`, "i").test(clause);
+    if (actionTargetsDeep
+      && /(?:no|without|absent|even when no).{0,40}(?:material risk|Deep)?\s*signal/i.test(clause)
+      && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasOptionalEvidence(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(/\boptional\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    if (/\bevidence\b/i.test(clause) && /\b(?:feasibility|confidence|confirmed|plausible)\b/i.test(clause)
+      && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasStaleDecisionPermission(content) {
+  const value = normalizeMarkdownWhitespace(content);
+  for (const match of value.matchAll(/\binvalidat(?:e|es|ed|ing)\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    if (/\b(?:revision|HEAD|worktree|evidence)\b/i.test(clause)
+      && /\b(?:brief|handoff|design)\b/i.test(clause)
+      && brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  for (const match of value.matchAll(/\b(?:continue|continues|continued|using|use|uses|rely|relies|relied|remain|remains|stays?|valid|current)\b/gi)) {
+    const clause = brainstormClauseAround(value, match.index);
+    if (/\b(?:brief|handoff|design)\b/i.test(clause)
+      && /(?:after|despite).{0,40}\b(?:revision|HEAD|worktree|evidence)\b.{0,20}\bchanges?\b/i.test(clause)
+      && !brainstormIsLocallyNegated(value, match.index)) return true;
+  }
+  return false;
+}
+
+function brainstormHasUnsafeEvidencePromotion(content) {
+  return brainstormHasAffirmativePhrase(
+    content,
+    /\b(?:classify|mark|report|treat|set|allow)\b.{0,100}\b(?:confirmed|plausible|high confidence)\b.{0,100}\b(?:without|missing|absent)\b.{0,30}\bevidence\b/gi,
+  ) || brainstormHasAffirmativePhrase(
+    content,
+    /\b(?:missing|absent)\b.{0,30}\bevidence\b.{0,100}\b(?:may|can|permits?|allows?)\b.{0,100}\b(?:confirmed|plausible|high confidence)\b/gi,
+  );
+}
+
 function brainstormContractIssues(input) {
   const expectedKeys = ["agent", "framework", "skill"];
   const keys = input && typeof input === "object" && !Array.isArray(input)
@@ -1331,10 +1466,14 @@ function brainstormContractIssues(input) {
   const options = markdownSectionUnderHeading(semantic.skill, "Options and specialist use");
   const delivery = markdownSectionUnderHeading(semantic.skill, "Delivery design and approval");
   const persistence = markdownSectionUnderHeading(semantic.skill, "Persistence and handoff");
+  const controls = markdownSectionUnderHeading(semantic.skill, "Control flags");
+  const adaptiveDepth = markdownSectionUnderHeading(semantic.skill, "Adaptive analysis depth");
   const frameworkContract = markdownSectionUnderHeading(semantic.framework, "Contract gaps and accepted decisions");
   const risk = markdownSectionUnderHeading(semantic.framework, "Risk surfaces");
+  const evidenceCalibration = markdownSectionUnderHeading(semantic.framework, "Evidence calibration");
   const decisionRegister = markdownSectionUnderHeading(semantic.framework, "Decision Register");
   const agentEntry = markdownSectionUnderHeading(semantic.agent, "Entry gate");
+  const agentProcess = markdownSectionUnderHeading(semantic.agent, "Advisory process");
   const normalizedFrontDoor = normalizeMarkdownWhitespace(frontDoor);
   const normalizedOptions = normalizeMarkdownWhitespace(options);
   const normalizedDelivery = normalizeMarkdownWhitespace(delivery);
@@ -1478,6 +1617,56 @@ function brainstormContractIssues(input) {
     issues.add("specialist-boundary");
   }
 
+  const normalizedControls = normalizeMarkdownWhitespace(controls);
+  if (!["controlSegment", "controlGrammar", "controlTerminator", "contentBoundary", "controlReject", "directBeforeControls"]
+    .every((key) => normalizedControls.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES[key])))
+    || /(?:unknown|duplicate).{0,80}(?:continue|ignore|treat as content)/i.test(normalizedControls)
+    || /(?:after the first content token|after `--`).{0,80}(?:parse|apply).{0,30}(?:control|flag)/i.test(normalizedControls)
+    || brainstormHasControlBeforeDirect(normalized.skill)) {
+    issues.add("adaptive-flags");
+  }
+
+  const normalizedDepth = normalizeMarkdownWhitespace(adaptiveDepth);
+  if (!["depthStandard", "depthDeep", "depthFallback", "depthSplit", "lensSkip"]
+    .every((key) => normalizedDepth.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES[key])))
+    || BRAINSTORM_LENS_TRIGGERS.some((trigger) => !normalizedDepth.includes(normalizeMarkdownWhitespace(trigger)))
+    || brainstormHasDeepWithoutSignal(normalizedDepth)) {
+    issues.add("adaptive-depth");
+  }
+
+  const normalizedCalibration = normalizeMarkdownWhitespace(evidenceCalibration);
+  if (!["feasibilityEnums", "confidenceEnums", "dispositionEnums", "evidenceFallback", "numericEstimate"]
+    .every((key) => normalizedCalibration.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES[key])))
+    || !normalized.skill.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.controllerEvidence))
+    || !normalized.skill.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.controllerNumeric))
+    || brainstormHasUnsafeEvidencePromotion(`${normalized.skill} ${normalized.framework}`)
+    || brainstormHasOptionalEvidence(`${normalized.skill} ${normalized.framework}`)) {
+    issues.add("evidence-calibration");
+  }
+
+  if (!["visualOverlay", "adviceOverlay", "overlayRedaction", "overlayAuthority"]
+    .every((key) => normalizedOptions.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES[key])))
+    || /(?:overlay|visual|advice).{0,100}(?:automatically|without authority).{0,50}(?:write|persist|dispatch|approve)/i.test(normalizedOptions)
+    || brainstormHasSensitiveAdviserTransfer(normalized.skill)) {
+    issues.add("overlay-boundary");
+  }
+
+  if (!["decisionBrief", "decisionFreshness", "decisionAuthority"]
+    .every((key) => normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES[key])))
+    || BRAINSTORM_DECISION_HEADINGS.some((heading) => !normalizedPersistence.includes(normalizeMarkdownWhitespace(`\`${heading}\``)))
+    || brainstormHasStaleDecisionPermission(normalizedPersistence)) {
+    issues.add("decision-brief");
+  }
+
+  const normalizedAgentProcess = normalizeMarkdownWhitespace(agentProcess);
+  if (!normalizedAgentProcess.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.adviserRedaction))
+    || !normalizedAgentProcess.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.adviserEvidence))
+    || !normalizedAgentProcess.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.adviserNumeric))
+    || !normalizedAgentProcess.includes("`skipped: <reason>`")
+    || !/^tools: Glob, Grep, Read, WebFetch, WebSearch$/m.test(semantic.agent)) {
+    issues.add("adviser-adaptive");
+  }
+
   const lines = Object.values(input).reduce((sum, value) => {
     const parts = value.split("\n");
     return sum + (value.endsWith("\n") ? parts.length - 1 : parts.length);
@@ -1522,6 +1711,11 @@ async function runBrainstormContractTests() {
     [BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} After final approval, save the draft.`],
     [BRAINSTORM_CONTRACT_CLAUSES.noDevelop, `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} The controller is forbidden to invoke Specs.`],
     [BRAINSTORM_CONTRACT_CLAUSES.finalApproval, `${BRAINSTORM_CONTRACT_CLAUSES.finalApproval} Avoid duplicate final approval.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, `${BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls} Never honor --visual prior to Direct classification.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, `${BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls} Controls are not permitted to be applied before Direct routing.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction, `${BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction} Internal advisers must never share credentials.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction, `${BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction} Credentials must not be forwarded to advisers. Tokens are not permitted to be transmitted to the specialist.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness, `${BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness} A brief is never valid after a revision change.`],
   ];
   const safelyStrengthened = {
     ...baseline,
@@ -1541,6 +1735,41 @@ async function runBrainstormContractTests() {
   }
 
   const mutations = [
+    { name: "controls-before-direct", group: "direct-precedence", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, to: "Apply controls before routing Direct.", expected: ["adaptive-flags"] },
+    { name: "deep-additive-before-direct", group: "direct-precedence", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, to: `${BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls} When --deep is present, apply it before Direct.`, expected: ["adaptive-flags"] },
+    { name: "visual-additive-before-direct", group: "direct-precedence", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, to: `${BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls} When --visual is present, honor it prior to Direct classification.`, expected: ["adaptive-flags"] },
+    { name: "direct-deferred-until-control", group: "direct-precedence", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls, to: `${BRAINSTORM_CONTRACT_CLAUSES.directBeforeControls} Defer Direct classification until after applying --visual.`, expected: ["adaptive-flags"] },
+    { name: "literal-flag-reparsed", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlTerminator, to: "`--` pauses controls, but later `--*` content is parsed again.", expected: ["adaptive-flags"] },
+    { name: "content-token-reparsed", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.contentBoundary, to: "After the first content token, parse later `--*` tokens as controls.", expected: ["adaptive-flags"] },
+    { name: "flag-order-forced", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlGrammar, to: "Accept `--deep`, then `--visual`, then `--advice` only in that order.", expected: ["adaptive-flags"] },
+    { name: "flag-combination-forbidden", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlGrammar, to: "Accept exactly one of `--deep`, `--visual`, or `--advice`.", expected: ["adaptive-flags"] },
+    { name: "duplicate-flag-ignored", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlReject, to: "Ignore duplicate controls and continue.", expected: ["adaptive-flags"] },
+    { name: "unknown-flag-becomes-content", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlReject, to: "Treat unknown `--*` controls as content and continue.", expected: ["adaptive-flags"] },
+    { name: "flag-equals-syntax-accepted", group: "leading-flags", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controlGrammar, to: "Accept `--deep=true`, `--visual=true`, and `--advice=true`.", expected: ["adaptive-flags"] },
+    { name: "deep-risk-truncated", group: "ordered-depth", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.depthDeep, to: "**Deep:** use only for critical security risk.", expected: ["adaptive-depth"] },
+    { name: "deep-without-signal", group: "ordered-depth", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.depthFallback, to: `${BRAINSTORM_CONTRACT_CLAUSES.depthFallback} Without a Deep signal, select Deep when useful.`, expected: ["adaptive-depth"] },
+    { name: "deep-default-without-risk", group: "ordered-depth", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.depthFallback, to: `${BRAINSTORM_CONTRACT_CLAUSES.depthFallback} Deep is the default even when no material risk signal exists.`, expected: ["adaptive-depth"] },
+    { name: "deep-lenses-forced", group: "lens-trigger-skip", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.lensSkip, to: "Apply every lens whether or not its trigger is present", expected: ["adaptive-depth"] },
+    ...BRAINSTORM_LENS_TRIGGERS.map((trigger, index) => ({ name: `lens-trigger-${index + 1}-removed`, group: "lens-trigger-skip", source: "skill", from: trigger, to: `lens-${index + 1} for any request`, expected: ["adaptive-depth"] })),
+    { name: "missing-evidence-high-confidence", group: "evidence-semantics", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.evidenceFallback, to: "Missing evidence permits feasibility `plausible` and confidence `high`", expected: ["evidence-calibration"] },
+    { name: "missing-evidence-additive-promotion", group: "evidence-semantics", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.evidenceFallback, to: `${BRAINSTORM_CONTRACT_CLAUSES.evidenceFallback}. Missing evidence may still be classified as confirmed with high confidence.`, expected: ["evidence-calibration"] },
+    { name: "evidence-optional-for-plausible", group: "evidence-semantics", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.evidenceFallback, to: `${BRAINSTORM_CONTRACT_CLAUSES.evidenceFallback}. Evidence is optional when feasibility is plausible.`, expected: ["evidence-calibration"] },
+    { name: "controller-evidence-route-removed", group: "evidence-semantics", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controllerEvidence, to: "Only question-driven routes calibrate evidence.", expected: ["evidence-calibration"] },
+    { name: "adviser-evidence-collapsed", group: "evidence-semantics", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.adviserEvidence, to: "Return one combined confidence verdict without evidence.", expected: ["adviser-adaptive"] },
+    { name: "numeric-estimate-without-basis", group: "numeric-estimates", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.numericEstimate, to: "A numeric estimate is valid without a range, basis, evidence, or assumptions.", expected: ["evidence-calibration"] },
+    { name: "controller-numeric-rule-removed", group: "numeric-estimates", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.controllerNumeric, to: "The controller may provide a best-effort number.", expected: ["evidence-calibration"] },
+    { name: "adviser-numeric-rule-removed", group: "numeric-estimates", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.adviserNumeric, to: "The adviser may provide a best-effort number.", expected: ["adviser-adaptive"] },
+    { name: "advice-forwards-sensitive-input", group: "pre-tool-authority-redaction", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction, to: "Before an adviser handoff, forward credentials and unnecessary PII verbatim.", expected: ["overlay-boundary"] },
+    { name: "trusted-adviser-redaction-bypass", group: "pre-tool-authority-redaction", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction, to: `${BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction} For trusted advisers, credentials may be forwarded.`, expected: ["overlay-boundary"] },
+    { name: "approved-adviser-token-transfer", group: "pre-tool-authority-redaction", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction, to: `${BRAINSTORM_CONTRACT_CLAUSES.overlayRedaction} Approved advisers are permitted to transmit access tokens.`, expected: ["overlay-boundary"] },
+    { name: "adviser-redaction-removed", group: "pre-tool-authority-redaction", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.adviserRedaction, to: "Analyze all supplied context without checking redaction.", expected: ["adviser-adaptive"] },
+    { name: "advice-bypasses-material-gate", group: "adviser-gate-fallback", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.adviceOverlay, to: "`--advice` invokes `brainstormer` before identifying a material choice.", expected: ["overlay-boundary"] },
+    { name: "advice-failure-stops-controller", group: "adviser-gate-fallback", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.adviceOverlay, to: "`--advice` stops controller analysis when the adviser is unavailable.", expected: ["overlay-boundary"] },
+    { name: "decision-brief-stale", group: "decision-brief", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness, to: "The first section may omit revision, freshness, and invalidation.", expected: ["decision-brief"] },
+    { name: "decision-brief-additive-stale", group: "decision-brief", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness, to: `${BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness} A revision change does not invalidate an existing brief.`, expected: ["decision-brief"] },
+    { name: "decision-brief-after-head-change", group: "decision-brief", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness, to: `${BRAINSTORM_CONTRACT_CLAUSES.decisionFreshness} Continue using the brief after HEAD changes.`, expected: ["decision-brief"] },
+    { name: "visual-auto-persists", group: "no-persistence-dispatch", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.visualOverlay, to: "`--visual` automatically persists a diagram without authority.", expected: ["overlay-boundary"] },
+    { name: "decision-brief-creates-authority", group: "no-persistence-dispatch", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.decisionAuthority, to: "Durable output creates readiness and execution state.", expected: ["decision-brief"] },
     { name: "direct-after-scout", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.direct, to: "scout first, then leave Brainstorm.", expected: ["front-door-routing"] },
     {
       name: "direct-safe-clause-moved-outside-route",
@@ -1644,8 +1873,8 @@ async function runBrainstormContractTests() {
     { name: "specialist-mixed-polarity-workflow", source: "agent", from: "## Output", to: "Do not invoke Specs, but run Develop.\n\n## Output", expected: ["specialist-boundary"] },
     { name: "specialist-mixed-polarity-delegate", source: "agent", from: "## Output", to: "Do not delegate work, but delegate tasks.\n\n## Output", expected: ["specialist-boundary"] },
     { name: "specialist-handoff-spelling-exception", source: "agent", from: "## Output", to: "The specialist may handoff to Specs.\n\n## Output", expected: ["specialist-boundary"] },
-    { name: "specialist-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch, TaskUpdate", expected: ["specialist-boundary"] },
-    { name: "specialist-write-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, Bash, WebFetch, WebSearch, Write", expected: ["specialist-boundary"] },
+    { name: "specialist-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, WebFetch, WebSearch, TaskUpdate", expected: ["specialist-boundary", "adviser-adaptive"] },
+    { name: "specialist-write-tool-authority", source: "agent", from: "tools: Glob, Grep, Read, WebFetch, WebSearch", to: "tools: Glob, Grep, Read, WebFetch, WebSearch, Write", expected: ["specialist-boundary", "adviser-adaptive"] },
     { name: "bundle-growth", source: "framework", from: "## Final self-check", to: `${"\n".repeat(BRAINSTORM_BUNDLE_LIMIT)}## Final self-check`, expected: ["context-budget"] },
   ];
 
@@ -1676,9 +1905,22 @@ async function runBrainstormContractTests() {
   const deltas = lineRows
     .map(([relativePath, count, delta]) => `${relativePath}=${count} (${delta >= 0 ? "+" : ""}${delta})`)
     .join(", ");
+  const adaptiveMutations = mutations.filter(({ group }) => group);
+  const actualAdaptiveGroups = [...new Set(adaptiveMutations.map(({ group }) => group))].sort();
+  const expectedAdaptiveGroups = [...BRAINSTORM_ADAPTIVE_GROUPS].sort();
+  if (JSON.stringify(actualAdaptiveGroups) !== JSON.stringify(expectedAdaptiveGroups)) {
+    fail(`adaptive mutation groups expected ${JSON.stringify(expectedAdaptiveGroups)} but returned ${JSON.stringify(actualAdaptiveGroups)}`);
+  }
+  for (const group of BRAINSTORM_ADAPTIVE_GROUPS) {
+    if (!adaptiveMutations.some((mutation) => mutation.group === group)) fail(`adaptive mutation group ${group} is empty`);
+  }
+  const proportionalMutationCount = mutations.length - adaptiveMutations.length;
   console.log(`✔ hapo:brainstorm proportional routing contract is complete and bounded; ${deltas}; total ${total}/${BRAINSTORM_BUNDLE_LIMIT}`);
-  console.log(`✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=${mutations.length}`);
-  return mutations.length + 2;
+  console.log(`✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=${proportionalMutationCount}`);
+  const adaptiveMutationCount = adaptiveMutations.length;
+  console.log(`✔ hapo:brainstorm adaptive-depth contract is complete and bounded; groups=${actualAdaptiveGroups.length}`);
+  console.log(`✔ hapo:brainstorm adaptive-depth checker rejects semantic weakenings; count=${adaptiveMutationCount}`);
+  return mutations.length + 4;
 }
 
 function outsideLegacySections(content) {

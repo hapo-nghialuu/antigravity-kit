@@ -152,6 +152,23 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
 
+### Adaptive Brainstorm controls
+
+Brainstorm stays proportional by default: Direct classification runs before any
+analysis overlay, then non-direct work selects the smallest adequate Standard or
+Deep depth. Controls are parsed only from the leading control segment. Combine
+the single-use exact flags `--deep`, `--visual`, and `--advice` in any order;
+an unknown or duplicate leading `--*` stops with usage and no action. `--` ends
+controls, so literal flag content can start with `/hapo:brainstorm -- --dry-run`.
+
+`--deep` raises non-direct analysis depth only. `--visual` changes presentation
+and falls back to text. `--advice` uses the advisory brainstormer only after a
+material choice exists. External visual/adviser context is minimized and
+redacted first; neither overlay writes, approves, persists, dispatches, or
+completes work. Chat is the default output. A durable file needs explicit user
+authority, and no Brainstorm output is live proof or Specs/Develop approval or
+execution authority.
+
 Common companion skills bundled in this package include `inspect`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
 
 CafeKit uses rule-based skill routing guidance instead of an automatic prompt-scoring hook. See `.claude/rules/skill-workflow-routing.md`, `.claude/rules/skill-domain-routing.md`, or run:

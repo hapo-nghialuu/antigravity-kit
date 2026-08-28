@@ -115,6 +115,21 @@ Raise only risks that can change the contract or approval path:
 Explain the verified risk and viable consequences before asking. Do not create a
 ceremonial risk matrix.
 
+## Evidence calibration
+
+Keep these independent in every recommendation:
+
+- **Feasibility:** `confirmed | plausible | unknown | infeasible`.
+- **Confidence:** `high | medium | low`.
+- **Disposition:** `chosen | rejected | deferred`.
+
+Every value cites its repository/current-research evidence or stated basis.
+Missing evidence forces feasibility `unknown` and confidence `low`; it never
+becomes a confident guess. A numeric estimate is valid only with range, unit,
+basis, evidence, and assumptions. Otherwise write `unknown`, not a factual
+number. Record why an inapplicable Deep lens was skipped so selective analysis
+is auditable without forcing ceremony.
+
 ## Question format
 
 Use the runtime's native structured user-input tool when available.

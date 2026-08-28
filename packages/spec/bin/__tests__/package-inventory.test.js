@@ -157,6 +157,56 @@ const BRAINSTORM_SOURCE_RELATIVES = {
   framework: 'src/claude/skills/brainstorm/references/question-framework.md',
   agent: 'src/claude/agents/brainstormer.md',
 };
+const REQUIRED_ADAPTIVE_BRAINSTORM_GROUPS = [
+  'adviser-gate-fallback',
+  'decision-brief',
+  'direct-precedence',
+  'evidence-semantics',
+  'leading-flags',
+  'lens-trigger-skip',
+  'no-persistence-dispatch',
+  'numeric-estimates',
+  'ordered-depth',
+  'pre-tool-authority-redaction',
+];
+const ADAPTIVE_BRAINSTORM_INSTALLED_RULES = [
+  { group: 'direct-precedence', mutations: [
+    { from: 'Route Direct first, then\napply controls only to requests that remain in Brainstorm.', to: 'Apply controls before Direct classification.', clause: 'Route Direct first, then apply controls only to requests that remain in Brainstorm.' },
+  ] },
+  { group: 'ordered-depth', mutations: [
+    { from: 'With no Deep signal, use Standard.', to: 'Deep is always the default.', clause: 'With no Deep signal, use Standard. `--deep` raises Standard to Deep.' },
+  ] },
+  { group: 'leading-flags', mutations: [
+    { from: 'Parse controls only from the leading consecutive token segment.', to: 'Parse flag-like tokens anywhere.', clause: 'Parse controls only from the leading consecutive token segment.' },
+    { from: '`--deep`, `--visual`, and `--advice` in any order, each at most once.', to: '`--deep`, `--visual`, and `--advice` may repeat.', clause: '`--deep`, `--visual`, and `--advice` in any order, each at most once.' },
+    { from: '`--` ends\nthe control segment.', to: '`--` is treated as another control.', clause: '`--` ends the control segment.' },
+    { from: 'An unknown or duplicate `--*` inside the leading segment returns usage', to: 'An unknown or duplicate `--*` is ignored', clause: 'An unknown or duplicate `--*` inside the leading segment returns usage and performs no scout, question, tool call, write, or workflow action.' },
+  ] },
+  { group: 'lens-trigger-skip', mutations: [
+    { from: 'failure isolation for partial or cascading failure\nacross boundaries', to: 'generic failure notes', clause: 'failure isolation for partial or cascading failure across boundaries' },
+  ] },
+  { group: 'evidence-semantics', mutations: [
+    { from: 'Missing evidence\nforces feasibility `unknown` and confidence `low`.', to: 'Missing evidence permits a confident guess.', clause: 'Missing evidence forces feasibility `unknown` and confidence `low`.' },
+  ] },
+  { group: 'numeric-estimates', mutations: [
+    { from: 'A numeric estimate requires\nrange, unit, basis, evidence, and assumptions; otherwise report `unknown`.', to: 'A numeric estimate may be a best-effort number.', clause: 'A numeric estimate requires range, unit, basis, evidence, and assumptions; otherwise report `unknown`.' },
+  ] },
+  { group: 'pre-tool-authority-redaction', mutations: [
+    { from: 'Before an\nexternal visual tool or adviser handoff, minimize context and redact secrets,\ncredentials, private keys, access tokens, and unnecessary PII.', to: 'Forward full context to every external tool and adviser.', clause: 'Before an external visual tool or adviser handoff, minimize context and redact secrets, credentials, private keys, access tokens, and unnecessary PII.' },
+    { from: '`--visual` may present inline Mermaid or ASCII for any non-direct analysis and\nfalls back to equivalent text when rendering is unavailable.', to: '`--visual` fails when rendering is unavailable.', clause: '`--visual` may present inline Mermaid or ASCII for any non-direct analysis and falls back to equivalent text when rendering is unavailable.' },
+    { from: 'Durable or external\nrendering requires explicit user authority before invocation.', to: 'Durable or external rendering may run without consent.', clause: 'Durable or external rendering requires explicit user authority before invocation.' },
+  ] },
+  { group: 'adviser-gate-fallback', mutations: [
+    { from: '`--advice` invokes\n`brainstormer` only after the material-choice gate;', to: '`--advice` invokes `brainstormer` before routing;', clause: '`--advice` invokes `brainstormer` only after the material-choice gate;' },
+    { from: 'if advice is unavailable or\nfails, label it unavailable and continue with controller analysis.', to: 'if advice is unavailable, stop the workflow.', clause: 'if advice is unavailable or fails, label it unavailable and continue with controller analysis.' },
+  ] },
+  { group: 'decision-brief', mutations: [
+    { from: 'The first section records target\nidentity, current source revision and worktree state or `[UNVERIFIED]`, an\nevidence-as-of value, and what change invalidates the brief.', to: 'The handoff has no revision or freshness binding.', clause: 'The first section records target identity, current source revision and worktree state or `[UNVERIFIED]`, an evidence-as-of value, and what change invalidates the brief.' },
+  ] },
+  { group: 'no-persistence-dispatch', mutations: [
+    { from: 'Neither overlay\nwrites, approves, persists, dispatches, or completes work.', to: 'Overlays may persist, approve, dispatch, and complete work.', clause: 'Neither overlay writes, approves, persists, dispatches, or completes work.' },
+  ] },
+];
 
 function npmPack(args, cwd) {
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-npm-pack-cache-'));
@@ -585,6 +635,83 @@ function assertPackedBrainstormParity(project, platform) {
       `${platform} packed Brainstorm ${source} must equal its exact production projection`
     );
   }
+}
+
+function packedBrainstormInstalledPaths(project, platform) {
+  return platform === 'codex'
+    ? {
+        skill: path.join(project, '.agents/skills/brainstorm/SKILL.md'),
+        framework: path.join(project, '.agents/skills/brainstorm/references/question-framework.md'),
+        agent: path.join(project, '.codex/agents/brainstormer.toml'),
+      }
+    : {
+        skill: path.join(project, '.claude/skills/brainstorm/SKILL.md'),
+        framework: path.join(project, '.claude/skills/brainstorm/references/question-framework.md'),
+        agent: path.join(project, '.claude/agents/brainstormer.md'),
+      };
+}
+
+function packedAdaptiveBrainstormIssues(project, platform) {
+  const skill = fs.readFileSync(packedBrainstormInstalledPaths(project, platform).skill, 'utf8')
+    .replace(/\s+/g, ' ').trim();
+  return ADAPTIVE_BRAINSTORM_INSTALLED_RULES
+    .filter(({ mutations }) => mutations.some(({ clause }) => !skill.includes(clause)))
+    .map(({ group }) => group)
+    .sort();
+}
+
+function assertPackedAdaptiveBrainstormMutations(project, platform, canonicalBytes) {
+  const installedScope = platform === 'codex'
+    ? path.join(project, '.agents/skills/brainstorm')
+    : path.join(project, '.claude/skills/brainstorm');
+  const target = packedBrainstormInstalledPaths(project, platform).skill;
+  assertContainedRealpath(project, installedScope, `${platform} Brainstorm installed scope`);
+  const targetLstat = fs.lstatSync(target);
+  assert.equal(targetLstat.isSymbolicLink(), false, `${platform} mutation target must not be a symlink`);
+  assert.equal(targetLstat.isFile(), true, `${platform} mutation target must be a regular file`);
+  const canonicalTarget = assertContainedRealpath(installedScope, target, `${platform} Brainstorm mutation target`);
+  assert.equal(
+    canonicalTarget,
+    assertContainedRealpath(project, target, `${platform} Brainstorm project mutation target`),
+    `${platform} scope and project containment must resolve to the same target`
+  );
+  const targetStat = fs.statSync(canonicalTarget);
+  assert.equal(targetStat.nlink, 1, `${platform} mutation target must have exactly one hard link`);
+  for (const sourcePath of canonicalBytes.keys()) {
+    const canonicalSource = fs.realpathSync(sourcePath);
+    const sourceStat = fs.statSync(canonicalSource);
+    assert.notEqual(canonicalTarget, canonicalSource, `${platform} mutation target must not resolve to canonical source`);
+    assert.notDeepEqual(
+      [targetStat.dev, targetStat.ino],
+      [sourceStat.dev, sourceStat.ino],
+      `${platform} mutation target must not share a canonical source inode`
+    );
+  }
+  const original = fs.readFileSync(target);
+  const exercised = new Set();
+  assert.deepEqual(packedAdaptiveBrainstormIssues(project, platform), []);
+  for (const rule of ADAPTIVE_BRAINSTORM_INSTALLED_RULES) {
+    assert.ok(rule.mutations.length > 0, `${platform}/${rule.group} must contain at least one mutation`);
+    let completedMutations = 0;
+    for (const mutation of rule.mutations) {
+      const content = original.toString('utf8');
+      const anchor = content.indexOf(mutation.from);
+      assert.ok(anchor >= 0, `${platform}/${rule.group} anchor must exist`);
+      assert.equal(content.indexOf(mutation.from, anchor + mutation.from.length), -1, `${platform}/${rule.group} anchor must be unique`);
+      try {
+        fs.writeFileSync(target, `${content.slice(0, anchor)}${mutation.to}${content.slice(anchor + mutation.from.length)}`);
+        assert.deepEqual(packedAdaptiveBrainstormIssues(project, platform), [rule.group]);
+        for (const [sourcePath, expected] of canonicalBytes) assert.deepEqual(fs.readFileSync(sourcePath), expected);
+      } finally {
+        fs.writeFileSync(target, original);
+      }
+      assert.deepEqual(fs.readFileSync(target), original, `${platform}/${rule.group} installed bytes restored`);
+      completedMutations += 1;
+    }
+    assert.ok(completedMutations > 0, `${platform}/${rule.group} must execute at least one mutation`);
+    exercised.add(`${platform}:${rule.group}`);
+  }
+  return exercised;
 }
 
 function sha256(content) {
@@ -1957,6 +2084,70 @@ test('packed Claude and Codex installs preserve adaptive Specs, spec-maker, and 
     }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packed Claude and Codex reject adaptive Brainstorm semantic weakenings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-brainstorm-adaptive-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  const canonicalBytes = new Map(Object.values(BRAINSTORM_SOURCE_RELATIVES).map((relative) => {
+    const sourcePath = path.join(PACKAGE_ROOT, relative);
+    return [sourcePath, fs.readFileSync(sourcePath)];
+  }));
+  try {
+    const configuredGroups = ADAPTIVE_BRAINSTORM_INSTALLED_RULES.map(({ group }) => group).sort();
+    assert.deepEqual(configuredGroups, REQUIRED_ADAPTIVE_BRAINSTORM_GROUPS);
+    assert.equal(new Set(configuredGroups).size, 10, 'adaptive Brainstorm matrix must define 10 distinct groups');
+    for (const rule of ADAPTIVE_BRAINSTORM_INSTALLED_RULES) {
+      assert.ok(Array.isArray(rule.mutations) && rule.mutations.length > 0, `${rule.group} must define a nonempty mutation set`);
+    }
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    assertCleanInventory(packedInventory(tarball));
+    const exercised = new Set();
+    for (const platform of ['claude', 'codex']) {
+      const project = path.join(root, platform);
+      const installer = installPacked(tarball, project, runtimeClosure);
+      runInstaller(installer, project, [platform], null);
+      assertPackedBrainstormParity(project, platform);
+      for (const entry of assertPackedAdaptiveBrainstormMutations(project, platform, canonicalBytes)) exercised.add(entry);
+      assertPackedBrainstormParity(project, platform);
+    }
+    assert.deepEqual(
+      [...exercised].sort(),
+      ['claude', 'codex'].flatMap((platform) => REQUIRED_ADAPTIVE_BRAINSTORM_GROUPS.map((group) => `${platform}:${group}`)).sort(),
+      'adaptive Brainstorm mutations must cover every platform and required group'
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('repository and package guides document adaptive Brainstorm usage', () => {
+  const guides = {
+    repository: fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../docs/specs-usage-guide.md'), 'utf8'),
+    package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
+  };
+  for (const [name, guide] of Object.entries(guides)) {
+    const normalized = guide.replace(/\s+/g, ' ');
+    for (const flag of ['--deep', '--visual', '--advice']) assert.ok(guide.includes(flag), `${name} ${flag}`);
+    assert.match(guide, /leading control segment/);
+    assert.match(guide, /-- --dry-run/);
+    assert.match(guide, /Direct.{0,80}(?:before|trước).{0,80}(?:overlay|control)/is);
+    assert.match(guide, /unknown.{0,30}(?:or|hoặc).{0,30}duplicate/is);
+    assert.match(guide, /(?:no action|không\s+thực\s+hiện\s+hành\s+động)/i);
+    assert.match(guide, /(?:redact|redacted)/i);
+    assert.match(guide, /(?:not (?:live proof|a live proof)|no\s+Brainstorm\s+output\s+is\s+live\s+proof|không\s+phải\s+live\s+proof)/i);
+    assert.match(guide, /Specs\/Develop/);
+    assert.match(guide, /(?:approval|execution authority)/i);
+    assert.match(normalized, /single-use.{0,100}`--deep`.{0,100}`--visual`.{0,100}`--advice`.{0,100}(?:any order|mọi thứ tự)/i);
+    assert.match(normalized, /`--`.{0,40}(?:ends controls|kết thúc control)/i);
+    assert.match(normalized, /`--visual`.{0,100}(?:fallback|falls? back).{0,30}text/i);
+    assert.match(normalized, /`--advice`.{0,140}(?:after a material choice exists|sau khi đã có material choice)/i);
+    assert.match(normalized, /(?:durable file needs explicit user authority|ghi file cần explicit user authority)/i);
+    assert.match(normalized, /(?:neither overlay|hai overlay).{0,140}(?:writes|write).{0,40}(?:approves|approve).{0,40}(?:persists|persist).{0,40}(?:dispatches|dispatch).{0,40}(?:completes|complete)/i);
   }
 });
 
