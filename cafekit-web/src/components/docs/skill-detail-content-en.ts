@@ -2,8 +2,8 @@ import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsEn: SkillDetailMap = {
   question: {
-    title: 'Question',
-    command: '/hapo:question',
+    title: 'Ask',
+    command: '/hapo:ask',
     category: 'Consultation',
     summary: 'Evidence-backed Q&A for project behavior, source code, specs, docs, configuration, dependencies, and external technical topics.',
     when: ['You need to understand how something works in the current system.', 'You need a source-backed answer before planning or changing code.', 'The repo may not have enough information and current external docs may be needed.'],
@@ -112,12 +112,12 @@ export const skillDetailsEn: SkillDetailMap = {
     next: '/hapo:specs for modernization work, or release handoff',
   },
   inspect: {
-    title: 'Inspect',
-    command: '/hapo:inspect',
+    title: 'Scout',
+    command: '/hapo:scout',
     category: 'Discovery',
     summary: 'Fast codebase discovery for file finding, task context, entrypoints, call paths, and blast radius.',
     when: ['Relevant files are unclear.', 'A task spans multiple directories.', 'Debugging, implementation, or review needs scoped context.'],
-    flow: [['Scope gate', 'Avoid root-wide scans and no-scan paths.'], ['Structure scout', 'Map the top-level layout for broad scopes.'], ['Explore', 'Search focused sub-scopes in parallel or with targeted reads.'], ['Aggregate', 'Return files, call paths, integration points, risks, and next steps.']],
+    flow: [['Scope gate', 'Avoid root-wide scans and no-scan paths.'], ['Fast path', 'Use local search and targeted reads for focused scopes.'], ['Delegate', 'Use Explore only with user permission, runtime support, and independent scopes.'], ['Aggregate', 'Return files, call paths, integration points, risks, and next steps.']],
     output: 'A compact context map for safer follow-up work.',
     avoid: 'Do not scan secrets, build outputs, node_modules, .git, or the entire repo when a bounded scope is enough.',
     next: 'The smallest skill that fits the discovered task',

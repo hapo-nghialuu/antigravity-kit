@@ -220,7 +220,7 @@ Avoid reconstructing a large monolith in one pass unless the user explicitly acc
 
 Normal docs workflows reuse the CafeKit docs stack already shipped in the package:
 
-- use `hapo:inspect` or targeted reads to scout source scope
+- use `hapo:scout` or targeted reads to scout source scope
 - use `docs-keeper` for evidence-backed docs writing when delegation is available
 - use `.claude/scripts/validate-docs.cjs <docs-root>` after create/update work
 - use `.claude/scripts/validate-docs-reconstruct.cjs <docs-root>/as-is/<scope-slug>` before a reconstructed bundle is handed to human review

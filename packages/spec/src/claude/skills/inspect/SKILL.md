@@ -1,21 +1,24 @@
 ---
-name: hapo:inspect
-description: "Fast codebase discovery using parallel agents. Use for file discovery, task context gathering, quick searches across directories. Supports internal Explore agents."
+name: hapo:scout
+description: "Fast scoped codebase discovery using local search first and user-permitted Explore delegation only for broad independent scopes. Use for file discovery, task context, entrypoints, call paths, and blast radius."
 user-invocable: true
-when_to_use: "Invoke for fast parallel codebase discovery and file location."
+when_to_use: "Invoke for fast scoped codebase discovery and file location."
 category: discovery
-keywords: [discovery, search, explore, context]
+keywords: [scout, inspect, discovery, search, context]
 argument-hint: "[search-target]"
 metadata:
   author: haposoft
   version: "2.1.0"
 ---
-# Inspect
+# Scout
 
-Fast, token-efficient codebase discovery using parallel agents to find files needed for tasks.
+Fast, token-efficient codebase discovery that uses focused local search by default
+and delegates only when parallel scouting has a concrete benefit.
 
 ## Arguments
-- Default: Inspect using built-in Explore subagents in parallel (`./references/internal-inspection.md`)
+- Default: Scout the named target with local `rg` and targeted reads. For a
+  genuinely broad scope, use the conditional delegation route in
+  `./references/internal-inspection.md`.
 
 ## When to Use
 
@@ -30,24 +33,29 @@ Before scanning:
 2. Apply the built-in no-scan lists below.
 3. Prefer file-type or glob hints whenever possible.
 
-**When scope is too broad:** use a **2-phase approach** — lightweight Structure Scout first, then parallel agents on real sub-scopes.
+**When scope is too broad:** use a **2-phase approach** — lightweight structure
+mapping first, then parallel agents only when the Delegation Gate is open.
 
-### Phase 1 — Structure Scout (Single Agent, Run First)
+### Phase 1 — Structure Map
 
-Spawn **one scout** to map top-level layout before dividing work:
+Map the top-level layout in the main agent. A single Explore agent may do this
+only when the Delegation Gate below is already open:
 1. List immediate children of the scope root (dirs + key config; monorepo markers)
 2. Rough file count per discovered directory
 3. Return a division plan of 1–10 logical sub-scopes (path/glob, est. files, focus)
 
-Wait for Scout before Phase 2.
+Complete the structure map before Phase 2.
 
-### Phase 2 — Parallel Explore Agents (Based on Scout Results)
+### Phase 2 — Conditional Parallel Explore
 
-1. Follow Scout's plan; merge scopes < 10 files; split scopes > 100 files
-2. Spawn parallel Explore agents, one per sub-scope
-3. Aggregate into the Inspect Report; offer deeper follow-up on specific areas
+1. Follow the structure map; merge scopes < 10 files; split scopes > 100 files
+2. If the Delegation Gate is open, spawn Explore agents on distinct sub-scopes;
+   otherwise scout the sub-scopes sequentially in the main agent
+3. Aggregate into the Scout Report; offer deeper follow-up on specific areas
 
-**Fallback to AskUserQuestion:** if Scout is ambiguous (flat layout, < 3 areas), offer 2–4 concrete scopes from findings, then re-invoke with the chosen scope.
+**Fallback to AskUserQuestion:** if the structure map still leaves multiple
+plausible targets and the choice would materially change the scan, offer 2–4
+concrete scopes from findings, then continue with the selected scope.
 
 ## Built-in No-Scan Guidance
 
@@ -63,50 +71,51 @@ Wait for Scout before Phase 2.
 
 ### 1. Analyze Task
 - Parse search targets; identify directories, patterns, file types
-- Determine SCALE of subagents
+- Estimate scan size and whether the work divides into independent scopes
 
-**SCALE Calculation:**
-```
-SCALE = ceil(estimated_files_to_scan / 50)
-```
+### 2. Choose The Smallest Route
 
-- Min SCALE = 1; Max SCALE = 10
-- SCALE 1-2: focused (< 100 files)
-- SCALE 3-5: medium
-- SCALE 6-10: large (internal Explore agents)
-
-### 2. Divide and Conquer
-- Split into logical segments; assign distinct directories/patterns; no overlap
-
-### 3. Register Inspect Tasks
-- **Skip if:** Agent count ≤ 2
-- `TaskList` first; if none, `TaskCreate` per agent with scope metadata
-- See `./references/internal-inspection.md` for patterns
-
-### 4. Choose Mode
-
-| Condition | Mode |
+| Condition | Route |
 |---|---|
-| Always | Internal Explore agents |
+| Named files/directories or focused scope (about 50 files or fewer) | Main-agent `rg` plus targeted reads; do not delegate |
+| Medium scope that still fits one coherent search | Main-agent scouting; narrow before considering delegation |
+| Broad scope with two or more independent areas | Structure map, then evaluate the Delegation Gate |
 
-Load: **Internal** `./references/internal-inspection.md`.
+Do not use the file estimate alone to justify agents. A focused 100-file search
+may still be cheaper locally; a smaller cross-system search may justify two
+independent scopes.
 
-### 5. Spawn Parallel Agents
+### 3. Delegation Gate
 
-Dispatch native Explore agents with breadth medium/very-thorough + the Scope Gate above. Details: `./references/internal-inspection.md`.
+Delegate only when all are true:
 
-- `TaskUpdate` each task to `in_progress` before spawn
-- Prompt each subagent with exact directories/files; each has < 200K context
-- Agent count follows resources + file volume; each returns a summary to the main agent
+- The user explicitly requested or permitted subagents, delegation, or parallel work.
+- The active runtime exposes an Explore/delegation capability.
+- At least two non-overlapping scopes have useful independent work.
 
-### 6. Collect Results
+If any condition is false, continue in the main agent with scoped `rg`, file
+listing, and targeted reads. Do not ask for delegation merely to complete an
+ordinary focused scout.
+
+### 4. Divide And Scout
+
+For local scouting, search the shortlisted scopes sequentially and stop when the
+question is answered. For delegated scouting, load
+`./references/internal-inspection.md`, split by logical boundaries, and ensure
+no overlap.
+
+- Skip task registration for two or fewer agents.
+- For three or more agents, use the live task/plan surface when available.
+- Prompt each agent with exact directories/files and a read-only boundary.
+
+### 5. Collect Results
 - Timeout: 3 minutes per agent (skip non-responders; log in report)
-- `TaskUpdate` completed tasks; aggregate; list unresolved questions at end
+- Update live task/plan state when one was used; aggregate; list unresolved questions at end
 
 ## Report Format
 
 ```markdown
-# Inspect Report
+# Scout Report
 
 ## Relevant Files
 - `path/to/file.ts` - Brief description
@@ -121,7 +130,7 @@ Dispatch native Explore agents with breadth medium/very-thorough + the Scope Gat
 
 ## Rules
 
-- Keep scope narrow. Do not use `hapo:inspect` as a runtime policy engine.
+- Keep scope narrow. Do not use `hapo:scout` as a runtime policy engine.
 - Prefer listing files first, then reading only the shortlisted files.
 - Never encourage scanning ignored/generated/sensitive areas from the no-scan list.
 - Keep reports concise and actionable.
@@ -130,4 +139,4 @@ Dispatch native Explore agents with breadth medium/very-thorough + the Scope Gat
 
 ## References
 
-- `./references/internal-inspection.md` - Using Explore subagents
+- `./references/internal-inspection.md` - Conditional Explore delegation

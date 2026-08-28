@@ -2,8 +2,8 @@ import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsVi: SkillDetailMap = {
   question: {
-    title: 'Question',
-    command: '/hapo:question',
+    title: 'Ask',
+    command: '/hapo:ask',
     category: 'Consultation',
     summary: 'Skill hỏi đáp có evidence cho source code, docs, specs, config, dependencies, workflow, và thông tin kỹ thuật bên ngoài.',
     when: ['Cần hiểu một luồng hoặc hành vi trong hệ thống hiện tại.', 'Cần câu trả lời có bằng chứng trước khi plan hoặc sửa code.', 'Source trong repo có thể chưa đủ và cần đối chiếu docs/internet hiện tại.'],
@@ -112,12 +112,12 @@ export const skillDetailsVi: SkillDetailMap = {
     next: '/hapo:specs cho modernization work, hoặc release handoff',
   },
   inspect: {
-    title: 'Inspect',
-    command: '/hapo:inspect',
+    title: 'Scout',
+    command: '/hapo:scout',
     category: 'Discovery',
     summary: 'Codebase discovery nhanh cho file finding, task context, entrypoints, call paths, và blast radius.',
     when: ['Relevant files chưa rõ.', 'Task chạm nhiều directories.', 'Debugging, implementation, hoặc review cần scoped context.'],
-    flow: [['Scope gate', 'Tránh root-wide scans và no-scan paths.'], ['Structure scout', 'Map top-level layout cho broad scopes.'], ['Explore', 'Search focused sub-scopes song song hoặc targeted reads.'], ['Aggregate', 'Trả files, call paths, integration points, risks, next steps.']],
+    flow: [['Scope gate', 'Tránh root-wide scans và no-scan paths.'], ['Fast path', 'Dùng local search và targeted reads cho scope rõ.'], ['Delegate', 'Chỉ dùng Explore khi user cho phép, runtime hỗ trợ, và scopes độc lập.'], ['Aggregate', 'Trả files, call paths, integration points, risks, next steps.']],
     output: 'Context map gọn để follow-up work an toàn hơn.',
     avoid: 'Không scan secrets, build outputs, node_modules, .git, hoặc cả repo khi bounded scope là đủ.',
     next: 'Skill nhỏ nhất phù hợp với task đã discover',

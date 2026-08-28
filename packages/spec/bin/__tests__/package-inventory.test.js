@@ -2006,14 +2006,26 @@ function assertStaleDigestMutations(paths, root, taskless, taskBearing) {
 }
 
 function assertTransforms(root, platform) {
-  const skill = path.join(root, RUNTIMES[platform].root === '.codex' ? '.agents/skills' : `${RUNTIMES[platform].root}/skills`, 'develop', 'SKILL.md');
+  const skillRoot = path.join(
+    root,
+    RUNTIMES[platform].root === '.codex' ? '.agents/skills' : `${RUNTIMES[platform].root}/skills`
+  );
+  const skill = path.join(skillRoot, 'develop', 'SKILL.md');
   const content = fs.readFileSync(skill, 'utf8');
+  const scout = fs.readFileSync(path.join(skillRoot, 'inspect', 'SKILL.md'), 'utf8');
+  const ask = fs.readFileSync(path.join(skillRoot, 'question', 'SKILL.md'), 'utf8');
   if (platform === 'codex') {
     assert.match(content, /\$hapo-develop/);
     assert.doesNotMatch(content, /\/hapo:develop/);
+    assert.match(scout, /^name:\s*hapo-scout$/m);
+    assert.match(ask, /^name:\s*hapo-ask$/m);
   } else {
     assert.match(content, /\/hapo:develop/);
+    assert.match(scout, /^name:\s*hapo:scout$/m);
+    assert.match(ask, /^name:\s*hapo:ask$/m);
   }
+  assert.equal(fs.existsSync(path.join(skillRoot, 'scout')), false);
+  assert.equal(fs.existsSync(path.join(skillRoot, 'ask')), false);
   assert.ok(fs.existsSync(path.join(root, RUNTIMES[platform].root, 'agents')) || platform === 'codex');
 }
 

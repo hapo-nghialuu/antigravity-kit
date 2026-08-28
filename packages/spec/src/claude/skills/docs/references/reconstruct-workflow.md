@@ -144,7 +144,7 @@ Never silently reconstruct a large system as one flat document.
 
 ### 2. Structure And Source Scout
 
-Use `hapo:inspect` patterns or targeted reads to identify:
+Use `hapo:scout` patterns or targeted reads to identify:
 
 - project type and language/framework
 - relevant screens/pages/routes

@@ -75,7 +75,7 @@ Do not silently patch around the regression.
 
 ```mermaid
 flowchart TD
-    A[Issue Input] --> B[Step 1: Scout via hapo:inspect]
+    A[Issue Input] --> B[Step 1: Scout via hapo:scout]
     B --> C[Step 2: Diagnose via hapo:debug]
     C --> D[Step 3: Classify Complexity]
     D -->|Trivial| E[Quick Fix after scout+diagnose]
@@ -103,7 +103,7 @@ flowchart TD
 
 **Purpose:** Understand the affected codebase BEFORE forming any hypotheses.
 
-**Action:** Activate `hapo:inspect` skill to map the blast radius.
+**Action:** Activate `hapo:scout` skill to map the blast radius.
 
 Do not ask generic questions before this step unless there is no repo, no error text, and no observable artifact to inspect.
 
@@ -197,7 +197,7 @@ If any field is vague (`probably`, `maybe`, `I think`, or missing file:line/conf
 3. Run full test suite
 
 ### Deep Workflow
-1. **Parallel investigation:** After initial scope is known, gather evidence in parallel — Scout (`hapo:inspect`), Diagnose (`hapo:debug`), and Research (`researcher` subagent) can run concurrently. See `references/parallel-patterns.md` Pattern E.
+1. **Parallel investigation:** After initial scope is known, Scout (`hapo:scout`), Diagnose (`hapo:debug`), and Research (`researcher` subagent) may run concurrently only when their permission, runtime-capability, and independent-scope gates pass; otherwise gather the same evidence locally and sequentially. See `references/parallel-patterns.md` Pattern E.
 2. Synthesize findings from all three into a unified fix approach
 3. Plan the fix (consider writing to `references/` for future use)
 4. Implement in stages, verifying each stage

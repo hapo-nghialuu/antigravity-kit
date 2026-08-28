@@ -1,18 +1,18 @@
 ---
-name: hapo:question
+name: hapo:ask
 description: "Answer questions with evidence. Use when the user asks about project behavior, source code, specs, docs, configuration, dependencies, or external technical information; inspect the repo first, use internet/current docs when repo evidence is insufficient, and ask back only when the question cannot be answered safely."
 user-invocable: true
 when_to_use: "Invoke to answer project or technical questions with repo-first evidence."
 category: utilities
-keywords: [question, evidence, answer, research]
+keywords: [ask, question, evidence, answer, research]
 argument-hint: "<question> [--repo|--web|--both|--brief|--deep]"
 metadata:
   author: haposoft
   version: "1.0.0"
 ---
-# Question Skill
+# Ask Skill
 
-`hapo:question` is an evidence-backed question-answering skill. It answers user questions by checking the local project first, then external/current sources when the repository cannot answer the question.
+`hapo:ask` is an evidence-backed question-answering skill. It answers user questions by checking the local project first, then external/current sources when the repository cannot answer the question.
 
 ## Core Stance
 
@@ -29,7 +29,7 @@ The output is an answer, evidence, confidence, and a follow-up only when needed.
 
 ## When To Use
 
-Use `hapo:question` when the user asks:
+Use `hapo:ask` when the user asks:
 - "What does X do in this system?"
 - "Where is this flow handled?"
 - "What is the current config/version/package?"
@@ -77,7 +77,7 @@ Repo evidence priority:
 3. source files, tests, scripts, package manifests, config files
 4. git history only when the question asks about changes or provenance
 
-Use focused search (`rg`, targeted file reads) instead of broad scans. Use `hapo:inspect` when the user asks where something lives or the source surface is unclear.
+Use focused search (`rg`, targeted file reads) instead of broad scans. Use `hapo:scout` when the user asks where something lives or the source surface is unclear.
 
 External evidence:
 - Use external/current docs when repo evidence is absent, stale, or not authoritative.
@@ -138,7 +138,7 @@ Use `templates/question.md` when the user asks to save or document the answer.
 ### Source Question
 
 ```text
-/hapo:question "In this system, which file does cafekit use to toggle skill routing?"
+/hapo:ask "In this system, which file does cafekit use to toggle skill routing?"
 ```
 
 Expected behavior:
@@ -149,7 +149,7 @@ Expected behavior:
 ### Mixed Source + Web Question
 
 ```text
-/hapo:question "Which React version does this project use, and does that version still match current best practice?" --both
+/hapo:ask "Which React version does this project use, and does that version still match current best practice?" --both
 ```
 
 Expected behavior:
@@ -160,7 +160,7 @@ Expected behavior:
 ### Ask Back
 
 ```text
-/hapo:question "Is this system stable?"
+/hapo:ask "Is this system stable?"
 ```
 
 Expected behavior:

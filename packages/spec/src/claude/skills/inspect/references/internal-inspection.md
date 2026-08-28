@@ -1,6 +1,19 @@
-# Internal Discovery with Explore Subagents
+# Conditional Discovery with Explore Subagents
 
-Dispatch native Explore agents with breadth medium/very-thorough + the Scope Gate in `SKILL.md`. Use when SCALE ≥ 6 or external tools are unavailable.
+Use native Explore agents only after the `SKILL.md` Delegation Gate passes.
+Focused discovery stays in the main agent even when Explore is available.
+
+## Delegation Preconditions
+
+All are required:
+
+1. The user explicitly requested or permitted delegation or parallel agents.
+2. The active runtime exposes an Explore/delegation capability.
+3. The structure map identifies at least two distinct, non-overlapping scopes
+   with useful independent work.
+
+If any precondition fails, use scoped `rg`, file listing, and targeted reads in
+the main agent. Do not request extra authority for an ordinary focused scout.
 
 ## Agent Tool Configuration
 
@@ -26,7 +39,9 @@ Report format:
 
 ## Spawning Strategy
 
-Split by logical dirs (`src/`, `lib/`, `tests/`, `config/`, `api/`, `types/`). Spawn all in one call; distinct scopes; no overlap.
+Split by logical dirs (`src/`, `lib/`, `tests/`, `config/`, `api/`, `types/`).
+Spawn agents concurrently only when the runtime supports it; keep scopes
+distinct and non-overlapping.
 
 **Example** (auth): A1 `src/auth/, middleware/`; A2 `api/, routes/`; A3 `tests/`; A4 `lib/, utils/`; A5 `config/`; A6 `types/`.
 
@@ -37,7 +52,9 @@ Split by logical dirs (`src/`, `lib/`, `tests/`, `config/`, `api/`, `types/`). S
 | ≤ 2    | No (overhead) |
 | ≥ 3    | Yes |
 
-`TaskList` → reuse or `TaskCreate` per agent (`agentType: Explore`, scope, scale, agentIndex, totalAgents, toolMode: internal). Lifecycle: pending → in_progress before spawn → completed on return (timeout: keep in_progress + error metadata).
+Use the live task or plan surface when available. Record scope and ownership
+before spawn, then completion or timeout after collection. Do not create task
+state solely for one or two short probes.
 
 ## Timeout, Aggregation, Reading
 
@@ -51,4 +68,3 @@ Start from concrete directories (not repo root); prefer scoped globs; skip `NO_S
 ## Output Contract
 
 Return: file paths, brief description per file, notable relationships/patterns, unresolved questions.
-

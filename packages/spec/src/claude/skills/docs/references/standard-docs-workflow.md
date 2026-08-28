@@ -66,7 +66,7 @@ Normal docs are current-state living docs. Ground them in:
 - source code that implements the documented behavior
 - tests, CI, deploy config, schemas, migrations, routes when relevant
 
-Use `hapo:inspect` or targeted `rg`/file reads when the project is large. Keep broad scanning scoped by real project areas.
+Use `hapo:scout` or targeted `rg`/file reads when the project is large. Keep broad scanning scoped by real project areas.
 
 ### 3. Author Concisely
 

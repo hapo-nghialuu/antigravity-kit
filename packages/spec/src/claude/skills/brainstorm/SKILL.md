@@ -92,7 +92,7 @@ For feature/docs delivery and every bug/failure, resolve four user-owned fields:
 - **Non-goals:** nearby work excluded from this delivery.
 - **Acceptance:** observable evidence that proves completion.
 
-After front-door routing, run `hapo:inspect` or a narrow equivalent before
+After front-door routing, run `hapo:scout` or a narrow equivalent before
 technical design. Inspect relevant modules, patterns, docs/plans, contracts, and
 runtime constraints; summarize only useful findings in 3–6 bullets.
 

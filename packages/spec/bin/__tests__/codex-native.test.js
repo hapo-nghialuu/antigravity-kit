@@ -2061,6 +2061,27 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
     assert.equal(new Set(skillNames).size, skillNames.length);
     assert.ok(skillNames.every((name) => /^[a-z0-9-]+$/.test(name)));
 
+    const scoutSkill = fs.readFileSync(
+      path.join(root, '.agents', 'skills', 'inspect', 'SKILL.md'),
+      'utf8'
+    );
+    assert.match(scoutSkill, /^name:\s*hapo-scout$/m);
+    assert.equal(
+      fs.existsSync(path.join(root, '.agents', 'skills', 'scout')),
+      false,
+      'public Scout rename must keep the manifest-owned inspect directory'
+    );
+    const askSkill = fs.readFileSync(
+      path.join(root, '.agents', 'skills', 'question', 'SKILL.md'),
+      'utf8'
+    );
+    assert.match(askSkill, /^name:\s*hapo-ask$/m);
+    assert.equal(
+      fs.existsSync(path.join(root, '.agents', 'skills', 'ask')),
+      false,
+      'public Ask rename must keep the manifest-owned question directory'
+    );
+
     const catalog = spawnSync(
       process.execPath,
       [path.join(root, '.codex', 'scripts', 'generate-skill-catalog.cjs'), '--json'],

@@ -59,7 +59,7 @@ If the user asks to fix while still inside `hapo:debug`, finish the debug report
 
 ```mermaid
 flowchart TD
-    A[Issue Input] --> B[Step 1: Scout via hapo:inspect]
+    A[Issue Input] --> B[Step 1: Scout via hapo:scout]
     B --> C[Step 2: Capture Evidence]
     C --> D[Step 3: Pattern Analysis]
     D --> E[Step 4: Hypothesis Tests]
@@ -79,8 +79,8 @@ flowchart TD
 
 Understand the affected code before forming hypotheses.
 
-**Action:** Activate `hapo:inspect` for the relevant scope.
-If `hapo:inspect` is unavailable, use direct read-only reconnaissance (`rg`, file reads, test discovery, and `git log`) and state that fallback.
+**Action:** Activate `hapo:scout` for the relevant scope.
+If `hapo:scout` is unavailable, use direct read-only reconnaissance (`rg`, file reads, test discovery, and `git log`) and state that fallback.
 
 **Checklist:**
 - [ ] Project type, language, framework, runtime, and test runner identified

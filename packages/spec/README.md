@@ -142,7 +142,8 @@ cat .codex/cafekit.json
 
 CafeKit ships many skills, but the main release surface is:
 
-- `/hapo:question <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
+- `/hapo:ask <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
+- `/hapo:scout <search-target>`: discover relevant files locally first, delegating only for permitted broad independent scopes
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
@@ -186,7 +187,8 @@ names and `fork_turns: "none"`.
 Claude Code:
 
 ```bash
-/hapo:question "Which files define the current CafeKit install/runtime behavior?" --repo
+/hapo:ask "Which files define the current CafeKit install/runtime behavior?" --repo
+/hapo:scout "Find the runtime entrypoints for skill installation"
 /hapo:brainstorm Explore approaches for a Google Meet transcript extension
 /hapo:specs Build a Google Meet transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
@@ -197,7 +199,8 @@ Claude Code:
 Codex CLI:
 
 ```text
-$hapo-question "Which files define the current CafeKit runtime?" --repo
+$hapo-ask "Which files define the current CafeKit runtime?" --repo
+$hapo-scout "Find the runtime entrypoints for skill installation"
 $hapo-brainstorm Explore approaches for a Google Meet transcript extension
 $hapo-specs Build a Google Meet transcript extension with AI summaries
 $hapo-develop meet-transcript-mvp

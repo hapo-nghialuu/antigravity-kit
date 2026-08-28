@@ -4,8 +4,8 @@ Advisory routing for installed domain skills (not an automatic hook). Read the s
 
 | Domain / intent | Skill |
 |---|---|
-| answer questions from source code/docs/specs/config | `/hapo:question` |
-| file discovery, structure, blast radius | `/hapo:inspect` |
+| answer questions from source code/docs/specs/config | `/hapo:ask` |
+| file discovery, structure, blast radius | `/hapo:scout` |
 | style / layout / design system | `/hapo:frontend-design` |
 | React/TypeScript UI implementation | `/hapo:frontend-development` |
 | React/Next performance / re-renders | `/hapo:react-best-practices` |

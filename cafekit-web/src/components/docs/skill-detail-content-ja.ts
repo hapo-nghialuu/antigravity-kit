@@ -2,8 +2,8 @@ import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsJa: SkillDetailMap = {
   question: {
-    title: 'Question',
-    command: '/hapo:question',
+    title: 'Ask',
+    command: '/hapo:ask',
     category: 'Consultation',
     summary: 'Source code、docs、specs、config、dependencies、external technical topics に対する evidence-backed Q&A skill。',
     when: ['現在の system behavior や flow を理解したい。', 'Planning や code change の前に source-backed answer が必要。', 'Repo evidence が不足し、current external docs も確認する必要がある。'],
@@ -112,12 +112,12 @@ export const skillDetailsJa: SkillDetailMap = {
     next: 'Modernization work は /hapo:specs、または release handoff',
   },
   inspect: {
-    title: 'Inspect',
-    command: '/hapo:inspect',
+    title: 'Scout',
+    command: '/hapo:scout',
     category: 'Discovery',
     summary: 'File finding、task context、entrypoints、call paths、blast radius のための fast codebase discovery。',
     when: ['Relevant files が不明。', 'Task が複数 directories にまたがる。', 'Debugging、implementation、review に scoped context が必要。'],
-    flow: [['Scope gate', 'Root-wide scans と no-scan paths を避けます。'], ['Structure scout', 'Broad scopes では top-level layout を map します。'], ['Explore', 'Focused sub-scopes を parallel search または targeted reads で調査します。'], ['Aggregate', 'Files、call paths、integration points、risks、next steps を返します。']],
+    flow: [['Scope gate', 'Root-wide scans と no-scan paths を避けます。'], ['Fast path', 'Focused scope は local search と targeted reads を使います。'], ['Delegate', 'User permission、runtime support、independent scopes が揃う時だけ Explore を使います。'], ['Aggregate', 'Files、call paths、integration points、risks、next steps を返します。']],
     output: 'Follow-up work を安全にする compact context map。',
     avoid: 'Secrets、build outputs、node_modules、.git、または bounded scope で足りるのに entire repo を scan しません。',
     next: 'Discovered task に合う smallest skill',

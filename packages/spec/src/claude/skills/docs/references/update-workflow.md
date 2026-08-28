@@ -39,7 +39,7 @@ Scout source areas that can affect docs:
    - design/code standards
    - roadmap/changelog state
 3. Run targeted source reads for evidence.
-4. Use `hapo:inspect` only when the affected scope is unclear or broad.
+4. Use `hapo:scout` only when the affected scope is unclear or broad.
 
 Do not treat commit messages as sufficient evidence. Verify changed behavior in code, tests, config, or schemas.
 

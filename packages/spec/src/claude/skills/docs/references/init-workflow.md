@@ -64,7 +64,7 @@ Run a lightweight source scout before deep reading:
    - UI/API/worker/job/deployment surfaces
 4. Split large repositories into scoped source areas.
 
-Use `hapo:inspect` when source discovery spans multiple directories. Prefer targeted reads when the repo is small.
+Use `hapo:scout` when source discovery spans multiple directories. Prefer targeted reads when the repo is small.
 
 ### Phase 2: Evidence Scout
 

@@ -1508,9 +1508,9 @@ function brainstormContractIssues(input) {
     || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.direct))
     || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration))
     || brainstormHasDirectCeremony(directRemainder)
-    || !semantic.skill.includes("After front-door routing, run `hapo:inspect`")
+    || !semantic.skill.includes("After front-door routing, run `hapo:scout`")
     || semantic.skill.indexOf("## Front-door routing — before scout or questions")
-      > semantic.skill.indexOf("After front-door routing, run `hapo:inspect`")) {
+      > semantic.skill.indexOf("After front-door routing, run `hapo:scout`")) {
     issues.add("front-door-routing");
   }
   const bugIndex = frontDoor.indexOf("**Bug or failure:**");
@@ -3053,10 +3053,10 @@ async function runStaticSemanticTests() {
         content.includes("Do not start Develop"),
     },
     {
-      label: "hapo:question skill answers questions with repo-first evidence",
+      label: "hapo:ask skill answers questions with repo-first evidence",
       file: "src/claude/skills/question/SKILL.md",
       assert: (content) =>
-        content.includes("name: hapo:question") &&
+        content.includes("name: hapo:ask") &&
         content.includes("Answer questions with evidence") &&
         content.includes("<ANSWER-ONLY-GATE>") &&
         content.includes("Source-first") &&
@@ -3070,7 +3070,7 @@ async function runStaticSemanticTests() {
         content.includes("templates/question.md"),
     },
     {
-      label: "hapo:question template captures answer evidence and gaps",
+      label: "hapo:ask template captures answer evidence and gaps",
       file: "src/claude/skills/question/templates/question.md",
       assert: (content) =>
         content.includes("## Question") &&
@@ -3081,9 +3081,13 @@ async function runStaticSemanticTests() {
         content.includes("## Follow-up Question"),
     },
     {
-      label: "hapo:question is packaged in migration manifest",
+      label: "hapo:ask is packaged from the question directory in the migration manifest",
       file: "src/claude/migration-manifest.json",
-      assert: (content) => content.includes('"question"'),
+      assert: (content) => {
+        const manifest = JSON.parse(content);
+        return manifest.skills.required.includes("question") &&
+          !manifest.skills.required.includes("ask");
+      },
     },
     {
       label: "hapo:specs review requires evidence, fresh context, and bounded findings",
@@ -3337,13 +3341,25 @@ async function runStaticSemanticTests() {
       },
     },
     {
-      label: "inspect uses only internal Explore discovery",
+      label: "hapo:scout uses a focused local fast path before delegation",
       file: "src/claude/skills/inspect/SKILL.md",
       assert: (content) =>
-        content.includes("Internal Explore agents") &&
+        content.includes("name: hapo:scout") &&
+        content.includes("about 50 files or fewer") &&
+        content.includes("Main-agent `rg` plus targeted reads; do not delegate") &&
+        content.includes("Do not use the file estimate alone to justify agents") &&
         !content.includes("external-gemini-inspection") &&
         !content.includes("Gemini") &&
         !content.includes("`ext`"),
+    },
+    {
+      label: "hapo:scout delegation requires permission runtime support and independent scopes",
+      file: "src/claude/skills/inspect/references/internal-inspection.md",
+      assert: (content) =>
+        content.includes("The user explicitly requested or permitted delegation or parallel agents") &&
+        content.includes("The active runtime exposes an Explore/delegation capability") &&
+        content.includes("at least two distinct, non-overlapping scopes") &&
+        content.includes("Focused discovery stays in the main agent"),
     },
     {
       label: "quality gate uses shared verdicts instead of numeric scores",
@@ -3560,7 +3576,7 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
       assert: (content) =>
-        content.includes("/hapo:question -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
+        content.includes("/hapo:ask -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
         content.includes("ask about source code, docs, specs, config, dependencies") &&
         content.includes("/hapo:debug -> /hapo:hotfix") &&
         content.includes("/hapo:docs --reconstruct <scope>") &&
@@ -3571,7 +3587,7 @@ async function runStaticSemanticTests() {
       label: "CafeKit skill routing domain rule maps installed skills",
       file: "src/claude/rules/skill-domain-routing.md",
       assert: (content) =>
-        content.includes("/hapo:question") &&
+        content.includes("/hapo:ask") &&
         content.includes("answer questions from source code/docs/specs/config") &&
         content.includes("/hapo:frontend-development") &&
         content.includes("/hapo:react-best-practices") &&
@@ -4057,7 +4073,8 @@ function runSkillCatalogTests() {
     "`hapo:specs`",
     "`hapo:develop`",
     "`hapo:docs`",
-    "`hapo:question`",
+    "`hapo:ask`",
+    "`hapo:scout`",
     "`hapo:debug`",
     "`hapo:hotfix`",
     "`hapo:react-best-practices`",

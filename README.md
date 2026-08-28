@@ -20,7 +20,8 @@ The installer records the package version in the selected runtime:
 ## What It Is
 
 CafeKit installs a native runtime bundle for each supported coding agent:
-- `hapo:question` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
+- `hapo:ask` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
+- `hapo:scout` for fast scoped discovery of files, entrypoints, call paths, and blast radius
 - `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
@@ -46,7 +47,8 @@ Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> sto
 Claude Code:
 
 ```bash
-/hapo:question "Which config file controls CafeKit runtime behavior in this project?"
+/hapo:ask "Which config file controls CafeKit runtime behavior in this project?"
+/hapo:scout "Find the runtime entrypoints for skill installation"
 /hapo:brainstorm Explore approaches for a meeting transcript extension
 /hapo:specs Build a meeting transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
@@ -57,7 +59,8 @@ Claude Code:
 Codex CLI uses native skills from `.agents/skills/`:
 
 ```text
-$hapo-question "Which config controls CafeKit runtime behavior?" --repo
+$hapo-ask "Which config controls CafeKit runtime behavior?" --repo
+$hapo-scout "Find the runtime entrypoints for skill installation"
 $hapo-brainstorm Explore approaches for a meeting transcript extension
 $hapo-specs Build a meeting transcript extension with AI summaries
 $hapo-develop meet-transcript-mvp
