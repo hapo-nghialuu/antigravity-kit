@@ -111,8 +111,8 @@ mutation or unsafe authentication handling.
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: a9a7a23a9bee12ee9fe84900e368b81305802f86
-Head: b5b14c4e906c5ae2ebf2d4781180037b12c95c4634020a9c9cb5f8667e9585d0
+Base: a007c3632c697e7de55ca2c128b4b6c891f459e2
+Head: a27da7683c1274e32aaeda63822f233c5279eef90489b0c94e597b7efaeebe41
 
 ```text
 ✔ hapo:test plan-native proof contract is complete and bounded
