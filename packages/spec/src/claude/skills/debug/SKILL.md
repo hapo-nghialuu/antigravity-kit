@@ -23,6 +23,13 @@ Debugging is diagnosis, not repair. Find the source of the failure before changi
 
 Default: systematic diagnosis with no product-code edits, scout first.
 
+## Proportional depth
+
+- **Quick/local:** one deterministic syntax, lint, type, or isolated-test failure. Keep the six-step flow, but omit an incident timeline and recurrence analysis when they cannot change the diagnosis or handoff.
+- **Incident/deep:** production impact, multiple components, intermittent behavior, data/security risk, environment drift, concurrency, or two refuted hypotheses. Add a cross-source timeline, explicit elimination path, trigger/root-cause/contributing-factor separation, and recurrence-prevention gaps.
+
+Depth changes evidence breadth, never the diagnostic-only gate or root-cause standard. Do not make a routine local failure perform incident ceremony merely because more tools are available.
+
 <DIAGNOSTIC-ONLY-GATE>
 `hapo:debug` is read-only for product code.
 Do NOT edit product code, apply fixes, create migrations, or add regression tests as implementation.
@@ -64,7 +71,7 @@ flowchart TD
     C --> D[Step 3: Pattern Analysis]
     D --> E[Step 4: Hypothesis Tests]
     E --> F[Step 5: Root Cause Trace]
-    F --> G[Step 6: Blast Radius + Verification Plan]
+    F --> G[Step 6: Verification + Prevention Handoff]
     G --> H[Diagnostic Report]
     H --> I{Fix requested?}
     I -->|Yes| J[Hand off to hapo:hotfix]
@@ -107,6 +114,8 @@ Create a baseline that can later prove whether the issue changed.
 - Environment facts: runtime, dependency versions, OS, browser, CI runner, config
 - Whether the issue reproduces consistently or intermittently
 
+For Incident/deep work, build an `Evidence Timeline` from timestamped facts across relevant sources. Normalize timezones, preserve request/trace/run IDs, and distinguish observed ordering from inferred causation. Quick/local work records `Timeline: skipped - local deterministic failure`.
+
 For frontend issues, use `.claude/references/debugger/frontend-verification.md`.
 For CI/log issues, use `.claude/references/debugger/log-ci-analysis.md`.
 For performance issues, use `.claude/references/debugger/performance-diagnostics.md`.
@@ -147,6 +156,7 @@ Rules:
 - Prefer read-only evidence: logs, grep, stack traces, DB queries, browser traces.
 - For flaky async tests, use `.claude/references/debugger/condition-based-waiting.md`.
 - If 2+ hypotheses are refuted, use inversion: ask what evidence would make the current explanation impossible.
+- Preserve an elimination path: for every confirmed, refuted, or inconclusive hypothesis, cite the observation and explain why it changes the candidate set.
 
 **Output:** `✓ Step 4: Hypotheses tested - [confirmed/refuted counts]`
 
@@ -167,16 +177,20 @@ Symptom
 - Symptom: exact observable failure
 - Reproduction: command/user flow/log trigger
 - Expected vs actual behavior
+- Trigger: event or input that activated the failure, or `unknown`
 - Root cause: file:line or config/env source
+- Contributing factors: conditions that increased likelihood or impact but are not sufficient causes, or `none evidenced`
 - Why now: recent change, data state, dependency, environment, timing, or load factor
 - Evidence chain: observations that prove this cause
 - Blast radius: files/modules/tests/users/workflows affected
+
+Do not collapse correlation into causation. The root cause must explain the mechanism from trigger to symptom and identify the earliest owned invariant whose correction would prevent recurrence. Read `.claude/references/debugger/root-cause-tracing.md` for deep call/data flow or test-pollution cases.
 
 **Output:** `✓ Step 5: Root cause traced - [file:line/config/env]`
 
 ---
 
-## Step 6: Blast Radius + Verification Plan
+## Step 6: Blast Radius + Verification And Prevention Plan
 
 Prepare the handoff to `hapo:hotfix` or the user.
 
@@ -187,6 +201,8 @@ Prepare the handoff to `hapo:hotfix` or the user.
 - Typecheck/lint/build commands when relevant
 - UI screenshot/console/network checks when relevant
 - Side-effect sweep from `.claude/references/debugger/side-effect-gate.md`
+
+For Incident/deep work, add recurrence-prevention candidates: missing invariant or validation layer, observability/alerting gap, and one regression scenario. These are evidence-backed handoff directions only; `hapo:debug` does not implement them.
 
 **Output:** `✓ Step 6: Verification planned - [commands/scenarios]`
 
@@ -206,18 +222,31 @@ Prepare the handoff to `hapo:hotfix` or the user.
 - Reproduction:
 - Expected:
 - Actual:
+- Trigger:
 - Root cause:
+- Contributing factors:
 - Why now:
 - Evidence chain:
 - Blast radius:
 
+### Evidence Timeline
+- skipped: [reason] | [timestamp/source/id/event]
+
 ### Hypotheses Tested
 1. [confirmed/refuted/inconclusive] [hypothesis] - [evidence]
+
+### Elimination Path
+- [candidate removed or retained] - [decisive observation]
 
 ### Verification Plan
 - Original reproduction:
 - Regression guard:
 - Side-effect sweep:
+
+### Recurrence-Prevention Handoff
+- Missing invariant/validation:
+- Monitoring or alerting gap:
+- Regression scenario:
 
 ### Temporary Instrumentation
 - none | removed: [file:line, purpose, proof captured]
@@ -247,9 +276,9 @@ Prepare the handoff to `hapo:hotfix` or the user.
 Load as needed:
 - `.claude/references/debugger/core-philosophy.md` - Anti-guessing discipline
 - `.claude/references/debugger/root-cause-tracing.md` - Backward trace to origin
-- `.claude/references/debugger/verification-protocol.md` - Fresh evidence requirements
+- `.claude/references/debugger/verification-protocol.md` - Diagnostic baseline and proof handoff ownership
 - `.claude/references/debugger/log-ci-analysis.md` - Logs and CI/CD failure analysis
-- `.claude/references/debugger/parallel-agent-hydration.md` - Parallel reconnaissance
+- `.claude/references/debugger/parallel-agent-hydration.md` - Permission-gated parallel reconnaissance
 - `.claude/references/debugger/frontend-verification.md` - Browser/UI verification
 - `.claude/references/debugger/performance-diagnostics.md` - Performance investigation
 - `.claude/references/debugger/condition-based-waiting.md` - Flaky async test diagnosis

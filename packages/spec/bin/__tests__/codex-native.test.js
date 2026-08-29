@@ -59,6 +59,16 @@ const TEST_BUNDLE = [
   'references/test-memory.md'
 ];
 const TEST_RUNNER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/test-runner.md');
+const DEBUG_SKILL_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/skills/debug/SKILL.md');
+const DEBUG_AGENT_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/debugger.md');
+const DEBUG_REFERENCE_FILES = [
+  'core-philosophy.md',
+  'root-cause-tracing.md',
+  'verification-protocol.md',
+  'log-ci-analysis.md',
+  'parallel-agent-hydration.md',
+  'side-effect-gate.md'
+];
 const CODE_REVIEW_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/code-review');
 const IMPLEMENTATION_READINESS_BOUNDARY_ROWS = [
   ['Interaction/UI', 'entry journey; visible/loading/empty/error states; input/focus/keyboard; accessibility; responsive/native/device behavior'],
@@ -1887,6 +1897,43 @@ test('Codex dry-run leaves both managed roots untouched', () => {
     assert.equal(fs.existsSync(path.join(root, '.agents')), false);
     assert.equal(fs.existsSync(path.join(root, 'AGENTS.md')), false);
     assert.equal(fs.existsSync(path.join(root, '.gitignore')), false);
+  });
+});
+
+test('Codex install preserves the adaptive diagnostic-only Debug contract', () => {
+  inTempProject((root) => {
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedSkill = fs.readFileSync(
+      path.join(root, '.agents/skills/debug/SKILL.md'), 'utf8'
+    );
+    assert.match(installedSkill, /^name: hapo-debug$/m);
+    assert.match(installedSkill, /## Proportional depth/);
+    assert.match(installedSkill, /Evidence Timeline/);
+    assert.match(installedSkill, /### Elimination Path/);
+    assert.match(installedSkill, /### Recurrence-Prevention Handoff/);
+    assert.match(installedSkill, /`hapo-debug` is read-only for product code/);
+
+    const installedAgent = fs.readFileSync(
+      path.join(root, '.codex/agents/debugger.toml'), 'utf8'
+    );
+    assert.equal(
+      installedAgent,
+      convertCodexAgentContent(fs.readFileSync(DEBUG_AGENT_SOURCE_PATH, 'utf8'), 'debugger.md')
+    );
+    assert.match(installedAgent, /Never implement the repair/);
+
+    for (const relative of DEBUG_REFERENCE_FILES) {
+      const source = fs.readFileSync(
+        path.join(PACKAGE_ROOT, 'src/claude/references/debugger', relative), 'utf8'
+      );
+      const installed = fs.readFileSync(
+        path.join(root, '.codex/references/debugger', relative), 'utf8'
+      );
+      assert.equal(installed, normalizeCodexBody(source, relative), relative);
+    }
+    assert.equal(fs.existsSync(DEBUG_SKILL_SOURCE_PATH), true);
   });
 });
 

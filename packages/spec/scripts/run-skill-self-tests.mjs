@@ -2884,6 +2884,113 @@ async function runSpecs21ContractTests() {
   return 15 + authoringInstructionTests;
 }
 
+const DEBUG_ADAPTIVE_PATHS = {
+  skill: "src/claude/skills/debug/SKILL.md",
+  agent: "src/claude/agents/debugger.md",
+  tracing: "src/claude/references/debugger/root-cause-tracing.md",
+  verification: "src/claude/references/debugger/verification-protocol.md",
+  parallel: "src/claude/references/debugger/parallel-agent-hydration.md",
+  logs: "src/claude/references/debugger/log-ci-analysis.md",
+  sideEffects: "src/claude/references/debugger/side-effect-gate.md",
+};
+
+function debugAdaptiveContractIssues(input) {
+  const issues = new Set();
+  const { skill, agent, tracing, verification, parallel, logs, sideEffects } = input;
+  if (!skill.includes("## Proportional depth")
+    || !skill.includes("**Quick/local:**")
+    || !skill.includes("**Incident/deep:**")
+    || !skill.includes('argument-hint: "[issue] --quick|--ci|--frontend|--perf"')) {
+    issues.add("proportional-depth");
+  }
+  if (!skill.includes("`hapo:debug` is read-only for product code")
+    || !agent.includes("Never implement the repair")
+    || !verification.includes("Debug owns the failing baseline and the proof plan")
+    || verification.includes("Execution (Apply the Fix)")) {
+    issues.add("diagnostic-boundary");
+  }
+  if (!skill.includes("Evidence Timeline")
+    || !logs.includes("Normalize all timestamps to one timezone")
+    || !logs.includes("ordering, not causation")
+    || !logs.includes("request, trace, job, session, or run ID")) {
+    issues.add("timeline-causality");
+  }
+  if (!skill.includes("Preserve an elimination path")
+    || !agent.includes("Keep an elimination path")) {
+    issues.add("elimination-path");
+  }
+  if (!skill.includes("Trigger: event or input")
+    || !skill.includes("Contributing factors:")
+    || !skill.includes("Do not collapse correlation into causation")
+    || !tracing.includes("## Separate Causal Roles")) {
+    issues.add("causal-taxonomy");
+  }
+  if (!tracing.includes("symptom -> immediate cause -> caller/data boundary -> origin")
+    || !tracing.includes("For test pollution, isolate the polluter")
+    || !tracing.includes("History And Bisection")) {
+    issues.add("deep-tracing");
+  }
+  if (!skill.includes("### Recurrence-Prevention Handoff")
+    || !agent.includes("### Recurrence-Prevention Handoff")
+    || !sideEffects.includes("Observability/alerting gap")) {
+    issues.add("recurrence-handoff");
+  }
+  if (!parallel.includes("The user explicitly requested or permitted delegation or parallel agents")
+    || !parallel.includes("The active runtime exposes an Explore/delegation capability")
+    || !parallel.includes("at least two distinct, non-overlapping scopes")
+    || !parallel.includes("Otherwise continue sequentially")
+    || !parallel.includes("Reconnaissance is read-only")) {
+    issues.add("delegation-gate");
+  }
+  if (!agent.includes("Use `/hapo:scout` or focused local `rg`/reads")
+    || agent.includes("less than 2 days old")
+    || agent.includes("create/update a codebase summary")) {
+    issues.add("targeted-discovery");
+  }
+  return [...issues].sort();
+}
+
+function replaceDebugClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`expected one Debug mutation anchor: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runDebugAdaptiveContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(DEBUG_ADAPTIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = debugAdaptiveContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Debug adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+  const mutations = [
+    ["quick-becomes-deep", "skill", "proportional-depth", "**Quick/local:**", "**Routine:**"],
+    ["debug-applies-fix", "verification", "diagnostic-boundary", "Debug owns the failing baseline and the proof plan", "Debug applies the fix and owns the proof plan"],
+    ["timeline-drops-timezone", "logs", "timeline-causality", "Normalize all timestamps to one timezone", "Compare timestamps as printed"],
+    ["elimination-is-optional", "agent", "elimination-path", "Keep an elimination path", "Optionally summarize candidates"],
+    ["cause-loses-trigger", "skill", "causal-taxonomy", "Trigger: event or input", "Activation detail: event or input"],
+    ["trace-stops-at-throw", "tracing", "deep-tracing", "symptom -> immediate cause -> caller/data boundary -> origin", "symptom -> thrown frame"],
+    ["recurrence-is-removed", "sideEffects", "recurrence-handoff", "Observability/alerting gap", "Operational notes"],
+    ["delegation-loses-user-gate", "parallel", "delegation-gate", "The user explicitly requested or permitted delegation or parallel agents", "Delegation seems useful"],
+    ["scout-becomes-mandatory-summary", "agent", "targeted-discovery", "Use `/hapo:scout` or focused local `rg`/reads", "Always create/update a codebase summary"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceDebugClauseOnce(baseline[source], from, to) };
+    const issues = debugAdaptiveContractIssues(changed);
+    if (!issues.includes(expectedIssue)) {
+      throw new Error(`[FAIL] Debug adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+  console.log("✔ hapo:debug adaptive incident contract is complete and bounded");
+  console.log(`✔ hapo:debug adaptive incident checker rejects ${mutations.length} semantic weakenings`);
+  return mutations.length + 1;
+}
+
 async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
@@ -2891,6 +2998,7 @@ async function runStaticSemanticTests() {
   const brainstormContractTests = await runBrainstormContractTests();
   const developPlanNativeTests = await runDevelopPlanNativeContractTests();
   const testPlanNativeTests = await runTestPlanNativeContractTests();
+  const debugAdaptiveTests = await runDebugAdaptiveContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -4052,7 +4160,7 @@ async function runStaticSemanticTests() {
 
   return checks.length + specs21Tests + implementationReadinessTests
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
-    + developPlanNativeTests + testPlanNativeTests;
+    + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests;
 }
 
 function runSkillCatalogTests() {
