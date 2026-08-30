@@ -16,7 +16,7 @@ Use this when the issue affects rendering, layout, interaction, hydration, brows
    - Record URL, viewport, user role, feature flags, and required test data.
    - Record browser, OS, and device profile when relevant.
 2. **Screenshot**
-   - Debug captures the failing baseline screenshot. Hotfix/Test owns the post-change comparison.
+   - Debug captures the failing baseline screenshot. Fix/Test owns the post-change comparison.
    - Check text overflow, occlusion, clipping, broken images, blank states, and responsive layout.
 3. **Console**
    - Capture console errors and warnings.

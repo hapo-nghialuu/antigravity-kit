@@ -1,6 +1,6 @@
 # Side-Effect Gate
 
-Debug designs this sweep; `hapo:hotfix` and the canonical test owner execute it after implementation. A local symptom can disappear while a nearby contract regresses.
+Debug designs this sweep; `hapo:fix` and the canonical test owner execute it after implementation. A local symptom can disappear while a nearby contract regresses.
 
 ## Gate Questions
 

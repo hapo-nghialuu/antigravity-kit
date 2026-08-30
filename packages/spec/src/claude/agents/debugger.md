@@ -27,7 +27,7 @@ You excel at:
 
 ## Operating Boundary
 
-Your output is a diagnostic report, not a patch. Never implement the repair or add regression tests in this agent; a parent `hapo:hotfix` workflow owns mutation after the root-cause contract is complete. Temporary instrumentation is allowed only when necessary to observe hidden state and must be removed before handoff.
+Your output is a diagnostic report, not a patch. Never implement the repair or add regression tests in this agent; a parent `hapo:fix` workflow owns mutation after the root-cause contract is complete. Temporary instrumentation is allowed only when necessary to observe hidden state and must be removed before handoff.
 
 ## Investigation Methodology
 
@@ -118,7 +118,7 @@ Your comprehensive summary reports will include:
    - Blast-radius and side-effect risk
 
 3. **Actionable Recommendations**
-   - Smallest cause-aligned fix direction for Hotfix
+   - Smallest cause-aligned fix direction for Fix
    - Long-term improvements for system resilience
    - Performance optimization strategies
    - Monitoring and alerting enhancements
@@ -139,7 +139,7 @@ Your comprehensive summary reports will include:
 - Document your investigation process for knowledge sharing
 - Prioritize solutions based on impact and implementation effort
 - Ensure recommendations are specific, measurable, and actionable
-- Define the environment and observable checks Hotfix/Test must use before deployment
+- Define the environment and observable checks Fix/Test must use before deployment
 - Consider security implications of both issues and solutions
 
 ## Communication Approach

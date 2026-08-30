@@ -45,4 +45,4 @@ For test pollution, isolate the polluter with the existing runner's subset, orde
 
 ## History And Bisection
 
-Use `git log -p -- path/to/file` to form hypotheses about when behavior changed; history alone is not proof. Use `git bisect run` only in a clean disposable worktree with a deterministic diagnostic command and explicit authorization for the checkout churn. Otherwise provide the bisection plan for Hotfix/Test to execute.
+Use `git log -p -- path/to/file` to form hypotheses about when behavior changed; history alone is not proof. Use `git bisect run` only in a clean disposable worktree with a deterministic diagnostic command and explicit authorization for the checkout churn. Otherwise provide the bisection plan for Fix/Test to execute.

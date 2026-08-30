@@ -1,5 +1,5 @@
 ---
-name: hapo:hotfix
+name: hapo:fix
 description: "Use when asked to FIX a bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Uses hapo:debug for evidence-first diagnosis before any code change."
 user-invocable: true
 when_to_use: "Invoke to fix a bug or failure with scout-first diagnosis before change."
@@ -10,7 +10,7 @@ metadata:
   author: haposoft
   version: "2.0.0"
 ---
-# Hotfix — root-cause fix workflow
+# Fix — root-cause repair workflow
 
 Fix the diagnosed root cause, prove the fix with fresh evidence, and leave no
 side effects. Evidence first, fix second.
@@ -21,7 +21,7 @@ side effects. Evidence first, fix second.
 - `--parallel` - Fix independent issues concurrently, only through the Delegation Gate below
 - `--from-debug` - Start from an existing `hapo:debug` report and validate its contract before accepting it
 
-Default: deterministic scout-first hotfix. There is no initial mode selection step.
+Default: deterministic scout-first fix. There is no initial mode selection step.
 
 ## Proportional depth
 
@@ -40,6 +40,23 @@ follows `hapo:debug`:
 Depth changes evidence breadth, never the gates: scout, diagnosis, before/after
 proof, and the side-effect gate apply at every depth.
 
+## Bounded repair frame
+
+Quick/local does not add a separate framing ceremony when the issue and diagnosis
+already establish the repaired behavior and proof. For Standard or Incident/deep,
+or whenever scope or risk remains ambiguous after diagnosis, record four short
+fields before choosing an implementation:
+
+- **Outcome:** the observable repaired behavior.
+- **Constraints:** compatibility, safety, ownership, rollout, and time boundaries.
+- **Non-goals:** adjacent behavior the repair must not absorb.
+- **Acceptance:** the exact reproduction plus broader evidence that proves completion.
+
+Derive repository-owned facts from scout and diagnosis. Ask the user only for a
+missing user-owned decision that could materially change the repair. This frame
+does not select a solution, widen the issue into feature work, or run before the
+root cause is proven.
+
 <HARD-GATE>
 Do not propose or implement a fix before Steps 1-2 (scout + diagnosis) complete.
 A symptom patch without a diagnosed root cause is a failed fix.
@@ -49,7 +66,7 @@ If 3+ fix attempts fail, stop, question the architecture, and discuss with the u
 </HARD-GATE>
 
 <HARD-GATE-SCOUT-FIRST>
-Hotfix always scouts before asking broad clarification questions, forming hypotheses, or changing files.
+Fix always scouts before asking broad clarification questions, forming hypotheses, or changing files.
 Collect these scout outputs first:
 1. Project type, language(s), framework(s), and package/test runner from repo files.
 2. Exact file(s) where the symptom surfaces and their direct callers/dependents.
@@ -130,7 +147,7 @@ reads) to map the blast radius.
 
 Evidence-based root cause analysis; no guessing. Use `hapo:debug`, or validate
 an existing debug report when `--from-debug` is provided. See
-`references/diagnosis-protocol.md` for the hotfix-local checklist.
+`references/diagnosis-protocol.md` for the Fix-local checklist.
 
 Diagnosis chain:
 
@@ -169,12 +186,15 @@ diagnosing or ask the user for the specific missing artifact. Do not implement.
 
 ---
 
-## Step 3: Select Depth
+## Step 3: Select Depth + Bound Repair
 
 Apply the Proportional depth rule above. For 2+ independent issues (or
 `--parallel`), evaluate the Delegation Gate; when it is closed, fix the issues
 sequentially. Track progress with the runtime's task surface when available, or
 a markdown checklist otherwise.
+
+For Standard and Incident/deep, complete the bounded repair frame above. Quick
+records no separate frame unless scope or risk is still ambiguous.
 
 **Output:** `✓ Step 3: [Depth] selected — [workflow]`
 
@@ -190,7 +210,14 @@ Rules:
 Workflows by depth:
 - **Quick:** apply the minimal fix from completed scout + diagnosis, run the exact pre-fix command plus typecheck/lint immediately, report before/after proof.
 - **Standard:** implement the fix, add or update a regression test that fails without the fix and passes with it, run the relevant suite.
-- **Incident/deep:** investigate with `hapo:scout`/`hapo:debug` (and `researcher` for external facts) — concurrently only through the Delegation Gate, otherwise sequentially; synthesize one fix approach; implement in stages and verify each stage.
+- **Incident/deep:** after diagnosis, research only unresolved external facts. If
+  multiple cause-aligned remedies or an architecture decision remain, use
+  `hapo:brainstorm` to compare 2-3 options against the bounded repair frame, then
+  write a concise staged implementation plan with dependencies and proof per
+  stage. When diagnosis leaves one safe direct repair, skip research and
+  brainstorm, record why it satisfies the frame, and implement it. Delegated
+  research follows the Delegation Gate; implementation starts only after the
+  direction is resolved.
 - **Parallel:** one independent issue per agent, each following Steps 1-5, dispatched only through the Delegation Gate; aggregate results on completion.
 
 **Output:** `✓ Step 4: Fixed — [N] files changed`
@@ -245,9 +272,11 @@ Unified step markers (emit after each step):
 
 ## Specialized Paths
 
-Use `references/workflow-specialized.md` as an overlay after Step 1 scout for
-CI/CD failures, test suite failures, TypeScript type errors, UI/visual issues,
-and application log errors. Specialized paths do not replace the six-step flow.
+Use `references/workflow-specialized.md` as a progressively disclosed overlay
+after Step 1 scout for CI/CD failures, test suite failures, TypeScript type
+errors, UI/visual issues, and application log errors. Load only the matching
+section. Specialized paths add category-specific evidence and proof; they do
+not replace the six-step flow, weaken diagnosis, or broaden the repair scope.
 
 ## References
 

@@ -51,7 +51,7 @@ packets instead of one monolithic design.
 
 <HARD-GATE>
 Do not ask the user directly, write files, mutate shared task state, delegate
-work, invoke Specs/Hotfix/Develop, or claim approval. Non-bug exploration may end
+work, invoke Specs/Fix/Develop, or claim approval. Non-bug exploration may end
 in chat; feature/docs delivery may only prepare a future explicit Specs
 invocation; bug handoff requires evidenced root cause and the user's explicit fix
 request.

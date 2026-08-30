@@ -1154,7 +1154,7 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   bugContract: "before diagnosis, capture the repaired-behavior Outcome, Constraints, Non-goals, and Acceptance evidence.",
   debugFirst: "Then use `hapo:debug` until root cause is evidenced. Do not brainstorm fixes from a symptom.",
   remedyCount: "If at least two cause-aligned remedies remain, compare 2–3 here.",
-  hotfixAuthority: "Hand off to `hapo:hotfix` only when the user explicitly requested a fix",
+  hotfixAuthority: "Hand off to `hapo:fix` only when the user explicitly requested a fix",
   diagnosisStop: "diagnosis-only work returns the root-cause report and stops.",
   nonBugExploration: "Non-bug exploration only",
   explorationStop: "Do not request design approval, persist a report, or invoke another workflow without a new explicit request.",
@@ -1176,7 +1176,7 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   decisionTruth: "Do not write \"user selected\" unless direct user text or the native input tool confirms it.",
   specialistGate: "Proceed to comparative analysis only when at least two viable architectural paths have materially different consequences.",
   specialistSingle: "If one path is viable, return that conclusion and why alternatives fail the contract; never invent strawmen to fill a quota.",
-  specialistBoundary: "Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Hotfix/Develop, or claim approval.",
+  specialistBoundary: "Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Fix/Develop, or claim approval.",
   specialistHandoff: "Non-bug exploration may end in chat; feature/docs delivery may only prepare a future explicit Specs invocation; bug handoff requires evidenced root cause and the user's explicit fix request.",
   controlSegment: "Parse controls only from the leading consecutive token segment.",
   controlGrammar: "Accept `--deep`, `--visual`, and `--advice` in any order, each at most once.",
@@ -1322,7 +1322,7 @@ function brainstormHasUnauthorizedSpecialistAuthority(content) {
     const hasTarget = ["ask", "question", "contact"].includes(action)
       ? /\b(?:the )?user\b/i.test(tail)
       : ["invoke", "start", "dispatch", "launch", "route", "forward", "run", "execute", "hand off"].includes(action)
-        ? /\b(?:Specs|Hotfix|Develop)\b/i.test(tail)
+        ? /\b(?:Specs|Fix|Develop)\b/i.test(tail)
         : ["write", "edit", "update", "mutate"].includes(action)
           ? /\b(?:files?|task state|shared state)\b/i.test(tail)
           : action === "delegate"
@@ -1546,7 +1546,7 @@ function brainstormContractIssues(input) {
     || !normalizedBugRoute.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop))
     || !normalizeMarkdownWhitespace(contract).includes("For feature/docs delivery and every bug/failure, resolve four user-owned fields:")
     || ["Outcome", "Constraints", "Non-goals", "Acceptance"].some((field) => !contractFields.has(field))
-    || brainstormHasWorkflowDispatch(hotfixRemainder, "hotfix")) {
+    || brainstormHasWorkflowDispatch(hotfixRemainder, "fix")) {
     issues.add("bug-routing");
   }
   const explorationRoute = explorationIndex >= 0 && featureIndex > explorationIndex
@@ -1561,7 +1561,7 @@ function brainstormContractIssues(input) {
     || featureIndex < 0
     || brainstormHasAffirmativePhrase(explorationRemainder, /\b(?:request|seek|require)\b.{0,40}\bapproval\b/gi)
     || brainstormHasAffirmativePhrase(explorationRemainder, /\b(?:persist|write|save)\b.{0,40}\b(?:report|summary|design)\b/gi)
-    || ["specs", "hotfix", "develop"].some((workflow) => brainstormHasWorkflowDispatch(explorationRemainder, workflow))) {
+    || ["specs", "fix", "develop"].some((workflow) => brainstormHasWorkflowDispatch(explorationRemainder, workflow))) {
     issues.add("exploration-stop");
   }
   if (!normalizedPersistence.includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs))
@@ -1706,7 +1706,7 @@ async function runBrainstormContractTests() {
   if (reflowIssues.length > 0) fail(`whitespace-only reflow returned ${reflowIssues.join(", ")}`);
 
   const safeStrengthenings = [
-    [BRAINSTORM_CONTRACT_CLAUSES.explorationStop, `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Never invoke Hotfix from exploration. Do not invoke Develop.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.explorationStop, `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Never invoke Fix from exploration. Do not invoke Develop.`],
     [BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} The user may invoke \`hapo:specs\` in a new request.`],
     [BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} After final approval, save the draft.`],
     [BRAINSTORM_CONTRACT_CLAUSES.noDevelop, `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} The controller is forbidden to invoke Specs.`],
@@ -1793,11 +1793,11 @@ async function runBrainstormContractTests() {
     { name: "bug-contract-drops-fields", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.bugContract, to: "before diagnosis, capture the repaired behavior.", expected: ["bug-routing"] },
     { name: "bug-options-before-debug", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.debugFirst, to: "Compare remedies, then use `hapo:debug`.", expected: ["bug-routing"] },
     { name: "bug-remedy-count-removed", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.remedyCount, to: "If remedies remain, compare any number here.", expected: ["bug-routing"] },
-    { name: "hotfix-without-authority", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority, to: "Hand off to `hapo:hotfix` whenever root cause is known", expected: ["bug-routing"] },
-    { name: "hotfix-contradictory-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Urgent incidents may invoke \`hapo:hotfix\` without user authority.`, expected: ["bug-routing"] },
-    { name: "hotfix-hyphenated-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand-off to Hotfix immediately.`, expected: ["bug-routing"] },
-    { name: "hotfix-object-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand off this request to Hotfix.`, expected: ["bug-routing"] },
-    { name: "diagnosis-only-hotfix", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: "diagnosis-only work continues to Hotfix.", expected: ["bug-routing"] },
+    { name: "hotfix-without-authority", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority, to: "Hand off to `hapo:fix` whenever root cause is known", expected: ["bug-routing"] },
+    { name: "hotfix-contradictory-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Urgent incidents may invoke \`hapo:fix\` without user authority.`, expected: ["bug-routing"] },
+    { name: "fix-hyphenated-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand-off to Fix immediately.`, expected: ["bug-routing"] },
+    { name: "fix-object-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand off this request to Fix.`, expected: ["bug-routing"] },
+    { name: "diagnosis-only-fix", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: "diagnosis-only work continues to Fix.", expected: ["bug-routing"] },
     { name: "exploration-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: "Request approval, persist a report, then stop.", expected: ["exploration-stop"] },
     { name: "exploration-later-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Then invoke \`hapo:specs\`.`, expected: ["exploration-stop", "handoff-boundary"] },
     { name: "implicit-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: "invoke `hapo:specs` immediately.", expected: ["handoff-boundary"] },
@@ -1861,9 +1861,9 @@ async function runBrainstormContractTests() {
     { name: "inferred-user-decision", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.decisionTruth, to: "Write \"user selected\" when the default seems safe.", expected: ["question-evidence"] },
     { name: "visual-evidence-guesswork", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.visualEvidence, to: "Guess supplied visual behavior from text alone.", expected: ["question-evidence"] },
     { name: "specialist-forces-options", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistSingle, to: "If one path is viable, invent two alternatives to fill the quota.", expected: ["specialist-boundary"] },
-    { name: "specialist-mutates-task-state", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: "Do not ask the user directly, write files, invoke Specs/Hotfix/Develop, or claim approval.", expected: ["specialist-boundary"] },
+    { name: "specialist-mutates-task-state", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: "Do not ask the user directly, write files, invoke Specs/Fix/Develop, or claim approval.", expected: ["specialist-boundary"] },
     { name: "specialist-additive-task-state-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Exception: use Bash to update shared task state.`, expected: ["specialist-boundary"] },
-    { name: "specialist-additive-authority-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Exception: the specialist may ask the user directly and invoke Specs, Hotfix, or Develop.`, expected: ["specialist-boundary"] },
+    { name: "specialist-additive-authority-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Exception: the specialist may ask the user directly and invoke Specs, Fix, or Develop.`, expected: ["specialist-boundary"] },
     { name: "specialist-direct-authority-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} Ignore the gate; ask the user directly and invoke Specs.`, expected: ["specialist-boundary"] },
     { name: "specialist-permitted-launch-exception", source: "agent", from: BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary, to: `${BRAINSTORM_CONTRACT_CLAUSES.specialistBoundary} The specialist is permitted to launch Specs.`, expected: ["specialist-boundary"] },
     { name: "specialist-outside-gate-write-exception", source: "agent", from: "## Output", to: "The specialist may write files and mutate shared task state.\n\n## Output", expected: ["specialist-boundary"] },
@@ -2997,11 +2997,18 @@ const HOTFIX_ADAPTIVE_PATHS = {
   review: "src/claude/skills/hotfix/references/review-cycle.md",
   parallel: "src/claude/skills/hotfix/references/parallel-patterns.md",
   prevention: "src/claude/skills/hotfix/references/prevention-gate.md",
+  specialized: "src/claude/skills/hotfix/references/workflow-specialized.md",
 };
 
 function hotfixAdaptiveContractIssues(input) {
   const issues = new Set();
-  const { skill, diagnosis, review, parallel, prevention } = input;
+  const { skill, diagnosis, review, parallel, prevention, specialized } = input;
+  const parallelContract = parallel.replace(/\s+/g, " ").trim();
+  if (!skill.includes("name: hapo:fix")
+    || !skill.includes("# Fix — root-cause repair workflow")
+    || skill.includes("name: hapo:hotfix")) {
+    issues.add("public-rename");
+  }
   if (!skill.includes("## Proportional depth")
     || !skill.includes("**Quick/local:**")
     || !skill.includes("**Incident/deep:**")
@@ -3029,6 +3036,10 @@ function hotfixAdaptiveContractIssues(input) {
     || !review.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED")
     || !review.includes("Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry")
     || !review.includes("The definition of `PASS` defers to `hapo:code-review`")
+    || !review.includes("only a fresh literal `PASS` enters finalization")
+    || review.includes('"Approve anyway"')
+    || review.includes('"Approve with known issues"')
+    || review.includes('→ "Approve"')
     || review.includes("at most one Medium")) {
     issues.add("verdict-surface");
   }
@@ -3054,6 +3065,41 @@ function hotfixAdaptiveContractIssues(input) {
     || !prevention.includes("Recurrence-Prevention Handoff")) {
     issues.add("prevention-link");
   }
+  if (!skill.includes("## Bounded repair frame")
+    || !skill.includes("Quick/local does not add a separate framing ceremony")
+    || !skill.includes("**Outcome:**")
+    || !skill.includes("**Constraints:**")
+    || !skill.includes("**Non-goals:**")
+    || !skill.includes("**Acceptance:**")
+    || !skill.includes("does not select a solution, widen the issue into feature work")) {
+    issues.add("bounded-repair-frame");
+  }
+  if (!skill.includes("after diagnosis, research only unresolved external facts")
+    || !skill.includes("multiple cause-aligned remedies or an architecture decision remain")
+    || !skill.includes("`hapo:brainstorm` to compare 2-3 options")
+    || !skill.includes("concise staged implementation plan with dependencies and proof per")
+    || !skill.includes("When diagnosis leaves one safe direct repair, skip research and")) {
+    issues.add("deep-decision-route");
+  }
+  if (!skill.includes("Load only the matching")
+    || !specialized.includes("Load only the matching section")
+    || !specialized.includes("## CI/CD Pipeline Failures")
+    || !specialized.includes("## Test Suite Failures")
+    || !specialized.includes("## TypeScript Type Errors")
+    || !specialized.includes("## UI / Visual Issues")
+    || !specialized.includes("## Application Log Errors")
+    || (specialized.match(/\*\*Baseline:\*\*/g) || []).length < 5
+    || (specialized.match(/\*\*Proof:\*\*/g) || []).length < 5) {
+    issues.add("specialized-proof-overlays");
+  }
+  if (!parallelContract.includes("Diagnosis still starts only")
+    || !parallelContract.includes("after the required scout outputs are synthesized")
+    || !parallelContract.includes("then begin hypotheses and diagnosis")
+    || !parallelContract.includes("Research begins only after Step 2 diagnosis")
+    || parallelContract.includes("scout + diagnose + research together")
+    || parallelContract.includes("You don't need to wait for scouting")) {
+    issues.add("scout-before-diagnosis");
+  }
   return [...issues].sort();
 }
 
@@ -3076,6 +3122,7 @@ async function runHotfixAdaptiveContractTests() {
     throw new Error(`[FAIL] Hotfix adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
   }
   const mutations = [
+    ["public-name-reverts", "skill", "public-rename", "name: hapo:fix", "name: hapo:hotfix"],
     ["quick-skips-diagnosis", "skill", "proportional-depth", "Quick mode only reduces depth", "Quick mode may shorten diagnosis"],
     ["contract-loses-trigger", "skill", "causal-fields", "Trigger: event or input that activated the failure", "Activation note: whatever started the failure"],
     ["protocol-loses-contributing", "diagnosis", "causal-fields", "- Contributing factors: conditions that raised likelihood or impact but are not sufficient causes, or `none evidenced`", "- Side notes: optional context"],
@@ -3085,7 +3132,8 @@ async function runHotfixAdaptiveContractTests() {
     ["incomplete-report-implements", "skill", "handoff-validation", "routes back to diagnosis", "may proceed to implementation with caveats"],
     ["enum-drops-warnings", "skill", "verdict-surface", "report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`", "report `PASS | FAIL | BLOCKED`"],
     ["warnings-auto-accept", "review", "verdict-surface", "Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry", "Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves"],
-    ["pass-redefined-locally", "review", "verdict-surface", "The definition of `PASS` defers to `hapo:code-review`; hotfix never redefines it with local severity thresholds.", "The definition of `PASS` is local: no Critical, no High, at most one Medium."],
+    ["warnings-user-approve", "review", "verdict-surface", "only a fresh literal `PASS` enters finalization", '"Approve anyway" enters finalization'],
+    ["pass-redefined-locally", "review", "verdict-surface", "The definition of `PASS` defers to `hapo:code-review`; Fix never redefines it with local severity thresholds.", "The definition of `PASS` is local: no Critical, no High, at most one Medium."],
     ["confidence-score-returns", "skill", "verdict-surface", "**Report:** root cause, changes made", "**Report:** Confidence score, root cause, changes made"],
     ["sweep-loses-repro-check", "skill", "side-effect-gate", "The original symptom no longer reproduces with the exact pre-fix command/user flow.", "The symptom appears resolved."],
     ["sweep-loses-module-tests", "skill", "side-effect-gate", "Modified files and transitively affected modules still pass relevant tests.", "Modified files look correct on re-read."],
@@ -3097,6 +3145,11 @@ async function runHotfixAdaptiveContractTests() {
     ["tasks-become-mandatory", "skill", "delegation-gate", "Task-tracking tools are an optional visibility fallback, never a required step", "Task-tracking tools are a required step"],
     ["prevention-unlinks-sweep", "prevention", "prevention-link", "Step 5 side-effect sweep", "final summary"],
     ["prevention-drops-recurrence", "prevention", "prevention-link", "Recurrence-Prevention Handoff", "informal notes"],
+    ["quick-gains-mandatory-frame", "skill", "bounded-repair-frame", "Quick/local does not add a separate framing ceremony", "Quick/local always requires a separate framing ceremony"],
+    ["deep-skips-post-diagnosis-choice", "skill", "deep-decision-route", "after diagnosis, research only unresolved external facts", "research broadly before diagnosis"],
+    ["overlays-load-everything", "specialized", "specialized-proof-overlays", "Load only the matching section", "Load every section"],
+    ["diagnosis-starts-before-scout", "parallel", "scout-before-diagnosis", "Diagnosis still starts only", "Diagnosis may start"],
+    ["research-starts-before-diagnosis", "parallel", "scout-before-diagnosis", "Research begins only after Step 2 diagnosis", "Research may begin before Step 2 diagnosis"],
   ];
   for (const [name, source, expectedIssue, from, to] of mutations) {
     const changed = { ...baseline, [source]: replaceHotfixClauseOnce(baseline[source], from, to) };
@@ -3105,8 +3158,8 @@ async function runHotfixAdaptiveContractTests() {
       throw new Error(`[FAIL] Hotfix adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:hotfix adaptive contract is complete and bounded");
-  console.log(`✔ hapo:hotfix checker rejects ${mutations.length} semantic weakenings`);
+  console.log("✔ hapo:fix adaptive contract is complete and bounded");
+  console.log(`✔ hapo:fix checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
 }
 
@@ -3315,6 +3368,15 @@ async function runStaticSemanticTests() {
         const manifest = JSON.parse(content);
         return manifest.skills.required.includes("question") &&
           !manifest.skills.required.includes("ask");
+      },
+    },
+    {
+      label: "hapo:fix is packaged from the hotfix directory in the migration manifest",
+      file: "src/claude/migration-manifest.json",
+      assert: (content) => {
+        const manifest = JSON.parse(content);
+        return manifest.skills.required.includes("hotfix") &&
+          !manifest.skills.required.includes("fix");
       },
     },
     {
@@ -3635,16 +3697,16 @@ async function runStaticSemanticTests() {
         content.includes("Spec-Aware Mode"),
     },
     {
-      label: "hapo:hotfix is deterministic scout-first without mode selection",
+      label: "hapo:fix is deterministic scout-first without mode selection",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
-        content.includes("Default: deterministic scout-first hotfix") &&
+        content.includes("Default: deterministic scout-first fix") &&
         content.includes("There is no initial mode selection step") &&
         content.includes("<HARD-GATE-SCOUT-FIRST>") &&
         !content.includes("Default: Autonomous mode"),
     },
     {
-      label: "hapo:hotfix quick path never skips scout or diagnosis",
+      label: "hapo:fix quick path never skips scout or diagnosis",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
         content.includes("it never skips scout, pre-fix evidence, diagnosis, or before/after verification") &&
@@ -3652,7 +3714,7 @@ async function runStaticSemanticTests() {
         content.includes("Do not ask generic questions before this step"),
     },
     {
-      label: "hapo:hotfix enforces no-side-effect gate with user options",
+      label: "hapo:fix enforces no-side-effect gate with user options",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
         content.includes("<HARD-GATE-NO-SIDE-EFFECTS>") &&
@@ -3661,19 +3723,19 @@ async function runStaticSemanticTests() {
         content.includes("Do not silently patch around the regression"),
     },
     {
-      label: "hapo:hotfix references are local and not stale debugger paths",
+      label: "hapo:fix references are local and not stale debugger paths",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) => !content.includes("references/debugger/"),
     },
     {
-      label: "hapo:hotfix prevention gate points back to side-effect sweep",
+      label: "hapo:fix prevention gate points back to side-effect sweep",
       file: "src/claude/skills/hotfix/references/prevention-gate.md",
       assert: (content) =>
         content.includes("Step 5 side-effect sweep") &&
         !content.includes("references/debugger/"),
     },
     {
-      label: "hapo:hotfix review cycle uses pause conditions not mode selection",
+      label: "hapo:fix review cycle uses pause conditions not mode selection",
       file: "src/claude/skills/hotfix/references/review-cycle.md",
       assert: (content) =>
         content.includes("## Default Review Handling") &&
@@ -3709,7 +3771,7 @@ async function runStaticSemanticTests() {
         content.includes("Root cause: unknown") &&
         content.includes("Missing Evidence") &&
         content.includes("Next Diagnostic Action") &&
-        content.includes("do not hand off to `hapo:hotfix` as ready"),
+        content.includes("do not hand off to `hapo:fix` as ready"),
     },
     {
       label: "hapo:debug references installed debugger manuals",
@@ -3807,7 +3869,7 @@ async function runStaticSemanticTests() {
       assert: (content) =>
         content.includes("/hapo:ask -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
         content.includes("ask about source code, docs, specs, config, dependencies") &&
-        content.includes("/hapo:debug -> /hapo:hotfix") &&
+        content.includes("/hapo:debug -> /hapo:fix") &&
         content.includes("/hapo:docs --reconstruct <scope>") &&
         content.includes("missing acceptance criteria") &&
         content.includes("Do not inject or force a skill"),
@@ -4306,7 +4368,7 @@ function runSkillCatalogTests() {
     "`hapo:ask`",
     "`hapo:scout`",
     "`hapo:debug`",
-    "`hapo:hotfix`",
+    "`hapo:fix`",
     "`hapo:react-best-practices`",
   ]) {
     if (!result.stdout.includes(expected)) {

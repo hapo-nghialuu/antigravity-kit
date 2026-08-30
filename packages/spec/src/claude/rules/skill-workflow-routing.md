@@ -12,13 +12,13 @@ Claude Code selects skills from frontmatter descriptions; trust it for clear int
 /hapo:ask -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review -> /hapo:git
 ```
 
-Bug path: `/hapo:debug -> /hapo:hotfix` then test/review. As-is docs: `/hapo:scout` → `/hapo:docs --reconstruct <scope>` → human review → specs → develop. Delegate implementation to an external agent CLI: `/hapo:delegate`.
+Bug path: `/hapo:debug -> /hapo:fix` then test/review. As-is docs: `/hapo:scout` → `/hapo:docs --reconstruct <scope>` → human review → specs → develop. Delegate implementation to an external agent CLI: `/hapo:delegate`.
 
 ## Ambiguous cases
 
 | Ambiguity | Prefer | Not when |
 |---|---|---|
-| debug-vs-hotfix | `/hapo:debug` first when root cause unknown | Root cause is known / trivial local fix → `/hapo:hotfix` |
+| debug-vs-hotfix | `/hapo:debug` first when root cause unknown | Root cause is known / trivial local fix → `/hapo:fix` |
 | ask-vs-research | `/hapo:ask` to ask about source code, docs, specs, config, dependencies, or project facts | External best-practice comparison / multi-source investigation → `/hapo:research` |
 | ask-vs-brainstorm | `/hapo:ask` for factual answers with evidence | Vague idea, missing acceptance criteria, unclear scope, multi-approach tradeoffs → `/hapo:brainstorm` |
 | specs-vs-brainstorm | `/hapo:specs` when intent and acceptance are concrete enough | Unclear idea / architecture choices still open → `/hapo:brainstorm` first |

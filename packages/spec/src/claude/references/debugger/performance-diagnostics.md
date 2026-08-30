@@ -33,7 +33,7 @@ Measure before optimizing. A performance fix without a baseline is guessing.
    - Cold starts, cache misses, or dependency latency
 6. **Set verification target**
    - Before metric
-   - Required after metric for Hotfix/Test
+   - Required after metric for Fix/Test
    - Acceptable threshold
    - Regression guard if feasible
 

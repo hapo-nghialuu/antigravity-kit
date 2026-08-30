@@ -55,12 +55,12 @@ Do not ask generic questions before this step unless the issue cannot be located
 Do NOT recommend a fix until the root-cause contract is complete.
 Do NOT stop at the first plausible explanation. Test hypotheses against evidence.
 If 2+ hypotheses are refuted, change strategy before continuing.
-If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `hapo:hotfix` as ready.
+If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `hapo:fix` as ready.
 Answer each item in one concrete sentence.
 If any answer contains 'probably', 'I think', 'something with', or 'maybe' — it is not an answer; gather evidence instead.
 </ROOT-CAUSE-GATE>
 
-If the user asks to fix while still inside `hapo:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `hapo:hotfix`.
+If the user asks to fix while still inside `hapo:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `hapo:fix`.
 
 ## Process Flow
 
@@ -74,7 +74,7 @@ flowchart TD
     F --> G[Step 6: Verification + Prevention Handoff]
     G --> H[Diagnostic Report]
     H --> I{Fix requested?}
-    I -->|Yes| J[Hand off to hapo:hotfix]
+    I -->|Yes| J[Hand off to hapo:fix]
     I -->|No| K[Stop after diagnosis]
 ```
 
@@ -192,7 +192,7 @@ Do not collapse correlation into causation. The root cause must explain the mech
 
 ## Step 6: Blast Radius + Verification And Prevention Plan
 
-Prepare the handoff to `hapo:hotfix` or the user.
+Prepare the handoff to `hapo:fix` or the user.
 
 **Verification plan must include:**
 - Original failing command or reproduction path
@@ -264,12 +264,12 @@ For Incident/deep work, add recurrence-prevention candidates: missing invariant 
 - [Only if any]
 ```
 
-## Relationship To Hotfix
+## Relationship To Fix
 
 - Use `hapo:debug` to determine what is wrong.
-- Use `hapo:hotfix` to change code only after the root-cause contract is complete.
-- A `Root cause: unknown` report is not ready for hotfix; continue diagnosis or ask for the missing artifact.
-- If `hapo:hotfix` verification fails, return to `hapo:debug` with the new evidence.
+- Use `hapo:fix` to change code only after the root-cause contract is complete.
+- A `Root cause: unknown` report is not ready for Fix; continue diagnosis or ask for the missing artifact.
+- If `hapo:fix` verification fails, return to `hapo:debug` with the new evidence.
 
 ## References
 

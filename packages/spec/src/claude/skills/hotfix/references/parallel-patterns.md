@@ -21,7 +21,7 @@ Pattern C runs shell commands in the main agent and needs no gate.
 | Testing 2-3 diagnostic hypotheses simultaneously | Parallel hypothesis test | `Explore` × 2-3 |
 | Verifying fix (typecheck + lint + build + test) | Parallel verification | `Bash` × 3-4 |
 | Fixing 2+ independent bugs in one session | Parallel issue trees | `implementer` × N |
-| Deep workflow: scout + diagnose + research together | Parallel investigation | Mixed |
+| Deep workflow: parallel scout, then diagnose, then optional research | Staged investigation | Mixed |
 
 ## Pattern A: Parallel Scouting
 
@@ -85,21 +85,23 @@ TaskCreate(subject="Integration verification",              addBlockedBy=[A4, B4
 
 Spawn one `implementer` agent per issue tree. Each agent claims tasks via `TaskUpdate(status="in_progress")` and completes via `TaskUpdate(status="completed")`.
 
-## Pattern E: Deep Workflow — Parallel Investigation Phase
+## Pattern E: Deep Workflow — Parallel Evidence Gathering
 
-In complex bugs (Incident/deep), Steps 1+2+3 may run concurrently when the Delegation Gate is open:
+In complex bugs, independent scout scopes may run concurrently when the
+Delegation Gate is open. Diagnosis still starts only after the required scout
+outputs are synthesized:
 
 ```
-// All three launch simultaneously:
-Agent(subagent_type="Explore", prompt="Scout: map affected files, dependencies, and test coverage")
-// Meanwhile, main agent starts diagnosis using available error context
-// Meanwhile:
-Agent(subagent_type="researcher", prompt="Research: find latest docs and known issues for [library/framework]")
+// Both read-only scout scopes launch simultaneously:
+Agent(subagent_type="Explore", prompt="Scout scope A: map affected files, dependencies, and test coverage")
+Agent(subagent_type="Explore", prompt="Scout scope B: map runtime/config paths and recent changes")
 ```
 
-The main agent begins hypothesis formation (Step 2) immediately using the error message and stack trace. Scout results enrich the diagnosis when they arrive. Research results inform the fix approach.
-
-**Key insight:** You don't need to wait for scouting to finish before starting diagnosis — the error message itself is often enough to form initial hypotheses.
+Wait for the scout evidence, synthesize the required codebase-context summary,
+then begin hypotheses and diagnosis. Research begins only after Step 2 diagnosis
+proves the root cause and identifies one unresolved external fact. It may inform
+a post-diagnosis remedy decision; it never substitutes for repository evidence
+or selects a fix early.
 
 ## Resource Constraints
 

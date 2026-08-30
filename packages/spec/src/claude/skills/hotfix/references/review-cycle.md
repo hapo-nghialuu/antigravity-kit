@@ -4,7 +4,7 @@ How to handle code review results after a fix is implemented. Ensures quality wi
 
 ## Default Review Handling
 
-The agent reviews its own fix using `hapo:code-review` and applies the verdict. Every review returns exactly one verdict from the shared surface: `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. The definition of `PASS` defers to `hapo:code-review`; hotfix never redefines it with local severity thresholds.
+The agent reviews its own fix using `hapo:code-review` and applies the verdict. Every review returns exactly one verdict from the shared surface: `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. The definition of `PASS` defers to `hapo:code-review`; Fix never redefines it with local severity thresholds.
 
 ```
 attempt = 0
@@ -31,10 +31,13 @@ LOOP:
      ELSE IF attempt >= 3:
        → HALT. Present findings to user:
          "3 auto-fix cycles exhausted. [N] findings remain."
-         Options: "Fix manually" | "Approve with known issues" | "Abort"
+         Options: "Revise scope and re-review" | "Stop incomplete" | "Abort"
 ```
 
-`BLOCKED` is terminal for this review cycle. Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry; `PASS_WITH_WARNINGS` never auto-accepts, and a blocked review is never retried unchanged.
+`BLOCKED` is terminal for this review cycle. Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry; neither verdict can enter
+finalization through user approval. If the user changes scope or accepts a
+different contract, update the review target and obtain a fresh literal `PASS`.
+A blocked review is never retried unchanged.
 
 ## Required User Pause
 
@@ -54,9 +57,11 @@ When the fix touches production-critical code, changes public contracts, introdu
    ```
 3. Ask user for direction:
    - If verdict is `BLOCKED` → resolve the blocker; do not retry this review cycle unchanged.
-   - If verdict is `FAIL` with Critical or High findings → "Fix blocking findings" | "Fix all" | "Approve anyway" | "Abort"
-   - If verdict is `FAIL` or `PASS_WITH_WARNINGS` with only Medium/Low findings → "Approve" | "Address findings" | "Abort"
-4. Execute user's choice. Max 3 remediation cycles for `FAIL` and `PASS_WITH_WARNINGS`; `BLOCKED` never enters this retry limit.
+   - If verdict is `FAIL` with Critical or High findings → "Fix blocking findings" | "Fix all" | "Revise scope" | "Abort"
+   - If verdict is `FAIL` or `PASS_WITH_WARNINGS` with only Medium/Low findings → "Address findings" | "Revise scope" | "Stop incomplete"
+4. Execute the user's remediation or scope decision, then re-run verification
+   and review. Max 3 remediation cycles for `FAIL` and `PASS_WITH_WARNINGS`;
+   only a fresh literal `PASS` enters finalization. `BLOCKED` never enters this retry limit.
 
 ## When To Pause vs Continue
 

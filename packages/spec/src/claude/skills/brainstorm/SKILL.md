@@ -53,7 +53,7 @@ Classify intent first. This routing never waives safety or permission rules.
 3. **Bug or failure:** before diagnosis, capture the repaired-behavior Outcome,
    Constraints, Non-goals, and Acceptance evidence. Then use `hapo:debug` until
    root cause is evidenced. Do not brainstorm fixes from a symptom. If at least
-   two cause-aligned remedies remain, compare 2–3 here. Hand off to `hapo:hotfix`
+   two cause-aligned remedies remain, compare 2–3 here. Hand off to `hapo:fix`
    only when the user explicitly requested a fix; diagnosis-only work returns the
    root-cause report and stops.
 4. **Non-bug exploration only:** inspect enough evidence, give a chat
