@@ -161,6 +161,7 @@ const HOTFIX_SOURCE_RELATIVES = {
   skill: 'src/claude/skills/hotfix/SKILL.md',
   review: 'src/claude/skills/hotfix/references/review-cycle.md',
   parallel: 'src/claude/skills/hotfix/references/parallel-patterns.md',
+  specialized: 'src/claude/skills/hotfix/references/workflow-specialized.md',
 };
 const REQUIRED_ADAPTIVE_BRAINSTORM_GROUPS = [
   'adviser-gate-fallback',
@@ -2128,6 +2129,11 @@ test('packed Claude and Codex reject adaptive Brainstorm semantic weakenings', (
       const project = path.join(root, platform);
       const installer = installPacked(tarball, project, runtimeClosure);
       runInstaller(installer, project, [platform], null);
+      const publicDirectory = platform === 'claude'
+        ? path.join(project, '.claude/skills/fix')
+        : path.join(project, '.agents/skills/fix');
+      assert.equal(fs.existsSync(publicDirectory), false,
+        `${platform} public Fix rename keeps the manifest-owned hotfix directory`);
       assertPackedBrainstormParity(project, platform);
       for (const entry of assertPackedAdaptiveBrainstormMutations(project, platform, canonicalBytes)) exercised.add(entry);
       assertPackedBrainstormParity(project, platform);
@@ -2173,7 +2179,13 @@ function packedHotfixIssues(files, refPrefix) {
   const skill = compact(files.skill);
   const review = compact(files.review);
   const parallel = compact(files.parallel);
+  const specialized = compact(files.specialized);
   const issues = new Set();
+  if (!skill.includes(`name: ${refPrefix}fix`)
+    || !skill.includes('# Fix — root-cause repair workflow')
+    || skill.includes(`name: ${refPrefix}hotfix`)) {
+    issues.add('public-rename');
+  }
   if (!skill.includes('## Proportional depth')
     || !skill.includes('Quick mode only reduces depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.')) {
     issues.add('adaptive-depth');
@@ -2186,6 +2198,9 @@ function packedHotfixIssues(files, refPrefix) {
     || !skill.includes(`The definition of \`PASS\` defers to \`${refPrefix}code-review\`.`)
     || skill.includes('Confidence score')
     || !review.includes('Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry')
+    || !review.includes('only a fresh literal `PASS` enters finalization')
+    || review.includes('"Approve anyway"')
+    || review.includes('"Approve with known issues"')
     || review.includes('at most one Medium')) {
     issues.add('verdict-surface');
   }
@@ -2197,10 +2212,32 @@ function packedHotfixIssues(files, refPrefix) {
     || !skill.includes('Do not silently patch around the regression.')) {
     issues.add('side-effect-gate');
   }
+  if (!skill.includes('## Bounded repair frame')
+    || !skill.includes('Quick/local does not add a separate framing ceremony')) {
+    issues.add('bounded-repair-frame');
+  }
+  if (!skill.includes('after diagnosis, research only unresolved external facts')
+    || !skill.includes(`\`${refPrefix}brainstorm\` to compare 2-3 options`)
+    || !skill.includes('When diagnosis leaves one safe direct repair, skip research and')) {
+    issues.add('deep-decision-route');
+  }
+  if (!skill.includes('Load only the matching')
+    || !specialized.includes('Load only the matching section')
+    || (specialized.match(/\*\*Baseline:\*\*/g) || []).length < 5
+    || (specialized.match(/\*\*Proof:\*\*/g) || []).length < 5) {
+    issues.add('specialized-proof-overlays');
+  }
+  if (!parallel.includes('Diagnosis still starts only')
+    || !parallel.includes('after the required scout outputs are synthesized')
+    || !parallel.includes('Research begins only after Step 2 diagnosis')
+    || parallel.includes('scout + diagnose + research together')
+    || parallel.includes("You don't need to wait for scouting")) {
+    issues.add('scout-before-diagnosis');
+  }
   return [...issues].sort();
 }
 
-test('packed Claude and Codex installs reject adaptive Hotfix semantic weakenings', () => {
+test('packed Claude and Codex installs reject adaptive Fix semantic weakenings', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-hotfix-adaptive-'));
   const destination = path.join(root, 'pack');
   fs.mkdirSync(destination, { recursive: true });
@@ -2226,15 +2263,23 @@ test('packed Claude and Codex installs reject adaptive Hotfix semantic weakening
         skill: fs.readFileSync(path.join(project, layout.skillsRoot, 'SKILL.md'), 'utf8'),
         review: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/review-cycle.md'), 'utf8'),
         parallel: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/parallel-patterns.md'), 'utf8'),
+        specialized: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/workflow-specialized.md'), 'utf8'),
       });
       assert.deepEqual(packedHotfixIssues(readInstalled(), layout.refPrefix), [], `${platform} hotfix baseline`);
       const mutations = [
+        { group: 'public-rename', file: 'SKILL.md', from: `name: ${layout.refPrefix}fix`, to: `name: ${layout.refPrefix}hotfix` },
         { group: 'adaptive-depth', file: 'SKILL.md', from: 'Quick mode only reduces depth', to: 'Quick mode may shorten scope' },
         { group: 'debug-handoff', file: 'SKILL.md', from: '`Timeline: skipped - <reason>` or `- skipped: <reason>`', to: '`Timeline: omitted`' },
         { group: 'verdict-surface', file: 'references/review-cycle.md', from: 'Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry', to: 'Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves' },
+        { group: 'verdict-surface', file: 'references/review-cycle.md', from: 'only a fresh literal `PASS` enters finalization', to: '"Approve anyway" enters finalization' },
         { group: 'verdict-surface', file: 'SKILL.md', from: '**Report:** root cause, changes made', to: '**Report:** Confidence score, root cause, changes made' },
         { group: 'delegation-gate', file: 'SKILL.md', from: 'The user explicitly requested or permitted delegation or parallel agents.', to: 'Delegation is at the agent\'s discretion.' },
         { group: 'side-effect-gate', file: 'SKILL.md', from: 'Do not silently patch around the regression.', to: 'Patch around regressions quietly.' },
+        { group: 'bounded-repair-frame', file: 'SKILL.md', from: 'Quick/local does not add a separate framing ceremony', to: 'Quick/local always requires a separate framing ceremony' },
+        { group: 'deep-decision-route', file: 'SKILL.md', from: 'after diagnosis, research only unresolved external facts', to: 'research broadly before diagnosis' },
+        { group: 'specialized-proof-overlays', file: 'references/workflow-specialized.md', from: 'Load only the matching section', to: 'Load every section' },
+        { group: 'scout-before-diagnosis', file: 'references/parallel-patterns.md', from: 'Diagnosis still starts only', to: 'Diagnosis may start' },
+        { group: 'scout-before-diagnosis', file: 'references/parallel-patterns.md', from: 'Research begins only after Step 2 diagnosis', to: 'Research may begin before Step 2 diagnosis' },
       ];
       for (const mutation of mutations) {
         const target = path.join(project, layout.skillsRoot, mutation.file);
@@ -2264,24 +2309,36 @@ test('packed Claude and Codex installs reject adaptive Hotfix semantic weakening
         exercised.add(`${platform}:${mutation.group}`);
       }
     }
-    assert.equal(exercised.size, 10, 'hotfix mutations must cover both platforms and all five groups');
+    assert.equal(exercised.size, 20, 'Fix mutations must cover both platforms and all ten groups');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('repository and package guides document adaptive Hotfix usage', () => {
+test('repository and package guides document adaptive Fix usage', () => {
   const guides = {
     repository: fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../README.md'), 'utf8'),
     package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
   };
   for (const [name, guide] of Object.entries(guides)) {
-    assert.match(guide, /hapo:hotfix/, `${name} guide names hotfix`);
+    assert.match(guide, /hapo:fix/, `${name} guide names Fix`);
+    assert.doesNotMatch(guide, /hapo:hotfix|hapo-hotfix/, `${name} guide drops the old public name`);
     assert.match(guide, /Quick\/local/, `${name} guide documents quick depth`);
     assert.match(guide, /Incident\/deep/, `${name} guide documents incident depth`);
     assert.match(guide, /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/, `${name} guide documents shared verdicts`);
     assert.match(guide, /debug handoff|hapo:debug[^\n]*handoff/i, `${name} guide documents the debug handoff`);
     assert.doesNotMatch(guide, /hotfix[^\n]*\b\d+(?:\.\d+)?\s*(?:%|x faster|seconds|minutes|ms)\b/i, `${name} guide must not invent timing claims`);
+  }
+});
+
+test('localized reference guides keep OpenCode mappings historical', () => {
+  const docsRoot = path.resolve(PACKAGE_ROOT, '../../cafekit-web/public/content/docs');
+  const references = ['en', 'vi', 'ja'].map((locale) =>
+    fs.readFileSync(path.join(docsRoot, locale, 'reference.mdx'), 'utf8'));
+  for (const reference of references) {
+    assert.match(reference, /Legacy OpenCode 0\.16 command/);
+    assert.match(reference, /hapo:fix/);
+    assert.doesNotMatch(reference, /OpenCode currently|OpenCode hiện có|OpenCode は main implementation surface/);
   }
 });
 

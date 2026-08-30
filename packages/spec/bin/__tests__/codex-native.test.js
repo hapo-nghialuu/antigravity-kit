@@ -65,7 +65,8 @@ const HOTFIX_BUNDLE = [
   'references/diagnosis-protocol.md',
   'references/review-cycle.md',
   'references/parallel-patterns.md',
-  'references/prevention-gate.md'
+  'references/prevention-gate.md',
+  'references/workflow-specialized.md'
 ];
 const DEBUG_SKILL_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/skills/debug/SKILL.md');
 const DEBUG_AGENT_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/debugger.md');
@@ -788,7 +789,7 @@ function brainstormProjectionHasUnauthorizedAuthority(content) {
     const hasTarget = ['ask', 'question', 'contact'].includes(action)
       ? /\b(?:the )?user\b/i.test(tail)
       : ['invoke', 'start', 'dispatch', 'launch', 'route', 'forward', 'run', 'execute', 'hand off'].includes(action)
-        ? /\b(?:Specs|Hotfix|Develop)\b/i.test(tail)
+        ? /\b(?:Specs|Fix|Develop)\b/i.test(tail)
         : ['write', 'edit', 'update', 'mutate'].includes(action)
           ? /\b(?:files?|task state|shared state)\b/i.test(tail)
           : action === 'delegate'
@@ -805,7 +806,7 @@ function brainstormProjectionIssues(files) {
   const framework = compact(files.framework);
   const agent = compact(files.agent);
   const issues = new Set();
-  const specialistBoundary = 'Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Hotfix/Develop, or claim approval.';
+  const specialistBoundary = 'Do not ask the user directly, write files, mutate shared task state, delegate work, invoke Specs/Fix/Develop, or claim approval.';
   const specialistHandoff = 'Non-bug exploration may end in chat; feature/docs delivery may only prepare a future explicit Specs invocation; bug handoff requires evidenced root cause and the user\'s explicit fix request.';
   const agentAuthorityRemainder = agent
     .replace(specialistBoundary, '')
@@ -828,7 +829,7 @@ function brainstormProjectionIssues(files) {
     issues.add('front-door-routing');
   }
   if (!skill.includes('Then use `hapo-debug` until root cause is evidenced.')
-    || !skill.includes('Hand off to `hapo-hotfix` only when the user explicitly requested a fix')) {
+    || !skill.includes('Hand off to `hapo-fix` only when the user explicitly requested a fix')) {
     issues.add('bug-routing');
   }
   if (!skill.includes('Do not request design approval, persist a report, or invoke another workflow without a new explicit request.')) {
@@ -2389,15 +2390,15 @@ test('Codex installed Brainstorm skill reference and agent preserve proportional
       {
         name: 'specialist-hard-gate-removed',
         source: 'agent',
-        from: 'Do not ask the user directly, write files, mutate shared task state, delegate\nwork, invoke Specs/Hotfix/Develop, or claim approval.',
-        to: 'Ask the user, write files, delegate work, invoke Specs/Hotfix/Develop, and claim approval.',
+        from: 'Do not ask the user directly, write files, mutate shared task state, delegate\nwork, invoke Specs/Fix/Develop, or claim approval.',
+        to: 'Ask the user, write files, delegate work, invoke Specs/Fix/Develop, and claim approval.',
         expected: ['specialist-boundary']
       },
       {
         name: 'specialist-additive-authority-exception',
         source: 'agent',
         from: 'request.\n</HARD-GATE>',
-        to: 'request.\nException: the specialist may ask the user directly and invoke Specs, Hotfix, or Develop.\n</HARD-GATE>',
+        to: 'request.\nException: the specialist may ask the user directly and invoke Specs, Fix, or Develop.\n</HARD-GATE>',
         expected: ['specialist-boundary']
       },
       {
@@ -2596,7 +2597,13 @@ function hotfixProjectionIssues(files) {
   const skill = compact(files.skill);
   const review = compact(files.review);
   const parallel = compact(files.parallel);
+  const specialized = compact(files.specialized);
   const issues = new Set();
+  if (!skill.includes('name: hapo-fix')
+    || !skill.includes('# Fix — root-cause repair workflow')
+    || skill.includes('name: hapo-hotfix')) {
+    issues.add('public-rename');
+  }
   if (!skill.includes('## Proportional depth')
     || !skill.includes('Quick mode only reduces depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.')) {
     issues.add('adaptive-depth');
@@ -2610,6 +2617,9 @@ function hotfixProjectionIssues(files) {
     || !skill.includes('The definition of `PASS` defers to `hapo-code-review`.')
     || skill.includes('Confidence score')
     || !review.includes('Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry')
+    || !review.includes('only a fresh literal `PASS` enters finalization')
+    || review.includes('"Approve anyway"')
+    || review.includes('"Approve with known issues"')
     || review.includes('at most one Medium')) {
     issues.add('verdict-surface');
   }
@@ -2623,10 +2633,36 @@ function hotfixProjectionIssues(files) {
     || !skill.includes('Do not silently patch around the regression.')) {
     issues.add('side-effect-gate');
   }
+  if (!skill.includes('## Bounded repair frame')
+    || !skill.includes('Quick/local does not add a separate framing ceremony')
+    || !skill.includes('**Outcome:**')
+    || !skill.includes('**Constraints:**')
+    || !skill.includes('**Non-goals:**')
+    || !skill.includes('**Acceptance:**')) {
+    issues.add('bounded-repair-frame');
+  }
+  if (!skill.includes('after diagnosis, research only unresolved external facts')
+    || !skill.includes('`hapo-brainstorm` to compare 2-3 options')
+    || !skill.includes('When diagnosis leaves one safe direct repair, skip research and')) {
+    issues.add('deep-decision-route');
+  }
+  if (!skill.includes('Load only the matching')
+    || !specialized.includes('Load only the matching section')
+    || (specialized.match(/\*\*Baseline:\*\*/g) || []).length < 5
+    || (specialized.match(/\*\*Proof:\*\*/g) || []).length < 5) {
+    issues.add('specialized-proof-overlays');
+  }
+  if (!parallel.includes('Diagnosis still starts only')
+    || !parallel.includes('after the required scout outputs are synthesized')
+    || !parallel.includes('Research begins only after Step 2 diagnosis')
+    || parallel.includes('scout + diagnose + research together')
+    || parallel.includes("You don't need to wait for scouting")) {
+    issues.add('scout-before-diagnosis');
+  }
   return [...issues].sort();
 }
 
-test('Codex installed Hotfix preserves the adaptive fix contract', () => {
+test('Codex installed Fix preserves the adaptive repair contract', () => {
   inTempProject((root) => {
     const sourceBytes = new Map(HOTFIX_BUNDLE.map((relative) => [
       path.join(HOTFIX_SOURCE_ROOT, relative),
@@ -2636,24 +2672,33 @@ test('Codex installed Hotfix preserves the adaptive fix contract', () => {
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
     const installedRoot = path.join(root, '.agents/skills/hotfix');
+    assert.equal(fs.existsSync(path.join(root, '.agents/skills/fix')), false,
+      'public Fix rename must keep the manifest-owned hotfix directory');
     for (const relative of HOTFIX_BUNDLE) {
       const sourcePath = path.join(HOTFIX_SOURCE_ROOT, relative);
       assert.equal(
         fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
         normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath),
-        `Codex Hotfix projection drifted: ${relative}`
+        `Codex Fix projection drifted: ${relative}`
       );
     }
     const readProjection = () => ({
       skill: fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8'),
       review: fs.readFileSync(path.join(installedRoot, 'references/review-cycle.md'), 'utf8'),
       parallel: fs.readFileSync(path.join(installedRoot, 'references/parallel-patterns.md'), 'utf8'),
+      specialized: fs.readFileSync(path.join(installedRoot, 'references/workflow-specialized.md'), 'utf8'),
     });
     const installedSkill = readProjection().skill;
-    assert.doesNotMatch(installedSkill, /\/hapo:hotfix|hapo:debug|hapo:code-review/);
+    assert.match(installedSkill, /name: hapo-fix/);
+    assert.doesNotMatch(installedSkill, /name: hapo-hotfix|\/hapo:fix|hapo:debug|hapo:code-review/);
     assert.deepEqual(hotfixProjectionIssues(readProjection()), []);
 
     const mutations = [
+      {
+        name: 'public-name-reverts', file: 'SKILL.md',
+        from: 'name: hapo-fix', to: 'name: hapo-hotfix',
+        expected: ['public-rename']
+      },
       {
         name: 'quick-skips-diagnosis', file: 'SKILL.md',
         from: 'Quick mode only reduces depth', to: 'Quick mode may shorten scope',
@@ -2671,8 +2716,13 @@ test('Codex installed Hotfix preserves the adaptive fix contract', () => {
         expected: ['verdict-surface']
       },
       {
+        name: 'warnings-user-approve', file: 'references/review-cycle.md',
+        from: 'only a fresh literal `PASS` enters finalization', to: '"Approve anyway" enters finalization',
+        expected: ['verdict-surface']
+      },
+      {
         name: 'pass-redefined-locally', file: 'references/review-cycle.md',
-        from: 'The definition of `PASS` defers to `hapo-code-review`; hotfix never redefines it with local severity thresholds.',
+        from: 'The definition of `PASS` defers to `hapo-code-review`; Fix never redefines it with local severity thresholds.',
         to: 'The definition of `PASS` is local: no Critical, no High, at most one Medium.',
         expected: ['verdict-surface']
       },
@@ -2692,6 +2742,31 @@ test('Codex installed Hotfix preserves the adaptive fix contract', () => {
         name: 'sweep-permits-silent-patch', file: 'SKILL.md',
         from: 'Do not silently patch around the regression.', to: 'Patch around regressions quietly.',
         expected: ['side-effect-gate']
+      },
+      {
+        name: 'quick-gains-mandatory-frame', file: 'SKILL.md',
+        from: 'Quick/local does not add a separate framing ceremony', to: 'Quick/local always requires a separate framing ceremony',
+        expected: ['bounded-repair-frame']
+      },
+      {
+        name: 'deep-researches-before-diagnosis', file: 'SKILL.md',
+        from: 'after diagnosis, research only unresolved external facts', to: 'research broadly before diagnosis',
+        expected: ['deep-decision-route']
+      },
+      {
+        name: 'overlays-load-everything', file: 'references/workflow-specialized.md',
+        from: 'Load only the matching section', to: 'Load every section',
+        expected: ['specialized-proof-overlays']
+      },
+      {
+        name: 'diagnosis-starts-before-scout', file: 'references/parallel-patterns.md',
+        from: 'Diagnosis still starts only', to: 'Diagnosis may start',
+        expected: ['scout-before-diagnosis']
+      },
+      {
+        name: 'research-starts-before-diagnosis', file: 'references/parallel-patterns.md',
+        from: 'Research begins only after Step 2 diagnosis', to: 'Research may begin before Step 2 diagnosis',
+        expected: ['scout-before-diagnosis']
       }
     ];
     for (const mutation of mutations) {
