@@ -23,7 +23,11 @@ description: Commands, package facts, files, and state values.
 
 ## Command cheatsheet
 
-| Claude Code command | OpenCode command | Purpose |
+The second column records the frozen OpenCode 0.16 command surface for
+historical migration only. OpenCode is not a current runtime, and these entries
+are not aliases for current Claude or Codex commands.
+
+| Claude Code command | Legacy OpenCode 0.16 command | Purpose |
 |---|---|---|
 | `/hapo:ask` | `/question` | Answer project and technical questions with repo-first evidence. |
 | `/hapo:brainstorm` | `/brainstorm` | Clarify unclear ideas before specs. |
@@ -33,12 +37,12 @@ description: Commands, package facts, files, and state values.
 | `/hapo:code-review` | `/code-review` | Review changes for regressions and security. |
 | `/hapo:sync` | — | Sync task status, `task_registry`, task markdown, phase, or audit drift. |
 | `/hapo:debug` | `/debug` | Diagnose failures before fixing. |
-| `/hapo:hotfix` | `/hotfix` | Apply narrow diagnosed fixes. |
+| `/hapo:fix` | `/hotfix` | Apply narrow diagnosed fixes. |
 | `/hapo:docs` | `/docs` | Create, update, summarize, or reconstruct docs. |
 | `/hapo:scout` | `/inspect` | Scout source files and project structure. |
 | `/hapo:generate-graph` | `/generate-graph` | Generate technical diagrams. |
 
-OpenCode currently gets generated slash commands for the main implementation surface. The `sync` skill is still shipped in the shared skill bundle, but the installer does not generate a `/sync` OpenCode wrapper.
+For historical OpenCode 0.16 installs, the installer generated slash commands for the main implementation surface. The `sync` skill was shipped in the shared skill bundle, but the installer did not generate a `/sync` OpenCode wrapper.
 
 ## Installed Claude file structure
 

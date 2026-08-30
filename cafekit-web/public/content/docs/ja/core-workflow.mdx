@@ -111,7 +111,7 @@ Core flow は planned feature delivery 用です。作業タイプが違う場�
 |---|---|
 | 既存 system に信頼できる docs がない | specs の前に `/hapo:docs --reconstruct <scope>`。 |
 | Root cause が不明 | code 変更前に `/hapo:debug`。 |
-| Production bug に narrow fix が必要 | evidence-first diagnosis 後に `/hapo:hotfix`。 |
+| Production bug に narrow fix が必要 | evidence-first diagnosis 後に `/hapo:fix`。 |
 | Spec/task state が drift している | `/hapo:sync audit <feature>`。 |
 | Architecture に visual artifact が必要 | `/hapo:generate-graph <request>`。 |
 | Verified changes を publish できる | `/hapo:git commit` then `/hapo:git push`。 |

@@ -12,7 +12,7 @@ const icons = {
   'code-review': Shield,
   sync: GitBranch,
   debug: Bug,
-  hotfix: Wrench,
+  fix: Wrench,
   docs: FileText,
   inspect: Braces,
   git: GitBranch,

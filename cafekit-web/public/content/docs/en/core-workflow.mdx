@@ -111,7 +111,7 @@ The core flow handles planned feature delivery. Use another route when the work 
 |---|---|
 | Existing system has no reliable docs | `/hapo:docs --reconstruct <scope>` before specs. |
 | Root cause is unknown | `/hapo:debug` before changing code. |
-| Production bug needs a narrow fix | `/hapo:hotfix` after evidence-first diagnosis. |
+| Production bug needs a narrow fix | `/hapo:fix` after evidence-first diagnosis. |
 | Spec/task state drifted | `/hapo:sync audit <feature>`. |
 | Architecture needs a visual artifact | `/hapo:generate-graph <request>`. |
 | Verified changes are ready to publish | `/hapo:git commit` then `/hapo:git push`. |

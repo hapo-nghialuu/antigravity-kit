@@ -23,7 +23,11 @@ description: commands、package facts、files、state values。
 
 ## Command cheatsheet
 
-| Claude Code command | OpenCode command | Purpose |
+2 列目は historical migration 用に固定された OpenCode 0.16 command surface
+です。OpenCode は current runtime ではなく、これらは現在の Claude/Codex
+command の alias ではありません。
+
+| Claude Code command | Legacy OpenCode 0.16 command | Purpose |
 |---|---|---|
 | `/hapo:ask` | `/question` | Project と technical questions に repo-first evidence で回答。 |
 | `/hapo:brainstorm` | `/brainstorm` | spec 前に idea を明確化。 |
@@ -33,12 +37,12 @@ description: commands、package facts、files、state values。
 | `/hapo:code-review` | `/code-review` | regressions と security の review。 |
 | `/hapo:sync` | — | task status、`task_registry`、task markdown、phase、drift audit を sync。 |
 | `/hapo:debug` | `/debug` | fix 前に diagnose。 |
-| `/hapo:hotfix` | `/hotfix` | narrow diagnosed fixes。 |
+| `/hapo:fix` | `/hotfix` | narrow diagnosed fixes。 |
 | `/hapo:docs` | `/docs` | docs の create、update、summarize、reconstruct。 |
 | `/hapo:scout` | `/inspect` | source files と structure の scout。 |
 | `/hapo:generate-graph` | `/generate-graph` | technical diagrams の generation。 |
 
-OpenCode は main implementation surface の generated slash commands を持ちます。`sync` skill は shared skill bundle に含まれますが、installer は現時点で `/sync` OpenCode wrapper を生成しません。
+過去の OpenCode 0.16 install では、installer が main implementation surface の slash commands を生成していました。`sync` skill は shared skill bundle に含まれていましたが、installer は `/sync` OpenCode wrapper を生成しませんでした。
 
 ## Claude file structure
 

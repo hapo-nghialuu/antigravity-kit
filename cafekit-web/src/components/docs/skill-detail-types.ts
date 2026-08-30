@@ -7,7 +7,7 @@ export const mainSkillSlugs = [
   'code-review',
   'sync',
   'debug',
-  'hotfix',
+  'fix',
   'docs',
   'inspect',
   'git',
