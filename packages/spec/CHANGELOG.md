@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the public repair skill to `hapo:fix` for Claude and `hapo-fix` for Codex. This is a breaking public invocation rename with no old-command alias; the physical `hotfix` payload directory remains only for installer ownership and clean upgrades.
+- Added proportional repair framing, evidence-gated Incident/deep research-brainstorm-plan routing, and progressively disclosed CI/test/type/UI/log proof overlays without adding ceremony to deterministic Quick/local fixes.
+- Added semantic mutation and packed-install parity coverage for the public rename, bounded repair frame, deep decision route, specialized proof overlays, and scout-before-diagnosis ordering.
+
 ## [0.16.0-rc.8] - 2026-08-25
 
 ### Changed

@@ -25,7 +25,7 @@ CafeKit installs a native runtime bundle for each supported coding agent:
 - `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
-- `hapo:debug` and `hapo:hotfix` for evidence-first diagnosis and root-cause fixes — proportional depth (Quick/local vs Incident/deep), the debug handoff consumed before any change, and shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
+- `hapo:debug` and `hapo:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
 - `hapo:docs` for project documentation and source-backed as-is reconstruction
 - `hapo:test` and `hapo:code-review` for verification
 - supporting hooks, agents, rules, and platform-native runtime integration
@@ -38,7 +38,7 @@ Core routes (shown with Claude Code syntax):
 
 ```text
 Feature/docs: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
-Bug/failure: /hapo:debug -> /hapo:hotfix only when the user requested a fix
+Bug/failure: /hapo:debug -> /hapo:fix only when the user requested a fix
 Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> stop
 ```
 
