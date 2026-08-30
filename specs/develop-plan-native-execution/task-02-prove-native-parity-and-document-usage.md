@@ -72,14 +72,14 @@ teaches it without inventing runtime or speed evidence.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 24a013d8cb6fad6a9c47bbd436cd49204b2d81f0
-Head: b5e830537a5ae64d8659a680da49aa45cc38dcf04712be5c0e66bb1e2c30b3db
+Base: 566d1696f2dededf015068dda1ae650b06141d93
+Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
 
 ```text
 ✔ Develop process-first source contract preserves selection, recovery, final-Head, parallel, and Flash boundaries
 ✔ Claude installed Develop preserves plan-native execution and references
 ✔ Codex installed Develop preserves plan-native execution and references
 ✔ specs-usage-guide documents plan-native Develop without timing or live-adherence claims
-[skill-test] PASS: 988 tests executed
-Aggregate: pass=987 fail=0 skipped=1; Exit: 0.
+[skill-test] PASS: 1013 tests executed
+Aggregate: pass=1012 fail=0 skipped=1; Exit: 0.
 ```

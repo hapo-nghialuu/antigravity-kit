@@ -76,8 +76,8 @@ timing claims.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 24a013d8cb6fad6a9c47bbd436cd49204b2d81f0
-Head: b5e830537a5ae64d8659a680da49aa45cc38dcf04712be5c0e66bb1e2c30b3db
+Base: 566d1696f2dededf015068dda1ae650b06141d93
+Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
 
 ```text
 > @haposoft/cafekit@0.16.0-rc.8 test
@@ -86,5 +86,5 @@ Head: b5e830537a5ae64d8659a680da49aa45cc38dcf04712be5c0e66bb1e2c30b3db
 ✔ Claude installed Test preserves plan-native proof and references
 ✔ Codex installed Test preserves plan-native proof and references
 ✔ specs-usage-guide documents Test proof handoff without timing claims
-[skill-test] PASS: 988 tests executed
+[skill-test] PASS: 1013 tests executed
 ```
