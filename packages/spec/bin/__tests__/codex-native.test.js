@@ -59,6 +59,14 @@ const TEST_BUNDLE = [
   'references/test-memory.md'
 ];
 const TEST_RUNNER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/test-runner.md');
+const HOTFIX_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/hotfix');
+const HOTFIX_BUNDLE = [
+  'SKILL.md',
+  'references/diagnosis-protocol.md',
+  'references/review-cycle.md',
+  'references/parallel-patterns.md',
+  'references/prevention-gate.md'
+];
 const DEBUG_SKILL_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/skills/debug/SKILL.md');
 const DEBUG_AGENT_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/debugger.md');
 const DEBUG_REFERENCE_FILES = [
@@ -2577,6 +2585,136 @@ test('Codex installed Test preserves plan-native proof and references', () => {
     assert.match(installedReview, /controller-validated `test-proof-v1`/);
     assert.match(installedReview, /Never create or search for a separate[\s\S]*process-first receipt/i);
     assert.equal(fs.existsSync(path.join(root, '.claude/skills/test')), false);
+    for (const [sourcePath, expected] of sourceBytes) {
+      assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+    }
+  });
+});
+
+function hotfixProjectionIssues(files) {
+  const compact = (value) => String(value).replace(/\s+/g, ' ').trim();
+  const skill = compact(files.skill);
+  const review = compact(files.review);
+  const parallel = compact(files.parallel);
+  const issues = new Set();
+  if (!skill.includes('## Proportional depth')
+    || !skill.includes('Quick mode only reduces depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.')) {
+    issues.add('adaptive-depth');
+  }
+  if (!skill.includes('`Timeline: skipped - <reason>` or `- skipped: <reason>`')
+    || !skill.includes('`Recurrence-Prevention Handoff`, when present, carries evidence-backed candidates only.')
+    || !skill.includes('routes back to diagnosis (`hapo-debug`)')) {
+    issues.add('debug-handoff');
+  }
+  if (!skill.includes('report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`')
+    || !skill.includes('The definition of `PASS` defers to `hapo-code-review`.')
+    || skill.includes('Confidence score')
+    || !review.includes('Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry')
+    || review.includes('at most one Medium')) {
+    issues.add('verdict-surface');
+  }
+  if (!skill.includes('The user explicitly requested or permitted delegation or parallel agents.')
+    || !skill.includes('The active runtime exposes an Explore/delegation capability.')
+    || !skill.includes('at least two distinct, non-overlapping scopes')
+    || !parallel.includes('The user explicitly requested or permitted delegation or parallel agents.')) {
+    issues.add('delegation-gate');
+  }
+  if (!skill.includes('The original symptom no longer reproduces with the exact pre-fix command/user flow.')
+    || !skill.includes('Do not silently patch around the regression.')) {
+    issues.add('side-effect-gate');
+  }
+  return [...issues].sort();
+}
+
+test('Codex installed Hotfix preserves the adaptive fix contract', () => {
+  inTempProject((root) => {
+    const sourceBytes = new Map(HOTFIX_BUNDLE.map((relative) => [
+      path.join(HOTFIX_SOURCE_ROOT, relative),
+      fs.readFileSync(path.join(HOTFIX_SOURCE_ROOT, relative))
+    ]));
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedRoot = path.join(root, '.agents/skills/hotfix');
+    for (const relative of HOTFIX_BUNDLE) {
+      const sourcePath = path.join(HOTFIX_SOURCE_ROOT, relative);
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath),
+        `Codex Hotfix projection drifted: ${relative}`
+      );
+    }
+    const readProjection = () => ({
+      skill: fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8'),
+      review: fs.readFileSync(path.join(installedRoot, 'references/review-cycle.md'), 'utf8'),
+      parallel: fs.readFileSync(path.join(installedRoot, 'references/parallel-patterns.md'), 'utf8'),
+    });
+    const installedSkill = readProjection().skill;
+    assert.doesNotMatch(installedSkill, /\/hapo:hotfix|hapo:debug|hapo:code-review/);
+    assert.deepEqual(hotfixProjectionIssues(readProjection()), []);
+
+    const mutations = [
+      {
+        name: 'quick-skips-diagnosis', file: 'SKILL.md',
+        from: 'Quick mode only reduces depth', to: 'Quick mode may shorten scope',
+        expected: ['adaptive-depth']
+      },
+      {
+        name: 'handoff-drops-skip-forms', file: 'SKILL.md',
+        from: '`Timeline: skipped - <reason>` or `- skipped: <reason>`', to: '`Timeline: omitted`',
+        expected: ['debug-handoff']
+      },
+      {
+        name: 'warnings-auto-accept', file: 'references/review-cycle.md',
+        from: 'Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry',
+        to: 'Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves',
+        expected: ['verdict-surface']
+      },
+      {
+        name: 'pass-redefined-locally', file: 'references/review-cycle.md',
+        from: 'The definition of `PASS` defers to `hapo-code-review`; hotfix never redefines it with local severity thresholds.',
+        to: 'The definition of `PASS` is local: no Critical, no High, at most one Medium.',
+        expected: ['verdict-surface']
+      },
+      {
+        name: 'confidence-score-returns', file: 'SKILL.md',
+        from: '**Report:** root cause, changes made',
+        to: '**Report:** Confidence score, root cause, changes made',
+        expected: ['verdict-surface']
+      },
+      {
+        name: 'delegation-loses-user-clause', file: 'SKILL.md',
+        from: 'The user explicitly requested or permitted delegation or parallel agents.',
+        to: 'Delegation is at the agent\'s discretion.',
+        expected: ['delegation-gate']
+      },
+      {
+        name: 'sweep-permits-silent-patch', file: 'SKILL.md',
+        from: 'Do not silently patch around the regression.', to: 'Patch around regressions quietly.',
+        expected: ['side-effect-gate']
+      }
+    ];
+    for (const mutation of mutations) {
+      const target = path.join(installedRoot, mutation.file);
+      const original = fs.readFileSync(target);
+      const content = original.toString('utf8');
+      const anchor = content.indexOf(mutation.from);
+      assert.ok(anchor >= 0, `${mutation.name} mutation anchor must exist`);
+      assert.equal(
+        content.indexOf(mutation.from, anchor + mutation.from.length),
+        -1,
+        `${mutation.name} mutation anchor must be unique`
+      );
+      const weakened = `${content.slice(0, anchor)}${mutation.to}${content.slice(anchor + mutation.from.length)}`;
+      try {
+        fs.writeFileSync(target, weakened);
+        assert.deepEqual(hotfixProjectionIssues(readProjection()), mutation.expected, mutation.name);
+      } finally {
+        fs.writeFileSync(target, original);
+      }
+      assert.deepEqual(fs.readFileSync(target), original, `${mutation.name} byte restore`);
+      assert.deepEqual(hotfixProjectionIssues(readProjection()), []);
+    }
     for (const [sourcePath, expected] of sourceBytes) {
       assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
     }

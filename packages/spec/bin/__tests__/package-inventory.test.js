@@ -157,6 +157,11 @@ const BRAINSTORM_SOURCE_RELATIVES = {
   framework: 'src/claude/skills/brainstorm/references/question-framework.md',
   agent: 'src/claude/agents/brainstormer.md',
 };
+const HOTFIX_SOURCE_RELATIVES = {
+  skill: 'src/claude/skills/hotfix/SKILL.md',
+  review: 'src/claude/skills/hotfix/references/review-cycle.md',
+  parallel: 'src/claude/skills/hotfix/references/parallel-patterns.md',
+};
 const REQUIRED_ADAPTIVE_BRAINSTORM_GROUPS = [
   'adviser-gate-fallback',
   'decision-brief',
@@ -2160,6 +2165,123 @@ test('repository and package guides document adaptive Brainstorm usage', () => {
     assert.match(normalized, /`--advice`.{0,140}(?:after a material choice exists|sau khi đã có material choice)/i);
     assert.match(normalized, /(?:durable file needs explicit user authority|ghi file cần explicit user authority)/i);
     assert.match(normalized, /(?:neither overlay|hai overlay).{0,140}(?:writes|write).{0,40}(?:approves|approve).{0,40}(?:persists|persist).{0,40}(?:dispatches|dispatch).{0,40}(?:completes|complete)/i);
+  }
+});
+
+function packedHotfixIssues(files, refPrefix) {
+  const compact = (value) => String(value).replace(/\s+/g, ' ').trim();
+  const skill = compact(files.skill);
+  const review = compact(files.review);
+  const parallel = compact(files.parallel);
+  const issues = new Set();
+  if (!skill.includes('## Proportional depth')
+    || !skill.includes('Quick mode only reduces depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.')) {
+    issues.add('adaptive-depth');
+  }
+  if (!skill.includes('`Timeline: skipped - <reason>` or `- skipped: <reason>`')
+    || !skill.includes(`routes back to diagnosis (\`${refPrefix}debug\`)`)) {
+    issues.add('debug-handoff');
+  }
+  if (!skill.includes('report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`')
+    || !skill.includes(`The definition of \`PASS\` defers to \`${refPrefix}code-review\`.`)
+    || skill.includes('Confidence score')
+    || !review.includes('Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry')
+    || review.includes('at most one Medium')) {
+    issues.add('verdict-surface');
+  }
+  if (!skill.includes('The user explicitly requested or permitted delegation or parallel agents.')
+    || !parallel.includes('Otherwise continue sequentially')) {
+    issues.add('delegation-gate');
+  }
+  if (!skill.includes('The original symptom no longer reproduces with the exact pre-fix command/user flow.')
+    || !skill.includes('Do not silently patch around the regression.')) {
+    issues.add('side-effect-gate');
+  }
+  return [...issues].sort();
+}
+
+test('packed Claude and Codex installs reject adaptive Hotfix semantic weakenings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-hotfix-adaptive-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  const canonicalBytes = new Map(Object.values(HOTFIX_SOURCE_RELATIVES).map((relative) => {
+    const sourcePath = path.join(PACKAGE_ROOT, relative);
+    return [sourcePath, fs.readFileSync(sourcePath)];
+  }));
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    assertCleanInventory(packedInventory(tarball));
+    const layouts = {
+      claude: { skillsRoot: '.claude/skills/hotfix', refPrefix: 'hapo:' },
+      codex: { skillsRoot: '.agents/skills/hotfix', refPrefix: 'hapo-' },
+    };
+    const exercised = new Set();
+    for (const [platform, layout] of Object.entries(layouts)) {
+      const project = path.join(root, platform);
+      const installer = installPacked(tarball, project, runtimeClosure);
+      runInstaller(installer, project, [platform], null);
+      const readInstalled = () => ({
+        skill: fs.readFileSync(path.join(project, layout.skillsRoot, 'SKILL.md'), 'utf8'),
+        review: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/review-cycle.md'), 'utf8'),
+        parallel: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/parallel-patterns.md'), 'utf8'),
+      });
+      assert.deepEqual(packedHotfixIssues(readInstalled(), layout.refPrefix), [], `${platform} hotfix baseline`);
+      const mutations = [
+        { group: 'adaptive-depth', file: 'SKILL.md', from: 'Quick mode only reduces depth', to: 'Quick mode may shorten scope' },
+        { group: 'debug-handoff', file: 'SKILL.md', from: '`Timeline: skipped - <reason>` or `- skipped: <reason>`', to: '`Timeline: omitted`' },
+        { group: 'verdict-surface', file: 'references/review-cycle.md', from: 'Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry', to: 'Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves' },
+        { group: 'verdict-surface', file: 'SKILL.md', from: '**Report:** root cause, changes made', to: '**Report:** Confidence score, root cause, changes made' },
+        { group: 'delegation-gate', file: 'SKILL.md', from: 'The user explicitly requested or permitted delegation or parallel agents.', to: 'Delegation is at the agent\'s discretion.' },
+        { group: 'side-effect-gate', file: 'SKILL.md', from: 'Do not silently patch around the regression.', to: 'Patch around regressions quietly.' },
+      ];
+      for (const mutation of mutations) {
+        const target = path.join(project, layout.skillsRoot, mutation.file);
+        const original = fs.readFileSync(target);
+        const content = original.toString('utf8');
+        const anchor = content.indexOf(mutation.from);
+        assert.ok(anchor >= 0, `${platform} ${mutation.group} mutation anchor must exist`);
+        assert.equal(
+          content.indexOf(mutation.from, anchor + mutation.from.length),
+          -1,
+          `${platform} ${mutation.group} mutation anchor must be unique`
+        );
+        try {
+          fs.writeFileSync(target, `${content.slice(0, anchor)}${mutation.to}${content.slice(anchor + mutation.from.length)}`);
+          assert.deepEqual(
+            packedHotfixIssues(readInstalled(), layout.refPrefix),
+            [mutation.group],
+            `${platform} ${mutation.group} must fail with its exact issue`
+          );
+        } finally {
+          fs.writeFileSync(target, original);
+        }
+        assert.deepEqual(packedHotfixIssues(readInstalled(), layout.refPrefix), [], `${platform} ${mutation.group} restore`);
+        for (const [sourcePath, expected] of canonicalBytes) {
+          assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+        }
+        exercised.add(`${platform}:${mutation.group}`);
+      }
+    }
+    assert.equal(exercised.size, 10, 'hotfix mutations must cover both platforms and all five groups');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('repository and package guides document adaptive Hotfix usage', () => {
+  const guides = {
+    repository: fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../README.md'), 'utf8'),
+    package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
+  };
+  for (const [name, guide] of Object.entries(guides)) {
+    assert.match(guide, /hapo:hotfix/, `${name} guide names hotfix`);
+    assert.match(guide, /Quick\/local/, `${name} guide documents quick depth`);
+    assert.match(guide, /Incident\/deep/, `${name} guide documents incident depth`);
+    assert.match(guide, /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/, `${name} guide documents shared verdicts`);
+    assert.match(guide, /debug handoff|hapo:debug[^\n]*handoff/i, `${name} guide documents the debug handoff`);
+    assert.doesNotMatch(guide, /hotfix[^\n]*\b\d+(?:\.\d+)?\s*(?:%|x faster|seconds|minutes|ms)\b/i, `${name} guide must not invent timing claims`);
   }
 });
 
