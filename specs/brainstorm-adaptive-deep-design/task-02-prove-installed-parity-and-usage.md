@@ -46,8 +46,8 @@ Claude and Codex installations preserve adaptive-deep Brainstorm semantics, and 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 566d1696f2dededf015068dda1ae650b06141d93
-Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
+Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
+Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
 ```text
 $ npm --prefix packages/spec test
 ✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity
@@ -55,8 +55,8 @@ $ npm --prefix packages/spec test
 ✔ packed Claude and Codex reject adaptive Brainstorm semantic weakenings
 ✔ repository and package guides document adaptive Brainstorm usage
 ✔ hook behavioral tests: tests=189 pass=189 fail=0
-[skill-test] PASS: 1013 tests executed
-Aggregate: pass=1012 fail=0 skipped=1; Exit: 0
+[skill-test] PASS: 1022 tests executed
+Aggregate: pass=1021 fail=0 skipped=1; Exit: 0
 Reachability: packed installs exercised disposable .claude/.codex/.agents projections and both published guides.
 Negative proof: exact issue-set assertions covered 10 nonempty groups across Claude and Codex, including flag grammar, fallback, consent, redaction, and non-authority.
 Cleanup: eight canonical SHA-256 values and git status were identical before and after the final single-process command.

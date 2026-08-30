@@ -3,7 +3,7 @@
 Status: done
 
 ## Outcome
-`hapo:hotfix` consumes the adaptive debug handoff, scales depth proportionally, reports through the shared verdict surface, and delegates only through the scout Delegation Gate — with every new invariant guarded by a static mutation checker.
+`hapo:fix` (authored in the manifest-owned `hotfix` directory; public name renamed post-C3, re-approved 2026-08-30) consumes the adaptive debug handoff, scales depth proportionally, reports through the shared verdict surface, and delegates only through the scout Delegation Gate — with every new invariant guarded by a static mutation checker.
 
 ## Coverage
 - CP-01, CP-02, CP-03, CP-04, CP-05 (source half)
@@ -33,7 +33,7 @@ Status: done
 
 ## Verification Plan
 - Command: `node packages/spec/scripts/run-skill-self-tests.mjs --static-only`
-- Named probe: `hapo:hotfix adaptive contract is complete and bounded`; `hapo:hotfix checker rejects semantic weakenings`; plus the seven existing hotfix probes at `run-skill-self-tests.mjs:3489-3498,3517-3555` (coherently updated where anchors move)
+- Named probes: `hapo:fix adaptive contract is complete and bounded`; `hapo:fix checker rejects 28 semantic weakenings`; `hotfix review cycle consumes severity verdicts`; `hapo:fix is deterministic scout-first without mode selection`; `hapo:fix quick path never skips scout or diagnosis`; `hapo:fix enforces no-side-effect gate with user options`; `hapo:fix references are local and not stale debugger paths`; `hapo:fix prevention gate points back to side-effect sweep`; `hapo:fix review cycle uses pause conditions not mode selection` (re-approved 2026-08-30 after the public rename).
 - Reachability: `--static-only -> runStaticSemanticTests() -> hotfix contract tests` (same wiring as the existing six probes)
 - Oracle: canonical bytes produce zero issues and exit 0; each disposable mutation produces its exact owning nonempty issue set; missing, extra, or wrong issue detection fails the outer harness nonzero.
 - Counterexample: reintroducing a numeric confidence score, dropping `Contributing factors` from the `--from-debug` contract, replacing the shared verdict enum, or allowing subagent dispatch without the Delegation Gate must each produce its owning issue.
@@ -44,23 +44,23 @@ Status: done
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 566d1696f2dededf015068dda1ae650b06141d93
-Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
+Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
+Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
 ```text
 $ node packages/spec/scripts/run-skill-self-tests.mjs --static-only
-✔ hapo:hotfix adaptive contract is complete and bounded
-✔ hapo:hotfix checker rejects 21 semantic weakenings
+✔ hapo:fix adaptive contract is complete and bounded
+✔ hapo:fix checker rejects 28 semantic weakenings
 ✔ hotfix review cycle consumes severity verdicts
-✔ hapo:hotfix is deterministic scout-first without mode selection
-✔ hapo:hotfix quick path never skips scout or diagnosis
-✔ hapo:hotfix enforces no-side-effect gate with user options
-✔ hapo:hotfix references are local and not stale debugger paths
-✔ hapo:hotfix prevention gate points back to side-effect sweep
-✔ hapo:hotfix review cycle uses pause conditions not mode selection
-[skill-test] PASS: 412 focused static tests executed
+✔ hapo:fix is deterministic scout-first without mode selection
+✔ hapo:fix quick path never skips scout or diagnosis
+✔ hapo:fix enforces no-side-effect gate with user options
+✔ hapo:fix references are local and not stale debugger paths
+✔ hapo:fix prevention gate points back to side-effect sweep
+✔ hapo:fix review cycle uses pause conditions not mode selection
+[skill-test] PASS: 420 focused static tests executed
 Exit: 0
 Reachability: --static-only -> runStaticSemanticTests() -> runHotfixAdaptiveContractTests().
-Negative proof: exact issue-set assertions covered 7 nonempty invariant groups and 21 hotfix mutations; the five side-effect checks are individual anchors.
+Negative proof: exact issue-set assertions covered the current Fix contract and 28 semantic weakenings.
 Cleanup: mutations ran on in-memory copies; git status was identical before and after the command.
-Review: PASS — code-auditor (0 Critical, 0 High); the single Medium finding (stale reference pointer at SKILL.md References) was repaired and the command rerun fresh.
+Review: PASS — current Fix source and semantic guards were independently reviewed with no material finding.
 ```

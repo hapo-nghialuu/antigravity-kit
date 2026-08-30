@@ -33,22 +33,44 @@ Packed Claude and Codex installs preserve the same adaptive Specs contract, its 
 ## Verification Plan
 
 - Command: `npm --prefix packages/spec test`
-- Named probes: `hapo:specs adaptive coverage contract is complete and monotonic`; `specs-usage-guide documents adaptive routing without timing claims`; `Codex installed Specs and spec-maker reject adaptive coverage mutations`; `packed Claude and Codex installs preserve adaptive Specs and spec-maker`
+- Named probes: `hapo:specs adaptive coverage contract is complete and monotonic`; `specs-usage-guide documents adaptive routing without timing claims`; `Codex installed Specs and spec-maker reject adaptive coverage mutations`; `packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm` (probe name re-approved 2026-08-30 after its coverage expanded)
 - Reachability: canonical skill source → recursive payload copy → Claude/Codex installed skill roots; source `spec-maker.md` → native agent copy/transform → `.claude/agents/spec-maker.md` and `.codex/agents/spec_maker.toml`; guide → exact static check. No live routing or wall-clock claim is inferred.
 - Oracle: the package runner exits 0 with nonzero executed tests, every named adaptive source/installed mutation rejected, native skill/agent semantics equivalent after allowed transformations, exact guide assertions present, and existing runtime/legacy suites green.
 - Counterexample: skill checks pass while an installed agent retains stale routing, one runtime drops an unknown surface, the guide invents measured speed, or a planned live proof is treated as already passed; the owning named probe fails.
 - Artifacts: disposable package/install fixtures only; tests verify containment and cleanup, leaving canonical source bytes unchanged.
+
+## Historical Receipt (stale, non-authoritative)
+
+This receipt predates the expanded packed-install probe and cannot authorize `done`.
+Verification: PASS
+Command: npm --prefix packages/spec test
+Exit: 0
+Base: 566d1696f2dededf015068dda1ae650b06141d93
+Head: cecf31f4730cd47cfa78225088a4cd6bac1f4c251c3fb8fa6f19f227af055ed2
+```text
+✔ specs-usage-guide documents adaptive routing without timing claims
+✔ Codex installed Specs and spec-maker reject adaptive coverage mutations
+[skill-test] PASS: 1022 tests executed
+Aggregate: pass=1021 fail=0 skipped=1; Exit: 0.
+```
 
 ## Receipt
 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 566d1696f2dededf015068dda1ae650b06141d93
-Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
+Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
+Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
 ```text
+$ npm --prefix packages/spec test
+✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
 ✔ specs-usage-guide documents adaptive routing without timing claims
-✔ Codex installed Specs and spec-maker reject adaptive coverage mutations
-[skill-test] PASS: 1013 tests executed
-Aggregate: pass=1012 fail=0 skipped=1; Exit: 0.
+✔ Codex installed Specs and spec-maker reject adaptive coverage mutations (4112.004375ms)
+✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (82508.373333ms)
+[skill-test] PASS: 1022 tests executed
+Exit: 0
+Reachability: canonical skill source -> recursive payload copy -> Claude/Codex installed skill roots; guide -> exact static check.
+Negative proof: every named adaptive source/installed mutation was rejected with its exact issue set.
+Cleanup: disposable package/install fixtures only; git status was identical before and after the command.
+Review: PASS — packed-probe name re-approved by the user on 2026-08-30 after its coverage expanded to include proportional Brainstorm.
 ```

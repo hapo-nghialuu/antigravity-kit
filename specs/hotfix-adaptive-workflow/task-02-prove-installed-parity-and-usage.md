@@ -28,14 +28,15 @@ The adaptive hotfix contract survives projection into installed Claude and Codex
 
 ## Verification Plan
 - Command: `npm --prefix packages/spec test`
-- Named probe: the new hotfix parity checks in `codex-native.test.js` and `package-inventory.test.js`; `hapo:hotfix adaptive contract is complete and bounded` (via the suite's static pass); the guide-coverage assertions added for hotfix
+- Named probe: `Codex installed Fix preserves the adaptive repair contract`; `packed Claude and Codex installs reject adaptive Fix semantic weakenings`; `repository and package guides document adaptive Fix usage`; `hapo:fix adaptive contract is complete and bounded` (via the suite's static pass) — probe names re-approved 2026-08-30 after the public rename
 - Reachability: `npm test -> bin/__tests__ suites -> disposable packed/native installs under mkdtemp -> installed readiness checks`
 - Oracle: the full suite exits 0 on canonical bytes; each installed-copy mutation produces its exact nonempty issue set; zero executed tests or a skipped required probe is not a pass.
 - Counterexample: an installed Codex copy that restores the numeric confidence score, or a packed Claude copy that drops the Delegation Gate condition, must fail its owning regression.
 - Artifacts: none durable — installed copies live under a verified temporary root and are removed; canonical file SHA-256 values and `git status` must be identical before and after the command.
 
-## Receipt
+## Historical Receipt (stale, non-authoritative)
 
+This receipt predates the public `Hotfix` → `Fix` rename and cannot authorize `done`.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
@@ -54,4 +55,26 @@ Reachability: npm test -> bin/__tests__ suites -> disposable native/packed insta
 Negative proof: 7 Codex-native mutations plus 2 platforms x 5 packed mutation groups (exercised coverage assertion = 10) each produced its exact issue set, including the confidence-score counterexample on installed copies.
 Cleanup: installed mutations restored byte-exact under temporary roots; git status was identical before and after the command.
 Review: PASS — code-auditor initial FAIL (1 High: installed confidence-score counterexample uncovered) was remediated with the prescribed negative check + mutation in both suites, verified by the same reviewer; 2 Low notes remain non-blocking.
+```
+
+## Receipt
+
+Verification: PASS
+Command: npm --prefix packages/spec test
+Exit: 0
+Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
+Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
+```text
+$ npm --prefix packages/spec test
+✔ hapo:fix adaptive contract is complete and bounded
+✔ hapo:fix checker rejects 28 semantic weakenings
+✔ Codex installed Fix preserves the adaptive repair contract (827.50325ms)
+✔ packed Claude and Codex installs reject adaptive Fix semantic weakenings (22384.364625ms)
+✔ repository and package guides document adaptive Fix usage (1.586708ms)
+[skill-test] PASS: 1022 tests executed
+Exit: 0
+Reachability: npm test -> bin/__tests__ suites -> disposable native/packed installs under mkdtemp -> hotfixProjectionIssues/packedHotfixIssues.
+Negative proof: Codex-native mutations plus 2 platforms x 5 packed mutation groups (coverage assertion = 10) each produced its exact issue set, including the public-rename revert and confidence-score counterexamples on installed copies.
+Cleanup: installed mutations restored byte-exact under temporary roots; git status was identical before and after the command.
+Review: PASS — probe names re-approved by the user on 2026-08-30 after the public rename; pending-diff review returned no Critical/High finding.
 ```

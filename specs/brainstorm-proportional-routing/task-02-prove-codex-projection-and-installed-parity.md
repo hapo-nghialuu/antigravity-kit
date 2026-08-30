@@ -50,11 +50,11 @@ Claude and Codex receive the same proportional Brainstorm contract, and Codex's 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 566d1696f2dededf015068dda1ae650b06141d93
-Head: fe5c82fb10b24c4ef941a3799d436180e123909d37d44a9d4d5a9b498b2264a3
+Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
+Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
 ```text
 ✔ Codex payload transform keeps structured user-input grammar across determiners
 ✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity
-[skill-test] PASS: 1013 tests executed
-Aggregate: pass=1012 fail=0 skipped=1; Exit: 0.
+[skill-test] PASS: 1022 tests executed
+Aggregate: pass=1021 fail=0 skipped=1; Exit: 0.
 ```
