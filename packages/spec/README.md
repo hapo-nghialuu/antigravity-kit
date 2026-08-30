@@ -148,7 +148,7 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
 - `/hapo:debug <issue>`: run adaptive-depth, diagnostic-only root-cause analysis with elimination and prevention-aware handoff
-- `/hapo:hotfix <issue>`: fix diagnosed bugs with root-cause, verification, prevention, and side-effect gates
+- `/hapo:hotfix <issue>`: fix the diagnosed root cause with proportional depth (Quick/local vs Incident/deep), consume the `hapo:debug` handoff, and report shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts through verification, prevention, and side-effect gates
 - `/hapo:docs [--init|--update|--summarize|--reconstruct]`: create project docs or reconstruct as-is system documentation from source code
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
