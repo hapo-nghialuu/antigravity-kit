@@ -2991,6 +2991,125 @@ async function runDebugAdaptiveContractTests() {
   return mutations.length + 1;
 }
 
+const HOTFIX_ADAPTIVE_PATHS = {
+  skill: "src/claude/skills/hotfix/SKILL.md",
+  diagnosis: "src/claude/skills/hotfix/references/diagnosis-protocol.md",
+  review: "src/claude/skills/hotfix/references/review-cycle.md",
+  parallel: "src/claude/skills/hotfix/references/parallel-patterns.md",
+  prevention: "src/claude/skills/hotfix/references/prevention-gate.md",
+};
+
+function hotfixAdaptiveContractIssues(input) {
+  const issues = new Set();
+  const { skill, diagnosis, review, parallel, prevention } = input;
+  if (!skill.includes("## Proportional depth")
+    || !skill.includes("**Quick/local:**")
+    || !skill.includes("**Incident/deep:**")
+    || !skill.includes("Quick mode only reduces depth")
+    || !skill.includes("it never skips scout, pre-fix evidence, diagnosis, or before/after verification")) {
+    issues.add("proportional-depth");
+  }
+  if (!skill.includes("Trigger: event or input")
+    || !skill.includes("Contributing factors: conditions that raised likelihood")
+    || !diagnosis.includes("- Trigger: event or input")
+    || !diagnosis.includes("- Contributing factors: conditions that raised likelihood")) {
+    issues.add("causal-fields");
+  }
+  if (!skill.includes("`Timeline: skipped - <reason>`")
+    || !skill.includes("`- skipped: <reason>`")
+    || !skill.includes("`Elimination Path` records the decisive observation")
+    || !skill.includes("`Recurrence-Prevention Handoff`, when present")
+    || !skill.includes("routes back to diagnosis")) {
+    issues.add("handoff-validation");
+  }
+  if (!skill.includes("report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`")
+    || !skill.includes("The definition of `PASS` defers to `hapo:code-review`")
+    || !skill.includes("same remediation or user-pause path as `FAIL`")
+    || skill.includes("Confidence score")
+    || !review.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED")
+    || !review.includes("Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry")
+    || !review.includes("The definition of `PASS` defers to `hapo:code-review`")
+    || review.includes("at most one Medium")) {
+    issues.add("verdict-surface");
+  }
+  if (!skill.includes("The original symptom no longer reproduces with the exact pre-fix command/user flow.")
+    || !skill.includes("Modified files and transitively affected modules still pass relevant tests.")
+    || !skill.includes("Blast-radius workflows have no business-logic regression.")
+    || !skill.includes("No new lint/type/build errors were introduced.")
+    || !skill.includes("Public contracts are unchanged unless intentionally called out: function signatures, exported types, response shapes, DB schemas, env vars.")
+    || !skill.includes("Do not silently patch around the regression.")) {
+    issues.add("side-effect-gate");
+  }
+  if (!skill.includes("The user explicitly requested or permitted delegation or parallel agents.")
+    || !skill.includes("The active runtime exposes an Explore/delegation capability.")
+    || !skill.includes("at least two distinct, non-overlapping scopes")
+    || !skill.includes("Otherwise continue sequentially")
+    || !skill.includes("optional visibility fallback, never a required step")
+    || !parallel.includes("The user explicitly requested or permitted delegation or parallel agents.")
+    || !parallel.includes("at least two distinct, non-overlapping scopes")
+    || !parallel.includes("Otherwise continue sequentially")) {
+    issues.add("delegation-gate");
+  }
+  if (!prevention.includes("Step 5 side-effect sweep")
+    || !prevention.includes("Recurrence-Prevention Handoff")) {
+    issues.add("prevention-link");
+  }
+  return [...issues].sort();
+}
+
+function replaceHotfixClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`expected one Hotfix mutation anchor: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runHotfixAdaptiveContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(HOTFIX_ADAPTIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = hotfixAdaptiveContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Hotfix adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+  const mutations = [
+    ["quick-skips-diagnosis", "skill", "proportional-depth", "Quick mode only reduces depth", "Quick mode may shorten diagnosis"],
+    ["contract-loses-trigger", "skill", "causal-fields", "Trigger: event or input that activated the failure", "Activation note: whatever started the failure"],
+    ["protocol-loses-contributing", "diagnosis", "causal-fields", "- Contributing factors: conditions that raised likelihood or impact but are not sufficient causes, or `none evidenced`", "- Side notes: optional context"],
+    ["handoff-drops-dash-skip-form", "skill", "handoff-validation", "`Timeline: skipped - <reason>`", "`Timeline: omitted`"],
+    ["handoff-drops-colon-skip-form", "skill", "handoff-validation", "`- skipped: <reason>`", "`- omitted: <reason>`"],
+    ["recurrence-becomes-required", "skill", "handoff-validation", "`Recurrence-Prevention Handoff`, when present, carries evidence-backed candidates only", "`Recurrence-Prevention Handoff` is always required"],
+    ["incomplete-report-implements", "skill", "handoff-validation", "routes back to diagnosis", "may proceed to implementation with caveats"],
+    ["enum-drops-warnings", "skill", "verdict-surface", "report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`", "report `PASS | FAIL | BLOCKED`"],
+    ["warnings-auto-accept", "review", "verdict-surface", "Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry", "Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves"],
+    ["pass-redefined-locally", "review", "verdict-surface", "The definition of `PASS` defers to `hapo:code-review`; hotfix never redefines it with local severity thresholds.", "The definition of `PASS` is local: no Critical, no High, at most one Medium."],
+    ["confidence-score-returns", "skill", "verdict-surface", "**Report:** root cause, changes made", "**Report:** Confidence score, root cause, changes made"],
+    ["sweep-loses-repro-check", "skill", "side-effect-gate", "The original symptom no longer reproduces with the exact pre-fix command/user flow.", "The symptom appears resolved."],
+    ["sweep-loses-module-tests", "skill", "side-effect-gate", "Modified files and transitively affected modules still pass relevant tests.", "Modified files look correct on re-read."],
+    ["sweep-loses-blast-radius", "skill", "side-effect-gate", "Blast-radius workflows have no business-logic regression.", "Nearby workflows were not inspected."],
+    ["sweep-loses-toolchain-check", "skill", "side-effect-gate", "No new lint/type/build errors were introduced.", "Lint noise is acceptable."],
+    ["sweep-loses-contract-check", "skill", "side-effect-gate", "Public contracts are unchanged unless intentionally called out: function signatures, exported types, response shapes, DB schemas, env vars.", "Public contracts probably held."],
+    ["delegation-loses-user-clause", "skill", "delegation-gate", "The user explicitly requested or permitted delegation or parallel agents.", "Delegation is at the agent's discretion."],
+    ["patterns-lose-scope-clause", "parallel", "delegation-gate", "at least two distinct, non-overlapping scopes", "any promising scope"],
+    ["tasks-become-mandatory", "skill", "delegation-gate", "Task-tracking tools are an optional visibility fallback, never a required step", "Task-tracking tools are a required step"],
+    ["prevention-unlinks-sweep", "prevention", "prevention-link", "Step 5 side-effect sweep", "final summary"],
+    ["prevention-drops-recurrence", "prevention", "prevention-link", "Recurrence-Prevention Handoff", "informal notes"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceHotfixClauseOnce(baseline[source], from, to) };
+    const issues = hotfixAdaptiveContractIssues(changed);
+    if (!issues.includes(expectedIssue)) {
+      throw new Error(`[FAIL] Hotfix adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+  console.log("✔ hapo:hotfix adaptive contract is complete and bounded");
+  console.log(`✔ hapo:hotfix checker rejects ${mutations.length} semantic weakenings`);
+  return mutations.length + 1;
+}
+
 async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
@@ -2999,6 +3118,7 @@ async function runStaticSemanticTests() {
   const developPlanNativeTests = await runDevelopPlanNativeContractTests();
   const testPlanNativeTests = await runTestPlanNativeContractTests();
   const debugAdaptiveTests = await runDebugAdaptiveContractTests();
+  const hotfixAdaptiveTests = await runHotfixAdaptiveContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -3490,10 +3610,11 @@ async function runStaticSemanticTests() {
       file: "src/claude/skills/hotfix/references/review-cycle.md",
       assert: (content) =>
         content.includes("verdict and severity-classified findings") &&
-        content.includes("no Critical, no High, at most one Medium") &&
-        content.includes("PASS | FAIL | BLOCKED") &&
+        content.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED") &&
         content.includes("BLOCKED` is terminal") &&
-        content.includes("Only `FAIL` may enter remediation retry") &&
+        content.includes("Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry") &&
+        content.includes("The definition of `PASS` defers to `hapo:code-review`") &&
+        !content.includes("at most one Medium") &&
         !content.includes("score >= 9.0") &&
         !content.includes("critical_issues[]"),
     },
@@ -4160,7 +4281,8 @@ async function runStaticSemanticTests() {
 
   return checks.length + specs21Tests + implementationReadinessTests
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
-    + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests;
+    + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests
+    + hotfixAdaptiveTests;
 }
 
 function runSkillCatalogTests() {

@@ -1,6 +1,17 @@
 # Parallel Patterns & Task Coordination
 
-How to effectively leverage multiple subagents (the `Agent` tool) and native task tracking (`TaskCreate`/`TaskUpdate`) during fix workflows.
+How to leverage multiple subagents (the `Agent` tool) and optional task tracking during fix workflows.
+
+## Delegation Gate (applies to every subagent pattern)
+
+Patterns A, B, D, and E dispatch subagents only when all three conditions hold:
+
+- The user explicitly requested or permitted delegation or parallel agents.
+- The active runtime exposes an Explore/delegation capability.
+- The work splits into at least two distinct, non-overlapping scopes with useful independent work.
+
+Otherwise continue sequentially in the main agent with focused local evidence.
+Pattern C runs shell commands in the main agent and needs no gate.
 
 ## When to Go Parallel
 
@@ -52,7 +63,8 @@ All four must pass. If any fails, investigate that specific failure before re-at
 
 ## Pattern D: Task-Coordinated Issue Trees
 
-For 2+ independent bugs, create separate dependency chains per issue:
+For 2+ independent bugs, optionally create separate dependency chains per issue
+(task tools add visibility, never a required step):
 
 ```
 // Issue A — payment processing error
@@ -75,7 +87,7 @@ Spawn one `implementer` agent per issue tree. Each agent claims tasks via `TaskU
 
 ## Pattern E: Deep Workflow — Parallel Investigation Phase
 
-In complex bugs (Deep workflow), Steps 1+2+3 should run **concurrently** to save time:
+In complex bugs (Incident/deep), Steps 1+2+3 may run concurrently when the Delegation Gate is open:
 
 ```
 // All three launch simultaneously:

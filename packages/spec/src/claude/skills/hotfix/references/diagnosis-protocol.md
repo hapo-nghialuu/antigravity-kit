@@ -4,11 +4,11 @@ Structured root cause analysis methodology. Replaces ad-hoc guessing with eviden
 
 ## Core Principle
 
-**NEVER guess root causes.** Form hypotheses through structured reasoning and test them against evidence.
+Do not guess root causes. Form hypotheses through structured reasoning and test them against evidence.
 
-**NO FIXES IN DIAGNOSIS.** Product-code changes start only after the exact root-cause contract is complete.
+No fixes during diagnosis: product-code changes start only after the exact root-cause contract is complete.
 
-## Pre-Diagnosis: Capture State (MANDATORY)
+## Pre-Diagnosis: Capture State
 
 Before any investigation, capture the current broken state as baseline:
 
@@ -56,13 +56,14 @@ For each hypothesis:
 
 ### Phase 3: Test — Verify hypotheses against evidence
 
-Spawn parallel `Explore` subagents to test each hypothesis simultaneously:
+Test each hypothesis with focused local evidence (`rg`, targeted reads, exact
+commands). Spawn parallel `Explore` subagents only when the Delegation Gate in
+`../SKILL.md` is open:
 
 ```
-// Launch in SINGLE message — max 3 parallel agents
+// Only through the Delegation Gate — single message, max 3 parallel agents
 Agent(subagent_type="Explore", prompt="Test hypothesis A: [specific search/check]")
 Agent(subagent_type="Explore", prompt="Test hypothesis B: [specific search/check]")
-Agent(subagent_type="Explore", prompt="Test hypothesis C: [specific search/check]")
 ```
 
 **For each hypothesis result:**
@@ -83,7 +84,7 @@ Symptom (where error appears)
 
 **Rule:** NEVER fix where the error appears. Trace back to the source.
 
-## Exact Root-Cause Contract (MANDATORY)
+## Exact Root-Cause Contract
 
 Before Step 4 implementation in `hapo:hotfix`, record:
 
@@ -91,7 +92,9 @@ Before Step 4 implementation in `hapo:hotfix`, record:
 - Reproduction: command, user flow, CI job, log trigger, or route
 - Expected: intended behavior
 - Actual: observed behavior
+- Trigger: event or input that activated the failure, or `unknown`
 - Root cause: file:line, config, environment, dependency, or data source
+- Contributing factors: conditions that raised likelihood or impact but are not sufficient causes, or `none evidenced`
 - Why now: recent change, data state, dependency drift, environment, timing, or load factor
 - Evidence chain: observations proving this cause
 - Blast radius: affected files, modules, tests, users, workflows, or release paths
@@ -116,7 +119,9 @@ If 2+ hypotheses are REFUTED → see `escalation-tactics.md`.
 - Reproduction:
 - Expected:
 - Actual:
+- Trigger:
 - Root cause:
+- Contributing factors:
 - Why now:
 - Blast radius:
 

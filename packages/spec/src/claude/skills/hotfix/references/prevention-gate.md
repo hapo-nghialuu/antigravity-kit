@@ -2,6 +2,11 @@
 
 After a fix is verified, apply defense-in-depth to prevent the same bug class from recurring. Prevention is not the same as side-effect safety; run the Step 5 side-effect sweep in `../SKILL.md` before claiming completion.
 
+When the debug report carries a `Recurrence-Prevention Handoff`, consume its
+evidence-backed candidates (missing invariant or validation layer,
+observability/alerting gap, regression scenario) as guard inputs below instead
+of inventing new ones.
+
 ## Mandatory Prevention Checklist
 
 For every fix (Standard+ complexity), evaluate and apply at least ONE:
