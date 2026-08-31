@@ -1,6 +1,6 @@
 # Task 01 — Strengthen adaptive Research contract
 
-Status: blocked
+Status: done
 
 ## Outcome
 Research scales effort to decision risk and returns traceable, honest evidence
@@ -28,7 +28,8 @@ without forcing delegation or persistent files.
   comparisons name a winner only with explicit fit, tradeoffs, and limitations.
 - AC-03: delegation is optional acceleration, not a correctness dependency;
   output stays in chat unless durable persistence has explicit authority.
-- Existing Specs research headings and legacy consumers remain compatible.
+- Existing Specs research headings and ordering remain byte-compatible; full
+  scaffold/validator consumer compatibility is owned by Task 03 package proof.
 
 ## Dependencies
 - none
@@ -37,7 +38,8 @@ without forcing delegation or persistent files.
 - Command: `node packages/spec/scripts/run-skill-self-tests.mjs --static-only`
 - Named probes: `hapo:research adaptive evidence contract is complete and bounded`;
   `hapo:research checker rejects semantic weakenings`.
-- Reachability: canonical Research skill, researcher agent, and report template.
+- Reachability: canonical Research skill, researcher agent, and report template;
+  installed and legacy-consumer proof belongs to Task 03.
 - Oracle: the runner exits 0 only when depth, provenance, uncertainty,
   contradiction handling, fallback, and persistence boundaries coexist.
 - Counterexample: a mutation forces delegation, persists every answer, removes a
@@ -47,3 +49,14 @@ without forcing delegation or persistent files.
 
 ## Receipt
 
+Verification: PASS
+Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
+Exit: 0
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
+
+```text
+✔ hapo:research adaptive evidence contract is complete and bounded
+✔ hapo:research checker rejects semantic weakenings; count=18
+[skill-test] PASS: 470 focused static tests executed
+```

@@ -111,11 +111,11 @@ mutation or unsafe authentication handling.
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: a37467e325a8284048a0438e27d10cb11601d40e
-Head: 62168a6a1badeda4698c51dcda60ec63532f7641a09ce5e65965de9eae41d2dd
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
 
 ```text
 ✔ hapo:test plan-native proof contract is complete and bounded
 ✔ hapo:test plan-native checker rejects semantic weakenings
-[skill-test] PASS: 420 focused static tests executed
+[skill-test] PASS: 470 focused static tests executed
 ```

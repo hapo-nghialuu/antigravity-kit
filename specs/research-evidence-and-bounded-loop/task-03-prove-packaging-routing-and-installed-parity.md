@@ -1,6 +1,6 @@
 # Task 03 — Prove packaging, routing, and installed parity
 
-Status: blocked
+Status: done
 
 ## Outcome
 Packed Claude and Codex installs expose Research and Loop with equivalent
@@ -13,7 +13,7 @@ semantics, complete references, correct routing, and mutation-resistant safety.
 
 ## Coverage
 - CP-03
-- CP-02 installed/behavioral proof
+- CP-02 installed instruction-contract proof; live adherence `[UNPROVEN]`
 
 ## Ownership
 - Modify: `packages/spec/src/claude/migration-manifest.json`
@@ -21,13 +21,17 @@ semantics, complete references, correct routing, and mutation-resistant safety.
 - Modify: `packages/spec/src/claude/rules/skill-domain-routing.md`
 - Modify: `packages/spec/bin/__tests__/package-inventory.test.js`
 - Modify: `packages/spec/bin/__tests__/codex-native.test.js`
+- Read/execute: `packages/spec/bin/__tests__/specs-v2-policy-and-scaffold.test.js`
+- Read/execute: `packages/spec/bin/__tests__/specs-v2-validator-grounder-contract.test.js`
 - Generate/verify: disposable installed projections for Claude and Codex,
   including `.agents/skills/research`, `.agents/skills/loop`,
   `.codex/agents/researcher.toml`, and `.codex/cafekit-manifest.json`.
 
 ## Acceptance
-- AC-05/06: disposable fixture execution proves Loop isolation and failure
-  handling without touching the repository's primary worktree or branch.
+- AC-05/06: deterministic negative fixtures prove the packed written contract
+  rejects dirty scope, external path/Git targeting, oracle mutation, ambiguous
+  metrics, surviving descendants, ownership races, and incomplete handoff; they
+  do not prove live-agent adherence.
 - AC-07: manifest and routing expose Research for evidence-backed decisions and
   Loop only for explicit bounded optimization; ordinary implementation does not
   auto-route into Loop.
@@ -49,11 +53,30 @@ semantics, complete references, correct routing, and mutation-resistant safety.
 - Reachability: source manifest/rules through packed Claude and Codex disposable
   installs, including the researcher agent projection and Loop references.
 - Oracle: package tests exit 0 only when inventory, both runtime projections,
-  routing, behavior, and semantic mutation checks agree.
+  routing, legacy template consumers, and semantic mutation checks agree; live
+  execution remains explicitly `[UNPROVEN]`.
 - Counterexample: remove a Loop reference, route Loop implicitly, retain
   Claude-only tool names in Codex, weaken Guard/isolation after packing, or
   mutate a primary worktree during a failure fixture; its named probe fails.
-- Artifacts: disposable installation and worktree fixtures only.
+- Artifacts: disposable install/mutation fixtures with cleanup asserted by tests;
+  no production Loop patch artifact is created by this proof.
 
 ## Receipt
 
+Verification: PASS
+Command: npm --prefix packages/spec test
+Exit: 0
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
+
+```text
+✔ Codex installed Research preserves adaptive evidence semantics
+✔ packed Claude and Codex installs preserve bounded Loop safety and routing
+✔ packed Research and Loop reject semantic weakenings
+ℹ tests 354
+ℹ pass 353
+ℹ skipped 1
+ℹ tests 189
+ℹ pass 189
+[skill-test] PASS: 1076 tests executed
+```

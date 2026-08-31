@@ -1,6 +1,6 @@
 # Task 02 — Add safe bounded Loop engine
 
-Status: blocked
+Status: done
 
 ## Outcome
 CafeKit gains an explicit optimization loop that can improve a numeric metric
@@ -22,19 +22,26 @@ without trading away correctness or endangering the user's working branch.
 - Modify: `packages/spec/scripts/run-skill-self-tests.mjs`
 
 ## Acceptance
-- AC-04: preflight validates every required input before mutation and refuses
-  code mutation without an independent mandatory Guard.
-- AC-05: a fresh disposable worktree contains every experiment; commands are
-  explicit argument vectors or equivalently non-evaluated invocations; one
-  attributable change is retained only when metric delta clears noise/minimum
-  delta and Guard passes on the same candidate.
-- AC-05: drift in source, baseline, metric, Guard, scope, or environment stops
-  the run; primary worktree and branch remain byte/commit-state untouched.
-- AC-06: failure cleans only loop-owned disposable resources when ownership is
-  certain, otherwise stops and reports exact residue; no destructive recovery.
-- Final output reports baseline, best value, accepted/rejected iteration ledger,
-  Guard evidence, residual limits, and a reviewable patch/reference without
-  applying or committing it to the primary branch.
+- AC-04: preflight freezes the complete numeric sampling/formula contract,
+  distinct immutable Guard, pinned base/dirty state, unique run identity,
+  canonical root, budget, stop conditions, and exact cleanup/export consent.
+- AC-05: each iteration uses a unique detached worktree rebuilt from pinned base
+  plus accepted-best patch. Trusted commands run as screened argv with canonical
+  `cwd`; shell/interpreter wrappers and Git targeting outside the loop root are
+  forbidden, while arbitrary executable side effects remain outside the proven
+  boundary without an OS sandbox.
+- AC-05: Metric and Guard run on identical fingerprinted bytes. Any tracked or
+  untracked oracle mutation is drift. Only one attributable change whose finite
+  aggregated value improves current best beyond both noise and minimum delta,
+  with the distinct Guard passing, may become the accepted-best patch.
+- AC-06: timeout owns an isolated process group/job, terminate-to-kill escalation,
+  reap/quiescence, and a never-reused run path. Failure cleans only an exact
+  ownership-marked path with upfront consent; uncertainty retains residue and
+  returns `BLOCKED`, never destructive recovery.
+- Final output is a base-OID-bound patch plus complete scoped file manifest,
+  untracked/binary policy, SHA-256, secret/redaction result, accepted/rejected
+  ledger, Guard evidence, limitations, and explicit artifact lifetime. It is
+  never applied, committed, or stored in the primary worktree implicitly.
 
 ## Dependencies
 - `task-01-strengthen-adaptive-research-contract.md`
@@ -44,13 +51,27 @@ without trading away correctness or endangering the user's working branch.
 - Named probes: `hapo:loop bounded experiment contract is complete and fail-closed`;
   `hapo:loop checker rejects unsafe semantic weakenings`.
 - Reachability: canonical Loop skill and both references.
-- Oracle: the runner exits 0 only when mandatory preflight, isolation,
+- Oracle: the runner exits 0 only when mandatory preflight, cooperative command
+  trust, detached isolation,
   one-change attribution, metric-plus-Guard keep rule, stop rules, and forbidden
   Git/shell actions coexist.
-- Counterexample: a mutation makes Guard optional, uses `eval` or reset-hard,
-  commits the primary branch, accepts noisy regression, edits the benchmark, or
-  cleans an unowned path; its named probe fails.
-- Artifacts: disposable test fixtures only.
+- Counterexample: a mutation makes Guard optional/non-distinct, accepts NaN or
+  ambiguous samples, uses a shell wrapper or external Git `-C`, imports dirty
+  scope, permits oracle mutation/surviving descendants, commits the primary
+  branch, edits the benchmark, cleans an unowned path, or emits an unbound patch;
+  its named probe fails.
+- Artifacts: source instruction contract only; live adherence is `[UNPROVEN]`.
 
 ## Receipt
 
+Verification: PASS
+Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
+Exit: 0
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
+
+```text
+✔ hapo:loop bounded experiment contract is complete and fail-closed
+✔ hapo:loop checker rejects unsafe semantic weakenings; count=30
+[skill-test] PASS: 470 focused static tests executed
+```

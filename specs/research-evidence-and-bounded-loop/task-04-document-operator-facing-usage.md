@@ -1,6 +1,6 @@
 # Task 04 — Document operator-facing usage
 
-Status: blocked
+Status: done
 
 ## Outcome
 Repository, package, and website guidance explain when to use Research versus
@@ -19,8 +19,10 @@ Loop, which inputs are mandatory, and what safe handoff users receive.
 - Modify: `README.md`
 - Modify: `packages/spec/README.md`
 - Modify: `packages/spec/CHANGELOG.md`
+- Modify: `docs/project-changelog.md`
 - Modify: `cafekit-web/src/components/docs/catalog-visuals.tsx`
 - Modify: `cafekit-web/src/components/docs/skill-overview.tsx`
+- Modify: `packages/spec/bin/__tests__/package-inventory.test.js`
 
 ## Acceptance
 - AC-08: guidance says Research answers uncertain decisions with traceable
@@ -48,3 +50,22 @@ Loop, which inputs are mandatory, and what safe handoff users receive.
 
 ## Receipt
 
+Verification: PASS
+Command: npm --prefix packages/spec test && pnpm --dir cafekit-web lint && pnpm --dir cafekit-web build
+Exit: 0
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
+
+```text
+✔ repository and package guides document adaptive Research and bounded Loop
+ℹ tests 354
+ℹ pass 353
+ℹ skipped 1
+ℹ tests 189
+ℹ pass 189
+[skill-test] PASS: 1076 tests executed
+> web@0.1.0 lint
+> eslint
+✓ Compiled successfully
+✓ Generating static pages using 7 workers (10/10)
+```

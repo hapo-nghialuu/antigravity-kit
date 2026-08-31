@@ -59,15 +59,15 @@ Aggregate: pass=1021 fail=0 skipped=1; Exit: 0.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: a37467e325a8284048a0438e27d10cb11601d40e
-Head: 62168a6a1badeda4698c51dcda60ec63532f7641a09ce5e65965de9eae41d2dd
+Base: e4988200e250bae26a38618462aeaec8503ba09a
+Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
 ```text
 $ npm --prefix packages/spec test
 ✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
 ✔ specs-usage-guide documents adaptive routing without timing claims
-✔ Codex installed Specs and spec-maker reject adaptive coverage mutations (4112.004375ms)
-✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm (82508.373333ms)
-[skill-test] PASS: 1022 tests executed
+✔ Codex installed Specs and spec-maker reject adaptive coverage mutations
+✔ packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm
+[skill-test] PASS: 1076 tests executed
 Exit: 0
 Reachability: canonical skill source -> recursive payload copy -> Claude/Codex installed skill roots; guide -> exact static check.
 Negative proof: every named adaptive source/installed mutation was rejected with its exact issue set.
