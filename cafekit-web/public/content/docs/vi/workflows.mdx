@@ -17,11 +17,11 @@ Luồng delivery chính được giải thích kỹ ở [Workflow chính](/vi/do
 
 | Command | Dùng khi |
 |---|---|
-| `/hapo:specs` | Cần requirements, research, design, tasks, validation. |
+| `/hapo:specs` | Cần C1 scope, reviewed plan, flat executable tasks và C2 decision. |
 | `/hapo:develop` | Spec hoặc task file đã approved và sẵn sàng implement. |
 | `/hapo:test` | Cần evidence từ commands, build, tests, UI checks, runtime reachability. |
 | `/hapo:code-review` | Cần adversarial review cho bugs, security, drift, missing proof. |
-| `/hapo:sync` | Task status, `task_registry`, và task markdown cần update sau proof, hoặc cần audit drift. |
+| `/hapo:sync` | Cần sync observed task Status hoặc final inline Receipt mà không bịa proof. |
 
 Dùng `/hapo:brainstorm` trước path này chỉ khi idea chưa rõ, architecture còn mở, hoặc cần pressure-test scope.
 
@@ -39,7 +39,6 @@ Dùng `/hapo:brainstorm` trước path này chỉ khi idea chưa rõ, architectu
 | `/hapo:docs --init` | Project docs đang thiếu. |
 | `/hapo:docs --update` | Source thay đổi đủ lớn để docs cần refresh. |
 | `/hapo:docs --reconstruct <scope>` | Cần as-is docs dựa trên source cho hệ thống hiện có. |
-| `/hapo:generate-graph <request>` | Cần architecture, flow, sequence, hoặc state diagram. |
 
 ## Release
 
@@ -48,4 +47,4 @@ Dùng `/hapo:brainstorm` trước path này chỉ khi idea chưa rõ, architectu
 | `/hapo:git commit` | Change đã verify sẵn sàng commit conventional. |
 | `/hapo:git push` | Tests và review đủ sạch để publish branch. |
 
-OpenCode cài command không prefix như `/specs`, `/develop`, `/test`, `/code-review`.
+Codex CLI expose cùng public workflow qua native `$hapo-*` skills.

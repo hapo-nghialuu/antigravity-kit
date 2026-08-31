@@ -17,11 +17,11 @@ Main delivery path は [Core workflow](/ja/docs/core-workflow) で詳しく説�
 
 | Command | Use when |
 |---|---|
-| `/hapo:specs` | requirements、research、design、tasks、validation が必要。 |
+| `/hapo:specs` | C1 scope、reviewed plan、flat executable tasks、C2 decision が必要。 |
 | `/hapo:develop` | spec または task file が approved で implementation ready。 |
 | `/hapo:test` | commands、build、tests、UI checks、runtime reachability の evidence が必要。 |
 | `/hapo:code-review` | bugs、security、drift、missing proof の adversarial review。 |
-| `/hapo:sync` | proof 後に task status、`task_registry`、task markdown を更新する、または drift audit/repair が必要。 |
+| `/hapo:sync` | Observed task Status または final inline Receipt を proof の捏造なしで sync。 |
 
 Idea が曖昧、architecture が未決定、scope を pressure-test したい場合だけ、この path の前に `/hapo:brainstorm` を使います。
 
@@ -39,7 +39,6 @@ Idea が曖昧、architecture が未決定、scope を pressure-test したい�
 | `/hapo:docs --init` | project docs がない。 |
 | `/hapo:docs --update` | source changes が docs refresh を必要とする。 |
 | `/hapo:docs --reconstruct <scope>` | existing system の source-backed as-is docs が必要。 |
-| `/hapo:generate-graph <request>` | architecture、flow、sequence、state diagram が必要。 |
 
 ## Release
 
@@ -48,4 +47,4 @@ Idea が曖昧、architecture が未決定、scope を pressure-test したい�
 | `/hapo:git commit` | verified changes を focused conventional commit にする。 |
 | `/hapo:git push` | tests と review が clean で branch を publish できる。 |
 
-OpenCode では `/specs`、`/develop`、`/test`、`/code-review` のような prefix-free commands が使われます。
+Codex CLI は同じ public workflow を native `$hapo-*` skills で提供します。

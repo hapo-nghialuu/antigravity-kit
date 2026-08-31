@@ -117,22 +117,22 @@ const translations: Record<Locale, LandingTranslations> = {
           tab: "/hapo:specs",
           title: "Create the feature contract",
           description:
-            "Generate `spec.json`, requirements, design notes, and task packets. Validation is part of this stage before implementation starts.",
+            "Confirm C1 scope, write `plan.md` and flat tasks, then resolve adversarial findings at C2 before implementation starts.",
           highlights: [
-            "Creates `specs/<feature>/` with machine-readable state and task files.",
-            "Runs reconciliation and validation before handing work to implementation.",
-            "Locks the runtime contract that develop, test, and sync rely on.",
+            "Creates `specs/<feature>/plan.md` with flat `task-NN-*.md` files.",
+            "Runs adversarial review and resolves material findings at C2.",
+            "Stops after planning so implementation begins only through a new explicit `/hapo:develop` invocation.",
           ],
           notes: [
             {
-              title: "Validation first",
+              title: "Human decisions",
               description:
-                "Treat `/hapo:specs --validate` as part of the specs stage, not an optional afterthought.",
+                "C1 confirms scope; C2 accepts or resolves the reviewed plan before handoff.",
             },
             {
               title: "Task packets",
               description:
-                "Each `task-R*.md` becomes the execution boundary for `hapo:develop`.",
+                "Each flat `task-NN-*.md` becomes one execution boundary for `/hapo:develop`.",
             },
           ],
         },
@@ -143,7 +143,7 @@ const translations: Record<Locale, LandingTranslations> = {
             "Ship code through a verified task loop instead of coding the whole feature in one pass.",
           highlights: [
             "Supports both full-spec orchestration and surgical single-task execution.",
-            "Uses task boundaries, verification receipts, and registry sync before marking work done.",
+            "Lets the controller record task status and the final inline verification receipt.",
             "Runs lightweight docs checkpoints after verified tasks.",
           ],
           notes: [
@@ -342,22 +342,22 @@ const translations: Record<Locale, LandingTranslations> = {
           tab: "/hapo:specs",
           title: "Tạo contract cho feature",
           description:
-            "Sinh `spec.json`, requirements, design và task packet. Validate là một phần của giai đoạn này trước khi code bắt đầu.",
+            "Xác nhận C1 scope, viết `plan.md` và flat tasks, rồi giải quyết adversarial findings tại C2 trước implementation.",
           highlights: [
-            "Tạo `specs/<feature>/` với state machine-readable và task files.",
-            "Chạy reconciliation và validation trước khi handoff sang implementation.",
-            "Khóa runtime contract mà develop, test và sync sẽ bám vào.",
+            "Tạo `specs/<feature>/plan.md` cùng các file phẳng `task-NN-*.md`.",
+            "Chạy adversarial review và xử lý findings quan trọng tại C2.",
+            "Dừng sau planning; implementation chỉ bắt đầu bằng một lượt gọi `/hapo:develop` mới và rõ ràng.",
           ],
           notes: [
             {
-              title: "Validate trước",
+              title: "Quyết định của người dùng",
               description:
-                "Xem `/hapo:specs --validate` là một phần của stage specs, không phải bước phụ.",
+                "C1 xác nhận phạm vi; C2 chấp nhận hoặc xử lý plan đã được review trước khi handoff.",
             },
             {
               title: "Task packet",
               description:
-                "Mỗi `task-R*.md` là biên thực thi cho `hapo:develop`.",
+                "Mỗi file phẳng `task-NN-*.md` là một biên thực thi cho `/hapo:develop`.",
             },
           ],
         },
@@ -368,7 +368,7 @@ const translations: Record<Locale, LandingTranslations> = {
             "Code theo verified task loop thay vì làm cả feature trong một lượt dài.",
           highlights: [
             "Hỗ trợ cả full-spec orchestration lẫn chạy một task rất cụ thể.",
-            "Dùng task boundary, verification receipt và registry sync trước khi mark done.",
+            "Controller ghi task status và verification receipt cuối cùng ngay trong task.",
             "Có docs checkpoint nhẹ sau mỗi task đã verify.",
           ],
           notes: [
@@ -569,21 +569,21 @@ const translations: Record<Locale, LandingTranslations> = {
           tab: "/hapo:specs",
           title: "feature contract を作る",
           description:
-            "`spec.json`、requirements、design、task packet を生成します。validation は実装前にこの段階で行います。",
+            "C1 scope を確認し、`plan.md` と flat tasks を作成、implementation 前に C2 adversarial findings を解決します。",
           highlights: [
-            "machine-readable な state と task files を持つ `specs/<feature>/` を生成します。",
-            "implementation に渡す前に reconciliation と validation を実行します。",
-            "develop、test、sync が依存する runtime contract を固定します。",
+            "`specs/<feature>/plan.md` と flat な `task-NN-*.md` files を生成します。",
+            "adversarial review を実行し、C2 で重要な findings を解決します。",
+            "planning 後に停止し、implementation は明示的な新しい `/hapo:develop` invocation でのみ開始します。",
           ],
           notes: [
             {
-              title: "Validate first",
+              title: "Human decisions",
               description:
-                "`/hapo:specs --validate` は specs stage の一部として扱います。",
+                "C1 で scope を確認し、C2 で reviewed plan を承認または修正してから handoff します。",
             },
             {
               title: "Task packet",
-              description: "`task-R*.md` は `hapo:develop` の実行境界になります。",
+              description: "flat な `task-NN-*.md` は `/hapo:develop` の実行境界になります。",
             },
           ],
         },
@@ -594,7 +594,7 @@ const translations: Record<Locale, LandingTranslations> = {
             "feature 全体を一気に書くのではなく、verified task loop で前に進みます。",
           highlights: [
             "full-spec orchestration と single-task execution の両方をサポートします。",
-            "done にする前に task boundary、verification receipt、registry sync を使います。",
+            "controller が task status と最終 inline verification receipt を記録します。",
             "verified task ごとに軽量な docs checkpoint を実行します。",
           ],
           notes: [

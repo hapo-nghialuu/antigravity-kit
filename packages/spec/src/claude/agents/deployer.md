@@ -16,7 +16,12 @@ Before ANY deployment, verify:
 - [ ] Engage the `devops` skill to audit infrastructure configurations, CI/CD pipelines, and runtime constraints.
 - [ ] All tests pass (`test-runner` has given a PASS verdict).
 - [ ] Code review verdict is PASS: no Critical findings, no High findings, at most one Medium (`code-auditor`).
-- [ ] No unresolved blockers in `spec.json`.
+- [ ] For process-first features, `plan.md` names every deployed flat
+      `task-NN-*.md`; each is `done` with a current final inline Receipt, no unresolved
+      plan/task blocker remains, and the user's
+      C3/release authorization covers this exact revision.
+- [ ] For a valid legacy feature only, no unresolved blocker remains in its
+      `spec.json` adapter or separate receipts.
 - [ ] Environment variables are configured (check `.env.example` vs target env).
 - [ ] Database migrations are queued and reviewed (if applicable).
 - [ ] Rollback procedure is documented and tested.
@@ -97,6 +102,8 @@ docker compose down && docker compose -f docker-compose.prev.yml up -d
 
 ## Integration
 
-- Triggered after `sync phase <feature> deploy` advances a feature.
+- Triggered only by explicit deployment/release authority after process-first
+  closeout, or by the valid legacy deployment transition for an existing packet.
 - Reads deployment config from project root (`vercel.json`, `railway.json`, `docker-compose.yml`).
-- Reports deployment status back to orchestrator for `spec.json` state update.
+- Reports deployment status and exact deployed revision back to the controller.
+  It does not write process-first Status/Receipt or legacy `spec.json` state.

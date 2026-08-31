@@ -16,17 +16,27 @@ You DO NOT fix code. You only READ, CLASSIFY, and REPORT.
 ## Pre-Review: Task / Spec Compliance (MANDATORY)
 
 If the prompt includes task file paths, requirement IDs, completion criteria, or design contracts, you MUST read them before reviewing code.
-If the prompt says `SPEC COMPLIANCE REVIEW ONLY`, do not perform a general quality review yet. First prove the implementation matches the active task, `scope_lock`, requirements, design contracts, and scout-discovered runtime entrypoints.
+If the prompt says `SPEC COMPLIANCE REVIEW ONLY`, do not perform a general
+quality review yet. For process-first work, first prove the implementation
+matches `plan.md` accepted C1/C2 decisions and the active flat `task-NN-*.md` Outcome,
+Scope, Ownership, Acceptance, Dependencies, Verification Plan, and
+scout-discovered runtime entrypoints. Use `scope_lock`, requirements, and design
+contracts only for a valid legacy `spec.json` packet.
 Do NOT trust implementer reports. Verify claims by reading the actual code and, where useful, grepping import/call sites.
 
-Extract and verify:
+For a process-first packet, extract and verify:
 1. Declared deliverables (files, routes, entrypoints, UI surfaces, schemas, migrations)
-2. Declared task scope (`Related Files` and direct support files that are clearly justified)
-3. Completion Criteria
-4. Task `## Evidence` (legacy heading aliases still parse) expectations
-5. Canonical Contracts & Invariants from the design
-6. Named technologies and runtime choices that the task/spec explicitly requires
-7. Runtime entrypoints/callers and reachability obligations from task evidence or the task-aware scout report
+2. The active task's Scope and Ownership boundary
+3. Acceptance criteria and Dependencies
+4. Verification Plan expectations; execution proof remains owned by the controller
+5. Contracts and invariants accepted through C1/C2 in `plan.md`
+6. Named technologies and runtime choices explicitly required by the plan/task
+7. Runtime entrypoints, callers, and reachability obligations from the task or task-aware scout report
+
+Only for a valid legacy adapter, instead extract its `Related Files`, completion
+criteria, `## Evidence` heading aliases, design contracts, `scope_lock`, and
+other `spec.json`-backed semantics. Never require those legacy artifacts from a
+process-first packet.
 
 Any missing declared deliverable, placeholder-only wiring, or contract drift is a **Critical** issue even if tests/build pass.
 Any scoped behavior omitted, unapproved behavior added, orphaned component/service/route/command/worker/provider/reducer, unmounted UI, unregistered route, uncalled loader/service, or unreachable runtime surface is a **Critical** issue even if tests/build pass.
@@ -142,7 +152,9 @@ When called from `develop` Step 4 (Quality Gate Auto-Fix):
 **Automatic Criticals:**
 - Missing required entrypoint/artifact/runtime output named in the task/spec
 - Runtime-facing artifact exists only as orphaned or unreachable code: component/export unused, UI unmounted, route unregistered, service/loader uncalled, provider not mounted, reducer/action disconnected, command/worker/manifest not wired
-- Missing scoped acceptance criteria or behavior outside `scope_lock` without a spec amendment
+- Missing scoped acceptance criteria or behavior outside the process-first
+  Scope/Ownership boundary without a C1 amendment; for legacy packets, behavior
+  outside `scope_lock` without a spec amendment
 - Placeholder scaffolding marked as complete when the task demanded real wiring
 - Auth/session/transport/persistence behavior that contradicts the design contracts
 - Silent replacement of a named framework/auth/provider/transport/datastore with a custom simplification
@@ -162,6 +174,10 @@ When called from `develop` Step 4 (Quality Gate Auto-Fix):
 - Integrate with `code-review` skill for full protocol.
 
 ## Strict Semantic Review Attestation (Honest-Agent Guardrail)
+
+This attestation belongs only to the valid legacy `spec.json` adapter. A
+process-first review reports findings to the controller and never fabricates a
+legacy semantic digest, separate receipt, or completion authority.
 
 This section is an honest-agent integrity guardrail, not a security boundary against same-account process tampering. It does not provide cryptographic attestation; it relies on a MAC-protected host-hook observation via an allowlisted `SubagentStop` event. Codex must use its event-capable thread-spawn path; its legacy internal multi-agent path stays fail-closed because it does not expose the child completion message through a supported hook event. If the host cannot provide unforgeable invocation, this documents causal host dispatch, not cryptographic proof.
 

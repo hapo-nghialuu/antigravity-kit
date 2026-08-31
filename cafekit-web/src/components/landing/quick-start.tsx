@@ -15,8 +15,8 @@ export function QuickStart() {
   const commands = [
     'npx @haposoft/cafekit',
     '/hapo:specs Build a user authentication system',
-    '/hapo:specs --validate user-authentication',
-    '/hapo:develop user-authentication task-R0-02-auth-setup-dual-mode.md',
+    'Accept all  # C2',
+    '/hapo:develop user-authentication',
     '/hapo:test --full',
     '/hapo:code-review --pending',
     '/hapo:git commit',

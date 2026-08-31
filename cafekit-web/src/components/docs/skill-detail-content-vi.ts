@@ -1,7 +1,7 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsVi: SkillDetailMap = {
-  question: {
+  ask: {
     title: 'Ask',
     command: '/hapo:ask',
     category: 'Consultation',
@@ -27,10 +27,10 @@ export const skillDetailsVi: SkillDetailMap = {
     title: 'Specs',
     command: '/hapo:specs',
     category: 'Specification',
-    summary: 'Tạo feature contract bền vững: requirements, research, design, task packets, và validation state.',
+    summary: 'Tạo plan process-first đã review, flat executable tasks, và quyết định của user tại C1/C2.',
     when: ['Hướng đã đủ rõ để thành requirements.', 'Cần task files trước khi code.', 'Feature cần traceable scope và evidence gates.'],
-    flow: [['Detect', 'Kiểm tra spec đang dở và tránh duplicate.'], ['Requirements', 'Viết behavior, constraints, và acceptance criteria.'], ['Research', 'Ghi findings và decisions có source backing.'], ['Design', 'Định nghĩa architecture, contracts, data flow, invariants.'], ['Tasks', 'Tách work thành task packets có evidence criteria.'], ['Validate', 'Kiểm tra spec.json, task files, và registry alignment.']],
-    output: 'Thư mục `specs/<feature>/` sẵn sàng để implement từng task một.',
+    flow: [['C1', 'Xác nhận outcome, scope, exclusions, constraints và lựa chọn chưa giải quyết.'], ['Evidence', 'Ghi findings cần cho quyết định.'], ['Plan', 'Viết plan.md với acceptance criteria và boundaries.'], ['Tasks', 'Tạo flat task-NN có ownership, dependencies và proof command.'], ['C2', 'Đưa material review findings cho user quyết định.']],
+    output: '`plan.md` đã review cùng flat `task-NN-*.md`, sẵn sàng cho invocation develop mới.',
     avoid: 'Không dùng spec như tài liệu trang trí sau khi code đã đoán xong. Spec phải constrain implementation.',
     next: '/hapo:develop',
   },
@@ -40,7 +40,7 @@ export const skillDetailsVi: SkillDetailMap = {
     category: 'Implementation',
     summary: 'Implement approved task packets với scope fidelity, task-aware inspection, verification, review, và state sync.',
     when: ['Spec hoặc task packet đã approve.', 'Muốn implement một task an toàn.', 'Task có completion criteria và evidence expectations.'],
-    flow: [['Load', 'Mở spec.json và chọn một unblocked task.'], ['Extract', 'Đọc scope, related files, requirements, contracts, evidence commands.'], ['Inspect', 'Scout entrypoints thật, callers, patterns, prior outputs, blast radius.'], ['Implement', 'Chỉ sửa active task boundary trừ khi có scope escape hợp lý.'], ['Gate', 'Chạy tests và review; fail thì quay lại implementation.'], ['Sync', 'Chỉ đóng task sau khi có proof.']],
+    flow: [['Load', 'Mở plan.md và chọn một flat task chưa bị block.'], ['Extract', 'Đọc outcome, ownership, dependencies, acceptance và proof command.'], ['Scout', 'Trace entrypoints thật, callers, patterns và blast radius.'], ['Implement', 'Chỉ sửa active task boundary trừ khi có scope escape hợp lý.'], ['Verify', 'Chạy exact planned command và lấy current output.'], ['Receipt', 'Controller cập nhật Status duy nhất và final inline Receipt.']],
     output: 'Production code reachable thật, kèm task evidence và synchronized state.',
     avoid: 'Không dùng trước spec approval hoặc để âm thầm thay named technology bằng placeholder.',
     next: '/hapo:test và /hapo:code-review',
@@ -71,10 +71,10 @@ export const skillDetailsVi: SkillDetailMap = {
     title: 'Sync',
     command: '/hapo:sync',
     category: 'State',
-    summary: 'Update task status, task_registry, task markdown, phase, và audit result để agent sau có thể tin project record.',
-    when: ['Task status cần đổi sau proof.', 'spec.json và task markdown bị drift.', 'Cần phase advancement hoặc audit task registry và physical task files.'],
-    flow: [['Resolve', 'Xác định feature, task reference, target status, phase, hoặc audit mode.'], ['Machine state', 'Update chính xác spec.json task_registry, task_files, phase, timestamps, blocker.'], ['Human state', 'Update task markdown status và checked criteria.'], ['Proof gate', 'Từ chối done nếu chưa có verification receipt.'], ['Audit', 'Repair mismatch giữa task_files, registry, và task files.']],
-    output: 'spec.json, task_registry, và task markdown đã sync với status có proof.',
+    summary: 'Đồng bộ Status và inline Receipt đã quan sát được, không bịa proof.',
+    when: ['Task Status cần phản ánh fresh proof.', 'Inline Receipt stale hoặc thiếu.', 'Cần audit phẫu thuật giữa plan và flat task state.'],
+    flow: [['Resolve', 'Xác định feature, flat task, observed state và exact proof command.'], ['Inspect', 'Đọc plan.md, task Status và final inline Receipt.'], ['Proof gate', 'Từ chối done nếu thiếu current runtime-derived proof.'], ['Sync', 'Chỉ update Status và canonical Receipt đã quan sát.'], ['Audit', 'Báo mismatch mà không bịa approval hay execution.']],
+    output: 'Flat task đã đồng bộ với một Status và một inline Receipt hiện tại.',
     avoid: 'Không mark done từ chat memory hoặc khi task file chưa có evidence.',
     next: 'Docs checkpoint hoặc next unblocked task',
   },
@@ -111,7 +111,7 @@ export const skillDetailsVi: SkillDetailMap = {
     avoid: 'Không bịa architecture claim nếu không back được bằng files, commands, hoặc runtime evidence.',
     next: '/hapo:specs cho modernization work, hoặc release handoff',
   },
-  inspect: {
+  scout: {
     title: 'Scout',
     command: '/hapo:scout',
     category: 'Discovery',

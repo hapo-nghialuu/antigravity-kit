@@ -2102,6 +2102,12 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
       const name = path.basename(fileName, '.md').replace(/-/g, '_');
       const agentPath = path.join(root, '.codex', 'agents', `${name}.toml`);
       const content = fs.readFileSync(agentPath, 'utf8');
+      const sourcePath = path.join(PACKAGE_ROOT, 'src', 'claude', 'agents', fileName);
+      assert.equal(
+        content,
+        convertCodexAgentContent(fs.readFileSync(sourcePath, 'utf8'), fileName),
+        `Codex agent projection drifted: ${fileName}`
+      );
       assert.equal(parseGeneratedTomlString(content, 'name'), name);
       assert.ok(parseGeneratedTomlString(content, 'description').length > 8);
       assert.ok(parseGeneratedTomlString(content, 'developer_instructions').length > 20);

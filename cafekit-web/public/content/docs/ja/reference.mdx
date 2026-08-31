@@ -31,16 +31,15 @@ command の alias ではありません。
 |---|---|---|
 | `/hapo:ask` | `/question` | Project と technical questions に repo-first evidence で回答。 |
 | `/hapo:brainstorm` | `/brainstorm` | spec 前に idea を明確化。 |
-| `/hapo:specs` | `/specs` | specs の create、resume、validate、approve。 |
-| `/hapo:develop` | `/develop` | approved task packets の implementation。 |
+| `/hapo:specs` | `/specs` | C1/C2 を通じて process-first plan と flat tasks を作成。 |
+| `/hapo:develop` | `/develop` | Approved flat task を one at a time で execute。 |
 | `/hapo:test` | `/test` | task-aware verification。 |
 | `/hapo:code-review` | `/code-review` | regressions と security の review。 |
-| `/hapo:sync` | — | task status、`task_registry`、task markdown、phase、drift audit を sync。 |
+| `/hapo:sync` | — | Observed task Status と final inline Receipt を sync。 |
 | `/hapo:debug` | `/debug` | fix 前に diagnose。 |
 | `/hapo:fix` | `/hotfix` | narrow diagnosed fixes。 |
 | `/hapo:docs` | `/docs` | docs の create、update、summarize、reconstruct。 |
 | `/hapo:scout` | `/inspect` | source files と structure の scout。 |
-| `/hapo:generate-graph` | `/generate-graph` | technical diagrams の generation。 |
 
 過去の OpenCode 0.16 install では、installer が main implementation surface の slash commands を生成していました。`sync` skill は shared skill bundle に含まれていましたが、installer は `/sync` OpenCode wrapper を生成しませんでした。
 

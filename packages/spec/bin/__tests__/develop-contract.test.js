@@ -35,6 +35,13 @@ const PARALLEL_WAVES = path.join(PACKAGE_ROOT, 'src/claude/skills/develop/refere
 const DEVELOP_REFERENCES = ['quality-gate.md', 'parallel-waves.md', 'subagent-patterns.md'];
 const INSTALLER = path.join(PACKAGE_ROOT, 'bin/install.js');
 const SYNC_PROTOCOLS = path.join(PACKAGE_ROOT, 'src/claude/skills/sync/references/sync-protocols.md');
+const PROCESS_FIRST_AGENTS = [
+  'implementer.md',
+  'inspector.md',
+  'code-auditor.md',
+  'docs-keeper.md',
+  'deployer.md',
+].map((name) => path.join(PACKAGE_ROOT, 'src/claude/agents', name));
 const PROVENANCE = path.join(PACKAGE_ROOT, '../../docs/provenance.md');
 const SPECS_USAGE_GUIDE = path.join(PACKAGE_ROOT, '../../docs/specs-usage-guide.md');
 const RUNTIME_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-policy-runtime-'));
@@ -785,6 +792,35 @@ test('Specs primary output is a flat process-first packet with isolated legacy c
   assert.match(regions.legacy, /spec\.json/i);
   assert.match(regions.legacy, /never requires the legacy kernel/i);
   assertVocabularyIsLegacyOnly(SPECS, regions);
+});
+
+test('core execution agents default to process-first state and isolate legacy packets', () => {
+  for (const filePath of PROCESS_FIRST_AGENTS) {
+    const content = read(filePath);
+    const name = path.basename(filePath);
+    assert.match(content, /plan\.md/i, `${name} must read the process-first plan`);
+    assert.match(content, /task-NN-\*\.md|task-NN-<slug>\.md/i, `${name} must understand flat tasks`);
+    assert.match(content, /legacy/i, `${name} must isolate legacy compatibility`);
+  }
+
+  const implementer = read(PROCESS_FIRST_AGENTS[0]);
+  assert.match(implementer, /Under every dispatch mode[\s\S]{0,160}do NOT edit[\s\S]{0,80}`plan\.md`[\s\S]{0,80}`Status:`[\s\S]{0,80}`## Receipt`/i);
+  assert.match(implementer, /controller/i);
+  assert.match(implementer, /process-first work[\s\S]{0,100}Ownership[\s\S]{0,100}`Related Files` only for a valid legacy adapter/i);
+
+  const auditor = read(PROCESS_FIRST_AGENTS[2]);
+  assert.match(auditor, /accepted C1\/C2 decisions/i);
+  assert.match(auditor, /Only for a valid legacy adapter[\s\S]*`Related Files`[\s\S]*`## Evidence`/i);
+  assert.match(auditor, /Never require those legacy artifacts from a[\s\S]*process-first packet/i);
+  assert.match(auditor, /attestation belongs only to the valid legacy/i);
+
+  const docsKeeper = read(PROCESS_FIRST_AGENTS[3]);
+  assert.match(docsKeeper, /never[\s\S]{0,80}invent or write Status, Receipt, approval, or execution proof/i);
+
+  const deployer = read(PROCESS_FIRST_AGENTS[4]);
+  assert.match(deployer, /current final inline Receipt/i);
+  assert.match(deployer, /C3\/release authorization/i);
+  assert.match(deployer, /does not write process-first Status\/Receipt/i);
 });
 
 test('R7 Develop and Sync surfaces teach process-v3 and isolate hierarchical Legacy sections', () => {

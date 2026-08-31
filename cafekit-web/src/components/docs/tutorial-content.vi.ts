@@ -12,7 +12,6 @@ export const tutorialContentVi: TutorialContent = {
     replay: "Chạy lại",
     back: "← Quay lại",
     next: "Tiếp theo →",
-    openCodeNote: "Dùng OpenCode? Bỏ tiền tố hapo: — dùng /specs, /develop, /test thay thế.",
     prerequisiteItems: [
       "Node.js 18 trở lên (kiểm tra: node --version)",
       "Terminal đang mở — Terminal trên Mac, PowerShell trên Windows",
@@ -33,7 +32,7 @@ export const tutorialContentVi: TutorialContent = {
       links: [
         { label: "Cài Claude Code", href: "https://code.claude.com/docs/en/setup", external: true },
         { label: "Ngày đầu với Claude Code", href: "https://support.claude.com/en/articles/14552382-your-first-day-in-claude-code", external: true },
-        { label: "Dùng OpenCode thay thế?", href: "/docs/platforms/opencode" },
+        { label: "Dùng Codex CLI?", href: "/docs/platforms" },
       ],
     },
     {
@@ -73,18 +72,15 @@ export const tutorialContentVi: TutorialContent = {
       ],
       command: "/hapo:specs Build a word counter that counts words in a sentence",
       outputs: [
-        { kind: "output", text: "đang tạo specs/word-counter/…" },
-        { kind: "success", text: "✓ spec.json          trạng thái machine-readable" },
-        { kind: "success", text: "✓ requirements.md    tính năng cần làm gì" },
-        { kind: "success", text: "✓ design.md          sẽ xây dựng như thế nào" },
-        { kind: "success", text: "✓ tasks/task-R0-01-count-words.md" },
-        { kind: "output", text: "task_registry: 1 pending  |  ready_for_implementation: false" },
+        { kind: "output", text: "C1 → xác nhận outcome, scope, exclusions và constraints" },
+        { kind: "success", text: "✓ specs/word-counter/plan.md" },
+        { kind: "success", text: "✓ specs/word-counter/task-01-count-words.md" },
+        { kind: "output", text: "C2 → review findings trước implementation" },
       ],
       youWillSee: [
-        "Thư mục specs/word-counter/ với 4+ file",
-        "spec.json — trạng thái machine-readable (phase, task registry)",
-        "requirements.md — countWords() cần làm gì",
-        "tasks/ — một file task sẵn sàng để implement",
+        "Thư mục specs/word-counter/ với plan.md và flat task files",
+        "plan.md — scope, exclusions, acceptance criteria và task map",
+        "task-01-count-words.md — một outcome, một Status và planned proof command",
       ],
       troubleshooting: [
         { problem: "/hapo:specs không được nhận diện", fix: "Đảm bảo đã chạy npx @haposoft/cafekit trong project này. Kiểm tra .claude/ tồn tại." },
@@ -92,29 +88,28 @@ export const tutorialContentVi: TutorialContent = {
       ],
       glossary: [
         { term: "spec", definition: "Thư mục chứa các file mô tả cần xây dựng gì. Đây là nguồn sự thật — không phải chat." },
-        { term: "task packet", definition: "Đơn vị implement nhỏ, có phạm vi rõ ràng, định nghĩa trong tasks/task-R*.md." },
+        { term: "task packet", definition: "Đơn vị implement nhỏ, có phạm vi rõ ràng, định nghĩa trong flat task-NN-*.md." },
       ],
     },
     {
       id: "validate",
-      label: "Kiểm tra",
-      title: "Validate spec trước khi code",
+      label: "Duyệt",
+      title: "Giải quyết C2 trước khi code",
       narrative: [
-        "Trước khi viết một dòng code nào, hãy validate rằng spec đã đầy đủ và nhất quán. Bước này bắt các chi tiết còn thiếu sớm — trước khi chúng trở thành bug.",
+        "Sau adversarial review, CafeKit đưa ra gap, risk và contradiction quan trọng tại C2. Bạn accept, yêu cầu sửa, hoặc KEEP một limitation có tên rõ trước khi implement.",
       ],
-      command: "/hapo:specs --validate word-counter",
+      command: "Accept all",
       outputs: [
-        { kind: "output", text: "kiểm tra tính nhất quán của spec.json…" },
-        { kind: "output", text: "kiểm tra task_registry với các task file…" },
-        { kind: "success", text: "✓ validation.status: completed" },
-        { kind: "success", text: "✓ ready_for_implementation: true" },
+        { kind: "output", text: "ghi quyết định C2 vào plan.md…" },
+        { kind: "success", text: "✓ scope và findings đã được chấp nhận" },
+        { kind: "success", text: "✓ sẵn sàng cho invocation /hapo:develop mới" },
       ],
       youWillSee: [
-        "validation.status: completed — spec nhất quán, không có vấn đề",
-        "ready_for_implementation: true — sẵn sàng để implement",
+        "Quyết định C2 được lưu bền vững trong plan.md",
+        "Planning dừng tại đây; implementation bắt đầu bằng command develop mới",
       ],
       troubleshooting: [
-        { problem: "Validation trả về lỗi", fix: "Đọc kỹ output lỗi. Thường do thiếu trường trong spec.json hoặc task file không khớp. Chạy lại /hapo:specs để tạo mới." },
+        { problem: "Validation trả về lỗi", fix: "Đọc kỹ output lỗi. Thường do thiếu trường trong plan.md hoặc task file không khớp. Chạy lại /hapo:specs để tạo mới." },
       ],
     },
     {
@@ -124,23 +119,22 @@ export const tutorialContentVi: TutorialContent = {
       narrative: [
         "Bây giờ mới implement — từng task một. CafeKit đọc file task, kiểm tra những gì cần xây dựng và implement. Sau khi code xong, nó chạy quality gate: build, evidence và review đều phải pass.",
       ],
-      command: "/hapo:develop word-counter task-R0-01-count-words.md",
-      openCodeCommand: "/develop word-counter task-R0-01-count-words.md",
+      command: "/hapo:develop word-counter",
       outputs: [
-        { kind: "output", text: "đang đọc task-R0-01-count-words.md…" },
+        { kind: "output", text: "đang đọc task-01-count-words.md…" },
         { kind: "output", text: "đang implement countWords()…" },
         { kind: "output", text: "quality gate → build · evidence · review" },
         { kind: "success", text: "✓ implement hoàn thành" },
-        { kind: "success", text: "✓ task synced: in_progress" },
+        { kind: "success", text: "✓ task Status: done với inline Receipt" },
       ],
       youWillSee: [
         "Hàm countWords() được tạo trong project",
         "Verification receipt bên trong file task",
-        "task_registry entry được cập nhật thành in_progress",
+        "Status và inline Receipt cuối của task do controller cập nhật",
       ],
       glossary: [
         { term: "quality gate", definition: "Ba kiểm tra phải pass trước khi task xong: build thành công, evidence được ghi, review không có lỗi chặn." },
-        { term: "task_registry", definition: "Danh sách machine-readable trong spec.json theo dõi trạng thái mọi task (pending → in_progress → done)." },
+        { term: "Receipt", definition: "Proof chuẩn trong task: exact command, exit, verdict, Base, Head và current output." },
       ],
     },
     {
@@ -151,7 +145,6 @@ export const tutorialContentVi: TutorialContent = {
         "Chạy test suite. CafeKit kiểm tra build, types và tests — và từ chối kết quả hời hợt. Một lệnh thoát 0 trong khi chạy 0 test KHÔNG phải là pass.",
       ],
       command: "/hapo:test",
-      openCodeCommand: "/test",
       outputs: [
         { kind: "output", text: "đang nhận diện test runner…" },
         { kind: "output", text: "đang chạy test suite…" },
@@ -176,19 +169,18 @@ export const tutorialContentVi: TutorialContent = {
       title: "Review và đánh dấu hoàn thành",
       narrative: [
         "Chạy code review để bắt các vấn đề, rồi sync trạng thái task thành done. Task chỉ được coi là done khi implementation, evidence, tests và review đều đồng ý.",
-        "Sau khi review pass, chạy: /hapo:sync word-counter task-R0-01-count-words.md done",
+        "Sau khi review pass, chạy: /hapo:sync word-counter task-01-count-words.md done",
       ],
       command: "/hapo:code-review",
-      openCodeCommand: "/code-review",
       outputs: [
         { kind: "output", text: "đang review implementation word-counter…" },
         { kind: "success", text: "✓ spec compliance: ok" },
         { kind: "success", text: "✓ không có critical finding" },
-        { kind: "output", text: "tiếp theo: /hapo:sync word-counter task-R0-01-count-words.md done" },
+        { kind: "output", text: "tiếp theo: /hapo:sync word-counter task-01-count-words.md done" },
       ],
       youWillSee: [
         "no critical findings — sẵn sàng đánh dấu done",
-        "task_registry status trở thành done sau khi sync",
+        "Status và inline Receipt của task vẫn đồng bộ sau sync",
       ],
       troubleshooting: [
         { problem: "Review tìm thấy critical issues", fix: "Fix các vấn đề, chạy lại /hapo:test, rồi /hapo:code-review trước khi sync." },
@@ -201,7 +193,7 @@ export const tutorialContentVi: TutorialContent = {
       "Spec trước, code sau — hợp đồng ngăn scope drift",
       "Từng task một — mỗi thay đổi nhỏ và có thể review",
       "Cần evidence thật — không có kết quả xanh giả",
-      "State luôn đồng bộ — spec.json và task file lúc nào cũng khớp",
+      "State luôn audit được — mỗi task có đúng một Status và một inline Receipt hiện tại",
     ],
     nextLinks: [
       { label: "Spec-driven development", href: "/docs/spec-driven-development" },
@@ -211,7 +203,7 @@ export const tutorialContentVi: TutorialContent = {
     glossary: [
       { term: "spec", definition: "Thư mục file mô tả cần xây dựng gì trước khi code bắt đầu." },
       { term: "task packet", definition: "Đơn vị công việc nhỏ có steps, criteria và evidence." },
-      { term: "task_registry", definition: "Danh sách trạng thái task machine-readable trong spec.json." },
+      { term: "C3", definition: "Quyết định cuối của user rằng proof hiện tại và limitation đã nêu là đủ để đóng feature." },
       { term: "quality gate", definition: "Build + evidence + review — cả ba phải pass." },
       { term: "NO_TESTS", definition: "Không có test suite nào chạy. Không bao giờ là kết quả pass." },
     ],

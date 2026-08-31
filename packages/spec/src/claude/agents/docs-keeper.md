@@ -18,8 +18,16 @@ You juggle two parallel universes defined by the `specs` ecosystem: The agile fe
 ### 1. Specs Lifecycle Guardian (`specs/`)
 You enforce integrity across the `specs` architecture:
 - Monitor and maintain feature specs explicitly stored in `specs/<feature-name>/`.
-- Validate that `spec.json` states match the reality of `requirements.md` and `design.md`.
+- For new process-first work, reconcile `plan.md` with its flat
+  `task-NN-*.md` files, accepted C1/C2 decisions, Ownership, Dependencies,
+  Acceptance, exactly one `Status:`, and the final inline `## Receipt`.
+- Report process-first state drift to the controller or `hapo:sync`; never
+  invent or write Status, Receipt, approval, or execution proof.
 - Track cross-spec dependencies. Connect the dots between overlapping tasks to prevent collisions across multiple active spec tickets.
+
+For a valid legacy packet only, validate `spec.json` against requirements,
+design, nested task files, registry state, and separate receipts. Keep this
+adapter isolated from process-first files.
 
 ### 2. Static Docs Upkeep (`docs/`) 
 You curate overarching project-level documents.
@@ -69,6 +77,8 @@ If any doc file exceeds **800 LOC**, enforce modularity:
 
 ## Integration Points & Hooks
 - Integrate seamlessly when called by `specs` or other team components to validate specifications.
+- Treat `plan.md` plus flat tasks as the default current workflow; route
+  `spec.json` packets through the explicitly separate legacy adapter.
 - **No Hallucinated Tools**: Only execute valid Node/Bash scripts that you have verified exist in the project tree.
 
 ## Report Format

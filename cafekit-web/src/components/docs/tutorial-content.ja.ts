@@ -12,7 +12,6 @@ export const tutorialContentJa: TutorialContent = {
     replay: "再生",
     back: "← 戻る",
     next: "次へ →",
-    openCodeNote: "OpenCode を使用中？hapo: プレフィックスを省略 — /specs, /develop, /test を使います。",
     prerequisiteItems: [
       "Node.js 18 以上がインストール済み（確認: node --version）",
       "ターミナルが開いている — Mac は Terminal、Windows は PowerShell",
@@ -33,7 +32,7 @@ export const tutorialContentJa: TutorialContent = {
       links: [
         { label: "Claude Code をインストール", href: "https://code.claude.com/docs/en/setup", external: true },
         { label: "Claude Code の最初の日", href: "https://support.claude.com/en/articles/14552382-your-first-day-in-claude-code", external: true },
-        { label: "OpenCode を使う場合", href: "/docs/platforms/opencode" },
+        { label: "Codex CLI を使う場合", href: "/docs/platforms" },
       ],
     },
     {
@@ -73,18 +72,15 @@ export const tutorialContentJa: TutorialContent = {
       ],
       command: "/hapo:specs Build a word counter that counts words in a sentence",
       outputs: [
-        { kind: "output", text: "specs/word-counter/ を作成中…" },
-        { kind: "success", text: "✓ spec.json          machine-readable state" },
-        { kind: "success", text: "✓ requirements.md    feature が何をすべきか" },
-        { kind: "success", text: "✓ design.md          どう作るか" },
-        { kind: "success", text: "✓ tasks/task-R0-01-count-words.md" },
-        { kind: "output", text: "task_registry: 1 pending  |  ready_for_implementation: false" },
+        { kind: "output", text: "C1 → outcome、scope、exclusions、constraints を確認" },
+        { kind: "success", text: "✓ specs/word-counter/plan.md" },
+        { kind: "success", text: "✓ specs/word-counter/task-01-count-words.md" },
+        { kind: "output", text: "C2 → implementation 前に findings を review" },
       ],
       youWillSee: [
-        "specs/word-counter/ フォルダ（4 ファイル以上）",
-        "spec.json — machine-readable な state（phase, task registry）",
-        "requirements.md — countWords() が何をすべきか",
-        "tasks/ — 実装準備済みの task ファイル",
+        "specs/word-counter/ に plan.md と flat task files",
+        "plan.md — scope、exclusions、acceptance criteria、task map",
+        "task-01-count-words.md — one outcome、one Status、planned proof command",
       ],
       troubleshooting: [
         { problem: "/hapo:specs が認識されない", fix: "このプロジェクトで npx @haposoft/cafekit を実行済みか確認。.claude/ が存在するか確認。" },
@@ -92,29 +88,28 @@ export const tutorialContentJa: TutorialContent = {
       ],
       glossary: [
         { term: "spec", definition: "何を作るかを記述したファイル群のフォルダ。chat ではなくこれが唯一の真実の源。" },
-        { term: "task packet", definition: "tasks/task-R*.md に定義された、スコープの明確な小さい実装単位。" },
+        { term: "task packet", definition: "flat task-NN-*.md に定義された、スコープの明確な小さい実装単位。" },
       ],
     },
     {
       id: "validate",
-      label: "検証",
-      title: "コーディング前に spec を検証",
+      label: "承認",
+      title: "コーディング前に C2 を解決",
       narrative: [
-        "コードを 1 行も書く前に、spec が完全で一貫していることを検証します。不足している詳細を早期に発見し、バグになる前に対処します。",
+        "Adversarial review 後、CafeKit は C2 で重要な gaps、risks、contradictions を提示します。実装前に accept、修正依頼、または named limitation として KEEP します。",
       ],
-      command: "/hapo:specs --validate word-counter",
+      command: "Accept all",
       outputs: [
-        { kind: "output", text: "spec.json の一貫性を確認中…" },
-        { kind: "output", text: "task_registry と task ファイルを確認中…" },
-        { kind: "success", text: "✓ validation.status: completed" },
-        { kind: "success", text: "✓ ready_for_implementation: true" },
+        { kind: "output", text: "C2 decisions を plan.md に記録中…" },
+        { kind: "success", text: "✓ scope と findings を accepted" },
+        { kind: "success", text: "✓ 新しい /hapo:develop invocation の準備完了" },
       ],
       youWillSee: [
-        "validation.status: completed — spec に問題なし",
-        "ready_for_implementation: true — 実装開始可能",
+        "C2 decisions は plan.md に永続化される",
+        "Planning はここで停止し、implementation は新しい develop command で始まる",
       ],
       troubleshooting: [
-        { problem: "検証でエラーが返る", fix: "エラー出力を確認。通常は spec.json のフィールド不足か task ファイルの不一致。/hapo:specs を再実行。" },
+        { problem: "検証でエラーが返る", fix: "エラー出力を確認。通常は plan.md のフィールド不足か task ファイルの不一致。/hapo:specs を再実行。" },
       ],
     },
     {
@@ -124,23 +119,22 @@ export const tutorialContentJa: TutorialContent = {
       narrative: [
         "いよいよ実装です — 1 task ずつ進めます。CafeKit は task ファイルを読み、何を作るかを確認し、実装します。コーディング後は quality gate（build + evidence + review）を実行します。",
       ],
-      command: "/hapo:develop word-counter task-R0-01-count-words.md",
-      openCodeCommand: "/develop word-counter task-R0-01-count-words.md",
+      command: "/hapo:develop word-counter",
       outputs: [
-        { kind: "output", text: "task-R0-01-count-words.md を読み込み中…" },
+        { kind: "output", text: "task-01-count-words.md を読み込み中…" },
         { kind: "output", text: "countWords() を実装中…" },
         { kind: "output", text: "quality gate → build · evidence · review" },
         { kind: "success", text: "✓ 実装完了" },
-        { kind: "success", text: "✓ task synced: in_progress" },
+        { kind: "success", text: "✓ task Status: done with inline Receipt" },
       ],
       youWillSee: [
         "プロジェクト内に countWords() 関数が作成される",
         "task ファイル内に verification receipt",
-        "task_registry エントリが in_progress に更新",
+        "Task の Status と final inline Receipt は controller が更新",
       ],
       glossary: [
         { term: "quality gate", definition: "task 完了前に通過すべき 3 つのチェック: build 成功、evidence 記録、review でブロッカーなし。" },
-        { term: "task_registry", definition: "spec.json 内の machine-readable なリスト。各 task の状態を追跡（pending → in_progress → done）。" },
+        { term: "Receipt", definition: "Task 内の canonical proof: exact command、exit、verdict、Base、Head、current output。" },
       ],
     },
     {
@@ -151,7 +145,6 @@ export const tutorialContentJa: TutorialContent = {
         "テストスイートを実行します。CafeKit は build、types、tests を確認し、表面的な結果を拒否します。0 件のテストで終了コード 0 になるコマンドは pass ではありません。",
       ],
       command: "/hapo:test",
-      openCodeCommand: "/test",
       outputs: [
         { kind: "output", text: "test runner を検出中…" },
         { kind: "output", text: "test suite を実行中…" },
@@ -176,19 +169,18 @@ export const tutorialContentJa: TutorialContent = {
       title: "レビューして完了にする",
       narrative: [
         "コードレビューで問題を確認してから、task の状態を done に sync します。implementation、evidence、tests、review がすべて一致したときだけ task は done です。",
-        "レビュー通過後: /hapo:sync word-counter task-R0-01-count-words.md done を実行してください。",
+        "レビュー通過後: /hapo:sync word-counter task-01-count-words.md done を実行してください。",
       ],
       command: "/hapo:code-review",
-      openCodeCommand: "/code-review",
       outputs: [
         { kind: "output", text: "word-counter の実装をレビュー中…" },
         { kind: "success", text: "✓ spec compliance: ok" },
         { kind: "success", text: "✓ critical finding なし" },
-        { kind: "output", text: "次: /hapo:sync word-counter task-R0-01-count-words.md done" },
+        { kind: "output", text: "次: /hapo:sync word-counter task-01-count-words.md done" },
       ],
       youWillSee: [
         "no critical findings — done にする準備完了",
-        "sync 後 task_registry status が done になる",
+        "Sync 後も task Status と inline Receipt が一致する",
       ],
       troubleshooting: [
         { problem: "レビューで critical issue が見つかった", fix: "問題を修正し、/hapo:test → /hapo:code-review の順で再実行してから sync。" },
@@ -201,7 +193,7 @@ export const tutorialContentJa: TutorialContent = {
       "spec を先に、コードは後 — 契約が scope drift を防ぐ",
       "1 task ずつ — 各変更が小さく review 可能",
       "本物の evidence が必要 — fake な green result は不可",
-      "state は常に sync — spec.json と task ファイルが一致",
+      "State は監査可能 — 各 task は one Status と current inline Receipt を持つ",
     ],
     nextLinks: [
       { label: "Spec-driven development", href: "/docs/spec-driven-development" },
@@ -211,7 +203,7 @@ export const tutorialContentJa: TutorialContent = {
     glossary: [
       { term: "spec", definition: "コード開始前に何を作るかを記述したファイルフォルダ。" },
       { term: "task packet", definition: "steps、criteria、evidence を持つ小さいスコープの作業単位。" },
-      { term: "task_registry", definition: "spec.json 内の machine-readable なタスク状態リスト。" },
+      { term: "C3", definition: "Current proof と named limitations が feature close に十分かを user が決める final decision。" },
       { term: "quality gate", definition: "Build + evidence + review — 3 つすべてが必要。" },
       { term: "NO_TESTS", definition: "テストスイートが実行されなかった。絶対に pass の結果ではない。" },
     ],

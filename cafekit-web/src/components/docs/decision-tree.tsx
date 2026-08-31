@@ -23,7 +23,6 @@ const commands: Command[] = [
   { id: 'test', label: '/hapo:test', href: '/docs/workflows', category: 'workflow' },
   { id: 'review', label: '/hapo:code-review', href: '/docs/workflows', category: 'workflow' },
   { id: 'sync', label: '/hapo:sync', href: '/docs/workflows', category: 'state' },
-  { id: 'graph', label: '/hapo:generate-graph', href: '/docs/workflows', category: 'workflow' },
 ];
 
 const categoryStyles = {

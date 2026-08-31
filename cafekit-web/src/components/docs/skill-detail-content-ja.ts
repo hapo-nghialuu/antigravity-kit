@@ -1,7 +1,7 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsJa: SkillDetailMap = {
-  question: {
+  ask: {
     title: 'Ask',
     command: '/hapo:ask',
     category: 'Consultation',
@@ -27,10 +27,10 @@ export const skillDetailsJa: SkillDetailMap = {
     title: 'Specs',
     command: '/hapo:specs',
     category: 'Specification',
-    summary: 'Durable feature contract を作ります: requirements、research、design、task packets、validation state。',
+    summary: 'Reviewed process-first plan、flat executable tasks、C1/C2 の human decisions を作ります。',
     when: ['Direction が requirements に変換できるほど明確。', 'Coding の前に task files が必要。', 'Feature に traceable scope と evidence gates が必要。'],
-    flow: [['Detect', 'Incomplete specs を確認し duplicate を避けます。'], ['Requirements', 'Behavior、constraints、acceptance criteria を書きます。'], ['Research', 'Source-backed findings と decisions を記録します。'], ['Design', 'Architecture、contracts、data flow、invariants を定義します。'], ['Tasks', 'Work を evidence criteria 付き task packets に分割します。'], ['Validate', 'spec.json、task files、registry alignment を確認します。']],
-    output: 'Task-by-task implementation に進める `specs/<feature>/` directory。',
+    flow: [['C1', 'Outcome、scope、exclusions、constraints、未解決 choices を確認。'], ['Evidence', 'Decision に必要な findings を記録。'], ['Plan', 'Acceptance criteria と boundaries を持つ plan.md を作成。'], ['Tasks', 'Ownership、dependencies、proof commands を持つ flat task-NN files を作成。'], ['C2', 'Material review findings を human decision に提示。']],
+    output: 'Reviewed `plan.md` と flat `task-NN-*.md`。新しい explicit develop invocation に ready。',
     avoid: 'Code を推測した後の飾りとして spec を作りません。Spec は implementation を制約するものです。',
     next: '/hapo:develop',
   },
@@ -40,7 +40,7 @@ export const skillDetailsJa: SkillDetailMap = {
     category: 'Implementation',
     summary: 'Approved task packets を scope fidelity、task-aware inspection、verification、review、state sync とともに実装します。',
     when: ['Spec または task packet が approve 済み。', '1 task を安全に実装したい。', 'Task に completion criteria と evidence expectations がある。'],
-    flow: [['Load', 'spec.json を開き、1つの unblocked task を選びます。'], ['Extract', 'Scope、related files、requirements、contracts、evidence commands を読みます。'], ['Inspect', 'Real entrypoints、callers、patterns、prior outputs、blast radius を scout します。'], ['Implement', 'Justified scope escape 以外は active task boundary だけ変更します。'], ['Gate', 'Tests と review を実行し、fail なら implementation に戻ります。'], ['Sync', 'Proof が存在してから task を close します。']],
+    flow: [['Load', 'plan.md を開き、one unblocked flat task を選びます。'], ['Extract', 'Outcome、ownership、dependencies、acceptance、proof commands を読みます。'], ['Scout', 'Real entrypoints、callers、patterns、blast radius を trace。'], ['Implement', 'Justified scope escape 以外は active task boundary だけ変更。'], ['Verify', 'Exact planned command を実行し current output を取得。'], ['Receipt', 'Controller が single Status と final inline Receipt を更新。']],
     output: 'Reachable production code、task evidence、synchronized state。',
     avoid: 'Spec approval 前、または named technologies を placeholder に置き換えるためには使いません。',
     next: '/hapo:test and /hapo:code-review',
@@ -71,10 +71,10 @@ export const skillDetailsJa: SkillDetailMap = {
     title: 'Sync',
     command: '/hapo:sync',
     category: 'State',
-    summary: 'Task status、task_registry、task markdown、phase、audit results を更新し、future agents が project record を信頼できるようにします。',
-    when: ['Proof 後に task status を変更する必要がある。', 'spec.json と task markdown が drift している。', 'Phase advancement または task registry と physical task files の audit が必要。'],
-    flow: [['Resolve', 'Feature、task reference、target status、phase、audit mode を特定します。'], ['Machine state', 'spec.json task_registry、task_files、phase、timestamps、blocker を正確に更新します。'], ['Human state', 'Task markdown status と checked criteria を更新します。'], ['Proof gate', 'Verification receipt なしの done を拒否します。'], ['Audit', 'task_files、registry、task files の mismatch を修復します。']],
-    output: 'Proof-backed status を持つ synchronized spec.json、task_registry、task markdown。',
+    summary: 'Observed process-first task Status と inline Receipt を proof の捏造なしで同期します。',
+    when: ['Task Status が fresh proof を反映する必要がある。', 'Inline Receipt が stale または incomplete。', 'Plan と flat task state の surgical audit が必要。'],
+    flow: [['Resolve', 'Feature、flat task、observed state、exact proof command を特定。'], ['Inspect', 'plan.md、task Status、final inline Receipt を読む。'], ['Proof gate', 'Current runtime-derived proof がない done を拒否。'], ['Sync', 'Observed Status と canonical Receipt だけを更新。'], ['Audit', 'Approval や execution を捏造せず mismatch を報告。']],
+    output: 'One Status と one current inline Receipt を持つ synchronized flat task。',
     avoid: 'Chat memory だけ、または task file に evidence がない状態で done にしません。',
     next: 'Docs checkpoint または next unblocked task',
   },
@@ -111,7 +111,7 @@ export const skillDetailsJa: SkillDetailMap = {
     avoid: 'Files、commands、runtime evidence で back できない architecture claims を作りません。',
     next: 'Modernization work は /hapo:specs、または release handoff',
   },
-  inspect: {
+  scout: {
     title: 'Scout',
     command: '/hapo:scout',
     category: 'Discovery',

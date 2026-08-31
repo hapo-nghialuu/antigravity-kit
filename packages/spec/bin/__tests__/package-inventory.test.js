@@ -2579,6 +2579,80 @@ test('localized reference guides keep OpenCode mappings historical', () => {
   }
 });
 
+test('website keeps process-first docs, canonical public names, and historical legacy claims', () => {
+  const webRoot = path.resolve(PACKAGE_ROOT, '../../cafekit-web');
+  const docsRoot = path.join(webRoot, 'public/content/docs');
+  const sourceRoot = path.join(webRoot, 'src');
+  const walk = (root) => fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(root, entry.name);
+    return entry.isDirectory() ? walk(target) : [target];
+  });
+
+  const currentDocs = walk(docsRoot).filter((file) => {
+    const relative = path.relative(docsRoot, file).split(path.sep).join('/');
+    return file.endsWith('.mdx')
+      && !relative.endsWith('/reference.mdx')
+      && !relative.endsWith('/platforms/opencode.mdx')
+      && !relative.endsWith('/spec-lifecycle.mdx');
+  });
+  const currentSources = walk(sourceRoot).filter((file) => /\.(?:ts|tsx)$/.test(file));
+  const currentCorpus = [...currentDocs, ...currentSources]
+    .map((file) => fs.readFileSync(file, 'utf8'))
+    .join('\n');
+
+  assert.doesNotMatch(currentCorpus, /hapo:generate-graph|\/generate-graph/);
+  assert.doesNotMatch(
+    currentCorpus,
+    /\bspec\.json\b|\btask_registry\b|tasks\/task-R|task-R\*|hapo:specs --validate|registry sync/
+  );
+  assert.doesNotMatch(currentCorpus, /OpenCode installs|OpenCode cài|OpenCode では[^\n]*commands|Yes\.[^\n]*OpenCode|Có\.[^\n]*OpenCode|はい。[^\n]*OpenCode/i);
+
+  const config = fs.readFileSync(path.join(sourceRoot, 'lib/docs-config.ts'), 'utf8');
+  assert.match(config, /\/docs\/skills\/ask/);
+  assert.match(config, /\/docs\/skills\/scout/);
+  assert.match(config, /\/docs\/skills\/fix/);
+  assert.doesNotMatch(config, /\/docs\/skills\/(?:question|inspect|hotfix)/);
+
+  const route = fs.readFileSync(
+    path.join(sourceRoot, 'app/[locale]/docs/[[...slug]]/page.tsx'),
+    'utf8'
+  );
+  assert.match(route, /ask:\s*'question'/);
+  assert.match(route, /scout:\s*'inspect'/);
+  assert.match(route, /hotfix:\s*'fix'/);
+
+  const resolvedSkillDocuments = {
+    ask: 'question',
+    scout: 'inspect',
+    fix: 'fix',
+    question: 'question',
+    inspect: 'inspect',
+    hotfix: 'fix',
+  };
+  for (const locale of ['en', 'vi', 'ja']) {
+    for (const [publicSlug, documentSlug] of Object.entries(resolvedSkillDocuments)) {
+      assert.equal(
+        fs.existsSync(path.join(docsRoot, locale, 'skills', `${documentSlug}.mdx`)),
+        true,
+        `${locale} /docs/skills/${publicSlug} must resolve to ${documentSlug}.mdx`
+      );
+    }
+  }
+
+  for (const locale of ['en', 'vi', 'ja']) {
+    const lifecycle = fs.readFileSync(path.join(docsRoot, locale, 'spec-lifecycle.mdx'), 'utf8');
+    const legacyIndex = lifecycle.search(/^## Legacy compatibility$/m);
+    assert.ok(legacyIndex >= 0, `${locale} spec lifecycle must isolate legacy compatibility`);
+    assert.doesNotMatch(lifecycle.slice(0, legacyIndex), /\bspec\.json\b|\btask_registry\b|tasks\/task-R/);
+    assert.match(lifecycle.slice(legacyIndex), /\bspec\.json\b/);
+
+    const opencode = fs.readFileSync(path.join(docsRoot, locale, 'platforms/opencode.mdx'), 'utf8');
+    assert.match(opencode, /0\.17/);
+    assert.match(opencode, /warning/);
+    assert.match(opencode, /histor|lịch sử|migration/i);
+  }
+});
+
 test('packed Claude and Codex installs execute semantic kernel behavior without package source', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-semantic-'));
   const destination = path.join(root, 'pack');

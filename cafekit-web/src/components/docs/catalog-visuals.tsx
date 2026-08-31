@@ -2,17 +2,17 @@ import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, P
 
 const skillGroups: Array<[string, string[]]> = [
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
-  ['Pre-spec discovery', ['question', 'brainstorm', 'inspect', 'research']],
+  ['Pre-spec discovery', ['ask', 'brainstorm', 'scout', 'research']],
   ['Bounded optimization', ['loop']],
   ['Debug and change safety', ['debug', 'fix']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
-  ['Artifacts and media', ['docs', 'generate-graph', 'agent-browser', 'chrome-devtools', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],
+  ['Artifacts and media', ['docs', 'agent-browser', 'chrome-devtools', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],
 ];
 
 const agents = [
   ['brainstormer', 'Pressure-tests product and architecture choices before specs.', Sparkles],
-  ['spec-maker', 'Creates spec.json, requirements, design, research, and task files.', PenTool],
+  ['spec-maker', 'Creates a process-first plan and flat executable task packets.', PenTool],
   ['implementer', 'Implements approved task packets as production code.', Wrench],
   ['test-runner', 'Runs exact verification and rejects green lies.', TestTube2],
   ['code-auditor', 'Findings-first review for security, logic, architecture, and drift.', Shield],
@@ -28,7 +28,8 @@ const agents = [
 
 const platforms: Array<[string, string, string]> = [
   ['Claude Code', 'Primary runtime', '.claude/ skills, agents, hooks, statusline, settings'],
-  ['OpenCode', 'Supported runtime', '.opencode/ skills, agents, commands, plugins, runtime.json, AGENTS.md'],
+  ['Codex CLI', 'Supported runtime', '.agents/skills, .codex/agents, hooks, rules, runtime.json, AGENTS.md'],
+  ['OpenCode', 'Legacy 0.16 only', 'Support removed in 0.17; retained only as migration history'],
   ['Cursor', 'Future target', 'Not part of the current package runtime'],
 ];
 

@@ -11,7 +11,7 @@ const stages = [
     icon: ClipboardCheck,
     command: 'Approve task packet',
     title: 'Lock scope',
-    detail: 'Use spec.json, task_registry, and task markdown as the implementation contract.',
+    detail: 'Use the accepted C1/C2 decisions, plan, and flat task as the implementation contract.',
   },
   {
     icon: Code2,
@@ -35,15 +35,15 @@ const stages = [
     icon: GitBranch,
     command: '/hapo:sync',
     title: 'Sync',
-    detail: 'Update task_registry and task markdown only after proof, or audit drift before continuing.',
+    detail: 'Update task Status and its inline Receipt only after proof, or audit drift before continuing.',
   },
 ];
 
 const proofItems = [
-  ['Contract', 'Spec, requirements, design, and active task agree on scope.'],
+  ['Contract', 'Plan, accepted decisions, and active task agree on scope.'],
   ['Code', 'Runtime-facing work is wired into a real entrypoint or caller.'],
   ['Evidence', 'The task records commands, outcomes, and runtime or artifact proof.'],
-  ['State', 'spec.json and task markdown are synchronized after verification.'],
+  ['State', 'Task Status and inline Receipt are synchronized after verification.'],
 ];
 
 export function CoreWorkflowMap() {

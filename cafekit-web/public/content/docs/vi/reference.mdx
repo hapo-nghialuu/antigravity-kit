@@ -31,16 +31,15 @@ không phải alias cho command Claude hoặc Codex hiện tại.
 |---|---|---|
 | `/hapo:ask` | `/question` | Trả lời câu hỏi về project và kỹ thuật bằng source evidence trước. |
 | `/hapo:brainstorm` | `/brainstorm` | Làm rõ idea trước khi spec. |
-| `/hapo:specs` | `/specs` | Create, resume, validate, approve specs. |
-| `/hapo:develop` | `/develop` | Implement approved task packets. |
+| `/hapo:specs` | `/specs` | Tạo process-first plan và flat tasks qua C1/C2. |
+| `/hapo:develop` | `/develop` | Execute từng approved flat task. |
 | `/hapo:test` | `/test` | Task-aware verification. |
 | `/hapo:code-review` | `/code-review` | Review regressions và security. |
-| `/hapo:sync` | — | Sync task status, `task_registry`, task markdown, phase, hoặc audit drift. |
+| `/hapo:sync` | — | Sync observed task Status và final inline Receipt. |
 | `/hapo:debug` | `/debug` | Diagnose trước khi fix. |
 | `/hapo:fix` | `/hotfix` | Narrow diagnosed fixes. |
 | `/hapo:docs` | `/docs` | Create, update, summarize, reconstruct docs. |
 | `/hapo:scout` | `/inspect` | Scout source files và structure. |
-| `/hapo:generate-graph` | `/generate-graph` | Generate technical diagrams. |
 
 Với bản cài OpenCode 0.16 lịch sử, installer từng tạo slash commands cho surface implementation chính. Skill `sync` được ship trong shared skill bundle, nhưng installer không tạo wrapper `/sync` cho OpenCode.
 

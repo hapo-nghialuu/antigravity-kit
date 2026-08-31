@@ -1,7 +1,7 @@
 import { SkillDetailMap } from './skill-detail-types';
 
 export const skillDetailsEn: SkillDetailMap = {
-  question: {
+  ask: {
     title: 'Ask',
     command: '/hapo:ask',
     category: 'Consultation',
@@ -27,10 +27,10 @@ export const skillDetailsEn: SkillDetailMap = {
     title: 'Specs',
     command: '/hapo:specs',
     category: 'Specification',
-    summary: 'Creates the durable feature contract: requirements, research, design, task packets, and validation state.',
+    summary: 'Creates a reviewed process-first plan with flat executable tasks and human decisions at C1 and C2.',
     when: ['The direction is clear enough to become requirements.', 'You need task files before coding.', 'The feature needs traceable scope and evidence gates.'],
-    flow: [['Detect', 'Check incomplete specs and avoid duplicates.'], ['Requirements', 'Write behavior, constraints, and acceptance criteria.'], ['Research', 'Record source-backed findings and decisions.'], ['Design', 'Define architecture, contracts, data flow, and invariants.'], ['Tasks', 'Split work into task packets with evidence criteria.'], ['Validate', 'Check spec.json, task files, and registry alignment.']],
-    output: 'A `specs/<feature>/` directory ready for task-by-task implementation.',
+    flow: [['C1', 'Confirm outcome, scope, exclusions, constraints, and unresolved choices.'], ['Evidence', 'Record findings needed for the decision.'], ['Plan', 'Write plan.md with acceptance criteria and boundaries.'], ['Tasks', 'Create flat task-NN files with ownership, dependencies, and proof commands.'], ['C2', 'Present material review findings for a human decision.']],
+    output: 'A reviewed `plan.md` with flat `task-NN-*.md` files, ready for a new explicit develop invocation.',
     avoid: 'Do not use specs as decoration after code is already guessed. The spec should constrain implementation.',
     next: '/hapo:develop',
   },
@@ -40,7 +40,7 @@ export const skillDetailsEn: SkillDetailMap = {
     category: 'Implementation',
     summary: 'Implements approved task packets with scope fidelity, task-aware inspection, verification, review, and state sync.',
     when: ['A spec or task packet is approved.', 'You want one task implemented safely.', 'The task has completion criteria and evidence expectations.'],
-    flow: [['Load', 'Open spec.json and select one unblocked task.'], ['Extract', 'Read scope, related files, requirements, contracts, and evidence commands.'], ['Inspect', 'Scout real entrypoints, callers, patterns, prior outputs, and blast radius.'], ['Implement', 'Change only the active task boundary unless a justified scope escape is required.'], ['Gate', 'Run tests and review; failures route back to implementation.'], ['Sync', 'Close the task only after proof exists.']],
+    flow: [['Load', 'Open plan.md and select one unblocked flat task.'], ['Extract', 'Read outcome, ownership, dependencies, acceptance, and proof commands.'], ['Scout', 'Trace real entrypoints, callers, patterns, and blast radius.'], ['Implement', 'Change only the active task boundary unless a justified scope escape is required.'], ['Verify', 'Run the exact planned command and capture current output.'], ['Receipt', 'The controller updates the single Status and final inline Receipt.']],
     output: 'Reachable production code plus task evidence and synchronized state.',
     avoid: 'Do not use it before spec approval or to silently replace named technologies with placeholders.',
     next: '/hapo:test and /hapo:code-review',
@@ -71,10 +71,10 @@ export const skillDetailsEn: SkillDetailMap = {
     title: 'Sync',
     command: '/hapo:sync',
     category: 'State',
-    summary: 'Updates task status, task_registry, task markdown, phase, and audit results so future agents can trust the project record.',
-    when: ['Task status needs to change after proof.', 'spec.json and task markdown drifted.', 'You need phase advancement or an audit of task registry and physical task files.'],
-    flow: [['Resolve', 'Identify feature, task reference, target status, phase, or audit mode.'], ['Machine state', 'Update spec.json task_registry, task_files, phase, timestamps, and blocker precisely.'], ['Human state', 'Update task markdown status and checked criteria.'], ['Proof gate', 'Reject done without a verification receipt.'], ['Audit', 'Repair mismatches across task_files, registry, and task files.']],
-    output: 'Synchronized spec.json, task_registry, and task markdown with proof-backed status.',
+    summary: 'Synchronizes observed process-first task Status and inline Receipts without inventing proof.',
+    when: ['A task Status must reflect fresh proof.', 'A task Receipt is stale or incomplete.', 'You need a surgical audit of plan and flat task state.'],
+    flow: [['Resolve', 'Identify the feature, flat task, observed state, and exact proof command.'], ['Inspect', 'Read plan.md, the task Status, and final inline Receipt.'], ['Proof gate', 'Reject done without current runtime-derived proof.'], ['Sync', 'Update only the observed Status and canonical Receipt.'], ['Audit', 'Report mismatches without fabricating approval or execution.']],
+    output: 'A synchronized flat task with one Status and one current inline Receipt.',
     avoid: 'Do not mark done from chat memory or without evidence in the task file.',
     next: 'Docs checkpoint or next unblocked task',
   },
@@ -111,7 +111,7 @@ export const skillDetailsEn: SkillDetailMap = {
     avoid: 'Do not invent architecture claims that cannot be backed by files, commands, or runtime evidence.',
     next: '/hapo:specs for modernization work, or release handoff',
   },
-  inspect: {
+  scout: {
     title: 'Scout',
     command: '/hapo:scout',
     category: 'Discovery',
