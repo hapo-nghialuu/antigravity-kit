@@ -53,17 +53,17 @@ Loop, which inputs are mandatory, and what safe handoff users receive.
 Verification: PASS
 Command: npm --prefix packages/spec test && pnpm --dir cafekit-web lint && pnpm --dir cafekit-web build
 Exit: 0
-Base: e4988200e250bae26a38618462aeaec8503ba09a
-Head: 640dad7c2c375b6eb30092af978bdd28934dd48d0802b909d6d62009d2d00ab8
+Base: 65fd5d0bbfb4700b50339897009e2df9fcb6877a
+Head: bde4bb7e559cb7a15b8d10c9909a10b149724a214769b24e5b6bb4d24e6c954c
 
 ```text
 ✔ repository and package guides document adaptive Research and bounded Loop
-ℹ tests 354
-ℹ pass 353
+ℹ tests 356
+ℹ pass 355
 ℹ skipped 1
 ℹ tests 189
 ℹ pass 189
-[skill-test] PASS: 1076 tests executed
+[skill-test] PASS: 1078 tests executed
 > web@0.1.0 lint
 > eslint
 ✓ Compiled successfully
