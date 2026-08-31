@@ -145,6 +145,8 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:ask <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
 - `/hapo:scout <search-target>`: discover relevant files locally first, delegating only for permitted broad independent scopes
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
+- `/hapo:research <decision>`: choose proportional depth and return traceable evidence for an uncertain technical decision
+- `/hapo:loop <bounded-experiment>`: run explicit-only numeric optimization in an isolated worktree and return a base-bound patch handoff
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
 - `/hapo:debug <issue>`: run adaptive-depth, diagnostic-only root-cause analysis with elimination and prevention-aware handoff
@@ -170,6 +172,28 @@ completes work. Chat is the default output. A durable file needs explicit user
 authority, and no Brainstorm output is live proof or Specs/Develop approval or
 execution authority.
 
+### Adaptive Research and bounded Loop
+
+Use `/hapo:research` when the result is a decision: Quick, Standard, or Deep
+research binds material claims to a URL or repository anchor, authority,
+date/version, applicability, and `confirmed`, `inferred`, or `unresolved`
+state. Research returns evidence and tradeoffs; it does not implement the
+recommendation or guarantee correctness.
+
+Use `/hapo:loop` only by explicit request and only after its preflight freezes
+Goal, isolated Scope, finite numeric Metric and Direction, reproducible
+Baseline, distinct Guard, noise policy and minimum delta, budget, and stop
+conditions. Each iteration stays in a detached worktree. The result is a
+base-bound isolated patch handoff, never an automatic apply, commit, push, or
+guarantee of improvement.
+
+```text
+/hapo:research Compare current local-first search libraries for this repository
+/hapo:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+$hapo-research Compare current local-first search libraries for this repository
+$hapo-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+```
+
 Common companion skills bundled in this package include `inspect`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
 
 CafeKit uses rule-based skill routing guidance instead of an automatic prompt-scoring hook. See `.claude/rules/skill-workflow-routing.md`, `.claude/rules/skill-domain-routing.md`, or run:
@@ -190,6 +214,7 @@ Claude Code:
 /hapo:ask "Which files define the current CafeKit install/runtime behavior?" --repo
 /hapo:scout "Find the runtime entrypoints for skill installation"
 /hapo:brainstorm Explore approaches for a Google Meet transcript extension
+/hapo:research Compare current transcript storage options for this repository
 /hapo:specs Build a Google Meet transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
 /hapo:test meet-transcript-mvp --full
@@ -202,6 +227,7 @@ Codex CLI:
 $hapo-ask "Which files define the current CafeKit runtime?" --repo
 $hapo-scout "Find the runtime entrypoints for skill installation"
 $hapo-brainstorm Explore approaches for a Google Meet transcript extension
+$hapo-research Compare current transcript storage options for this repository
 $hapo-specs Build a Google Meet transcript extension with AI summaries
 $hapo-develop meet-transcript-mvp
 $hapo-test meet-transcript-mvp --full

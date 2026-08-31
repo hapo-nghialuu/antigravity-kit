@@ -23,6 +23,8 @@ CafeKit installs a native runtime bundle for each supported coding agent:
 - `hapo:ask` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
 - `hapo:scout` for fast scoped discovery of files, entrypoints, call paths, and blast radius
 - `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
+- `hapo:research` for proportional, traceable evidence when a technical decision remains uncertain
+- `hapo:loop` for explicit-only, bounded numeric optimization in an isolated worktree
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
 - `hapo:debug` and `hapo:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
@@ -40,6 +42,8 @@ Core routes (shown with Claude Code syntax):
 Feature/docs: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 Bug/failure: /hapo:debug -> /hapo:fix only when the user requested a fix
 Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> stop
+Uncertain technical decision: /hapo:research -> traceable evidence -> decision handoff
+Explicit numeric optimization: /hapo:loop -> bounded isolated experiments -> patch handoff
 ```
 
 ## Quick Start
@@ -50,6 +54,8 @@ Claude Code:
 /hapo:ask "Which config file controls CafeKit runtime behavior in this project?"
 /hapo:scout "Find the runtime entrypoints for skill installation"
 /hapo:brainstorm Explore approaches for a meeting transcript extension
+/hapo:research Compare current local-first search libraries for this repository
+/hapo:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
 /hapo:specs Build a meeting transcript extension with AI summaries
 /hapo:develop meet-transcript-mvp
 /hapo:test --full
@@ -62,6 +68,8 @@ Codex CLI uses native skills from `.agents/skills/`:
 $hapo-ask "Which config controls CafeKit runtime behavior?" --repo
 $hapo-scout "Find the runtime entrypoints for skill installation"
 $hapo-brainstorm Explore approaches for a meeting transcript extension
+$hapo-research Compare current local-first search libraries for this repository
+$hapo-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
 $hapo-specs Build a meeting transcript extension with AI summaries
 $hapo-develop meet-transcript-mvp
 $hapo-test --full
@@ -70,6 +78,19 @@ $hapo-code-review --pending
 
 Use `/skills` to browse installed skills. Trust the repository, then review
 project hooks with `/hooks` before enabling them.
+
+### Research versus Loop
+
+Research answers an uncertain decision. It selects Quick, Standard, or Deep
+depth, uses repository evidence for local fit, and attaches source, authority,
+date/version, applicability, and confidence state to material claims. It does
+not implement the recommendation or guarantee that it is correct.
+
+Loop is never selected automatically. Use it only when Goal, isolated Scope,
+finite numeric Metric and Direction, reproducible Baseline, distinct Guard,
+noise policy and minimum delta, budget, and stop conditions are explicit. It
+experiments in a detached worktree and returns a base-bound patch handoff; it
+does not apply, commit, push, or guarantee an improvement.
 
 For existing or legacy systems without reliable documentation:
 

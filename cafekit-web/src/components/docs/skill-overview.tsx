@@ -37,7 +37,8 @@ const labels = {
 };
 
 const supportSkills = [
-  ['hapo:research', 'External technical research and source validation.'],
+  ['hapo:research', 'Adaptive evidence for uncertain decisions, with traceable claims and explicit gaps; it does not implement or guarantee the recommendation.'],
+  ['hapo:loop', 'Explicit-only bounded experiments requiring Goal, isolated Scope, numeric Metric and Direction, reproducible Baseline, distinct Guard, noise policy and minimum delta, budget, and stop conditions; returns a base-bound isolated patch handoff without guaranteed improvement.'],
   ['hapo:generate-graph', 'Technical diagrams exported as SVG/PNG.'],
   ['hapo:frontend-design', 'Polished frontend redesign and visual execution.'],
   ['hapo:frontend-development', 'React/TypeScript frontend implementation patterns.'],

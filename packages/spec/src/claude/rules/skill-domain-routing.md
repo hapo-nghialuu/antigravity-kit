@@ -22,6 +22,7 @@ Advisory routing for installed domain skills (not an automatic hook). Read the s
 | Chrome DevTools evidence | `/hapo:chrome-devtools` |
 | diagnose error / CI failure | `/hapo:debug` |
 | external best practices / tool compare | `/hapo:research` |
+| explicit bounded numeric optimization with a distinct correctness Guard | `/hapo:loop` (explicit-only; never automatic) |
 | pptx / docx / pdf / xlsx / multimodal | `/hapo:pptx` / `docx` / `pdf` / `xlsx` / `ai-multimodal` |
 | commit / branch / release prep | `/hapo:git` |
 | review before release | `/hapo:code-review` |

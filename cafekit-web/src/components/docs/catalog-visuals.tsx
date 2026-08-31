@@ -3,6 +3,7 @@ import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, P
 const skillGroups: Array<[string, string[]]> = [
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
   ['Pre-spec discovery', ['question', 'brainstorm', 'inspect', 'research']],
+  ['Bounded optimization', ['loop']],
   ['Debug and change safety', ['debug', 'fix']],
   ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
   ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
@@ -20,7 +21,7 @@ const agents = [
   ['git-ops', 'Handles conventional commits, pushes, and release-safe git flow.', GitPullRequest],
   ['inspector', 'Scouts code structure and relevant files quickly.', Braces],
   ['project-manager', 'Aggregates feature progress, blockers, and release state.', Layers3],
-  ['researcher', 'Validates external technical claims with sources.', FileSearch],
+  ['researcher', 'Builds proportional, traceable evidence for uncertain technical decisions.', FileSearch],
   ['ui-ux-designer', 'Designs accessible, polished product interfaces.', Laptop],
   ['deployer', 'Coordinates deploys, checks, and rollback handoff.', Boxes],
 ];

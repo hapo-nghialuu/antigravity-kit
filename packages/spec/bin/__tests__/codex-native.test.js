@@ -44,6 +44,9 @@ const BRAINSTORM_SOURCE_PATHS = [
   BRAINSTORM_REFERENCE_SOURCE_PATH,
   BRAINSTORM_AGENT_SOURCE_PATH
 ];
+const RESEARCH_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/research');
+const RESEARCH_SKILL_SOURCE_PATH = path.join(RESEARCH_SOURCE_ROOT, 'SKILL.md');
+const RESEARCH_AGENT_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/researcher.md');
 const DEVELOP_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/develop');
 const DEVELOP_BUNDLE = [
   'SKILL.md',
@@ -2530,6 +2533,50 @@ test('Codex installed Develop preserves plan-native execution and references', (
     assert.match(installedSkill, /\.codex\/scripts\/workflow-policy\.cjs/);
     assert.doesNotMatch(installedSkill, /\/hapo:develop|\.claude\/scripts/);
     assert.equal(fs.existsSync(path.join(root, '.claude/skills/develop')), false);
+    for (const [sourcePath, expected] of sourceBytes) {
+      assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+    }
+  });
+});
+
+test('Codex installed Research preserves adaptive evidence semantics', () => {
+  inTempProject((root) => {
+    const sourceBytes = new Map([
+      [RESEARCH_SKILL_SOURCE_PATH, fs.readFileSync(RESEARCH_SKILL_SOURCE_PATH)],
+      [RESEARCH_AGENT_SOURCE_PATH, fs.readFileSync(RESEARCH_AGENT_SOURCE_PATH)],
+    ]);
+    const result = install(root);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedSkillPath = path.join(root, '.agents/skills/research/SKILL.md');
+    const installedAgentPath = path.join(root, '.codex/agents/researcher.toml');
+    assert.equal(
+      fs.readFileSync(installedSkillPath, 'utf8'),
+      normalizeCodexBody(fs.readFileSync(RESEARCH_SKILL_SOURCE_PATH, 'utf8'), RESEARCH_SKILL_SOURCE_PATH)
+    );
+    assert.equal(
+      fs.readFileSync(installedAgentPath, 'utf8'),
+      convertCodexAgentContent(fs.readFileSync(RESEARCH_AGENT_SOURCE_PATH, 'utf8'), 'researcher.md')
+    );
+    const installedSkill = fs.readFileSync(installedSkillPath, 'utf8');
+    const installedAgent = parseGeneratedTomlString(
+      fs.readFileSync(installedAgentPath, 'utf8'), 'developer_instructions'
+    );
+    assert.match(installedSkill, /^name: hapo-research$/m);
+    assert.match(installedSkill, /Quick \| One low-risk, reversible fact or known option/);
+    assert.match(installedSkill, /research sequentially with the same evidence bar/);
+    assert.match(installedSkill, /Default to a concise answer in chat/);
+    assert.match(installedSkill, /confirmed \| inferred \| unresolved/);
+    assert.match(installedAgent, /do not implement code,\s+write files, mutate task state/);
+    assert.match(installedAgent, /owns any\s+authorized persistence/);
+    assert.doesNotMatch(installedSkill, /must (?:instantly |always )?delegate/i);
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(root, '.codex/cafekit-manifest.json'), 'utf8')
+    );
+    assert.ok(manifest.files['.agents/skills/research/SKILL.md']);
+    assert.ok(manifest.files['.codex/agents/researcher.toml']);
+    assert.equal(fs.existsSync(path.join(root, '.claude/skills/research')), false);
     for (const [sourcePath, expected] of sourceBytes) {
       assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
     }

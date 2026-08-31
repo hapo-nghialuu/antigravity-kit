@@ -22,3 +22,4 @@ Bug path: `/hapo:debug -> /hapo:fix` then test/review. As-is docs: `/hapo:scout`
 | ask-vs-research | `/hapo:ask` to ask about source code, docs, specs, config, dependencies, or project facts | External best-practice comparison / multi-source investigation → `/hapo:research` |
 | ask-vs-brainstorm | `/hapo:ask` for factual answers with evidence | Vague idea, missing acceptance criteria, unclear scope, multi-approach tradeoffs → `/hapo:brainstorm` |
 | specs-vs-brainstorm | `/hapo:specs` when intent and acceptance are concrete enough | Unclear idea / architecture choices still open → `/hapo:brainstorm` first |
+| develop-vs-loop | `/hapo:develop` for ordinary implementation from an accepted task | Only an explicit request with numeric Metric, reproducible Baseline, distinct immutable Guard, and bounded budget → `/hapo:loop`; never auto-route |

@@ -3163,6 +3163,393 @@ async function runHotfixAdaptiveContractTests() {
   return mutations.length + 1;
 }
 
+const RESEARCH_ADAPTIVE_PATHS = {
+  skill: "src/claude/skills/research/SKILL.md",
+  agent: "src/claude/agents/researcher.md",
+  template: "src/claude/skills/specs/templates/research.md",
+};
+
+function researchAdaptiveContractIssues(input) {
+  const expectedKeys = Object.keys(RESEARCH_ADAPTIVE_PATHS).sort();
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("research adaptive checker expects exactly three UTF-8 source strings");
+  }
+
+  const issues = new Set();
+  const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+    key, normalizeMarkdownWhitespace(value),
+  ]));
+  const requireClauses = (issue, clausesBySource) => {
+    const missing = Object.entries(clausesBySource).some(([source, clauses]) =>
+      clauses.some((clause) => !normalized[source].includes(normalizeMarkdownWhitespace(clause))));
+    if (missing) issues.add(issue);
+  };
+
+  requireClauses("depth-routing", { skill: [
+    "Choose the smallest depth that can support the decision:",
+    "Quick | One low-risk, reversible fact or known option",
+    "Standard | Several viable options or a material integration choice",
+    "Deep | High blast radius, hard-to-reverse architecture, security/compliance, substantial cost, or conflicting evidence",
+    "Escalate depth when evidence conflicts, a primary source is missing, or a finding changes the decision boundary.",
+  ], agent: [
+    "Honor the controller's `Quick | Standard | Deep` assignment.",
+    "Deep completes a separate contradiction-and-gap round",
+  ] });
+  requireClauses("claim-provenance", { skill: [
+    "Repository claims: cite a resolvable `path:line` anchor from current bytes.",
+    "claim, URL or repository anchor, authority, date/version, applicability to this project, and status `confirmed | inferred | unresolved`.",
+    "Browse when facts may have changed; record the source date or applicable version.",
+  ], agent: [
+    "claim, URL or repository anchor, authority, date/version, applicability, and `confirmed | inferred | unresolved`.",
+  ], template: [
+    "URL or repository path:line; authority; date/version; project applicability; confirmed|inferred|unresolved.",
+  ] });
+  requireClauses("contradiction-and-ranking", { skill: [
+    "Do not inflate source counts with mirrors or articles that repeat the same upstream claim.",
+    "Complete Standard, then run a separate contradiction-and-gap round",
+    "rank only viable options and name a winner when evidence and project fit support one.",
+    "If evidence cannot choose a winner, return `unresolved` plus the smallest fact or experiment that would.",
+  ], agent: [
+    "Surface contradictions, version mismatch, missing primary evidence, and limits.",
+    "Never convert source quantity into a fabricated credibility score.",
+  ] });
+  requireClauses("delegation-fallback", { skill: [
+    "Use delegated researchers only as optional acceleration",
+    "If delegation is unavailable, unauthorized, or not useful, research sequentially with the same evidence bar.",
+    "The controller owns the question, source reconciliation, and final recommendation.",
+  ] });
+  requireClauses("persistence-authority", { skill: [
+    "Default to a concise answer in chat.",
+    "one explicitly resolved active Spec requires durable `research.md`",
+    "the user explicitly requests a durable report and approves its destination.",
+    "Do not create a Spec or `_shared` archive merely to save an answer.",
+  ], agent: [
+    "do not implement code, write files, mutate task state, ask the user directly, or launch another workflow.",
+    "The controller reconciles tracks, chooses the final recommendation, and owns any authorized persistence.",
+  ] });
+  requireClauses("legacy-template", { skill: [
+    "Keep claim records and comparisons inside `## Evidence Summary`; do not add or reorder mandatory H2 headings.",
+  ], template: [
+    "## Uncertainty", "## Evidence Summary", "## Decision", "## Remaining Gaps",
+    "Keep the mandatory H2 headings in this exact order.",
+  ] });
+  requireClauses("proof-boundary", { skill: [
+    "It never starts Develop, edits implementation code, claims user approval, or presents source/installed evidence as live-system proof.",
+  ] });
+
+  const skillCorpus = normalized.skill.toLowerCase();
+  const agentCorpus = normalized.agent.toLowerCase();
+  if (/must (?:instantly |always )?delegate|must not attempt to run websearch|delegation is required/.test(skillCorpus)) {
+    issues.add("delegation-fallback");
+  }
+  if (/(?:every|all) research (?:request|task).{0,50}(?:requires?|must use).{0,40}(?:delegat|researcher)/.test(skillCorpus)) {
+    issues.add("delegation-fallback");
+  }
+  if (/always save|all research belongs in|create it if it does not exist/.test(skillCorpus)) {
+    issues.add("persistence-authority");
+  }
+  if (/(?:persist|save|archive) every (?:answer|response|report)/.test(skillCorpus)) {
+    issues.add("persistence-authority");
+  }
+  if (/deep (?:may|can|should).{0,50}skip.{0,40}contradiction/.test(skillCorpus)) {
+    issues.add("contradiction-and-ranking");
+  }
+  if (/material claims?.{0,60}(?:may|can).{0,40}(?:omit|skip).{0,50}(?:anchor|date|version|status|applicability)/.test(skillCorpus)) {
+    issues.add("claim-provenance");
+  }
+  if (/credibility coefficient|absolute accuracy|supreme directive|alpha predator/.test(agentCorpus)) {
+    issues.add("contradiction-and-ranking");
+  }
+  if (/live (?:adherence|system) is (?:verified|proven)|\[verified\]/.test(skillCorpus)) {
+    issues.add("proof-boundary");
+  }
+  if (/(?:source|installed).{0,50}(?:may|can|should).{0,40}(?:count|serve|be treated).{0,30}(?:as )?live/.test(skillCorpus)) {
+    issues.add("proof-boundary");
+  }
+
+  const mandatoryHeadings = markdownH2s(input.template);
+  if (JSON.stringify(mandatoryHeadings) !== JSON.stringify([
+    "Uncertainty", "Evidence Summary", "Decision", "Remaining Gaps",
+  ])) issues.add("legacy-template");
+  return [...issues].sort();
+}
+
+function replaceResearchClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`research mutation anchor must occur exactly once: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runResearchAdaptiveContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(RESEARCH_ADAPTIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = researchAdaptiveContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Research adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+  const mutations = [
+    ["quick-becomes-default-deep", "skill", "depth-routing", "Choose the smallest depth that can support the decision:", "Always use Deep regardless of decision risk:"],
+    ["deep-drops-contradiction-round", "skill", "contradiction-and-ranking", "Complete Standard, then run a separate contradiction-and-gap round", "Repeat Standard until the answer looks complete"],
+    ["repo-anchor-removed", "skill", "claim-provenance", "cite a resolvable `path:line` anchor from current bytes.", "mention a likely repository file."],
+    ["claim-status-removed", "agent", "claim-provenance", "and `confirmed | inferred | unresolved`.", "and a confidence adjective."],
+    ["mirrors-count-independent", "skill", "contradiction-and-ranking", "Do not inflate source counts", "Inflate source counts"],
+    ["winner-without-fit", "skill", "contradiction-and-ranking", "rank only viable options", "rank every option"],
+    ["delegation-mandatory", "skill", "delegation-fallback", "Use delegated researchers only as optional acceleration", "Delegation is required"],
+    ["fallback-lowers-bar", "skill", "delegation-fallback", "research sequentially with the same evidence bar.", "answer from memory with a lower evidence bar."],
+    ["chat-default-removed", "skill", "persistence-authority", "Default to a concise answer in chat.", "Always save before answering."],
+    ["shared-archive-restored", "skill", "persistence-authority", "Do not create a Spec or `_shared` archive merely to save an answer.", "Create `_shared` for every answer."],
+    ["agent-writes-report", "agent", "persistence-authority", "do not implement code,", "do not implement code; write the report and update task state;"],
+    ["template-reorders-heading", "template", "legacy-template", "## Decision", "## Conclusion"],
+    ["live-proof-promoted", "skill", "proof-boundary", "presents source/installed evidence as live-system proof.", "treats installed text as verified live behavior."],
+    ["additive-delegation-override", "skill", "delegation-fallback", "## 4. Synthesize", "Every research request requires a delegated researcher.\n\n## 4. Synthesize"],
+    ["additive-persistence-override", "skill", "persistence-authority", "## Handoff boundary", "Persist every answer before returning chat output.\n\n## Handoff boundary"],
+    ["additive-deep-skip", "skill", "contradiction-and-ranking", "## 3. Gather evidence", "Deep may skip the contradiction-and-gap round when time constrained.\n\n## 3. Gather evidence"],
+    ["additive-provenance-omission", "skill", "claim-provenance", "## 4. Synthesize", "Material claims may omit date or status when the source looks official.\n\n## 4. Synthesize"],
+    ["additive-live-promotion", "skill", "proof-boundary", "## Handoff boundary", "Installed evidence may be treated as live proof.\n\n## Handoff boundary"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceResearchClauseOnce(baseline[source], from, to) };
+    const issues = researchAdaptiveContractIssues(changed);
+    if (!issues.includes(expectedIssue)) {
+      throw new Error(`[FAIL] Research adaptive mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+  console.log("✔ hapo:research adaptive evidence contract is complete and bounded");
+  console.log(`✔ hapo:research checker rejects semantic weakenings; count=${mutations.length}`);
+  return mutations.length + 1;
+}
+
+const LOOP_BOUNDED_PATHS = {
+  skill: "src/claude/skills/loop/SKILL.md",
+  protocol: "src/claude/skills/loop/references/bounded-loop-protocol.md",
+  metric: "src/claude/skills/loop/references/metric-and-guard-contract.md",
+};
+
+function loopBoundedContractIssues(input) {
+  const expectedKeys = Object.keys(LOOP_BOUNDED_PATHS).sort();
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("loop bounded checker expects exactly three UTF-8 source strings");
+  }
+  const issues = new Set();
+  const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+    key, normalizeMarkdownWhitespace(value),
+  ]));
+  const requireClauses = (issue, clausesBySource) => {
+    const missing = Object.entries(clausesBySource).some(([source, clauses]) =>
+      clauses.some((clause) => !normalized[source].includes(normalizeMarkdownWhitespace(clause))));
+    if (missing) issues.add(issue);
+  };
+
+  requireClauses("explicit-preflight", { skill: [
+    "Loop is explicit-only. Never auto-route ordinary implementation, debugging, or research into Loop.",
+    "freeze every field before any worktree, process, patch, or file mutation",
+    "Reject dirty in-scope state; record but never import or clean out-of-scope dirt.",
+    "Frozen positive iteration and wall-clock budgets; explicit success, no-improvement, drift, failure, timeout, and cancellation stops.",
+    "Unique run identity, exact disposable root, ownership marker, upfront cleanup consent, handoff mode/destination, retention, and cleanup owner.",
+    "Missing, ambiguous, unsafe, or non-reproducible input returns `BLOCKED` without mutation.",
+  ] });
+  requireClauses("metric-semantics", { metric: [
+    "`sample_count`: integer at least 3, identical for baseline and candidates.",
+    "`numeric_format`: exactly IEEE-754 binary64, roundTiesToEven after every operation, with negative zero normalized to positive zero.",
+    "Each successful sample must emit exactly one trimmed UTF-8 line matching",
+    "Reject empty, multi-line, multi-value, `NaN`, `Infinity`, unit-suffixed, nonzero exit, signaled, or timed-out output.",
+    "Reject a decimal with a nonzero significand when binary64 parsing underflows it to zero.",
+    "Calculate noise as the maximum absolute distance from that median.",
+    "required_delta = max(minimum_delta, best_noise + candidate_noise)",
+    "Accept only when `improvement > required_delta`",
+    "Equality is not an improvement.",
+    "use `lower + (upper - lower) / 2` when both have the same sign",
+    "otherwise use `lower / 2 + upper / 2`.",
+    "require median, noise, improvement, and required delta to remain finite.",
+    "A failed sample rejects the candidate rather than being dropped from aggregation.",
+  ] });
+  requireClauses("guard-independence", { skill: [
+    "Distinct immutable Guard argv and timeout for code mutation.",
+    "Do not edit Metric, Guard, tests, benchmarks, datasets, budgets, or thresholds to win",
+  ], metric: [
+    "Guard is mandatory, fixed before baseline, and distinct from Metric.",
+    "A second invocation of Metric, a threshold over the same output, or an oracle the loop may edit is not an independent Guard.",
+    "Run Guard after Metric on the identical candidate fingerprint.",
+  ] });
+  requireClauses("command-boundary", { skill: [
+    "The safety boundary is cooperative: commands must already be trusted by the user or repository.",
+    "No instruction-only workflow can contain a malicious executable without an OS sandbox.",
+    "Screen each trusted command as an argv vector and run it with `cwd` fixed to the canonical detached root.",
+    "The executable is a separately approved external realpath; only path-valued target arguments must resolve inside the detached root.",
+    "Never use `eval`, `sh -c`, `bash -c`, `zsh -c`, `cmd /c`, PowerShell `-Command`",
+  ], protocol: [
+    "Refuse general shell evaluation, inline code flags, Git external targeting",
+    "Do not apply the target-path rule to the separately approved executable itself.",
+    "This screening reduces mistakes; it cannot contain arbitrary side effects from a malicious or compromised executable.",
+  ] });
+  requireClauses("worktree-isolation", { skill: [
+    "add a detached Git worktree at the pinned OID.",
+    "Do not create a branch or commit.",
+    "primary worktree bytes, index, branch, and refs remain untouched.",
+    "Create a fresh unique detached worktree from pinned base and apply only the accepted-best patch",
+    "Make exactly one bounded hypothesis change inside Scope. Multiple unrelated changes are forbidden.",
+  ], protocol: [
+    "Reject any dirty path that is inside Scope; never import, stash, clean, or overwrite primary dirt.",
+    "use `git worktree add --detach`",
+    "Do not use `-b`, create refs, or commit.",
+    "Every later path must be a lexical and canonical descendant of the owned root.",
+    "Parallel iterations are forbidden: one run, one lock, one candidate at a time.",
+  ] });
+  requireClauses("oracle-drift", { skill: [
+    "Capture the complete detached-worktree tracked/untracked manifest before and after every Metric and Guard run",
+    "Any other oracle mutation is drift.",
+  ], protocol: [
+    "Capture the complete detached-worktree tracked/untracked fingerprint around every Metric and Guard command.",
+    "every other oracle-created file or byte/mode/type/path change, inside or outside Scope, rejects the candidate as drift.",
+  ] });
+  requireClauses("process-and-cleanup", { skill: [
+    "Launch every command in an isolated process group on POSIX or Job Object on Windows.",
+    "If the runtime cannot terminate the whole process tree, refuse to run.",
+    "If descendants, path ownership, or cleanup is uncertain, retain exact residue and return `BLOCKED`",
+    "never use `git reset --hard`, `git clean`, broad deletion, or unrelated recovery.",
+  ], protocol: [
+    "terminate the whole tree, wait the frozen grace period, escalate to kill, reap, and verify no owned descendant remains.",
+    "do not clean. Preserve the exact path, PID/process evidence, and ownership marker; return `BLOCKED`",
+    "Never broaden a glob or follow a symlink.",
+  ] });
+  requireClauses("patch-handoff", { skill: [
+    "a redacted tracked-text patch bound to base OID, complete scoped file manifest, and lowercase SHA-256.",
+    "Use only the preflight-selected handoff mode: inline ephemeral patch, or an exact user-approved path outside the primary worktree",
+    "Never apply, commit, push, merge, cherry-pick, deploy, publish, or write an artifact into the primary worktree implicitly.",
+  ], protocol: [
+    "Default handoff supports tracked regular UTF-8 text files only.",
+    "`base_oid`;",
+    "patch byte length and lowercase SHA-256",
+    "creation time, retention/expiry, cleanup owner, and application authority.",
+    "Never apply or commit it.",
+  ] });
+  requireClauses("proof-boundary", { skill: [
+    "Live-agent adherence to this written contract is `[UNPROVEN]` without a host run.",
+  ], protocol: [
+    "Live-agent adherence remains `[UNPROVEN]` until separately observed.",
+  ] });
+
+  const corpus = Object.values(normalized).join(" ").toLowerCase();
+  const issueIf = (issue, pattern) => { if (pattern.test(corpus)) issues.add(issue); };
+  issueIf("explicit-preflight", /(?:loop|optimization).{0,40}(?:may|can|should).{0,30}(?:start|mutate).{0,30}(?:before|without).{0,30}preflight/);
+  issueIf("explicit-preflight", /(?:iteration|wall-clock) budgets?.{0,40}(?:may|can|is allowed to).{0,30}(?:be optional|be omitted|change)/);
+  issueIf("guard-independence", /guard.{0,40}(?:may|can|is allowed to).{0,35}(?:be optional|equal the metric|be edited|be skipped)/);
+  issueIf("metric-semantics", /(?:nan|infinity|multi-value|failed sample).{0,50}(?:may|can).{0,30}(?:pass|be accepted|be dropped|be ignored)/);
+  issueIf("metric-semantics", /derived values?.{0,40}(?:may|can).{0,30}(?:be non-finite|overflow|be stored)/);
+  issueIf("metric-semantics", /numeric (?:format|representation).{0,40}(?:may|can|is allowed to).{0,25}(?:vary|be inferred|change)/);
+  issueIf("command-boundary", /(?:eval|sh -c|bash -c|git -c|--git-dir|--work-tree).{0,50}(?:may|can|is allowed to).{0,25}(?:run|target|be used)/);
+  issueIf("command-boundary", /executable realpath.{0,40}(?:must|should).{0,25}(?:be|resolve).{0,20}inside the detached root/);
+  issueIf("worktree-isolation", /(?:primary worktree|primary branch|dirty in-scope).{0,60}(?:may|can|is allowed to).{0,35}(?:change|be imported|be cleaned|be committed)/);
+  issueIf("oracle-drift", /oracle mutation.{0,50}(?:may|can|is allowed to).{0,30}(?:pass|be kept|be ignored)/);
+  issueIf("oracle-drift", /oracle mutation outside scope.{0,50}(?:may|can|is allowed to).{0,30}(?:pass|be kept|be ignored)/);
+  issueIf("worktree-isolation", /multiple unrelated changes.{0,40}(?:may|can|are allowed to).{0,25}(?:be included|be kept|pass)/);
+  issueIf("guard-independence", /(?:benchmarks?|datasets?).{0,40}(?:may|can|are allowed to).{0,25}(?:be edited|change between)/);
+  issueIf("process-and-cleanup", /(?:surviving descendant|uncertain ownership|cleanup uncertainty).{0,60}(?:may|can|is allowed to).{0,35}(?:clean|delete|reuse|continue)/);
+  issueIf("process-and-cleanup", /recovery.{0,30}(?:may|can|should).{0,20}use.{0,20}git reset --hard/);
+  issueIf("patch-handoff", /(?:patch|handoff).{0,50}(?:may|can|is allowed to).{0,40}(?:omit|skip).{0,30}(?:base|manifest|sha-256|retention)/);
+  issueIf("proof-boundary", /live-agent adherence.{0,30}(?:is|becomes)\s+`?\[?(?:proven|verified)\b|\[verified\]/);
+  return [...issues].sort();
+}
+
+function replaceLoopClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`loop mutation anchor must occur exactly once: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runLoopBoundedContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(LOOP_BOUNDED_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = loopBoundedContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Loop bounded contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+  const contractMedian = (lower, upper) => {
+    const sameSign = (lower >= 0 && upper >= 0) || (lower <= 0 && upper <= 0);
+    const value = sameSign
+      ? lower + ((upper - lower) / 2)
+      : (lower / 2) + (upper / 2);
+    return Object.is(value, -0) ? 0 : value;
+  };
+  if (contractMedian(Number.MIN_VALUE, Number.MIN_VALUE) !== Number.MIN_VALUE) {
+    throw new Error("[FAIL] Loop bounded contract: smallest-subnormal median underflowed");
+  }
+  if (!Number.isFinite(contractMedian(Number.MAX_VALUE, Number.MAX_VALUE))) {
+    throw new Error("[FAIL] Loop bounded contract: maximum-finite median overflowed");
+  }
+  const metricSamplePattern = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
+  for (const sample of ["0", "1.25", "-3", "5e-324", "1E+9"]) {
+    if (!metricSamplePattern.test(sample) || !Number.isFinite(Number(sample))) {
+      throw new Error(`[FAIL] Loop bounded contract: valid finite sample rejected: ${sample}`);
+    }
+  }
+  for (const sample of ["", "NaN", "Infinity", "1 ms", "1\n2"]) {
+    if (metricSamplePattern.test(sample)) {
+      throw new Error(`[FAIL] Loop bounded contract: invalid sample accepted: ${sample}`);
+    }
+  }
+  const mutations = [
+    ["preflight-optional", "skill", "explicit-preflight", "freeze every field before any", "freeze fields after the first"],
+    ["dirty-scope-import", "protocol", "worktree-isolation", "never import, stash, clean, or overwrite primary dirt.", "import dirty in-scope bytes into the experiment."],
+    ["branch-worktree", "protocol", "worktree-isolation", "use `git worktree add --detach`", "use `git worktree add -b loop-result`"],
+    ["guard-optional", "metric", "guard-independence", "Guard is mandatory,", "Guard may be optional or equal the Metric;"],
+    ["sample-count-one", "metric", "metric-semantics", "integer at least 3", "integer at least 1"],
+    ["threshold-equality", "metric", "metric-semantics", "improvement > required_delta", "improvement >= required_delta"],
+    ["failed-sample-dropped", "metric", "metric-semantics", "A failed sample rejects the candidate", "A failed sample may be dropped"],
+    ["oracle-mutation-accepted", "skill", "oracle-drift", "Any other oracle mutation is drift.", "Oracle mutation may be ignored."],
+    ["shell-eval-enabled", "skill", "command-boundary", "Never use `eval`", "You may use `eval`"],
+    ["primary-commit-enabled", "skill", "patch-handoff", "Never apply, commit, push, merge, cherry-pick, deploy, publish", "You may apply, commit, push, merge, cherry-pick, deploy, publish"],
+    ["descendant-cleanup", "skill", "process-and-cleanup", "retain exact residue and return `BLOCKED`", "delete the path and continue"],
+    ["reset-hard-recovery", "protocol", "process-and-cleanup", "No `git reset --hard`", "Recovery may use `git reset --hard`"],
+    ["handoff-drops-base", "protocol", "patch-handoff", "`base_oid`;", "optional note;"],
+    ["live-proof-promoted", "skill", "proof-boundary", "`[UNPROVEN]`", "`[VERIFIED]`"],
+    ["additive-guard-exception", "metric", "guard-independence", "## Reproducibility and drift", "Guard may be skipped for a promising candidate.\n\n## Reproducibility and drift"],
+    ["additive-primary-mutation", "skill", "worktree-isolation", "## 4. Failure and process ownership", "The primary worktree may be changed after a metric win.\n\n## 4. Failure and process ownership"],
+    ["additive-shell-exception", "protocol", "command-boundary", "## Iteration lifecycle", "Bash -c may be used for complex metrics.\n\n## Iteration lifecycle"],
+    ["additive-uncertain-cleanup", "protocol", "process-and-cleanup", "## Patch handoff", "Uncertain ownership may be cleaned to save disk space.\n\n## Patch handoff"],
+    ["additive-incomplete-patch", "protocol", "patch-handoff", "## Patch handoff", "Patch handoff may omit the base OID or SHA-256.\n\n## Patch handoff"],
+    ["one-change-removed", "skill", "worktree-isolation", "Make exactly one bounded hypothesis change", "Make any number of unrelated changes"],
+    ["additive-multiple-changes", "protocol", "worktree-isolation", "## Process-tree timeout and cancellation", "Multiple unrelated changes may be included in one candidate.\n\n## Process-tree timeout and cancellation"],
+    ["additive-budget-optional", "skill", "explicit-preflight", "## 2. Establish isolation and baseline", "Iteration and wall-clock budgets may be omitted.\n\n## 2. Establish isolation and baseline"],
+    ["additive-benchmark-edit", "skill", "guard-independence", "## 4. Failure and process ownership", "Benchmarks may be edited between iterations.\n\n## 4. Failure and process ownership"],
+    ["additive-outside-scope-oracle-write", "protocol", "oracle-drift", "## Process-tree timeout and cancellation", "Oracle mutation outside Scope may be ignored.\n\n## Process-tree timeout and cancellation"],
+    ["executable-forced-inside-root", "protocol", "command-boundary", "Do not apply the target-path rule", "The executable realpath must resolve inside the detached root; do not apply the target-path rule"],
+    ["additive-derived-overflow", "metric", "metric-semantics", "## Guard independence", "Derived values may be non-finite and stored as current best.\n\n## Guard independence"],
+    ["numeric-format-unfrozen", "metric", "metric-semantics", "`numeric_format`: exactly IEEE-754 binary64", "`numeric_format`: implementation-defined number"],
+    ["additive-numeric-format-drift", "metric", "metric-semantics", "## Guard independence", "Numeric representation may vary between iterations.\n\n## Guard independence"],
+    ["same-sign-median-regression", "metric", "metric-semantics", "use `lower + (upper - lower) / 2`", "use `lower / 2 + upper / 2`"],
+    ["finite-nonzero-value-rejected", "metric", "metric-semantics", "nonzero exit", "nonzero value"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceLoopClauseOnce(baseline[source], from, to) };
+    const issues = loopBoundedContractIssues(changed);
+    if (!issues.includes(expectedIssue)) {
+      throw new Error(`[FAIL] Loop bounded mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+  console.log("✔ hapo:loop bounded experiment contract is complete and fail-closed");
+  console.log(`✔ hapo:loop checker rejects unsafe semantic weakenings; count=${mutations.length}`);
+  return mutations.length + 1;
+}
+
 async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
@@ -3172,6 +3559,8 @@ async function runStaticSemanticTests() {
   const testPlanNativeTests = await runTestPlanNativeContractTests();
   const debugAdaptiveTests = await runDebugAdaptiveContractTests();
   const hotfixAdaptiveTests = await runHotfixAdaptiveContractTests();
+  const researchAdaptiveTests = await runResearchAdaptiveContractTests();
+  const loopBoundedTests = await runLoopBoundedContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
     join(packageRoot, "src/claude/skills/specs/templates"),
@@ -4344,7 +4733,7 @@ async function runStaticSemanticTests() {
   return checks.length + specs21Tests + implementationReadinessTests
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
     + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests
-    + hotfixAdaptiveTests;
+    + hotfixAdaptiveTests + researchAdaptiveTests + loopBoundedTests;
 }
 
 function runSkillCatalogTests() {

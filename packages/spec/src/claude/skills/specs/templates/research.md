@@ -8,11 +8,11 @@ Research exists only because this uncertainty can change requirements or design.
 
 ## Evidence Summary
 
-<!-- Cite concrete repository evidence or current primary sources that resolve the uncertainty. -->
+<!-- Keep the mandatory H2 headings in this exact order. Record each material claim with: claim; URL or repository path:line; authority; date/version; project applicability; confirmed|inferred|unresolved. For comparisons include ranked fit, decisive tradeoffs, contradictions, and limits. -->
 
 ## Decision
 
-<!-- State the selected decision and how the evidence supports it. -->
+<!-- State the selected decision, research depth, and decisive evidence; if evidence cannot choose safely, state unresolved and name what would settle it. -->
 
 ## Remaining Gaps
 
