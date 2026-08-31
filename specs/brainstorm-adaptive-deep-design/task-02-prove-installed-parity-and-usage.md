@@ -46,8 +46,8 @@ Claude and Codex installations preserve adaptive-deep Brainstorm semantics, and 
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
-Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
+Base: a37467e325a8284048a0438e27d10cb11601d40e
+Head: 62168a6a1badeda4698c51dcda60ec63532f7641a09ce5e65965de9eae41d2dd
 ```text
 $ npm --prefix packages/spec test
 ✔ Codex installed Brainstorm skill reference and agent preserve proportional routing parity

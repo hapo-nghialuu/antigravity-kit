@@ -52,8 +52,8 @@ Brainstorm keeps its Direct fast route and produces deeper, evidence-calibrated,
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: bfdaec6db987aa6ea874d4b15b7fa7bca474e53c
-Head: 5515523cf29741fa51304361cea57363c34a36effe0e9d20c4a8dbeaa6925d6b
+Base: a37467e325a8284048a0438e27d10cb11601d40e
+Head: 62168a6a1badeda4698c51dcda60ec63532f7641a09ce5e65965de9eae41d2dd
 ```text
 $ node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 ✔ hapo:brainstorm proportional routing contract is complete and bounded; src/claude/skills/brainstorm/SKILL.md=207 (+19), src/claude/skills/brainstorm/references/question-framework.md=170 (-62), src/claude/agents/brainstormer.md=69 (-17); total 446/506

@@ -63,8 +63,8 @@ Tasks are sequential because Task 02 proves the exact contract authored by Task 
 
 ## Handoff state
 
-- **Execution: IN PROGRESS.** Task 01 remains `done`; Task 02's packed-install probe name is re-approved and awaits fresh proof.
-- **Proof: BLOCKED.** Task 02 requires a fresh exact-command run after its Verification Plan update.
+- **Execution: COMPLETE.** Both tasks are `done`; Task 02's re-approved packed-install probe name is covered by fresh proof.
+- **Proof: PASS.** Task 02 passed the exact Verification Plan command with the current runtime-bound receipt (full suite 1022).
 - **Review: PASS.** Initial hardlink/timing counterexamples were reproduced and repaired; the final independent review found no blocking issue.
 - **Scope: PASS.** Eight unique implementation paths only; `docs/.sync_hash` is generated sync metadata and this packet is controller state. No installer, hook, resolver, Receipt runtime, legacy, or timing-packet source changed.
 - **C3: ACCEPTED by the user on 2026-08-25.** Completion covers the verified scope above; live-model adherence and wall-clock generation timing remain explicitly unclaimed.
