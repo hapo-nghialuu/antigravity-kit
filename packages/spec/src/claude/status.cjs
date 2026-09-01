@@ -26,6 +26,10 @@ const { getGitInfo } = require('./hooks/lib/git.cjs');
 // ratio so 1M-context models are not treated as if they were 200k.
 const AUTOCOMPACT_BUFFER_RATIO = 0.225;
 
+// Usage cache freshness gate: a cache older than this hides the quota area
+// instead of rendering stale numbers.
+const USAGE_CACHE_TTL_MS = 300000;
+
 /**
  * Expand home directory to ~
  */
@@ -111,6 +115,21 @@ function buildUsageString(ctx) {
  * Combines parts based on content length vs terminal width
  * Tries to minimize lines while keeping content readable
  */
+function buildBranchPart(ctx) {
+  if (!ctx.gitBranch) return '';
+  let branchPart = `🌿 ${ctx.gitBranch}`;
+  // Build git status indicators: (unstaged, +staged, ahead↑, behind↓)
+  const gitIndicators = [];
+  if (ctx.gitUnstaged > 0) gitIndicators.push(`${ctx.gitUnstaged}`);
+  if (ctx.gitStaged > 0) gitIndicators.push(`+${ctx.gitStaged}`);
+  if (ctx.gitAhead > 0) gitIndicators.push(`${ctx.gitAhead}↑`);
+  if (ctx.gitBehind > 0) gitIndicators.push(`${ctx.gitBehind}↓`);
+  if (gitIndicators.length > 0) {
+    branchPart += ` ${yellow(`(${gitIndicators.join(', ')})`)}`;
+  }
+  return branchPart;
+}
+
 function renderSessionLines(ctx) {
   const lines = [];
   const termWidth = getTerminalWidth();
@@ -118,20 +137,7 @@ function renderSessionLines(ctx) {
 
   // Build all atomic parts for flexible composition (no colors on static text)
   const dirPart = `📁 ${ctx.currentDir}`;
-
-  let branchPart = '';
-  if (ctx.gitBranch) {
-    branchPart = `🌿 ${ctx.gitBranch}`;
-    // Build git status indicators: (unstaged, +staged, ahead↑, behind↓)
-    const gitIndicators = [];
-    if (ctx.gitUnstaged > 0) gitIndicators.push(`${ctx.gitUnstaged}`);
-    if (ctx.gitStaged > 0) gitIndicators.push(`+${ctx.gitStaged}`);
-    if (ctx.gitAhead > 0) gitIndicators.push(`${ctx.gitAhead}↑`);
-    if (ctx.gitBehind > 0) gitIndicators.push(`${ctx.gitBehind}↓`);
-    if (gitIndicators.length > 0) {
-      branchPart += ` ${yellow(`(${gitIndicators.join(', ')})`)}`;
-    }
-  }
+  const branchPart = buildBranchPart(ctx);
 
   // Active plan indicator (disabled for now - code preserved)
   // const planPart = ctx.activePlan ? `📋 ${ctx.activePlan}` : '';
@@ -150,6 +156,7 @@ function renderSessionLines(ctx) {
   const usageStr = buildUsageString(ctx);
   if (usageStr) {
     sessionPart += `  ⌛ ${usageStr.replace(/\)$/, ' used)')}`;
+    if (ctx.weeklyText) sessionPart += `  ${ctx.weeklyText}`;
   }
 
   // Build stats part (only lines changed now)
@@ -313,7 +320,7 @@ function renderMinimal(ctx) {
     parts.push(`${batteryIcon} ${ctx.contextPercent}%`);
   }
   const usageStr = buildUsageString(ctx);
-  if (usageStr) parts.push(`⏰ ${usageStr}`);
+  if (usageStr) parts.push(`⏰ ${usageStr}${ctx.weeklyText ? `  ${ctx.weeklyText}` : ''}`);
   if (ctx.gitBranch) parts.push(`🌿 ${ctx.gitBranch}`);
   parts.push(`📁 ${ctx.currentDir}`);
   console.log(parts.join('  '));
@@ -329,7 +336,7 @@ function renderCompact(ctx) {
     line1 += `  ${coloredBar(ctx.contextPercent, 12)} ${ctx.contextPercent}%`;
   }
   const usageStr = buildUsageString(ctx);
-  if (usageStr) line1 += `  ⌛ ${usageStr}`;
+  if (usageStr) line1 += `  ⌛ ${usageStr}${ctx.weeklyText ? `  ${ctx.weeklyText}` : ''}`;
   console.log(line1.replace(/ /g, '\u00A0'));
 
   // Line 2: Location (branch + directory)
@@ -359,11 +366,82 @@ function render(ctx, singleLineMode = false) {
     if (todosLine) lines.push(todosLine);
   }
 
-  // Output all lines with non-breaking spaces for alignment
+  writeStyledLines(lines);
+}
+
+/**
+ * Output lines with non-breaking spaces for alignment
+ */
+function writeStyledLines(lines) {
   for (const line of lines) {
     const outputLine = colors.shouldUseColor ? `${RESET}${line.replace(/ /g, '\u00A0')}` : line;
     console.log(outputLine);
   }
+}
+
+// ============================================================================
+// CONFIGURABLE LAYOUT
+// Global shape: { lines: [[sectionId, ...], ...] } — each inner array is one
+// output line; modes only slice the line count (minimal = 1, compact = 2,
+// full = all). Agents/todos stay outside `lines` behind their own flags.
+// ============================================================================
+
+const LAYOUT_SECTION_IDS = ['model', 'context', 'quota', 'directory', 'git', 'plan', 'cost', 'changes'];
+
+const LAYOUT_SECTIONS = {
+  model: (ctx) => `🤖 ${ctx.modelName}`,
+  context: (ctx) => ctx.contextPercent > 0
+    ? `${coloredBar(ctx.contextPercent, 12)} ${ctx.contextPercent}%`
+    : null,
+  quota: (ctx) => {
+    const usageStr = buildUsageString(ctx);
+    if (!usageStr) return null;
+    let out = `\u231B ${usageStr.replace(/\)$/, ' used)')}`;
+    if (ctx.weeklyText) out += `  ${ctx.weeklyText}`;
+    return out;
+  },
+  directory: (ctx) => `📁 ${ctx.currentDir}`,
+  git: (ctx) => buildBranchPart(ctx) || null,
+  plan: (ctx) => ctx.activePlan ? `📋 ${ctx.activePlan}` : null,
+  cost: (ctx) => ctx.costText ? `💵 ${ctx.costText.replace(/(\.\d{2})\d+/, '$1')}` : null,
+  changes: (ctx) => (ctx.linesAdded > 0 || ctx.linesRemoved > 0)
+    ? `📝 ${green(`+${ctx.linesAdded}`)} ${red(`-${ctx.linesRemoved}`)}`
+    : null,
+};
+
+/**
+ * Normalize a raw statuslineLayout config value.
+ * Unknown section ids are ignored; an empty or invalid layout returns null so
+ * rendering falls back to the default renderers.
+ */
+function normalizeStatuslineLayout(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.lines)) return null;
+  const lines = raw.lines
+    .filter((line) => Array.isArray(line))
+    .map((line) => line.filter((id) => LAYOUT_SECTION_IDS.includes(id)))
+    .filter((line) => line.length > 0);
+  if (lines.length === 0) return null;
+  return { lines, agents: raw.agents !== false, todos: raw.todos !== false };
+}
+
+/**
+ * Render with a user-configured layout. Modes only slice the line count.
+ */
+function renderLayout(ctx, layout, mode) {
+  const lineLimit = mode === 'minimal' ? 1 : mode === 'compact' ? 2 : layout.lines.length;
+  const lines = [];
+  for (const ids of layout.lines.slice(0, lineLimit)) {
+    const parts = ids.map((id) => LAYOUT_SECTIONS[id](ctx)).filter(Boolean);
+    if (parts.length > 0) lines.push(parts.join('  '));
+  }
+  if (mode !== 'minimal' && mode !== 'compact') {
+    if (layout.agents) lines.push(...renderAgentsLines(ctx.transcript));
+    if (layout.todos) {
+      const todosLine = renderTodosLine(ctx.transcript);
+      if (todosLine) lines.push(todosLine);
+    }
+  }
+  writeStyledLines(lines);
 }
 
 // ============================================================================
@@ -446,6 +524,7 @@ async function main() {
 
     // Session timer - read actual reset time from usage limits cache
     let sessionText = '';
+    let weeklyText = '';
     const transcriptPath = data.transcript_path;
 
     // Parse transcript for tools/agents/todos
@@ -459,9 +538,11 @@ async function main() {
         const cache = JSON.parse(fs.readFileSync(usageCachePath, 'utf8'));
 
         // Check status flag for fallback (non-OAuth scenarios)
+        const fresh = typeof cache.timestamp === 'number'
+          && Date.now() - cache.timestamp < USAGE_CACHE_TTL_MS;
         if (cache.status === 'unavailable') {
           sessionText = 'N/A';
-        } else {
+        } else if (cache.status === 'available' && fresh) {
           const fiveHour = cache.data?.five_hour;
           usagePercent = fiveHour?.utilization ?? null;
           const resetAt = fiveHour?.resets_at;
@@ -472,6 +553,19 @@ async function main() {
               const rh = Math.floor(remaining / 3600);
               const rm = Math.floor((remaining % 3600) / 60);
               sessionText = `${rh}h ${rm}m until reset`;
+            }
+          }
+          const sevenDay = cache.data?.seven_day;
+          if (sevenDay?.utilization != null) {
+            weeklyText = `wk ${Math.round(sevenDay.utilization)}%`;
+            const wkResetAt = sevenDay.resets_at;
+            if (wkResetAt) {
+              const wkRemaining = Math.floor(new Date(wkResetAt).getTime() / 1000) - Math.floor(Date.now() / 1000);
+              if (wkRemaining > 0) {
+                const wd = Math.floor(wkRemaining / 86400);
+                const wh = Math.floor((wkRemaining % 86400) / 3600);
+                weeklyText += ` (${wd}d ${wh}h)`;
+              }
             }
           }
         }
@@ -502,6 +596,7 @@ async function main() {
       activePlan,
       contextPercent,
       sessionText,
+      weeklyText,
       usagePercent,
       costText,
       linesAdded,
@@ -515,21 +610,28 @@ async function main() {
     const statuslineMode = config.statusline || 'full';
     colors.setColorEnabled(config.statuslineColors !== false);
 
-    // Render based on mode
-    switch (statuslineMode) {
-      case 'none':
-        console.log('');
-        break;
-      case 'minimal':
-        renderMinimal(ctx);
-        break;
-      case 'compact':
-        renderCompact(ctx);
-        break;
-      case 'full':
-      default:
-        render(ctx, false);
-        break;
+    // Render based on mode. A valid statuslineLayout takes over line
+    // composition; an absent, empty, or invalid layout falls back to the
+    // default renderers below.
+    const layout = normalizeStatuslineLayout(config.statuslineLayout);
+    if (statuslineMode !== 'none' && layout) {
+      renderLayout(ctx, layout, statuslineMode);
+    } else {
+      switch (statuslineMode) {
+        case 'none':
+          console.log('');
+          break;
+        case 'minimal':
+          renderMinimal(ctx);
+          break;
+        case 'compact':
+          renderCompact(ctx);
+          break;
+        case 'full':
+        default:
+          render(ctx, false);
+          break;
+      }
     }
 
   } catch (err) {

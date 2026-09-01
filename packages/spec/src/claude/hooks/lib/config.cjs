@@ -520,6 +520,9 @@ function loadConfig(options = {}) {
     // Statusline mode
     result.statusline = merged.statusline || 'full';
     result.statuslineColors = merged.statuslineColors !== false;
+    if (merged.statuslineLayout && typeof merged.statuslineLayout === 'object') {
+      result.statuslineLayout = merged.statuslineLayout;
+    }
 
     return sanitizeConfig(result, projectRoot);
   } catch (e) {
