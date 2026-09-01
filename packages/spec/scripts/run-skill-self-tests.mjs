@@ -3163,6 +3163,112 @@ async function runHotfixAdaptiveContractTests() {
   return mutations.length + 1;
 }
 
+const DOCS_ADAPTIVE_PATHS = {
+  skill: "src/claude/skills/docs/SKILL.md",
+  init: "src/claude/skills/docs/references/init-workflow.md",
+  update: "src/claude/skills/docs/references/update-workflow.md",
+  standard: "src/claude/skills/docs/references/standard-docs-workflow.md",
+};
+
+function docsAdaptiveContractIssues(input) {
+  const issues = new Set();
+  const { skill, init, update, standard } = input;
+  if (!skill.includes("The user explicitly requested or permitted delegation or parallel agents.")
+    || !skill.includes("The active runtime exposes an Explore/delegation capability.")
+    || !skill.includes("at least two distinct, non-overlapping scopes")
+    || !skill.includes("Otherwise continue sequentially in the main agent")
+    || !skill.includes("only through the Delegation Gate above")
+    || !init.includes("only through the Delegation Gate in `../SKILL.md`")
+    || !update.includes("Delegate to `docs-keeper` only through the Delegation Gate in `../SKILL.md`")
+    || !update.includes("only when the Delegation Gate in `../SKILL.md` is open")
+    || skill.includes("when delegation is available")
+    || init.includes("when delegation is available")
+    || update.includes("when delegation is available")) {
+    issues.add("delegation-gate");
+  }
+  if (!skill.includes("## Post-Task Docs Checkpoint")
+    || !skill.includes("`none`: report that no docs change is needed and edit nothing.")
+    || !skill.includes("update only affected existing docs, surgically")
+    || !skill.includes("A checkpoint never invents a new document")
+    || !skill.includes("never auto-selects `init` and overrides")
+    || !skill.includes("report the gap and recommend an explicit `/hapo:docs --init`")
+    || !update.includes("A post-task checkpoint entry never switches to `init`")
+    || !standard.includes("checkpoint contract in `../SKILL.md`")
+    || skill.includes("checkpoint may create")) {
+    issues.add("docs-checkpoint");
+  }
+  if (!skill.includes("Type: Observed | Inferred | Unknown")
+    || !skill.includes("Confidence: High | Medium | Low")
+    || !skill.includes("Do not hide uncertainty.")
+    || skill.includes("evidence is optional")) {
+    issues.add("evidence-taxonomy");
+  }
+  if (!skill.includes("## Reconstruction Is Not Specs")
+    || !skill.includes("- create `specs/<feature>/`")
+    || !skill.includes("- run `/hapo:develop`")
+    || skill.includes("are advisory")) {
+    issues.add("reconstruction-boundary");
+  }
+  if (!skill.includes("validate-docs.cjs")
+    || !skill.includes("validate-docs-reconstruct.cjs")
+    || !update.includes("validate-docs.cjs")
+    || !skill.includes("Choose the smallest adequate docs work")
+    || skill.includes("skip the validator")) {
+    issues.add("validation-and-proportionality");
+  }
+  return [...issues].sort();
+}
+
+function replaceDocsClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`expected one Docs mutation anchor: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+async function runDocsAdaptiveContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(DOCS_ADAPTIVE_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = docsAdaptiveContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Docs adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+  const mutations = [
+    ["gate-loses-user-clause", "skill", "delegation-gate", "The user explicitly requested or permitted delegation or parallel agents.", "Delegation is at the agent's discretion."],
+    ["gate-loses-capability-clause", "skill", "delegation-gate", "The active runtime exposes an Explore/delegation capability.", "Any runtime may delegate."],
+    ["keeper-ungated-returns", "update", "delegation-gate", "Delegate to `docs-keeper` only through the Delegation Gate in `../SKILL.md`", "Delegate to `docs-keeper` when delegation is available"],
+    ["readers-ungated", "update", "delegation-gate", "only when the Delegation Gate in `../SKILL.md` is open", "whenever it seems faster"],
+    ["init-keeper-ungated", "init", "delegation-gate", "only through the Delegation Gate in `../SKILL.md`", "when delegation is available"],
+    ["skill-keeper-ungated", "skill", "delegation-gate", "only through the Delegation Gate above", "when delegation is available"],
+    ["checkpoint-none-edits", "skill", "docs-checkpoint", "`none`: report that no docs change is needed and edit nothing.", "`none`: refresh the docs anyway."],
+    ["checkpoint-invents-doc", "skill", "docs-checkpoint", "A checkpoint never invents a new document", "A checkpoint may create missing documents"],
+    ["checkpoint-auto-init", "skill", "docs-checkpoint", "never auto-selects `init` and overrides", "may fall back to `init` and overrides"],
+    ["escape-path-removed", "skill", "docs-checkpoint", "report the gap and recommend an explicit `/hapo:docs --init`", "silently bootstrap the missing docs with `/hapo:docs"],
+    ["update-checkpoint-switches", "update", "docs-checkpoint", "A post-task checkpoint entry never switches to `init`", "A checkpoint may switch to `init`"],
+    ["standard-checkpoint-dropped", "standard", "docs-checkpoint", "checkpoint contract in `../SKILL.md`", "local judgment"],
+    ["taxonomy-drops-inferred", "skill", "evidence-taxonomy", "Type: Observed | Inferred | Unknown", "Type: Observed | Unknown"],
+    ["uncertainty-hidden", "skill", "evidence-taxonomy", "Do not hide uncertainty.", "Smooth over uncertainty; evidence is optional."],
+    ["reconstruction-becomes-advisory", "skill", "reconstruction-boundary", "## Reconstruction Is Not Specs", "## Reconstruction Is Not Specs\n\nThe prohibitions below are advisory."],
+    ["reconstruction-creates-specs", "skill", "reconstruction-boundary", "- create `specs/<feature>/`", "- create planning folders freely"],
+    ["validator-skipped", "skill", "validation-and-proportionality", "use `.claude/scripts/validate-docs.cjs <docs-root>` after create/update work", "skip the validator after create/update work"],
+    ["smallest-adequate-removed", "skill", "validation-and-proportionality", "Choose the smallest adequate docs work", "Prefer comprehensive rewrites"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceDocsClauseOnce(baseline[source], from, to) };
+    const issues = docsAdaptiveContractIssues(changed);
+    if (!issues.includes(expectedIssue)) {
+      throw new Error(`[FAIL] Docs adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+  console.log("✔ hapo:docs adaptive contract is complete and bounded");
+  console.log(`✔ hapo:docs checker rejects ${mutations.length} semantic weakenings`);
+  return mutations.length + 1;
+}
+
 const RESEARCH_ADAPTIVE_PATHS = {
   skill: "src/claude/skills/research/SKILL.md",
   agent: "src/claude/agents/researcher.md",
@@ -3847,6 +3953,7 @@ async function runStaticSemanticTests() {
   const testPlanNativeTests = await runTestPlanNativeContractTests();
   const debugAdaptiveTests = await runDebugAdaptiveContractTests();
   const hotfixAdaptiveTests = await runHotfixAdaptiveContractTests();
+  const docsAdaptiveTests = await runDocsAdaptiveContractTests();
   const researchAdaptiveTests = await runResearchAdaptiveContractTests();
   const routeContractTests = await runRouteContractTests();
   const loopBoundedTests = await runLoopBoundedContractTests();
@@ -5038,7 +5145,7 @@ async function runStaticSemanticTests() {
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
     + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests
     + hotfixAdaptiveTests + researchAdaptiveTests + routeContractTests
-    + loopBoundedTests;
+    + loopBoundedTests + docsAdaptiveTests;
 }
 
 function runSkillCatalogTests() {

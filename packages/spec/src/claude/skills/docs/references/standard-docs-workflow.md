@@ -56,6 +56,10 @@ Create only files that are useful. Minimum viable documentation is preferred ove
 `summarize`:
 - update only `codebase-summary.md`
 
+Post-task checkpoint entry (from Develop/Sync docs impact):
+- `none` reports only; `minor`/`major` update only affected existing docs per the checkpoint contract in `../SKILL.md`
+- a checkpoint never invents a new document and never auto-selects `init`
+
 ### 2. Scout And Verify
 
 Normal docs are current-state living docs. Ground them in:

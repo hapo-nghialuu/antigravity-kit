@@ -84,7 +84,7 @@ Merge scout results into a concise context summary. Keep file references with ea
 
 ### Phase 3: Docs Authoring
 
-Delegate the merged context to `docs-keeper` when available. Otherwise follow its verification discipline in the main context.
+Delegate the merged context to `docs-keeper` only through the Delegation Gate in `../SKILL.md`. Otherwise follow its verification discipline in the main context.
 
 Authoring rules:
 
