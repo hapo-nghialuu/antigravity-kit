@@ -96,8 +96,10 @@ After front-door routing, run `hapo:scout` or a narrow equivalent before
 technical design. Inspect relevant modules, patterns, docs/plans, contracts, and
 runtime constraints; summarize only useful findings in 3–6 bullets.
 
-For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` before
-designing. Add a diagram only when it clarifies a material choice or flow.
+For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` when the
+optional document bundle is installed; otherwise use the runtime's available
+multimodal capability or report the evidence gap. Add a diagram only when it
+clarifies a material choice or flow.
 
 Derive technical touchpoints from repository evidence. Ask the user about a
 touchpoint only when its ownership or scope boundary is a product decision that

@@ -271,15 +271,15 @@ function collectSkillPackages(skillsDir) {
 
 /** External binaries some skills shell out to — detected, never auto-installed. */
 const SYSTEM_TOOLS = [
-  { cmd: 'ffmpeg', why: 'ai-multimodal (audio/video)', brew: 'brew install ffmpeg', apt: 'sudo apt install ffmpeg', win: 'winget install ffmpeg' },
-  { cmd: 'pdftotext', why: 'pdf (text extraction, poppler)', brew: 'brew install poppler', apt: 'sudo apt install poppler-utils', win: 'choco install poppler' },
-  { cmd: 'rsvg-convert', why: 'generate-graph (PNG export, librsvg)', brew: 'brew install librsvg', apt: 'sudo apt install librsvg2-bin', win: 'choco install rsvg-convert' },
-  { cmd: 'tesseract', why: 'pdf/ai-multimodal (OCR)', brew: 'brew install tesseract', apt: 'sudo apt install tesseract-ocr', win: 'choco install tesseract' }
+  { cmd: 'ffmpeg', skills: ['ai-multimodal'], why: 'ai-multimodal (audio/video)', brew: 'brew install ffmpeg', apt: 'sudo apt install ffmpeg', win: 'winget install ffmpeg' },
+  { cmd: 'pdftotext', skills: ['pdf'], why: 'pdf (text extraction, poppler)', brew: 'brew install poppler', apt: 'sudo apt install poppler-utils', win: 'choco install poppler' },
+  { cmd: 'rsvg-convert', skills: ['generate-graph'], why: 'generate-graph (PNG export, librsvg)', brew: 'brew install librsvg', apt: 'sudo apt install librsvg2-bin', win: 'choco install rsvg-convert' },
+  { cmd: 'tesseract', skills: ['pdf', 'ai-multimodal'], why: 'pdf/ai-multimodal (OCR)', brew: 'brew install tesseract', apt: 'sudo apt install tesseract-ocr', win: 'choco install tesseract' }
 ];
 
 /** Global npm CLIs some skills expect — detected, never auto-installed. */
 const GLOBAL_NPM = [
-  { cmd: 'agent-browser', pkg: 'agent-browser', why: 'agent-browser skill' }
+  { cmd: 'agent-browser', pkg: 'agent-browser', skills: ['agent-browser'], why: 'agent-browser skill' }
 ];
 
 /** Per-OS install hint for a SYSTEM_TOOLS entry. */

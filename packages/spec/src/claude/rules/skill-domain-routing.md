@@ -1,30 +1,31 @@
 # Skill Domain Routing
 
-Advisory routing for installed domain skills (not an automatic hook). Read the selected skill's `SKILL.md` before acting.
+This rule is advisory model guidance, not an automatic prompt hook. Generate the
+current runtime catalog first when capability presence is uncertain, then read
+the selected skill's `SKILL.md` before acting.
 
-| Domain / intent | Skill |
+Resolve a capability slot from catalog `description`, `when_to_use`, `category`,
+and `keywords`; examples below are intent hints, not a copied installed inventory.
+
+| Capability slot | Matching intent |
 |---|---|
-| answer questions from source code/docs/specs/config | `/hapo:ask` |
-| file discovery, structure, blast radius | `/hapo:scout` |
-| style / layout / design system | `/hapo:frontend-design` |
-| React/TypeScript UI implementation | `/hapo:frontend-development` |
-| React/Next performance / re-renders | `/hapo:react-best-practices` |
-| deep UI/UX polish | `/hapo:ui-ux-pro-max` |
-| API, service, auth, database | `/hapo:backend-development` |
-| deploy / Docker / K8s / Cloudflare / CI | `/hapo:devops` |
-| mobile (RN / Flutter / iOS / Android) | `/hapo:mobile-development` |
-| docs init / update / summarize | `/hapo:docs --init` / `--update` / `--summarize` |
-| as-is reconstruction from legacy code | `/hapo:docs --reconstruct <scope>` |
-| future feature requirements | `/hapo:specs` |
-| run suites / scoped verification | `/hapo:test` |
-| E2E / load / a11y strategy | `/hapo:web-testing` |
-| browser snapshots / Browserbase | `/hapo:agent-browser` |
-| Chrome DevTools evidence | `/hapo:chrome-devtools` |
-| diagnose error / CI failure | `/hapo:debug` |
-| external best practices / tool compare | `/hapo:research` |
-| explicit bounded numeric optimization with a distinct correctness Guard | `/hapo:loop` (explicit-only; never automatic) |
-| pptx / docx / pdf / xlsx / multimodal | `/hapo:pptx` / `docx` / `pdf` / `xlsx` / `ai-multimodal` |
-| commit / branch / release prep | `/hapo:git` |
-| review before release | `/hapo:code-review` |
+| evidence answer | factual question requiring source/docs/spec/config/current evidence |
+| repository discovery | files, entrypoints, call path, structure, blast radius |
+| product or architecture decision | unresolved outcome, scope, or material trade-off |
+| technical research | external comparison, conflicting evidence, current best practice |
+| specification | concrete substantial work needing durable plan/tasks |
+| implementation or repair | authorized code/content change or cause-aligned fix |
+| diagnosis | bug, failure, CI, incident, regression, or unexpected behavior |
+| verification or review | test execution, independent correctness/security review |
+| browser evidence | page interaction, snapshots, network, performance, or accessibility |
+| repository delivery | explicitly authorized commit, push, or branch operation |
+| document/artifact work | use only a matching installed optional capability |
 
-Pick one primary domain skill; name a secondary only when it changes execution. If none fit, use `skill-workflow-routing.md`.
+Choose one primary capability per intent. Add a secondary only when its output is
+an entry condition for the primary. If zero valid capabilities match, continue
+inline when safe or name the gap. If multiple catalog entries expose the same
+public identity, do not auto-route; require explicit user disambiguation.
+
+Never infer an optional document capability from this rule. Never select the
+explicit-only numeric optimization capability unless the user invokes it with
+its required bounded metric/guard contract.

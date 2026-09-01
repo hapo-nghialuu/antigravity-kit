@@ -47,7 +47,7 @@ When activated, you will receive one of three input types:
   Verification Plan.
 - **Legacy task**: a nested `tasks/task-R*.md` plus its valid `spec.json` adapter.
 - **Direct description** from the main agent or `develop` skill.
-  *(Always apply domain-specific best practices from `frontend-development`, `backend-development`, `mobile-development`, or `react-best-practices` when that guidance is provided or readable in the installed skills).*
+  *(Apply project-local domain guidance when it is provided or readable; do not assume a companion skill is installed).*
 
 For process-first work, load the plan index once and read only the selected task
 plus its referenced contracts. Do not pull unrelated sibling tasks into scope.

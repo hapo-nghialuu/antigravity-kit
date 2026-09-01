@@ -146,12 +146,12 @@ CafeKit ships many skills, but the main release surface is:
 - `/hapo:scout <search-target>`: discover relevant files locally first, delegating only for permitted broad independent scopes
 - `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
 - `/hapo:research <decision>`: choose proportional depth and return traceable evidence for an uncertain technical decision
+- `/hapo:route <material-request>`: classify ambiguous, multi-step, multi-domain, or elevated-risk work and compose the shortest valid installed chain
 - `/hapo:loop <bounded-experiment>`: run explicit-only numeric optimization in an isolated worktree and return a base-bound patch handoff
 - `/hapo:specs <feature-description>`: create or resume a structured spec workflow
 - `/hapo:develop <feature-name>`: implement from approved spec artifacts
 - `/hapo:debug <issue>`: run adaptive-depth, diagnostic-only root-cause analysis with elimination and prevention-aware handoff
 - `/hapo:fix <issue>`: repair the diagnosed root cause with proportional depth; Quick/local stays direct, while Standard and Incident/deep bound the repair and use post-diagnosis research, brainstorm, or staged planning only when evidence leaves a real decision; every path consumes the `hapo:debug` handoff and reports shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts through verification, prevention, and side-effect gates
-- `/hapo:docs [--init|--update|--summarize|--reconstruct]`: create project docs or reconstruct as-is system documentation from source code
 - `/hapo:test [scope|--full]`: run verification and return a structured verdict
 - `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
 
@@ -194,13 +194,32 @@ $hapo-research Compare current local-first search libraries for this repository
 $hapo-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
 ```
 
-Common companion skills bundled in this package include `inspect`, `research`, `ai-multimodal`, `frontend-development`, `backend-development`, and `react-best-practices`.
+Optional document skills are `docs`, `docx`, `pdf`, `pptx`, `xlsx`, and
+`ai-multimodal`. Select them interactively or run:
+
+```bash
+npx @haposoft/cafekit --with-document-skills
+```
+
+Fresh non-interactive installs leave them out by default. Use
+`--without-document-skills` to skip them or remove pristine CafeKit-owned
+copies; user-modified files are preserved. Documentation validators, hooks,
+and the `docs-keeper` agent remain part of the core runtime.
 
 CafeKit uses rule-based skill routing guidance instead of an automatic prompt-scoring hook. See `.claude/rules/skill-workflow-routing.md`, `.claude/rules/skill-domain-routing.md`, or run:
 
 ```bash
 node .claude/scripts/generate-skill-catalog.cjs --skills
 ```
+
+Routing uses progressive disclosure: live catalog metadata selects a candidate,
+the selected `SKILL.md` supplies its contract, and only relevant references are
+loaded. Invoke an installed skill directly for explicit or obvious low-risk
+work; use `hapo:route` only when classification or chaining is material. When a
+capability or agent is absent, continue inline when safe or name the gap.
+Hooks are not a skill router and never grant capability presence or authority. Source
+and installed projections are verified; live-model adherence remains
+`UNPROVEN`, not deterministic.
 
 On Codex, invoke the transformed native skill names as `$hapo-<name>` or browse
 them with `/skills`. Explicit custom-agent delegation uses snake_case agent

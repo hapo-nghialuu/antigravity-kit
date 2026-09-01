@@ -22,6 +22,18 @@ npx @haposoft/cafekit
 npx @haposoft/cafekit --upgrade
 ```
 
+Fresh install には 18 core skills が含まれます。Interactive installer では
+`docs`, `docx`, `pdf`, `pptx`, `xlsx`, `ai-multimodal` の optional bundle を
+選択できます。Non-interactive install は明示しない限り bundle を含みません。
+
+```bash
+npx @haposoft/cafekit --with-document-skills
+npx @haposoft/cafekit --without-document-skills
+```
+
+後者は CafeKit-owned で未変更の skill を削除します。ユーザー変更は保持され、
+legacy install は最初の upgrade で bundle を維持します。
+
 ## Installed runtimes
 
 | Runtime | Detection | Installed shape |
@@ -37,4 +49,4 @@ Claude Code: `/hapo:specs Build a tiny verified feature`
 
 Codex CLI: `$hapo-specs Build a tiny verified feature`
 
-Version は `.claude/cafekit.json` または `.codex/cafekit.json` に記録されます。
+Version と document bundle の選択は `.claude/cafekit.json` または `.codex/cafekit.json` に記録されます。

@@ -17,6 +17,16 @@ npx @haposoft/cafekit --platform codex
 The installer records the package version in the selected runtime:
 `.claude/cafekit.json` or `.codex/cafekit.json`.
 
+Document and multimodal skills are optional. Choose them in the interactive
+installer, or opt in explicitly:
+
+```bash
+npx @haposoft/cafekit --with-document-skills
+```
+
+Use `--without-document-skills` to skip them or remove pristine CafeKit-owned
+copies from an existing install. User-modified skill files are preserved.
+
 ## What It Is
 
 CafeKit installs a native runtime bundle for each supported coding agent:
@@ -24,11 +34,12 @@ CafeKit installs a native runtime bundle for each supported coding agent:
 - `hapo:scout` for fast scoped discovery of files, entrypoints, call paths, and blast radius
 - `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
 - `hapo:research` for proportional, traceable evidence when a technical decision remains uncertain
+- `hapo:route` for ambiguous, multi-step, multi-domain, or elevated-risk work that needs the shortest valid installed chain
 - `hapo:loop` for explicit-only, bounded numeric optimization in an isolated worktree
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
 - `hapo:debug` and `hapo:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
-- `hapo:docs` for project documentation and source-backed as-is reconstruction
+- optional `hapo:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install
 - `hapo:test` and `hapo:code-review` for verification
 - supporting hooks, agents, rules, and platform-native runtime integration
 
@@ -36,10 +47,19 @@ CafeKit uses rule-based skill routing guidance and an installed skill catalog.
 Agents choose the right `hapo:*` skill from workflow/domain rules instead of
 using an automatic prompt-scoring hook.
 
+Skill loading uses progressive disclosure: catalog metadata identifies a
+candidate, its selected `SKILL.md` defines the contract, and only its needed
+references are read. Invoke a valid installed skill directly; escalate to
+`hapo:route` only when classification or chaining is material. If a skill or
+agent is absent, continue inline when safe or name the gap—never invent it.
+Hooks are not a skill router and do not auto-select skills. Source and installed
+projection parity is tested; live-model adherence remains `UNPROVEN` and is not
+deterministic.
+
 Core routes (shown with Claude Code syntax):
 
 ```text
-Feature/docs: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
+Feature: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
 Bug/failure: /hapo:debug -> /hapo:fix only when the user requested a fix
 Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> stop
 Uncertain technical decision: /hapo:research -> traceable evidence -> decision handoff
@@ -92,7 +112,7 @@ noise policy and minimum delta, budget, and stop conditions are explicit. It
 experiments in a detached worktree and returns a base-bound patch handoff; it
 does not apply, commit, push, or guarantee an improvement.
 
-For existing or legacy systems without reliable documentation:
+With the optional document skills installed, existing or legacy systems can use:
 
 ```bash
 /hapo:docs --reconstruct apps/legacy-admin

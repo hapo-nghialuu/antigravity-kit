@@ -127,12 +127,18 @@ function copyPlatformFiles(ctx, platformKey) {
       });
     }
 
-    // Additional required skills.
+    // Core skills plus the optional document bundle selected for this runtime.
     let requiredSkills = [];
     if (hasPlatformCapability(platformKey, 'skills')) {
       requiredSkills = ctx.manifest?.skills?.required || [];
+      if (ctx.documentSkills?.[platformKey]?.enabled) {
+        requiredSkills = [
+          ...requiredSkills,
+          ...(ctx.manifest?.skills?.bundles?.documentSkills || [])
+        ];
+      }
     }
-    requiredSkills
+    [...new Set(requiredSkills)]
       .filter((skillName) => skillName !== 'specs')
       .forEach((skillName) => {
         const skillSource = path.join(skillsSourceDir, skillName);

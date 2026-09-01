@@ -58,6 +58,8 @@ const MESSAGES = {
 
     // Skills / deps setup
     skillDepsConfirm:      'Install skill dependencies? (Python venv, pip, npm, Chromium — takes a few minutes)',
+    documentSkillsConfirm: 'Install optional document skills? (docs, DOCX, PDF, PPTX, XLSX, multimodal)',
+    documentSkillsMetadataRecovery: 'Could not read {path}; preserving document skills to avoid destructive cleanup.',
     skillsSkipped:         'Skill dependencies skipped.\n  Run later: npx @haposoft/cafekit --with-skills-deps',
 
     // rtk token-saver setup
@@ -180,6 +182,8 @@ const MESSAGES = {
     changeAddressingOption:'別の名前に変更',
 
     skillDepsConfirm:      'スキルの依存関係をインストールしますか？（Python venv、pip、npm、Chromium — 数分かかります）',
+    documentSkillsConfirm: '任意のドキュメントスキルをインストールしますか？（docs、DOCX、PDF、PPTX、XLSX、multimodal）',
+    documentSkillsMetadataRecovery: '{path} を読み取れないため、破壊的な削除を避けて document skills を保持します。',
     skillsSkipped:         'スキルの依存関係をスキップしました。\n  後で実行: npx @haposoft/cafekit --with-skills-deps',
 
     // rtk token-saver setup
@@ -299,6 +303,8 @@ const MESSAGES = {
     changeAddressingOption:'Đổi tên khác',
 
     skillDepsConfirm:      'Cài dependencies cho skill ngay? (Python venv, pip, npm, Chromium — mất vài phút)',
+    documentSkillsConfirm: 'Cài thêm nhóm skill tài liệu? (docs, DOCX, PDF, PPTX, XLSX, multimodal)',
+    documentSkillsMetadataRecovery: 'Không đọc được {path}; giữ nguyên skill tài liệu để tránh dọn nhầm dữ liệu.',
     skillsSkipped:         'Đã bỏ qua dependencies skill.\n  Cài sau bằng lệnh: npx @haposoft/cafekit --with-skills-deps',
 
     // rtk token-saver setup

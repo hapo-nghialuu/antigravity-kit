@@ -27,6 +27,9 @@ function validateManifestV2(manifest) {
   if (!manifest || manifest.version !== 2) return false;
   if (!manifest.runtime?.files || !Array.isArray(manifest.runtime.files)) return false;
   if (!manifest.settings?.template) return false;
+  if (!Array.isArray(manifest.skills?.required)) return false;
+  if (!Array.isArray(manifest.skills?.bundles?.documentSkills)) return false;
+  if (!Array.isArray(manifest.obsolete?.skills)) return false;
   return true;
 }
 
@@ -205,6 +208,8 @@ function parseInstallerArgs(argv) {
     yes: false,
     withSkillsDeps: false,
     withRtk: false,
+    withDocumentSkills: false,
+    withoutDocumentSkills: false,
     platforms: []
   };
 
@@ -221,6 +226,10 @@ function parseInstallerArgs(argv) {
       args.withSkillsDeps = true;
     } else if (arg === '--with-rtk') {
       args.withRtk = true;
+    } else if (arg === '--with-document-skills') {
+      args.withDocumentSkills = true;
+    } else if (arg === '--without-document-skills') {
+      args.withoutDocumentSkills = true;
     } else if (arg === '--platform') {
       args.platforms.push(...String(argv[++i] || '').split(',').filter(Boolean));
     } else if (arg.startsWith('--platform=')) {
@@ -230,6 +239,10 @@ function parseInstallerArgs(argv) {
     } else if (arg.startsWith('--lang=')) {
       args.lang = arg.slice('--lang='.length);
     }
+  }
+
+  if (args.withDocumentSkills && args.withoutDocumentSkills) {
+    throw new Error('--with-document-skills and --without-document-skills cannot be used together');
   }
 
   // Back-compat alias used throughout the phases.
@@ -298,6 +311,7 @@ function buildContext(argv, runId) {
     results: createResults(),
     trackers: {},    // platformKey → ownership tracker, set per platform
     ownership: {},   // platformFolder → ownership manifest read at run start
+    documentSkills: {}, // platformKey → persisted optional-bundle selection
     cancelled: false
   };
 }

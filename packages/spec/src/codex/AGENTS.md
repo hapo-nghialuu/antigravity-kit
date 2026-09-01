@@ -7,6 +7,12 @@
   - Windows: `.agents\\skills\\.venv\\Scripts\\python.exe scripts\\<script>.py`
 - CafeKit agents live in `.codex/agents/*.toml` and are auto-discovered after the repository is trusted.
 - Runtime support lives in `.codex/rules/`, `.codex/scripts/`, `.codex/references/`, and `.codex/runtime.json`.
+- For skill selection, read `.codex/rules/skill-workflow-routing.md` and
+  `.codex/rules/skill-domain-routing.md`. When capability presence is uncertain,
+  run `node .codex/scripts/generate-skill-catalog.cjs --skills`; its Codex-bound
+  root is `.agents/skills`. Use `$hapo-route` only for ambiguous, multi-step,
+  multi-domain, or risk-elevated work; explicit, obvious, and factual intents
+  stay direct.
 - Project hooks live in `.codex/hooks.json`; review trusted hooks with `/hooks`.
 - New Specs work uses the process-first flow. `$hapo-specs` opens C1, writes
   `specs/<feature>/plan.md` with flat `task-NN-*.md` files beside it, then opens

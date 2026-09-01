@@ -1170,7 +1170,7 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   approvedPersistence: "Persist only approved decisions and semantics, only with user authority",
   configuredPath: "Use the repository's configured report path and naming convention.",
   redactPersistence: "Before writing, redact live secrets, credentials, private keys, access tokens, and unnecessary PII;",
-  visualEvidence: "For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` before designing.",
+  visualEvidence: "For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` when the optional document bundle is installed; otherwise use the runtime's available multimodal capability or report the evidence gap.",
   touchpoints: "Technical touchpoints are evidence, not a fifth user-owned field.",
   riskSurfaces: "Raise only risks that can change the contract or approval path",
   decisionTruth: "Do not write \"user selected\" unless direct user text or the native input tool confirms it.",
@@ -3328,6 +3328,294 @@ async function runResearchAdaptiveContractTests() {
   return mutations.length + 1;
 }
 
+const ROUTE_CONTRACT_PATHS = {
+  skill: "src/claude/skills/route/SKILL.md",
+  taxonomy: "src/claude/skills/route/references/task-taxonomy.md",
+  chaining: "src/claude/skills/route/references/chaining-patterns.md",
+  timing: "src/claude/skills/route/references/agent-timing.md",
+};
+
+function routeContractIssues(input) {
+  const expectedKeys = Object.keys(ROUTE_CONTRACT_PATHS).sort();
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("route checker expects exactly four UTF-8 source strings");
+  }
+
+  const issues = new Set();
+  const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+    key, normalizeMarkdownWhitespace(value),
+  ]));
+  const requireClauses = (issue, clausesBySource) => {
+    const missing = Object.entries(clausesBySource).some(([source, clauses]) =>
+      clauses.some((clause) => !normalized[source].includes(normalizeMarkdownWhitespace(clause))));
+    if (missing) issues.add(issue);
+  };
+
+  requireClauses("direct-path", { skill: [
+    "when the user names a valid installed skill, invoke that skill directly",
+    "when exactly one installed skill clearly covers a low-risk request, use it directly without constructing a chain.",
+    "Do not create a route chain or spawn agents merely to answer it.",
+  ] });
+  requireClauses("classification", { skill: [
+    "Record exactly one class based on the final deliverable",
+    "size (`trivial | standard | epic`)",
+    "the highest-link risk (`low | elevated | high`)",
+    "the number of material domains.",
+  ], taxonomy: [
+    "Classify by the final deliverable the user expects",
+    "Risk is the maximum risk of any retained link, never an average",
+    "Count only material domains that need distinct evidence or ownership.",
+  ] });
+  requireClauses("installed-only", { skill: [
+    "Use the runtime's live installed skill and agent catalogs.",
+    "Never synthesize a skill, agent, command, or optional bundle",
+    "Name the gap; do not invent a substitute with broader authority.",
+  ], timing: [
+    "If the preferred agent is absent, do the work inline when safe or name the gap and stop; never synthesize a role",
+  ] });
+  requireClauses("link-contract", { chaining: [
+    "**Entry:** the evidence or artifact required to start.",
+    "**Exit:** one observable artifact or decision passed forward.",
+    "**Owner:** exactly one installed skill, installed agent, or the controller.",
+  ] });
+  requireClauses("collapse-and-insertion", { skill: [
+    "remove every link whose output is already evidenced",
+  ], chaining: [
+    "Remove a link when its exit is already current and evidenced.",
+    "Insert a link only for a real modifier:",
+  ] });
+  requireClauses("failure-stop", { chaining: [
+    "preserve its valid exit evidence, normalize the root cause, and choose one bounded detour that can change that cause.",
+    "Track the failure key as `(link, owner, normalized cause)` within the current chain.",
+    "Two failures with the same failure key stop the chain",
+    "Different normalized causes do not share a key",
+    "does not replace a separate orchestrator's authoritative task-retry budget.",
+  ] });
+  requireClauses("delegation-contract", { timing: [
+    "Delegation is optional acceleration, not a mandatory stage.",
+    "Every delegated link receives exactly these seven fields:",
+    "**Outcome** — observable result.",
+    "**Scope** — owned files, systems, or questions.",
+    "**Inputs** — current evidence and prerequisite artifacts.",
+    "**Constraints** — safety, compatibility, authority, and non-goals.",
+    "**Acceptance** — proof required for completion.",
+    "**Handoff** — expected returned artifact and destination.",
+    "**Status vocabulary** — `DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT`.",
+    "Parallel delegates require disjoint write ownership",
+    "`DONE`: validate the exit artifact, then advance.",
+    "`DONE_WITH_CONCERNS`: resolve correctness or scope concerns before advancing",
+    "`BLOCKED`: change evidence, owner, scope, or dependency before retrying.",
+    "`NEEDS_CONTEXT`: supply the missing bounded context before retrying.",
+    "Never blindly retry `BLOCKED` or `NEEDS_CONTEXT`.",
+  ] });
+  requireClauses("authority", { skill: [
+    "The route may narrow user authority but never expand it.",
+    "diagnosis does not authorize repair",
+    "implementation does not authorize commit, push, deploy, publish, or release",
+  ], taxonomy: [
+    "Modifiers constrain a route. They never grant mutation, external-action, commit, push, deploy, publish, or release authority.",
+  ], chaining: [
+    "review cannot imply push, diagnosis cannot imply repair, and build cannot imply deploy.",
+  ] });
+  requireClauses("risk-gates", { skill: [
+    "`elevated`: add explicit verification appropriate to the changed surface.",
+    "`high`: require independent review and user confirmation before advancing past the high-risk gate.",
+    "obtain that confirmation immediately before the action.",
+  ] });
+  requireClauses("proof-boundary", { skill: [
+    "live-model adherence. That behavior remains `[UNPROVEN]` until a separate host run observes it.",
+  ] });
+
+  const corpus = Object.values(normalized).join(" ").toLowerCase();
+  const issueIf = (issue, pattern) => { if (pattern.test(corpus)) issues.add(issue); };
+  issueIf("installed-only", /(?:always|must).{0,30}invoke.{0,30}hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal).{0,40}(?:even when|if).{0,20}(?:absent|not installed|unavailable)/);
+  issueIf("installed-only", /(?:missing|absent|unavailable) agent.{0,50}(?:may|can|should).{0,30}(?:be synthesized|be invented|be assumed)/);
+  issueIf("delegation-contract", /(?:always|may|can|should).{0,20}(?:blindly )?retry.{0,20}(?:blocked|needs_context).{0,40}(?:without change|unchanged|identical)|(?:^|[.!?]\s+)retry (?:a )?(?:blocked|needs_context) result once with identical inputs/);
+  issueIf("authority", /(?:review|diagnosis|implementation|build)(?:(?!\b(?:never|not|cannot|can't)\b).){0,40}(?:authorizes|implies|grants|permits|allows).{0,30}(?:push|repair|deploy|publish|release)/);
+  issueIf("classification", /(?:use|calculate|set).{0,20}(?:the )?(?:average|mean).{0,20}(?:link )?risk|risk is averaged/);
+  issueIf("failure-stop", /different normalized causes share (?:a|the same) key/);
+  issueIf("failure-stop", /same failure key.{0,40}(?:may|can|should).{0,20}(?:retry forever|continue indefinitely|loop)/);
+  issueIf("proof-boundary", /live-model adherence.{0,30}(?:is|becomes) `?\[?(?:verified|proven)/);
+
+  return [...issues].sort();
+}
+
+function replaceRouteClauseOnce(content, from, to) {
+  const first = content.indexOf(from);
+  if (first < 0 || content.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`route mutation anchor must occur exactly once: ${from}`);
+  }
+  return `${content.slice(0, first)}${to}${content.slice(first + from.length)}`;
+}
+
+function routingRuleIssues(input) {
+  const expectedKeys = ["domain", "workflow"];
+  const actualKeys = input && typeof input === "object" && !Array.isArray(input)
+    ? Object.keys(input).sort()
+    : [];
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some((key) => typeof input[key] !== "string")) {
+    throw new TypeError("routing rule checker expects workflow and domain source strings");
+  }
+
+  const workflow = normalizeMarkdownWhitespace(input.workflow);
+  const domain = normalizeMarkdownWhitespace(input.domain);
+  const issues = new Set();
+  const requireAll = (issue, content, clauses) => {
+    if (clauses.some((clause) => !content.includes(normalizeMarkdownWhitespace(clause)))) {
+      issues.add(issue);
+    }
+  };
+
+  requireAll("proportional-direct", workflow, [
+    "If the user names a valid installed skill, use it directly",
+    "If one obvious low-risk installed skill covers the intent, use it directly",
+    "do not invoke Route or agents for ceremony",
+    "ambiguous, multi-step, multi-domain, or elevated/high-risk work",
+  ]);
+  requireAll("live-catalog", workflow, [
+    "Resolve every abstract link against the current runtime catalog",
+    "An absent, invalid, folder-mismatched, duplicate, or retired entry is not routable",
+  ]);
+  requireAll("authority", workflow, [
+    "Diagnosis does not authorize repair",
+    "implementation does not authorize commit, push, deploy, publish, or release",
+    "no route expands the user's existing authority",
+  ]);
+  requireAll("installed-only", domain, [
+    "examples below are intent hints, not a copied installed inventory",
+    "document/artifact work | use only a matching installed optional capability",
+    "Never infer an optional document capability from this rule",
+  ]);
+  requireAll("duplicate", domain, [
+    "If multiple catalog entries expose the same public identity, do not auto-route; require explicit user disambiguation",
+  ]);
+
+  const corpus = `${workflow} ${domain}`.toLowerCase();
+  const issueIf = (issue, pattern) => { if (pattern.test(corpus)) issues.add(issue); };
+  issueIf("proportional-direct", /always invoke route for explicit installed skills[^.]*obvious low-risk[^.]*factual/);
+  issueIf("live-catalog", /(?<!never )treat examples as installed inventory/);
+  issueIf("authority", /(?<!no )(?:live catalog|route)(?:(?!\b(?:never|not|cannot|can't)\b).){0,40}(?:grants|expands)(?:(?!\b(?:no|never|not|cannot|can't)\b).){0,30}(?:mutation|delivery|user )?authority/);
+  issueIf("installed-only", /(?<!never )invoke (?:the )?(?:docs|document) capability even when (?:absent|not installed|unavailable)/);
+  issueIf("duplicate", /(?<!never )automatically (?:choose|select|route to) the first duplicate/);
+
+  return [...issues].sort();
+}
+
+async function runRouteContractTests() {
+  const baseline = Object.fromEntries(await Promise.all(
+    Object.entries(ROUTE_CONTRACT_PATHS).map(async ([key, relativePath]) => [
+      key, await readFile(join(packageRoot, relativePath), "utf8"),
+    ]),
+  ));
+  const baselineIssues = routeContractIssues(baseline);
+  if (baselineIssues.length > 0) {
+    throw new Error(`[FAIL] Route contract: intact sources returned ${baselineIssues.join(", ")}`);
+  }
+
+  const safeStrengthenings = [
+    {
+      source: "chaining",
+      from: "## Failure detours and stop",
+      to: "A successful review never permits push when local.\n\n## Failure detours and stop",
+    },
+    {
+      source: "timing",
+      from: "## Status handling",
+      to: "Never retry a BLOCKED result once with identical inputs.\n\n## Status handling",
+    },
+  ];
+  for (const strengthening of safeStrengthenings) {
+    const changed = {
+      ...baseline,
+      [strengthening.source]: replaceRouteClauseOnce(
+        baseline[strengthening.source], strengthening.from, strengthening.to,
+      ),
+    };
+    const issues = routeContractIssues(changed);
+    if (issues.length > 0) {
+      throw new Error(`[FAIL] Route safe strengthening returned ${issues.join(", ")}`);
+    }
+  }
+
+  const mutations = [
+    ["named-skill-reclassified", "skill", "direct-path", "invoke that skill directly", "reclassify that skill through Route"],
+    ["obvious-intent-chained", "skill", "direct-path", "use it directly without constructing a chain.", "construct a full chain before using it."],
+    ["factual-answer-spawns-agents", "skill", "direct-path", "Do not create a route chain or spawn agents merely to answer it.", "Spawn agents and create a route chain before answering it."],
+    ["terminal-class-removed", "taxonomy", "classification", "Classify by the final deliverable the user expects", "Classify by the first verb the user writes"],
+    ["risk-averaged-down", "taxonomy", "classification", "Risk is the maximum risk of any retained link, never an average", "Risk is the average link risk"],
+    ["domain-count-removed", "skill", "classification", "the number of material domains.", "the broad topic label."],
+    ["absent-docs-invoked", "skill", "installed-only", "## 3. Compose the shortest valid chain", "Always invoke hapo:docs even when it is not installed.\n\n## 3. Compose the shortest valid chain"],
+    ["link-owner-optional", "chaining", "link-contract", "**Owner:** exactly one installed skill, installed agent, or the controller.", "**Owner:** any number of possible skills or agents."],
+    ["collapse-removed", "chaining", "collapse-and-insertion", "Remove a link when its exit is already current and evidenced.", "Keep every link even when its exit is already evidenced."],
+    ["bounded-detour-removed", "chaining", "failure-stop", "preserve its valid exit evidence, normalize the root cause,\nand choose one bounded detour that can change that cause.", "discard prior evidence and retry the same action."],
+    ["same-key-loops", "chaining", "failure-stop", "Two failures with the same failure key stop the chain", "Two failures with the same failure key may retry forever and do not stop the chain"],
+    ["different-causes-conflated", "chaining", "failure-stop", "Different normalized causes do\nnot share a key", "Different normalized causes share the same key"],
+    ["brief-drops-status", "timing", "delegation-contract", "**Status vocabulary** — `DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT`.", "**Status** — any free-form completion message."],
+    ["brief-drops-outcome", "timing", "delegation-contract", "**Outcome** — observable result.", "**Topic** — broad area of interest."],
+    ["done-with-concerns-auto-advances", "timing", "delegation-contract", "`DONE_WITH_CONCERNS`: resolve correctness or scope concerns before advancing;", "`DONE_WITH_CONCERNS`: advance without resolving correctness or scope concerns;"],
+    ["missing-agent-synthesized", "timing", "installed-only", "never synthesize a role or pretend delegation occurred.", "a missing agent may be synthesized and treated as delegated."],
+    ["blocked-blind-retry", "timing", "delegation-contract", "Never blindly retry `BLOCKED` or `NEEDS_CONTEXT`.", "Always blindly retry BLOCKED without change."],
+    ["review-authorizes-push", "chaining", "authority", "review cannot imply push", "review authorizes push"],
+    ["additive-review-permits-push", "chaining", "authority", "## Failure detours and stop", "A successful review permits push when local.\n\n## Failure detours and stop"],
+    ["additive-blocked-identical-retry", "timing", "delegation-contract", "## Status handling", "Retry a BLOCKED result once with identical inputs.\n\n## Status handling"],
+    ["high-risk-skips-review", "skill", "risk-gates", "require independent review and user confirmation", "skip independent review and user confirmation"],
+    ["live-adherence-promoted", "skill", "proof-boundary", "remains `[UNPROVEN]`", "is `[VERIFIED]`"],
+  ];
+  for (const [name, source, expectedIssue, from, to] of mutations) {
+    const changed = { ...baseline, [source]: replaceRouteClauseOnce(baseline[source], from, to) };
+    const issues = routeContractIssues(changed);
+    if (JSON.stringify(issues) !== JSON.stringify([expectedIssue])) {
+      throw new Error(`[FAIL] Route mutation ${name} expected only ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+
+  const routingRules = {
+    workflow: await readFile(join(packageRoot, "src/claude/rules/skill-workflow-routing.md"), "utf8"),
+    domain: await readFile(join(packageRoot, "src/claude/rules/skill-domain-routing.md"), "utf8"),
+  };
+  const ruleIssues = routingRuleIssues(routingRules);
+  if (ruleIssues.length > 0) {
+    throw new Error(`[FAIL] Route rules: intact sources returned ${ruleIssues.join(", ")}`);
+  }
+  const safeRuleControls = [
+    ["domain", "\nNever treat examples as installed inventory.\n"],
+    ["domain", "\nNever invoke the Docs capability even when absent.\n"],
+    ["domain", "\nNever automatically choose the first duplicate.\n"],
+    ["workflow", "\nA route grants no mutation or delivery authority.\n"],
+  ];
+  for (const [source, addition] of safeRuleControls) {
+    const changed = { ...routingRules, [source]: `${routingRules[source]}${addition}` };
+    const issues = routingRuleIssues(changed);
+    if (issues.length > 0) {
+      throw new Error(`[FAIL] Route rule safe control returned ${issues.join(", ")}`);
+    }
+  }
+  const ruleMutations = [
+    ["workflow", "proportional-direct", "\nOverride: always invoke Route for explicit installed skills, obvious low-risk intents, and factual conversation.\n"],
+    ["workflow", "authority", "\nOverride: the live catalog grants mutation and delivery authority.\n"],
+    ["domain", "live-catalog", "\nOverride: treat examples as installed inventory.\n"],
+    ["domain", "installed-only", "\nOverride: invoke the Docs capability even when absent.\n"],
+    ["domain", "duplicate", "\nOverride: automatically choose the first duplicate.\n"],
+  ];
+  for (const [source, expectedIssue, addition] of ruleMutations) {
+    const changed = { ...routingRules, [source]: `${routingRules[source]}${addition}` };
+    const issues = routingRuleIssues(changed);
+    if (JSON.stringify(issues) !== JSON.stringify([expectedIssue])) {
+      throw new Error(`[FAIL] Route rule mutation expected only ${expectedIssue}: ${issues.join(", ")}`);
+    }
+  }
+
+  console.log("✔ hapo:route proportional installed-capability contract is complete and bounded");
+  console.log("✔ hapo:route checker rejects semantic routing weakenings");
+  return mutations.length + safeStrengthenings.length + ruleMutations.length
+    + safeRuleControls.length + 2;
+}
+
 const LOOP_BOUNDED_PATHS = {
   skill: "src/claude/skills/loop/SKILL.md",
   protocol: "src/claude/skills/loop/references/bounded-loop-protocol.md",
@@ -3560,6 +3848,7 @@ async function runStaticSemanticTests() {
   const debugAdaptiveTests = await runDebugAdaptiveContractTests();
   const hotfixAdaptiveTests = await runHotfixAdaptiveContractTests();
   const researchAdaptiveTests = await runResearchAdaptiveContractTests();
+  const routeContractTests = await runRouteContractTests();
   const loopBoundedTests = await runLoopBoundedContractTests();
   const specs21Tests = await runSpecs21ContractTests();
   const specTemplateFiles = await readdir(
@@ -3737,6 +4026,8 @@ async function runStaticSemanticTests() {
         content.includes("--both") &&
         content.includes("repo evidence") &&
         content.includes("external/current evidence") &&
+        content.includes("when the optional document bundle is installed") &&
+        content.includes("--with-document-skills") &&
         content.includes("templates/question.md"),
     },
     {
@@ -4256,30 +4547,37 @@ async function runStaticSemanticTests() {
     {
       label: "CafeKit skill routing workflow rule maps core flows",
       file: "src/claude/rules/skill-workflow-routing.md",
-      assert: (content) =>
-        content.includes("/hapo:ask -> /hapo:brainstorm -> /hapo:specs -> /hapo:develop") &&
-        content.includes("ask about source code, docs, specs, config, dependencies") &&
-        content.includes("/hapo:debug -> /hapo:fix") &&
-        content.includes("/hapo:docs --reconstruct <scope>") &&
-        content.includes("missing acceptance criteria") &&
-        content.includes("Do not inject or force a skill"),
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("If the user names a valid installed skill, use it directly") &&
+          normalized.includes("If one obvious low-risk installed skill covers the intent, use it directly") &&
+          normalized.includes("do not invoke Route or agents for ceremony") &&
+          normalized.includes("use the installed Route capability") &&
+          normalized.includes("Resolve every abstract link against the current runtime catalog") &&
+          normalized.includes("numeric optimization capability remains explicit-only") &&
+          !normalized.includes("/hapo:docs --reconstruct <scope>");
+      },
     },
     {
-      label: "CafeKit skill routing domain rule maps installed skills",
+      label: "CafeKit skill routing domain rule maps core and optional skills",
       file: "src/claude/rules/skill-domain-routing.md",
-      assert: (content) =>
-        content.includes("/hapo:ask") &&
-        content.includes("answer questions from source code/docs/specs/config") &&
-        content.includes("/hapo:frontend-development") &&
-        content.includes("/hapo:react-best-practices") &&
-        content.includes("/hapo:backend-development") &&
-        content.includes("/hapo:docs --reconstruct <scope>") &&
-        content.includes("/hapo:agent-browser"),
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("Generate the current runtime catalog first") &&
+          normalized.includes("description`, `when_to_use`, `category`, and `keywords") &&
+          normalized.includes("evidence answer") &&
+          normalized.includes("repository discovery") &&
+          normalized.includes("document/artifact work") &&
+          normalized.includes("matching installed optional capability") &&
+          normalized.includes("require explicit user disambiguation") &&
+          normalized.includes("explicit-only numeric optimization capability") &&
+          !/\/hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/.test(normalized);
+      },
     },
     {
-      label: "hapo:docs skill is packaged and supports reconstruct mode",
+      label: "hapo:docs skill is present in the optional document bundle",
       file: "src/claude/migration-manifest.json",
-      assert: (content) => content.includes('"docs"'),
+      assert: (content) => content.includes('"documentSkills"') && content.includes('"docs"'),
     },
     {
       label: "hapo:docs --reconstruct keeps as-is evidence contract",
@@ -4498,10 +4796,15 @@ async function runStaticSemanticTests() {
         !content.includes("URGENT") && !content.includes("BẮT BUỘC"),
     },
     {
-      label: "workflow routing keeps delegate and ambiguity table",
+      label: "workflow routing keeps proportional and authority boundaries",
       file: "src/claude/rules/skill-workflow-routing.md",
-      assert: (content) =>
-        content.includes("/hapo:delegate") && content.includes("debug"),
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("ambiguous, multi-step, multi-domain, or elevated/high-risk work") &&
+          normalized.includes("Collapse links whose output is already current and evidenced") &&
+          normalized.includes("Diagnosis does not authorize repair") &&
+          normalized.includes("no route expands the user's existing authority");
+      },
     },
     {
       label: "usage hook reads runtime config from hook cwd",
@@ -4734,7 +5037,8 @@ async function runStaticSemanticTests() {
   return checks.length + specs21Tests + implementationReadinessTests
     + processTaskStatusTests + adaptiveCoverageTests + brainstormContractTests
     + developPlanNativeTests + testPlanNativeTests + debugAdaptiveTests
-    + hotfixAdaptiveTests + researchAdaptiveTests + loopBoundedTests;
+    + hotfixAdaptiveTests + researchAdaptiveTests + routeContractTests
+    + loopBoundedTests;
 }
 
 function runSkillCatalogTests() {
@@ -4759,7 +5063,6 @@ function runSkillCatalogTests() {
     "`hapo:scout`",
     "`hapo:debug`",
     "`hapo:fix`",
-    "`hapo:react-best-practices`",
   ]) {
     if (!result.stdout.includes(expected)) {
       console.error(result.stdout);
@@ -4783,6 +5086,23 @@ function runSkillCatalogTests() {
     console.error(json.stdout);
     console.error("[FAIL] skill catalog JSON has too few skills");
     process.exit(1);
+  }
+  const retiredDirectories = [
+    "backend-development",
+    "devops",
+    "frontend-design",
+    "frontend-development",
+    "mobile-development",
+    "react-best-practices",
+  ];
+  for (const directory of retiredDirectories) {
+    if (parsed.skills.some((skill) => skill.directory === directory)
+      || !parsed.diagnostics?.some((diagnostic) =>
+        diagnostic.code === "retired_skill" && diagnostic.directory === directory)) {
+      console.error(json.stdout);
+      console.error(`[FAIL] skill catalog did not exclude retired skill ${directory}`);
+      process.exit(1);
+    }
   }
 
   // Determinism guard: running again must produce identical JSON (no cache/stale output)
@@ -4872,8 +5192,8 @@ async function runInstallerMigrationFixtureTests() {
     if (!(await fileExists(join(root, ".claude", "scripts", "generate-skill-catalog.cjs")))) {
       failures.push("skill catalog script was not installed");
     }
-    if (!(await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md")))) {
-      failures.push("hapo:docs skill was not installed");
+    if (await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md"))) {
+      failures.push("optional hapo:docs skill was installed without opt-in");
     }
 
     if (failures.length > 0) {

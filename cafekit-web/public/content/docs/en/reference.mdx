@@ -38,10 +38,25 @@ are not aliases for current Claude or Codex commands.
 | `/hapo:sync` | — | Sync observed task Status and final inline Receipt. |
 | `/hapo:debug` | `/debug` | Diagnose failures before fixing. |
 | `/hapo:fix` | `/hotfix` | Apply narrow diagnosed fixes. |
-| `/hapo:docs` | `/docs` | Create, update, summarize, or reconstruct docs. |
+| `/hapo:docs` | `/docs` | Optional bundle: create, update, summarize, or reconstruct docs. |
 | `/hapo:scout` | `/inspect` | Scout source files and project structure. |
+| `/hapo:route` | — | Compose the shortest valid installed chain for material work. |
 
 For historical OpenCode 0.16 installs, the installer generated slash commands for the main implementation surface. The `sync` skill was shipped in the shared skill bundle, but the installer did not generate a `/sync` OpenCode wrapper.
+
+## Skill selection and loading
+
+Native selection uses progressive disclosure: live catalog metadata identifies
+a candidate, the selected `SKILL.md` defines its contract, and only relevant
+references are loaded. Invoke an installed skill directly for explicit or
+obvious low-risk work. Use `hapo:route` only for ambiguous, multi-step,
+multi-domain, or elevated-risk work. If a skill or agent is absent, continue
+inline when safe or report the gap; optional document skills are usable only
+when installed.
+
+Hooks are not a skill router and do not auto-select capabilities. Source and
+installed projection parity is tested, but live-model adherence remains
+`UNPROVEN` and semantic selection is not deterministic.
 
 ## Installed Claude file structure
 

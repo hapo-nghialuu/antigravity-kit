@@ -7,36 +7,35 @@
   "skills": {
     "required": [
       "agent-browser",
-      "ai-multimodal",
-      "backend-development",
       "brainstorm",
       "chrome-devtools",
       "code-review",
       "debug",
       "delegate",
       "develop",
-      "devops",
-      "docs",
-      "docx",
-      "frontend-design",
-      "frontend-development",
       "git",
       "hotfix",
       "inspect",
       "loop",
-      "mobile-development",
-      "pdf",
-      "pptx",
       "question",
-      "react-best-practices",
       "research",
+      "route",
       "specs",
       "sync",
       "test",
       "ui-ux-pro-max",
-      "web-testing",
-      "xlsx"
-    ]
+      "web-testing"
+    ],
+    "bundles": {
+      "documentSkills": [
+        "ai-multimodal",
+        "docs",
+        "docx",
+        "pdf",
+        "pptx",
+        "xlsx"
+      ]
+    }
   },
   "agents": {
     "required": [
@@ -79,6 +78,14 @@
     "assumed": []
   },
   "obsolete": {
+    "skills": [
+      "backend-development",
+      "frontend-development",
+      "frontend-design",
+      "mobile-development",
+      "devops",
+      "react-best-practices"
+    ],
     "agents": {
       "claude": ["agents/god-developer.md"],
       "codex": ["agents/god_developer.toml"]

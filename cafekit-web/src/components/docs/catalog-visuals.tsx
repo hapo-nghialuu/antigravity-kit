@@ -1,13 +1,13 @@
 import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, PenTool, Shield, Sparkles, TestTube2, Wrench } from 'lucide-react';
 
 const skillGroups: Array<[string, string[]]> = [
+  ['Routing — semantic, not deterministic', ['hapo:route']],
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
   ['Pre-spec discovery', ['ask', 'brainstorm', 'scout', 'research']],
   ['Bounded optimization', ['loop']],
   ['Debug and change safety', ['debug', 'fix']],
-  ['Frontend and product', ['frontend-design', 'frontend-development', 'react-best-practices', 'ui-ux-pro-max', 'web-testing']],
-  ['Backend and platforms', ['backend-development', 'mobile-development', 'devops']],
-  ['Artifacts and media', ['docs', 'agent-browser', 'chrome-devtools', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],
+  ['Product and browser', ['ui-ux-pro-max', 'web-testing', 'agent-browser', 'chrome-devtools']],
+  ['Documents and media — optional when installed', ['docs', 'ai-multimodal', 'docx', 'pdf', 'pptx', 'xlsx']],
 ];
 
 const agents = [

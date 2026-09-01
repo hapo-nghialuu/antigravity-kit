@@ -22,6 +22,7 @@ const backup = require('./lib/backup');
 const manifestLib = require('./lib/manifest');
 
 const { selectLanguage, resolvePlatforms } = require('./phases/select-platform');
+const { selectDocumentSkills } = require('./phases/select-skill-bundles');
 const { copyPlatformFiles } = require('./phases/copy-payload');
 const {
   copyRoutingFile,
@@ -32,6 +33,7 @@ const {
   copyRulesDirectory,
   removeObsoleteAgents
 } = require('./phases/claude-runtime');
+const { reconcileSkillInventory } = require('./phases/skill-inventory');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installCodexRuntime } = require('./phases/codex-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
@@ -58,6 +60,7 @@ function installPlatform(ctx, platformKey) {
   ctx.ui.startSpinner(ctx.t('installingPlatform', { name: platform.name }));
 
   copyPlatformFiles(ctx, platformKey);
+  reconcileSkillInventory(ctx, platformKey);
   removeObsoleteAgents(ctx, platformKey);
 
   if (platformKey === 'claude') {
@@ -102,6 +105,8 @@ Options:
                        Chromium/Playwright). Otherwise prompted interactively.
   --with-rtk           Install the rtk token-saver (binary + Claude Code hook).
                        Otherwise prompted interactively.
+  --with-document-skills     Install docs/DOCX/PDF/PPTX/XLSX/multimodal skills
+  --without-document-skills  Skip or remove CafeKit-owned document skills
   -y, --yes            Non-interactive: skip prompts, use defaults (CI)
   -h, --help           Show this help
   -v, --version        Print version
@@ -161,6 +166,9 @@ async function main() {
       );
       process.exit(result.status ?? 1);
     }
+
+    await selectDocumentSkills(ctx);
+    if (ctx.cancelled) { lock.release(); process.exit(0); }
 
     // ── Pre-run snapshot for rollback ─────────────────────
     // Capture platform folders AND the root files the pipeline mutates

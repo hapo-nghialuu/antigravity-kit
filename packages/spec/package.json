@@ -28,7 +28,13 @@
     "!src/**/.cache/**",
     "!src/**/.state/**",
     "!src/**/.tmp/**",
-    "!src/.codex/**"
+    "!src/.codex/**",
+    "!src/claude/skills/backend-development/**",
+    "!src/claude/skills/frontend-development/**",
+    "!src/claude/skills/frontend-design/**",
+    "!src/claude/skills/mobile-development/**",
+    "!src/claude/skills/devops/**",
+    "!src/claude/skills/react-best-practices/**"
   ],
   "repository": {
     "type": "git",

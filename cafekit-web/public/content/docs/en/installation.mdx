@@ -23,6 +23,19 @@ npx @haposoft/cafekit
 
 The binary is exposed as `cafekit` from `packages/spec/bin/install.js`.
 
+Fresh installs include 18 core skills. The interactive installer offers the
+optional `docs`, `docx`, `pdf`, `pptx`, `xlsx`, and `ai-multimodal` bundle;
+non-interactive installs leave it out unless requested:
+
+```bash
+npx @haposoft/cafekit --with-document-skills
+npx @haposoft/cafekit --without-document-skills
+```
+
+The second command also removes pristine CafeKit-owned copies from an existing
+install. User-modified skill files are preserved. Legacy installs keep the
+bundle enabled on their first upgrade.
+
 ## Upgrade
 
 ```bash
@@ -63,4 +76,4 @@ The installer writes package metadata to:
 - `.claude/cafekit.json`
 - `.codex/cafekit.json`
 
-The metadata includes `packageName`, `version`, `platform`, install timestamps, previous version when available, and the exact install command.
+The metadata also persists the optional document-skill choice.

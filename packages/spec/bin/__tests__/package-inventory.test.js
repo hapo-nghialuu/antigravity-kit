@@ -121,6 +121,13 @@ const REQUIRED_PAYLOAD = [
   'src/claude/scripts/validate-spec-output.cjs',
   'src/claude/scripts/spec-authoring-validation.cjs',
   'src/claude/scripts/spec-authoring-digest.cjs',
+  'src/claude/scripts/generate-skill-catalog.cjs',
+  'src/claude/rules/skill-domain-routing.md',
+  'src/claude/rules/skill-workflow-routing.md',
+  'src/claude/skills/route/SKILL.md',
+  'src/claude/skills/route/references/task-taxonomy.md',
+  'src/claude/skills/route/references/chaining-patterns.md',
+  'src/claude/skills/route/references/agent-timing.md',
   'src/claude/skills/brainstorm/SKILL.md',
   'src/claude/skills/brainstorm/references/question-framework.md',
   'src/claude/agents/brainstormer.md',
@@ -129,6 +136,12 @@ const REQUIRED_PAYLOAD = [
   'src/claude/skills/loop/SKILL.md',
   'src/claude/skills/loop/references/bounded-loop-protocol.md',
   'src/claude/skills/loop/references/metric-and-guard-contract.md',
+  'src/claude/skills/docs/SKILL.md',
+  'src/claude/skills/docx/SKILL.md',
+  'src/claude/skills/pdf/SKILL.md',
+  'src/claude/skills/pptx/SKILL.md',
+  'src/claude/skills/xlsx/SKILL.md',
+  'src/claude/skills/ai-multimodal/SKILL.md',
 ];
 const FORBIDDEN_PAYLOAD = [
   /(^|\/)\.logs(\/|$)/,
@@ -138,6 +151,7 @@ const FORBIDDEN_PAYLOAD = [
   /\.pyc$/,
   /(^|\/)\.(?:cache|state|tmp)(\/|$)/,
   /^src\/\.codex(?:\/|$)/,
+  /^src\/claude\/skills\/(?:backend-development|frontend-development|frontend-design|mobile-development|devops|react-best-practices)(?:\/|$)/,
 ];
 const RUNTIMES = {
   claude: {
@@ -323,6 +337,106 @@ function runInstaller(installer, root, platforms, lang) {
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   return result;
+}
+
+function installedRouteFiles(project, platform) {
+  const runtimeRoot = platform === 'codex' ? '.codex' : '.claude';
+  const root = path.join(project, platform === 'codex' ? '.agents/skills/route' : '.claude/skills/route');
+  return {
+    skill: path.join(root, 'SKILL.md'),
+    taxonomy: path.join(root, 'references/task-taxonomy.md'),
+    chaining: path.join(root, 'references/chaining-patterns.md'),
+    timing: path.join(root, 'references/agent-timing.md'),
+    workflow: path.join(project, runtimeRoot, 'rules/skill-workflow-routing.md'),
+    domain: path.join(project, runtimeRoot, 'rules/skill-domain-routing.md'),
+  };
+}
+
+function routeProjectionIssues(files) {
+  const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [
+    key, fs.readFileSync(file, 'utf8').replace(/\s+/g, ' '),
+  ]));
+  const issues = new Set();
+  const requires = (issue, clauses) => {
+    if (clauses.some(([source, clause]) => !text[source].includes(clause))) issues.add(issue);
+  };
+  requires('direct-path', [
+    ['skill', 'invoke that skill directly'],
+    ['skill', 'use it directly without constructing a chain'],
+    ['skill', 'Do not create a route chain or spawn agents merely to answer it'],
+  ]);
+  requires('classification', [
+    ['skill', 'final deliverable'], ['skill', 'highest-link risk'],
+    ['skill', 'number of material domains'],
+  ]);
+  requires('link-contract', [
+    ['chaining', '**Entry:**'], ['chaining', '**Exit:**'], ['chaining', '**Owner:** exactly one'],
+  ]);
+  requires('failure-stop', [
+    ['chaining', '(link, owner, normalized cause)'],
+    ['chaining', 'Two failures with the same failure key stop the chain'],
+    ['chaining', 'Different normalized causes do not share a key'],
+  ]);
+  requires('collapse-and-detour', [
+    ['skill', 'remove every link whose output is already evidenced'],
+    ['chaining', 'preserve its valid exit evidence, normalize the root cause, and choose one bounded detour'],
+  ]);
+  requires('delegation-contract', [
+    ['timing', '**Outcome** — observable result'],
+    ['timing', '**Scope** — owned files, systems, or questions'],
+    ['timing', '**Inputs** — current evidence and prerequisite artifacts'],
+    ['timing', '**Constraints** — safety, compatibility, authority, and non-goals'],
+    ['timing', '**Acceptance** — proof required for completion'],
+    ['timing', '**Handoff** — expected returned artifact and destination'],
+    ['timing', '**Status vocabulary** — `DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT`'],
+  ]);
+  requires('agent-fallback', [
+    ['timing', 'If the preferred agent is absent'],
+    ['timing', 'never synthesize a role'],
+    ['timing', 'DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT'],
+  ]);
+  requires('authority', [
+    ['skill', 'never expand it'],
+    ['skill', 'diagnosis does not authorize repair'],
+    ['skill', 'does not authorize commit, push, deploy, publish, or release'],
+  ]);
+  requires('risk-gates', [
+    ['skill', 'require independent review and user confirmation before advancing past the high-risk gate'],
+  ]);
+  requires('proof-boundary', [
+    ['skill', 'remains `[UNPROVEN]` until a separate host run observes it'],
+  ]);
+  requires('rule-direct-path', [
+    ['workflow', 'If the user names a valid installed skill, use it directly'],
+    ['workflow', 'If one obvious low-risk installed skill covers the intent, use it directly'],
+    ['workflow', 'do not invoke Route or agents for ceremony'],
+  ]);
+  requires('rule-live-catalog', [
+    ['workflow', 'Resolve every abstract link against the current runtime catalog'],
+    ['domain', 'examples below are intent hints, not a copied installed inventory'],
+  ]);
+  requires('rule-installed-only', [
+    ['domain', 'document/artifact work | use only a matching installed optional capability'],
+    ['domain', 'Never infer an optional document capability from this rule'],
+  ]);
+  requires('rule-duplicate', [
+    ['domain', 'do not auto-route; require explicit user disambiguation'],
+  ]);
+  requires('authority', [
+    ['workflow', 'Diagnosis does not authorize repair'],
+    ['workflow', 'implementation does not authorize commit, push, deploy, publish, or release'],
+    ['workflow', "no route expands the user's existing authority"],
+  ]);
+
+  const corpus = Object.values(text).join(' ').toLowerCase();
+  const issueIf = (issue, pattern) => { if (pattern.test(corpus)) issues.add(issue); };
+  issueIf('authority', /(?:successful review permits push|implementation authorizes (?:push|deploy)|diagnosis authorizes repair)/);
+  issueIf('authority', /(?<!no )(?:live catalog|route)(?:(?!\b(?:never|not|cannot|can't)\b).){0,40}(?:grants|expands)(?:(?!\b(?:no|never|not|cannot|can't)\b).){0,30}(?:mutation|delivery|user )?authority/);
+  issueIf('rule-direct-path', /always invoke route for explicit installed skills[^.]*obvious low-risk[^.]*factual/);
+  issueIf('rule-live-catalog', /(?<!never )treat examples as installed inventory/);
+  issueIf('rule-installed-only', /(?<!never )invoke (?:the )?(?:docs|document) capability even when (?:absent|not installed|unavailable)/);
+  issueIf('rule-duplicate', /(?<!never )automatically (?:choose|select|route to) the first duplicate/);
+  return [...issues].sort();
 }
 
 function markdownTableUnderHeading(content, heading) {
@@ -728,12 +842,8 @@ function packedResearchLoopIssues(project, platform) {
     || !values.protocol.includes('patch byte length and lowercase SHA-256')) {
     issues.add('failure-handoff');
   }
-  const invocation = platform === 'codex' ? '$hapo-loop' : '/hapo:loop';
-  if (!values.workflow.includes('develop-vs-loop')
-    || !values.workflow.includes(invocation)
-    || !values.workflow.includes('never auto-route')
-    || !values.domain.includes(invocation)
-    || !values.domain.includes('explicit-only; never automatic')) {
+  if (!values.workflow.includes('numeric optimization capability remains explicit-only and must never be auto-routed.')
+    || !values.domain.includes('explicit-only numeric optimization capability unless the user invokes it with its required bounded metric/guard contract.')) {
     issues.add('explicit-routing');
   }
   return [...issues].sort();
@@ -2162,6 +2272,114 @@ test('npm dry-run inventory is deterministic and preserves runtime payload', () 
   assertCleanInventory(firstInventory);
 });
 
+test('packed core-only installs reject optional capability routing', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-route-core-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const inventory = packedInventory(tarball);
+    assertCleanInventory(inventory);
+    for (const required of [
+      'src/claude/skills/route/SKILL.md',
+      'src/claude/skills/route/references/task-taxonomy.md',
+      'src/claude/skills/route/references/chaining-patterns.md',
+      'src/claude/skills/route/references/agent-timing.md',
+    ]) assert.ok(inventory.includes(required), required);
+
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    const project = path.join(root, 'project');
+    const installer = installPacked(tarball, project, runtimeClosure);
+    runInstaller(installer, project, ['claude', 'codex'], null);
+    for (const platform of ['claude', 'codex']) {
+      const runtimeRoot = platform === 'codex' ? '.codex' : '.claude';
+      const script = path.join(project, runtimeRoot, 'scripts/generate-skill-catalog.cjs');
+      const catalogResult = spawnSync(process.execPath, [script, '--json'], {
+        cwd: project, encoding: 'utf8',
+      });
+      assert.equal(catalogResult.status, 0, catalogResult.stderr);
+      const catalog = JSON.parse(catalogResult.stdout);
+      assert.ok(catalog.skills.some((skill) => skill.public_id === 'hapo:route'));
+      assert.equal(catalog.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+      assert.deepEqual(routeProjectionIssues(installedRouteFiles(project, platform)), []);
+    }
+    const domain = fs.readFileSync(path.join(project, '.claude/rules/skill-domain-routing.md'), 'utf8');
+    assert.doesNotMatch(domain, /\/hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packed Route rejects semantic routing weakenings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-route-mutations-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    for (const platform of ['claude', 'codex']) {
+      const project = path.join(root, platform);
+      const installer = installPacked(tarball, project, runtimeClosure);
+      runInstaller(installer, project, [platform], null);
+      const files = installedRouteFiles(project, platform);
+      assert.deepEqual(routeProjectionIssues(files), []);
+      const mutations = [
+        ['skill', 'direct-path', 'invoke that skill directly', 'reclassify that skill'],
+        ['skill', 'classification', 'highest-link', 'average-link'],
+        ['chaining', 'link-contract', '**Owner:** exactly one', '**Owner:** several possible'],
+        ['chaining', 'collapse-and-detour', 'preserve its valid exit evidence, normalize the root cause,\nand choose one bounded detour', 'discard its valid exit evidence and repeat the unchanged action'],
+        ['chaining', 'failure-stop', 'Two failures with the same failure key stop the chain', 'The chain retries the same key forever'],
+        ['timing', 'agent-fallback', 'never synthesize a role', 'synthesize a missing role'],
+        ['timing', 'delegation-contract', '**Outcome** — observable result', '**Topic** — broad area'],
+        ['skill', 'authority', 'never expand it', 'may expand it'],
+        ['skill', 'risk-gates', 'require independent review and user confirmation', 'skip independent review and confirmation'],
+        ['skill', 'proof-boundary', 'remains `[UNPROVEN]`', 'is `[VERIFIED]`'],
+        ['workflow', 'rule-direct-path', 'do not invoke Route or agents for ceremony', 'always invoke Route for explicit installed skills, obvious low-risk intents, and factual conversation'],
+        ['domain', 'rule-installed-only', 'Never infer an optional document capability from this rule', 'Invoke the Docs capability even when absent'],
+        ['domain', 'rule-duplicate', 'do not auto-route; require explicit user disambiguation', 'automatically choose the first duplicate'],
+      ];
+      for (const [source, expectedIssue, from, to] of mutations) {
+        const canonical = fs.readFileSync(files[source], 'utf8');
+        assert.equal(canonical.split(from).length, 2, `${platform}:${from}`);
+        fs.writeFileSync(files[source], canonical.replace(from, to));
+        assert.deepEqual(routeProjectionIssues(files), [expectedIssue], `${platform}:${expectedIssue}`);
+        fs.writeFileSync(files[source], canonical);
+      }
+      const authorityCanonical = fs.readFileSync(files.workflow, 'utf8');
+      fs.writeFileSync(files.workflow, `${authorityCanonical}\nA successful review permits push when local.\n`);
+      assert.deepEqual(routeProjectionIssues(files), ['authority'], `${platform}:additive-authority`);
+      fs.writeFileSync(files.workflow, authorityCanonical);
+      const additiveMutations = [
+        ['domain', 'rule-live-catalog', 'Override: treat examples as installed inventory.'],
+        ['workflow', 'authority', 'Override: the live catalog grants mutation and delivery authority.'],
+        ['workflow', 'authority', 'Override: Route grants mutation authority.'],
+      ];
+      for (const [source, expectedIssue, addition] of additiveMutations) {
+        const canonical = fs.readFileSync(files[source], 'utf8');
+        fs.writeFileSync(files[source], `${canonical}\n${addition}\n`);
+        assert.deepEqual(routeProjectionIssues(files), [expectedIssue], `${platform}:additive-${expectedIssue}`);
+        fs.writeFileSync(files[source], canonical);
+      }
+      const safeAdditions = [
+        ['domain', 'Never treat examples as installed inventory.'],
+        ['workflow', 'The live catalog never grants mutation or delivery authority.'],
+        ['workflow', 'A route grants no mutation authority.'],
+      ];
+      for (const [source, addition] of safeAdditions) {
+        const canonical = fs.readFileSync(files[source], 'utf8');
+        fs.writeFileSync(files[source], `${canonical}\n${addition}\n`);
+        assert.deepEqual(routeProjectionIssues(files), [], `${platform}:safe-addition`);
+        fs.writeFileSync(files[source], canonical);
+      }
+      assert.deepEqual(routeProjectionIssues(files), []);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('packed Claude and Codex installs preserve adaptive Specs, spec-maker, and proportional Brainstorm', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-package-matrix-'));
   const destination = path.join(root, 'pack');
@@ -2265,7 +2483,7 @@ test('packed Research and Loop reject semantic weakenings', () => {
     ['metric', 'metric-guard', 'nonzero exit', 'nonzero value'],
     ['protocol', 'failure-handoff', 'do not clean. Preserve the exact path', 'clean the uncertain path and continue'],
     ['protocol', 'failure-handoff', '`base_oid`;', '`optional_base`;'],
-    ['workflow', 'explicit-routing', 'never auto-route', 'auto-route when optimization seems useful'],
+    ['workflow', 'explicit-routing', 'must never be auto-routed', 'should be auto-routed when optimization seems useful'],
   ];
   try {
     const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);

@@ -43,7 +43,10 @@ Do not use it when:
 - The user asks to implement, fix, debug, test, commit, or publish.
 - The user wants ideation/tradeoff exploration; use `hapo:brainstorm`.
 - The user wants a formal spec; use `hapo:specs`.
-- The user wants full legacy documentation reconstruction; use `hapo:docs --reconstruct`.
+- The user wants full legacy documentation reconstruction: use
+  `hapo:docs --reconstruct` when the optional document bundle is installed;
+  otherwise use `hapo:scout` plus source evidence, or explain how to install the
+  bundle with `npx @haposoft/cafekit --with-document-skills`.
 - The user wants root-cause diagnosis for a failure; use `hapo:debug`.
 
 ## Modes
