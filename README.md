@@ -42,6 +42,7 @@ CafeKit installs a native runtime bundle for each supported coding agent:
 - optional `hapo:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install — `hapo:docs` consumes a post-task docs checkpoint (`none | minor | major`, updating only affected existing docs), gates delegation behind the Delegation Gate, and keeps the `Observed | Inferred | Unknown` evidence taxonomy
 - `hapo:test` and `hapo:code-review` for verification
 - supporting hooks, agents, rules, and platform-native runtime integration
+- a configurable Claude statusline driven by `.claude/runtime.json` — `"statusline"` picks the mode (`full`/`compact`/`minimal`/`none`), `statuslineColors` toggles ANSI colors, and an optional `statuslineLayout` (`{ "lines": [["model", "context"], ["directory", "git"]] }`) composes lines from the section ids `model`, `context`, `quota`, `directory`, `git`, `plan`, `cost`, `changes`; leaving the key out keeps the default output unchanged
 
 CafeKit uses rule-based skill routing guidance and an installed skill catalog.
 Agents choose the right `hapo:*` skill from workflow/domain rules instead of

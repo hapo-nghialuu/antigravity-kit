@@ -138,6 +138,23 @@ cat .claude/cafekit.json
 cat .codex/cafekit.json
 ```
 
+### Statusline configuration
+
+The Claude statusline reads three keys from `.claude/runtime.json`:
+
+- `"statusline"`: render mode — `full` (default), `compact`, `minimal`, or `none`.
+- `statuslineColors`: set `false` to disable ANSI colors (`NO_COLOR` also wins).
+- `statuslineLayout`: optional custom layout. Global shape
+  `{ "lines": [["model", "context"], ["directory", "git"]] }` — each inner
+  array is one output line; modes only slice the line count (minimal = first
+  line, compact = first two, full = all). Valid section ids: `model`,
+  `context`, `quota`, `directory`, `git`, `plan`, `cost`, `changes`. Unknown
+  ids are ignored; an empty or invalid layout falls back to the default
+  renderers, and leaving the key out keeps the default output unchanged. The
+  `cost` section renders only when enabled here, billing mode is API, and cost
+  data exists. Quota shows five-hour and weekly windows only while the usage
+  cache is fresh.
+
 ## Core Skills
 
 CafeKit ships many skills, but the main release surface is:
