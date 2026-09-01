@@ -39,16 +39,16 @@ The adaptive docs contract survives projection into installed Claude and Codex l
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 65b3ec24fd7236d90013b87c157177502780ee53
-Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
+Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
+Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
 ```text
 $ npm --prefix packages/spec test
 ✔ hapo:docs adaptive contract is complete and bounded
 ✔ hapo:docs checker rejects 18 semantic weakenings
-✔ Codex installed Docs preserves the adaptive contract (1846.942958ms)
-✔ packed Claude and Codex installs reject adaptive Docs semantic weakenings (5805.908333ms)
-✔ repository and package guides document adaptive Docs usage (0.757083ms)
-[skill-test] PASS: 1153 tests executed
+✔ Codex installed Docs preserves the adaptive contract (2025.798708ms)
+✔ packed Claude and Codex installs reject adaptive Docs semantic weakenings (9881.728167ms)
+✔ repository and package guides document adaptive Docs usage (1.696166ms)
+[skill-test] PASS: 1154 tests executed
 Exit: 0
 Reachability: npm test -> bin/__tests__ suites -> disposable native/packed installs under mkdtemp with --with-document-skills -> docsProjectionIssues/packedDocsIssues.
 Negative proof: 5 Codex-native mutations plus 2 platforms x 4 packed mutation groups (exercised coverage assertion = 8) each produced its exact issue set; the absent-by-default catalog assertion stays untouched.

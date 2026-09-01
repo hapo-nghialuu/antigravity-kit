@@ -51,11 +51,11 @@ Brainstorm spends ceremony only on unresolved material choices while preserving 
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 65b3ec24fd7236d90013b87c157177502780ee53
-Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
+Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
+Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
 ```text
 ✔ hapo:brainstorm proportional routing contract is complete and bounded; src/claude/skills/brainstorm/SKILL.md=209 (+21), src/claude/skills/brainstorm/references/question-framework.md=170 (-62), src/claude/agents/brainstormer.md=69 (-17); total 448/506
 ✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=70
-[skill-test] PASS: 524 focused static tests executed
+[skill-test] PASS: 525 focused static tests executed
 Proportional mutations=70; adaptive mutations=43; adaptive groups=10.
 ```

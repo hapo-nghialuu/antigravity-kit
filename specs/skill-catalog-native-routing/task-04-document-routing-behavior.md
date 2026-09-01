@@ -39,8 +39,8 @@ Repository, package, and localized web guides explain discovery, selection, load
 Verification: PASS
 Command: node -e "const fs=require('fs');const files=['README.md','packages/spec/README.md','cafekit-web/public/content/docs/en/reference.mdx','cafekit-web/public/content/docs/vi/reference.mdx','cafekit-web/public/content/docs/ja/reference.mdx'];for(const f of files){const s=fs.readFileSync(f,'utf8');for(const p of [/hapo[: -]route/i,/progressive disclosure|metadata/i,/UNPROVEN|not deterministic|không.*đảm bảo|非決定/i,/hooks?.*(not|không|ではない).*rout/i])if(!p.test(s))throw new Error(f+' missing '+p)}" && pnpm --dir cafekit-web lint && pnpm --dir cafekit-web build
 Exit: 0
-Base: 65b3ec24fd7236d90013b87c157177502780ee53
-Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
+Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
+Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
 
 ```text
 inline reference-guide routing contract: PASS (5/5 guides)

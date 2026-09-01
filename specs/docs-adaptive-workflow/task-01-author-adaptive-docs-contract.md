@@ -42,8 +42,8 @@ Status: done
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 65b3ec24fd7236d90013b87c157177502780ee53
-Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
+Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
+Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
 ```text
 $ node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 ✔ hapo:docs adaptive contract is complete and bounded
@@ -60,7 +60,7 @@ $ node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 ✔ docs validator accepts configured docs root argument
 ✔ reconstruct validator is packaged and enforces evidence IDs
 ✔ reconstruct validator requires overview and bundle registry
-[skill-test] PASS: 524 focused static tests executed
+[skill-test] PASS: 525 focused static tests executed
 Exit: 0
 Reachability: --static-only -> runStaticSemanticTests() -> runDocsAdaptiveContractTests().
 Negative proof: exact issue-set assertions covered 5 nonempty invariant groups and 18 docs mutations; all four delegation sites carry their own mutation and every invariant has at least one forbidden-pattern assertion.
