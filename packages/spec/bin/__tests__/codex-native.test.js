@@ -62,6 +62,13 @@ const TEST_BUNDLE = [
   'references/test-memory.md'
 ];
 const TEST_RUNNER_SOURCE_PATH = path.join(PACKAGE_ROOT, 'src/claude/agents/test-runner.md');
+const DOCS_ADAPTIVE_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/docs');
+const DOCS_ADAPTIVE_BUNDLE = [
+  'SKILL.md',
+  'references/init-workflow.md',
+  'references/update-workflow.md',
+  'references/standard-docs-workflow.md'
+];
 const HOTFIX_SOURCE_ROOT = path.join(PACKAGE_ROOT, 'src/claude/skills/hotfix');
 const HOTFIX_BUNDLE = [
   'SKILL.md',
@@ -2858,6 +2865,129 @@ test('Codex installed Fix preserves the adaptive repair contract', () => {
       }
       assert.deepEqual(fs.readFileSync(target), original, `${mutation.name} byte restore`);
       assert.deepEqual(hotfixProjectionIssues(readProjection()), []);
+    }
+    for (const [sourcePath, expected] of sourceBytes) {
+      assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+    }
+  });
+});
+
+function docsProjectionIssues(files) {
+  const compact = (value) => String(value).replace(/\s+/g, ' ').trim();
+  const skill = compact(files.skill);
+  const init = compact(files.init);
+  const update = compact(files.update);
+  const standard = compact(files.standard);
+  const issues = new Set();
+  if (!skill.includes('The user explicitly requested or permitted delegation or parallel agents.')
+    || !skill.includes('The active runtime exposes an Explore/delegation capability.')
+    || !skill.includes('at least two distinct, non-overlapping scopes')
+    || !skill.includes('Otherwise continue sequentially in the main agent')
+    || !skill.includes('only through the Delegation Gate above')
+    || !init.includes('only through the Delegation Gate in `../SKILL.md`')
+    || !update.includes('only through the Delegation Gate in `../SKILL.md`')
+    || skill.includes('when delegation is available')
+    || init.includes('when delegation is available')
+    || update.includes('when delegation is available')) {
+    issues.add('delegation-gate');
+  }
+  if (!skill.includes('## Post-Task Docs Checkpoint')
+    || !skill.includes('`none`: report that no docs change is needed and edit nothing.')
+    || !skill.includes('A checkpoint never invents a new document')
+    || !skill.includes('never auto-selects `init` and overrides')
+    || !skill.includes('report the gap and recommend an explicit')
+    || !standard.includes('checkpoint contract in `../SKILL.md`')
+    || skill.includes('checkpoint may create')) {
+    issues.add('docs-checkpoint');
+  }
+  if (!skill.includes('Type: Observed | Inferred | Unknown')
+    || !skill.includes('Confidence: High | Medium | Low')
+    || skill.includes('evidence is optional')) {
+    issues.add('evidence-taxonomy');
+  }
+  if (!skill.includes('## Reconstruction Is Not Specs')
+    || skill.includes('are advisory')) {
+    issues.add('reconstruction-boundary');
+  }
+  return [...issues].sort();
+}
+
+test('Codex installed Docs preserves the adaptive contract', () => {
+  inTempProject((root) => {
+    const sourceBytes = new Map(DOCS_ADAPTIVE_BUNDLE.map((relative) => [
+      path.join(DOCS_ADAPTIVE_SOURCE_ROOT, relative),
+      fs.readFileSync(path.join(DOCS_ADAPTIVE_SOURCE_ROOT, relative))
+    ]));
+    const result = install(root, ['--with-document-skills']);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    const installedRoot = path.join(root, '.agents/skills/docs');
+    for (const relative of DOCS_ADAPTIVE_BUNDLE) {
+      const sourcePath = path.join(DOCS_ADAPTIVE_SOURCE_ROOT, relative);
+      assert.equal(
+        fs.readFileSync(path.join(installedRoot, relative), 'utf8'),
+        normalizeCodexBody(fs.readFileSync(sourcePath, 'utf8'), sourcePath),
+        `Codex Docs projection drifted: ${relative}`
+      );
+    }
+    const readProjection = () => ({
+      skill: fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8'),
+      init: fs.readFileSync(path.join(installedRoot, 'references/init-workflow.md'), 'utf8'),
+      update: fs.readFileSync(path.join(installedRoot, 'references/update-workflow.md'), 'utf8'),
+      standard: fs.readFileSync(path.join(installedRoot, 'references/standard-docs-workflow.md'), 'utf8'),
+    });
+    assert.match(readProjection().skill, /name: hapo-docs/);
+    assert.deepEqual(docsProjectionIssues(readProjection()), []);
+
+    const mutations = [
+      {
+        name: 'gate-loses-user-clause', file: 'SKILL.md',
+        from: 'The user explicitly requested or permitted delegation or parallel agents.',
+        to: 'Delegation is at the agent\'s discretion.',
+        expected: ['delegation-gate']
+      },
+      {
+        name: 'keeper-ungated-returns', file: 'SKILL.md',
+        from: 'only through the Delegation Gate above', to: 'when delegation is available',
+        expected: ['delegation-gate']
+      },
+      {
+        name: 'checkpoint-invents-doc', file: 'SKILL.md',
+        from: 'A checkpoint never invents a new document', to: 'A checkpoint may create missing documents',
+        expected: ['docs-checkpoint']
+      },
+      {
+        name: 'taxonomy-drops-inferred', file: 'SKILL.md',
+        from: 'Type: Observed | Inferred | Unknown', to: 'Type: Observed | Unknown',
+        expected: ['evidence-taxonomy']
+      },
+      {
+        name: 'reconstruction-becomes-advisory', file: 'SKILL.md',
+        from: '## Reconstruction Is Not Specs',
+        to: '## Reconstruction Is Not Specs\n\nThe prohibitions below are advisory.',
+        expected: ['reconstruction-boundary']
+      }
+    ];
+    for (const mutation of mutations) {
+      const target = path.join(installedRoot, mutation.file);
+      const original = fs.readFileSync(target);
+      const content = original.toString('utf8');
+      const anchor = content.indexOf(mutation.from);
+      assert.ok(anchor >= 0, `${mutation.name} mutation anchor must exist`);
+      assert.equal(
+        content.indexOf(mutation.from, anchor + mutation.from.length),
+        -1,
+        `${mutation.name} mutation anchor must be unique`
+      );
+      const weakened = `${content.slice(0, anchor)}${mutation.to}${content.slice(anchor + mutation.from.length)}`;
+      try {
+        fs.writeFileSync(target, weakened);
+        assert.deepEqual(docsProjectionIssues(readProjection()), mutation.expected, mutation.name);
+      } finally {
+        fs.writeFileSync(target, original);
+      }
+      assert.deepEqual(fs.readFileSync(target), original, `${mutation.name} byte restore`);
+      assert.deepEqual(docsProjectionIssues(readProjection()), []);
     }
     for (const [sourcePath, expected] of sourceBytes) {
       assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);

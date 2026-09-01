@@ -327,8 +327,8 @@ function installPacked(tarball, root, runtimeClosure) {
   return installer;
 }
 
-function runInstaller(installer, root, platforms, lang) {
-  const args = ['--platform', platforms.join(','), '--yes'];
+function runInstaller(installer, root, platforms, lang, extraArgs = []) {
+  const args = ['--platform', platforms.join(','), '--yes', ...extraArgs];
   if (lang) args.push('--lang', lang);
   const result = spawnSync(process.execPath, [installer, ...args], {
     cwd: root,
@@ -2868,6 +2868,130 @@ test('website keeps process-first docs, canonical public names, and historical l
     assert.match(opencode, /0\.17/);
     assert.match(opencode, /warning/);
     assert.match(opencode, /histor|lịch sử|migration/i);
+  }
+});
+
+const DOCS_ADAPTIVE_SOURCE_RELATIVES = {
+  skill: 'src/claude/skills/docs/SKILL.md',
+  init: 'src/claude/skills/docs/references/init-workflow.md',
+  update: 'src/claude/skills/docs/references/update-workflow.md',
+  standard: 'src/claude/skills/docs/references/standard-docs-workflow.md',
+};
+
+function packedDocsIssues(files) {
+  const compact = (value) => String(value).replace(/\s+/g, ' ').trim();
+  const skill = compact(files.skill);
+  const init = compact(files.init);
+  const update = compact(files.update);
+  const standard = compact(files.standard);
+  const issues = new Set();
+  if (!skill.includes('The user explicitly requested or permitted delegation or parallel agents.')
+    || !skill.includes('only through the Delegation Gate above')
+    || !init.includes('only through the Delegation Gate in `../SKILL.md`')
+    || !update.includes('only through the Delegation Gate in `../SKILL.md`')
+    || skill.includes('when delegation is available')
+    || init.includes('when delegation is available')
+    || update.includes('when delegation is available')) {
+    issues.add('delegation-gate');
+  }
+  if (!skill.includes('## Post-Task Docs Checkpoint')
+    || !skill.includes('A checkpoint never invents a new document')
+    || !skill.includes('never auto-selects `init` and overrides')
+    || !standard.includes('checkpoint contract in `../SKILL.md`')
+    || skill.includes('checkpoint may create')) {
+    issues.add('docs-checkpoint');
+  }
+  if (!skill.includes('Type: Observed | Inferred | Unknown')
+    || skill.includes('evidence is optional')) {
+    issues.add('evidence-taxonomy');
+  }
+  if (!skill.includes('## Reconstruction Is Not Specs')
+    || skill.includes('are advisory')) {
+    issues.add('reconstruction-boundary');
+  }
+  return [...issues].sort();
+}
+
+test('packed Claude and Codex installs reject adaptive Docs semantic weakenings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-packed-docs-adaptive-'));
+  const destination = path.join(root, 'pack');
+  fs.mkdirSync(destination, { recursive: true });
+  const canonicalBytes = new Map(Object.values(DOCS_ADAPTIVE_SOURCE_RELATIVES).map((relative) => {
+    const sourcePath = path.join(PACKAGE_ROOT, relative);
+    return [sourcePath, fs.readFileSync(sourcePath)];
+  }));
+  try {
+    const packed = npmPack(['--pack-destination', destination, '--json'], PACKAGE_ROOT);
+    const tarball = path.join(destination, packed.filename);
+    const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
+    assertCleanInventory(packedInventory(tarball));
+    const layouts = {
+      claude: { skillsRoot: '.claude/skills/docs' },
+      codex: { skillsRoot: '.agents/skills/docs' },
+    };
+    const exercised = new Set();
+    for (const [platform, layout] of Object.entries(layouts)) {
+      const project = path.join(root, platform);
+      const installer = installPacked(tarball, project, runtimeClosure);
+      runInstaller(installer, project, [platform], null, ['--with-document-skills']);
+      const readInstalled = () => ({
+        skill: fs.readFileSync(path.join(project, layout.skillsRoot, 'SKILL.md'), 'utf8'),
+        init: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/init-workflow.md'), 'utf8'),
+        update: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/update-workflow.md'), 'utf8'),
+        standard: fs.readFileSync(path.join(project, layout.skillsRoot, 'references/standard-docs-workflow.md'), 'utf8'),
+      });
+      assert.deepEqual(packedDocsIssues(readInstalled()), [], `${platform} docs baseline`);
+      const mutations = [
+        { group: 'delegation-gate', file: 'SKILL.md', from: 'only through the Delegation Gate above', to: 'when delegation is available' },
+        { group: 'docs-checkpoint', file: 'SKILL.md', from: 'A checkpoint never invents a new document', to: 'A checkpoint may create missing documents' },
+        { group: 'evidence-taxonomy', file: 'SKILL.md', from: 'Type: Observed | Inferred | Unknown', to: 'Type: Observed | Unknown' },
+        { group: 'reconstruction-boundary', file: 'SKILL.md', from: '## Reconstruction Is Not Specs', to: '## Reconstruction Is Not Specs\n\nThe prohibitions below are advisory.' },
+      ];
+      for (const mutation of mutations) {
+        const target = path.join(project, layout.skillsRoot, mutation.file);
+        const original = fs.readFileSync(target);
+        const content = original.toString('utf8');
+        const anchor = content.indexOf(mutation.from);
+        assert.ok(anchor >= 0, `${platform} ${mutation.group} mutation anchor must exist`);
+        assert.equal(
+          content.indexOf(mutation.from, anchor + mutation.from.length),
+          -1,
+          `${platform} ${mutation.group} mutation anchor must be unique`
+        );
+        try {
+          fs.writeFileSync(target, `${content.slice(0, anchor)}${mutation.to}${content.slice(anchor + mutation.from.length)}`);
+          assert.deepEqual(
+            packedDocsIssues(readInstalled()),
+            [mutation.group],
+            `${platform} ${mutation.group} must fail with its exact issue`
+          );
+        } finally {
+          fs.writeFileSync(target, original);
+        }
+        assert.deepEqual(packedDocsIssues(readInstalled()), [], `${platform} ${mutation.group} restore`);
+        for (const [sourcePath, expected] of canonicalBytes) {
+          assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
+        }
+        exercised.add(`${platform}:${mutation.group}`);
+      }
+    }
+    assert.equal(exercised.size, 8, 'docs mutations must cover both platforms and all four groups');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('repository and package guides document adaptive Docs usage', () => {
+  const guides = {
+    repository: fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../README.md'), 'utf8'),
+    package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
+  };
+  for (const [name, guide] of Object.entries(guides)) {
+    assert.match(guide, /hapo:docs/, `${name} guide names docs`);
+    assert.match(guide, /post-task docs checkpoint/i, `${name} guide documents the checkpoint`);
+    assert.match(guide, /Delegation Gate/, `${name} guide documents the gate`);
+    assert.match(guide, /Observed \| Inferred \| Unknown/, `${name} guide documents the evidence taxonomy`);
+    assert.doesNotMatch(guide, /docs[^\n]*\b\d+(?:\.\d+)?\s*(?:%|x faster|seconds|minutes|ms)\b/i, `${name} guide must not invent timing claims`);
   }
 });
 
