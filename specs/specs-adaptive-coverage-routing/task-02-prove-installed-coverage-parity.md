@@ -59,8 +59,8 @@ Aggregate: pass=1021 fail=0 skipped=1; Exit: 0.
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 16c4fbc01b25a1d64ebd825607a8e6ff09e4e788
-Head: 93a415002eb3d682ec54225314e91fb559a1cf64d60644aa0a5dc8c1d81362b9
+Base: 4560f0896a2306dcb68284bd80babafaae6980c9
+Head: 08847618733be316ffe34f9ad7624b06bce29e5a524602644ee78dc037e13e96
 ```text
 $ npm --prefix packages/spec test
 ✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
