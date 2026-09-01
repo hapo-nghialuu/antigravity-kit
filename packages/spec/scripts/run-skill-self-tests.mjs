@@ -4469,6 +4469,15 @@ async function runStaticSemanticTests() {
         !content.includes("critical_issues[]"),
     },
     {
+      label: "code-auditor speaks the shared verdict surface",
+      file: "src/claude/agents/code-auditor.md",
+      assert: (content) =>
+        content.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED") &&
+        content.includes("The definition of `PASS` defers to `hapo:code-review`") &&
+        content.includes("cannot finish a task") &&
+        !content.includes("at most one Medium"),
+    },
+    {
       label: "test-runner performs scope and runtime reachability audits",
       file: "src/claude/agents/test-runner.md",
       assert: (content) =>

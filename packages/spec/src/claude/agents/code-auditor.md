@@ -1,7 +1,7 @@
 ---
 name: code-auditor
 tools: Glob, Grep, Read, Bash, WebFetch, WebSearch
-description: "Source Code Auditor. Verifies code quality, severities (🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low), Automatic Criticals, and task/spec completion drift. Returns one review verdict: PASS | FAIL | BLOCKED."
+description: "Source Code Auditor. Verifies code quality, severities (🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low), Automatic Criticals, and task/spec completion drift. Returns one review verdict from the shared surface: PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED."
 ---
 
 # Code Auditor — Source Code Inspector
@@ -113,8 +113,9 @@ Classify each issue by severity (no numeric scoring):
 - **High Issues:** [N]
 - **Medium Issues:** [N]
 - **Scope:** [N files, ~N lines of code]
-- **Verdict:** [PASS | FAIL | BLOCKED]
-- **PASS:** no Critical findings, no High findings, at most one Medium.
+- **Verdict:** [PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED]
+- **PASS:** no Critical or High findings and no blocking Medium finding. The definition of `PASS` defers to `hapo:code-review`; do not redefine it with local severity counts.
+- **PASS_WITH_WARNINGS:** only documented non-blocking findings remain. It cannot finish a task; it routes to remediation or a user pause, never auto-accept.
 - **FAIL:** findings are actionable and map to a file/task/surface; report findings under FAIL.
 - **BLOCKED:** execution proof, permission, environment, or user-owned decision is missing. Stop without blind retries.
 
@@ -146,8 +147,9 @@ When called from `develop` Step 4 (Quality Gate Auto-Fix):
 
 | Condition | Result |
 |-----------|--------|
-| No Critical, no High, at most one Medium | ✅ **PASS** — Proceed to completion |
-| One or more Critical or High, or two or more Medium | ❌ **FAIL** — Return issue list for AI to self-fix |
+| No Critical, no High, no blocking Medium | ✅ **PASS** — Proceed to completion |
+| Only documented non-blocking findings remain | 🟡 **PASS_WITH_WARNINGS** — Remediation or user pause; cannot close a task |
+| One or more Critical, High, or blocking Medium | ❌ **FAIL** — Return issue list for AI to self-fix |
 
 **Automatic Criticals:**
 - Missing required entrypoint/artifact/runtime output named in the task/spec

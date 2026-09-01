@@ -15,7 +15,7 @@ Before ANY deployment, verify:
 
 - [ ] Audit infrastructure configurations, CI/CD pipelines, and runtime constraints from project evidence.
 - [ ] All tests pass (`test-runner` has given a PASS verdict).
-- [ ] Code review verdict is PASS: no Critical findings, no High findings, at most one Medium (`code-auditor`).
+- [ ] Code review verdict is literal PASS on the shared surface (`code-auditor`); PASS_WITH_WARNINGS, FAIL, or BLOCKED does not clear this gate.
 - [ ] For process-first features, `plan.md` names every deployed flat
       `task-NN-*.md`; each is `done` with a current final inline Receipt, no unresolved
       plan/task blocker remains, and the user's
