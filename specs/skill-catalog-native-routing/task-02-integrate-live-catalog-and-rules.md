@@ -43,8 +43,8 @@ Shared rules and generated catalogs resolve capability slots from the current in
 Verification: PASS
 Command: node --test packages/spec/bin/__tests__/skill-routing-source.test.js
 Exit: 0
-Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
-Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
+Base: 36b41525220e750c7dc489ac126f8f32e52f4127
+Head: 1ed24873eb58528ebce594155a772c7197af43207af8dca758f9eb39960d8dde
 
 ```text
 ✔ skill routing consumes live catalog without fixed optional commands

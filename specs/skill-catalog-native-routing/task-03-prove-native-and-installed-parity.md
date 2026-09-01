@@ -45,8 +45,8 @@ Automated installation tests prove equivalent Claude/Codex instruction and proje
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: c87c7fedaad6e0db836792910625b6e6cf6bf360
-Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
+Base: 36b41525220e750c7dc489ac126f8f32e52f4127
+Head: 1ed24873eb58528ebce594155a772c7197af43207af8dca758f9eb39960d8dde
 
 ```text
 ✔ Claude and Codex installed Route preserve proportional live-catalog semantics
@@ -54,5 +54,5 @@ Head: 3364ec2192a2ce6a8e095f1d21dadc152b3970763c358da306cabe548c0924e1
 ✔ installed Route degrades safely when an agent is absent
 ✔ packed core-only installs reject optional capability routing
 ✔ packed Route rejects semantic routing weakenings
-[skill-test] PASS: 1154 tests executed; 1153 passed, 0 failed, 1 opt-in live-host skip
+[skill-test] PASS: 1167 tests executed; 1166 passed, 0 failed, 1 opt-in live-host skip
 ```
