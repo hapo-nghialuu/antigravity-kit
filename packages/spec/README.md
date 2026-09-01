@@ -206,6 +206,13 @@ Fresh non-interactive installs leave them out by default. Use
 copies; user-modified files are preserved. Documentation validators, hooks,
 and the `docs-keeper` agent remain part of the core runtime.
 
+When installed, `hapo:docs` consumes a post-task docs checkpoint from
+Develop/Sync (`none | minor | major` — `none` reports only, `minor`/`major`
+update only affected existing docs, and a checkpoint never invents a new
+document), dispatches `docs-keeper` or parallel readers only through the
+Delegation Gate, and keeps every reconstructed claim on the
+`Observed | Inferred | Unknown` evidence taxonomy.
+
 CafeKit uses rule-based skill routing guidance instead of an automatic prompt-scoring hook. See `.claude/rules/skill-workflow-routing.md`, `.claude/rules/skill-domain-routing.md`, or run:
 
 ```bash

@@ -39,7 +39,7 @@ CafeKit installs a native runtime bundle for each supported coding agent:
 - `hapo:specs` for structured specification work
 - `hapo:develop` for implementation after technical spec readiness and an explicit invocation
 - `hapo:debug` and `hapo:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
-- optional `hapo:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install
+- optional `hapo:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install — `hapo:docs` consumes a post-task docs checkpoint (`none | minor | major`, updating only affected existing docs), gates delegation behind the Delegation Gate, and keeps the `Observed | Inferred | Unknown` evidence taxonomy
 - `hapo:test` and `hapo:code-review` for verification
 - supporting hooks, agents, rules, and platform-native runtime integration
 
