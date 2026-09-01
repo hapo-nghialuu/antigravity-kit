@@ -4931,6 +4931,33 @@ async function runStaticSemanticTests() {
         content.includes("runtime.usage?.enabled === false"),
     },
     {
+      label: "statusline layout contract keeps registry, fallback, cost gate, and weekly anchors",
+      file: "src/claude/status.cjs",
+      assert: (content) =>
+        content.includes("const LAYOUT_SECTION_IDS = ['model', 'context', 'quota', 'directory', 'git', 'plan', 'cost', 'changes']") &&
+        content.includes("invalid layout falls back to the") &&
+        content.includes("if (lines.length === 0) return null") &&
+        content.includes("billingMode === 'api'") &&
+        content.includes("seven_day") &&
+        content.includes("USAGE_CACHE_TTL_MS = 300000"),
+    },
+    {
+      label: "repository guide documents statusline configuration",
+      file: "../../README.md",
+      assert: (content) =>
+        content.includes("statuslineLayout") &&
+        content.includes("statuslineColors") &&
+        content.includes('"statusline"'),
+    },
+    {
+      label: "package guide documents statusline configuration",
+      file: "README.md",
+      assert: (content) =>
+        content.includes("statuslineLayout") &&
+        content.includes("statuslineColors") &&
+        content.includes('"statusline"'),
+    },
+    {
       label: "statusline colors respect runtime config",
       file: "src/claude/status.cjs",
       assert: (content) =>
