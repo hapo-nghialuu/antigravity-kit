@@ -40,8 +40,8 @@ All localized Skills pages and catalog visuals expose Route as the proportional 
 Verification: PASS
 Command: node -e "const fs=require('fs');const en=/(always|guaranteed|guarantees).{0,60}(select|selection|route|routing|dispatch)|(select|selection|route|routing|dispatch).{0,60}(always|guaranteed|guarantees)/i;const vi=/(luôn|luôn luôn|đảm bảo).{0,60}(chọn|lựa chọn|định tuyến)|(chọn|lựa chọn|định tuyến).{0,60}(luôn|luôn luôn|đảm bảo)/i;const ja=/(常に|保証).{0,60}(選択|ルート|ルーティング)|(選択|ルート|ルーティング).{0,60}(常に|保証)/i;const cases=[['cafekit-web/public/content/docs/en/skills.mdx',/document.{0,80}(optional|only when installed)/i,/semantic.{0,80}(not deterministic|does not guarantee)/i,en],['cafekit-web/public/content/docs/vi/skills.mdx',/tài liệu.{0,80}(tùy chọn|chỉ khi.{0,20}cài)/i,/ngữ nghĩa.{0,80}không.{0,20}(tất định|đảm bảo|tự động)/i,vi],['cafekit-web/public/content/docs/ja/skills.mdx',/ドキュメント.{0,80}(オプション|インストール時のみ)/i,/セマンティック.{0,80}(非決定|保証しない|自動ではない)/i,ja],['cafekit-web/src/components/docs/catalog-visuals.tsx',/document.{0,80}(optional|installed)/i,/semantic.{0,80}(not deterministic|does not guarantee)/i,en],['cafekit-web/src/components/docs/skill-overview.tsx',/document.{0,80}(optional|installed)/i,/semantic.{0,80}(not deterministic|does not guarantee)/i,en]];for(const [f,optional,nondeterministic,forbidden] of cases){const s=fs.readFileSync(f,'utf8');if((s.match(/hapo[: -]route/gi)||[]).length!==1||!optional.test(s)||!nondeterministic.test(s)||forbidden.test(s))throw new Error(f+' routing contract')}" && node -e "const s=require('fs').readFileSync('cafekit-web/src/components/docs/skill-overview.tsx','utf8');if(!s.includes(\"getSkillDetails(normalized).filter(([slug]) => slug !== 'docs')\"))throw new Error('main grid exposes optional docs')" && pnpm --dir cafekit-web lint && pnpm --dir cafekit-web build
 Exit: 0
-Base: 4560f0896a2306dcb68284bd80babafaae6980c9
-Head: 08847618733be316ffe34f9ad7624b06bce29e5a524602644ee78dc037e13e96
+Base: 65b3ec24fd7236d90013b87c157177502780ee53
+Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
 
 ```text
 inline Skills-surface Route presence contract: PASS (5/5 surfaces)

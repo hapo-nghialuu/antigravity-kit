@@ -42,11 +42,11 @@ CafeKit exposes `hapo:route`, reproducing AgentKit's proportional classification
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 4560f0896a2306dcb68284bd80babafaae6980c9
-Head: 08847618733be316ffe34f9ad7624b06bce29e5a524602644ee78dc037e13e96
+Base: 65b3ec24fd7236d90013b87c157177502780ee53
+Head: cb1c1689e0a5075ebd2d6dac25eceead2e0eff9867b03452e37a2251ea3bccbd
 
 ```text
 ✔ hapo:route proportional installed-capability contract is complete and bounded
 ✔ hapo:route checker rejects semantic routing weakenings
-[skill-test] PASS: 505 focused static tests executed
+[skill-test] PASS: 524 focused static tests executed
 ```
