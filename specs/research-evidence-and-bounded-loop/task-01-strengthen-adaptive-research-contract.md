@@ -52,11 +52,11 @@ without forcing delegation or persistent files.
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 65fd5d0bbfb4700b50339897009e2df9fcb6877a
-Head: bde4bb7e559cb7a15b8d10c9909a10b149724a214769b24e5b6bb4d24e6c954c
+Base: 16c4fbc01b25a1d64ebd825607a8e6ff09e4e788
+Head: 93a415002eb3d682ec54225314e91fb559a1cf64d60644aa0a5dc8c1d81362b9
 
 ```text
 ✔ hapo:research adaptive evidence contract is complete and bounded
 ✔ hapo:research checker rejects semantic weakenings; count=18
-[skill-test] PASS: 470 focused static tests executed
+[skill-test] PASS: 505 focused static tests executed
 ```

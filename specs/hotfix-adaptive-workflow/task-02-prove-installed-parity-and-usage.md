@@ -62,8 +62,8 @@ Review: PASS — code-auditor initial FAIL (1 High: installed confidence-score c
 Verification: PASS
 Command: npm --prefix packages/spec test
 Exit: 0
-Base: 65fd5d0bbfb4700b50339897009e2df9fcb6877a
-Head: bde4bb7e559cb7a15b8d10c9909a10b149724a214769b24e5b6bb4d24e6c954c
+Base: 16c4fbc01b25a1d64ebd825607a8e6ff09e4e788
+Head: 93a415002eb3d682ec54225314e91fb559a1cf64d60644aa0a5dc8c1d81362b9
 ```text
 $ npm --prefix packages/spec test
 ✔ hapo:fix adaptive contract is complete and bounded
@@ -71,7 +71,7 @@ $ npm --prefix packages/spec test
 ✔ Codex installed Fix preserves the adaptive repair contract
 ✔ packed Claude and Codex installs reject adaptive Fix semantic weakenings
 ✔ repository and package guides document adaptive Fix usage
-[skill-test] PASS: 1078 tests executed
+[skill-test] PASS: 1131 tests executed
 Exit: 0
 Reachability: npm test -> bin/__tests__ suites -> disposable native/packed installs under mkdtemp -> hotfixProjectionIssues/packedHotfixIssues.
 Negative proof: Codex-native mutations plus 2 platforms x 5 packed mutation groups (coverage assertion = 10) each produced its exact issue set, including the public-rename revert and confidence-score counterexamples on installed copies.
