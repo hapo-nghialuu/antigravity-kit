@@ -41,8 +41,8 @@ The shipped statusline renders a config-driven `statuslineLayout`, weekly quota 
 Verification: PASS
 Command: node --test packages/spec/src/claude/hooks/__tests__/statusline.test.js
 Exit: 0
-Base: 36b41525220e750c7dc489ac126f8f32e52f4127
-Head: 1ed24873eb58528ebce594155a772c7197af43207af8dca758f9eb39960d8dde
+Base: 8a865906308f73c5f28b682816e4c5e409cd2eb8
+Head: 35cd1eb2446bd0cde219e8592637d82ba95052e9d7fb35ace61b62ac1fe7eb3a
 ```text
 $ node --test packages/spec/src/claude/hooks/__tests__/statusline.test.js
 ✔ statusline default output is byte-identical to the golden fixture when no layout is configured

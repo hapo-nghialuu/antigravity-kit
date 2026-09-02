@@ -44,8 +44,8 @@ Specs converts a broad or ambiguous request into the smallest correct workflow a
 Verification: PASS
 Command: node packages/spec/scripts/run-skill-self-tests.mjs --static-only
 Exit: 0
-Base: 36b41525220e750c7dc489ac126f8f32e52f4127
-Head: 1ed24873eb58528ebce594155a772c7197af43207af8dca758f9eb39960d8dde
+Base: 8a865906308f73c5f28b682816e4c5e409cd2eb8
+Head: 35cd1eb2446bd0cde219e8592637d82ba95052e9d7fb35ace61b62ac1fe7eb3a
 ```text
 ✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: src/claude/skills/specs/SKILL.md -19, src/claude/skills/specs/references/review.md +3, src/claude/skills/specs/references/templates.md +16; total 750/750
 [skill-test] PASS: 528 focused static tests executed
