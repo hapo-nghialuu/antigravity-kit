@@ -122,6 +122,8 @@ const REQUIRED_PAYLOAD = [
   'src/claude/scripts/spec-authoring-validation.cjs',
   'src/claude/scripts/spec-authoring-digest.cjs',
   'src/claude/scripts/generate-skill-catalog.cjs',
+  'src/claude/rules/process-management.md',
+  'src/claude/rules/review-audit-self-decision.md',
   'src/claude/rules/skill-domain-routing.md',
   'src/claude/rules/skill-workflow-routing.md',
   'src/claude/skills/route/SKILL.md',

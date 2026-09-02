@@ -13,6 +13,10 @@
   root is `.agents/skills`. Use `$hapo-route` only for ambiguous, multi-step,
   multi-domain, or risk-elevated work; explicit, obvious, and factual intents
   stay direct.
+- Consult `.codex/rules/review-audit-self-decision.md` before applying audit
+  feedback, reversing a verified or user decision, or cutting scope, and
+  `.codex/rules/process-management.md` whenever a task starts, reuses, or ends
+  long-running processes.
 - Project hooks live in `.codex/hooks.json`; review trusted hooks with `/hooks`.
 - New Specs work uses the process-first flow. `$hapo-specs` opens C1, writes
   `specs/<feature>/plan.md` with flat `task-NN-*.md` files beside it, then opens

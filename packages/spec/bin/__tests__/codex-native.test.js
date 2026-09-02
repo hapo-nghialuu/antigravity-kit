@@ -2052,6 +2052,8 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
       '.codex/rules/workflow.md',
       '.codex/rules/hook-protocols.md',
       '.codex/rules/state-sync.md',
+      '.codex/rules/review-audit-self-decision.md',
+      '.codex/rules/process-management.md',
       '.codex/scripts/spec-ground.cjs',
       '.codex/scripts/validate-spec-output.cjs',
       '.agents/.gitignore',
@@ -3139,6 +3141,57 @@ test('combined installs bind each catalog to its native runtime inventory', () =
     assert.equal(codex.root, fs.realpathSync(path.join(root, '.agents/skills')));
     assert.equal(claude.skills.some((skill) => skill.public_id === 'hapo:docs'), true);
     assert.equal(codex.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+  });
+});
+
+test('Claude and Codex installed rules preserve the ported review and process guidance', () => {
+  inTempProject((root) => {
+    const result = installPlatforms(root, ['claude', 'codex']);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const ported = ['review-audit-self-decision.md', 'process-management.md'];
+    const renameOnly = (content) => content
+      .replace(/\/hapo:([a-z0-9-]+)/gi, (_match, name) => `$hapo-${name}`)
+      .replace(/\bhapo:([a-z0-9-]+)/gi, (_match, name) => `hapo-${name}`);
+    for (const relative of ported) {
+      const sourcePath = path.join(PACKAGE_ROOT, 'src/claude/rules', relative);
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      assert.equal(
+        fs.existsSync(path.join(PACKAGE_ROOT, 'src/codex/rules', relative)),
+        false,
+        `${relative} must not be shadowed by a Codex native override`
+      );
+      assert.equal(
+        fs.readFileSync(path.join(root, '.claude/rules', relative), 'utf8'),
+        source,
+        `claude:rules/${relative}`
+      );
+      const installedCodex = fs.readFileSync(path.join(root, '.codex/rules', relative), 'utf8');
+      assert.equal(installedCodex, normalizeCodexBody(source, sourcePath), `codex:rules/${relative}`);
+      assert.equal(
+        installedCodex,
+        renameOnly(source),
+        `codex:rules/${relative} must differ from source only by skill-name renames`
+      );
+    }
+    const agentsMd = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+    const pointerLines = agentsMd
+      .split('\n')
+      .filter((line) => ported.some((relative) => line.includes(relative)));
+    assert.equal(pointerLines.length, ported.length, 'AGENTS.md must point at both ported rules');
+    for (const relative of ported) {
+      assert.ok(
+        pointerLines.some((line) => line.includes(`.codex/rules/${relative}`)),
+        `AGENTS.md must name .codex/rules/${relative}`
+      );
+    }
+    const pointerText = pointerLines.join('\n');
+    for (const forbidden of ['hapo:', 'Claude Code', 'Claude Tasks', 'SendMessage', '.claude/']) {
+      assert.equal(
+        pointerText.includes(forbidden),
+        false,
+        `AGENTS.md pointer must stay Codex-native: ${forbidden}`
+      );
+    }
   });
 });
 

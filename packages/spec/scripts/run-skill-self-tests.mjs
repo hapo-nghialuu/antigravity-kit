@@ -3944,6 +3944,11 @@ async function runLoopBoundedContractTests() {
   return mutations.length + 1;
 }
 
+const PORTED_RULE_PATHS = [
+  "src/claude/rules/review-audit-self-decision.md",
+  "src/claude/rules/process-management.md",
+];
+
 async function runStaticSemanticTests() {
   const processTaskStatusTests = await runProcessTaskStatusContractTests();
   const implementationReadinessTests = await runImplementationReadinessContractTests();
@@ -5150,6 +5155,86 @@ async function runStaticSemanticTests() {
         content.includes("sync-finalize") &&
         content.includes("## Legacy compatibility") &&
         !/semantic_model|semantic-model|machine authority|task_registry|planning_depth|execution_tier|\blane\b/i.test(outsideLegacySections(content)),
+    },
+    {
+      label: "ported review rule keeps decision precedence without reversal loopholes",
+      file: PORTED_RULE_PATHS[0],
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("do not reverse it because an audit raises an abstract concern") &&
+          normalized.includes("Reverse only when the audit adds new evidence or the context changed") &&
+          normalized.includes("name the verification source") &&
+          normalized.includes("Do not silently undo an explicit user decision") &&
+          normalized.includes("C1 scope choice, C2 finding dispositions, and C3 completion judgement") &&
+          normalized.includes("- the original decision - the audit concern - the trade-off - the concrete options") &&
+          normalized.includes("Then wait for the user") &&
+          normalized.includes("identify what the code actually stores, protects, or exposes") &&
+          normalized.includes("Fix real failure modes. Document non-issues briefly.") &&
+          normalized.includes("scout before asking") &&
+          normalized.includes("owns the ask-back conditions; do not restate that list here") &&
+          normalized.includes("Do not add plan IDs, phase numbers, CP or AC identifiers, audit labels, or finding codes to code comments, migration names, test names, or commit messages") &&
+          !/(audit|review) (concerns?|findings?) (override|outrank|take precedence)/i.test(normalized) &&
+          !/do not wait for the user/i.test(normalized) &&
+          !/ids? (may|can) appear in (code|test|commit)/i.test(normalized);
+      },
+    },
+    {
+      label: "ported process rule keeps ownership, port, and cleanup discipline",
+      file: PORTED_RULE_PATHS[1],
+      assert: (content) => {
+        const normalized = content.replace(/\s+/g, " ");
+        return normalized.includes("picks a new port and starts another process") &&
+          normalized.includes("those processes stay behind") &&
+          normalized.includes("Track every background process you start: command, PID, port, and worktree") &&
+          normalized.includes("whose exit you can observe over an unobservable detached run") &&
+          normalized.includes("check whether one is already running") &&
+          normalized.includes("Bind to a deterministic port per project or worktree") &&
+          normalized.includes("stop the stale owner rather than taking another port") &&
+          normalized.includes("`lsof -i :PORT` or `ss -ltnp`") &&
+          normalized.includes("Stop what you started when its task, session, or worktree ends") &&
+          normalized.includes("wave releases a worktree") &&
+          normalized.includes("Reconcile periodically") &&
+          normalized.includes("Stop cleanly first") &&
+          normalized.includes("Only stop processes you started or clearly own") &&
+          normalized.includes("never match a kill pattern broad enough") &&
+          !/start on another port/i.test(normalized) &&
+          !/orphaned processes are (acceptable|fine|harmless|expected)/i.test(normalized);
+      },
+    },
+    {
+      label: "ported rules survive the Codex transform as rename-only",
+      files: PORTED_RULE_PATHS,
+      assertParts: (parts) => {
+        let normalize;
+        try {
+          normalize = require(join(packageRoot, "bin/lib/codex-install.js")).normalizeCodexBody;
+        } catch {
+          return false;
+        }
+        if (typeof normalize !== "function") return false;
+        const forbiddenTokens = [
+          "Claude Code", "CLAUDE.md", "Claude Tasks", "AskUserQuestion", "TodoWrite",
+          "TaskCreate", "TaskGet", "TaskUpdate", "TaskList", "SendMessage", "WebSearch",
+          "WebFetch", "subagent_type", "prompt=", "description=\"", "Agent tool",
+          "`Agent`", "Agent(", "Explore subagent", "packages/spec/src/", ".claude", ".codex",
+          "`Bash`", "`Read`", "`Glob`", "`Grep`", "`Write`", "`Edit`", "`NotebookEdit`",
+          "code-auditor", "test-runner", "spec-maker", "docs-keeper", "git-ops",
+          "project-manager", "ui-ux-designer",
+        ];
+        const forbiddenPatterns = [
+          /(^|[\s("'`])\/(brainstorm|code-review|debug|develop|docs|frontend-design|git|hotfix|inspect|question|research|specs|test)(?=$|[\s<`),.:])/m,
+          /hapo:(?![a-z0-9-])/,
+        ];
+        return PORTED_RULE_PATHS.every((relative, index) => {
+          const content = parts[index];
+          if (forbiddenTokens.some((token) => content.includes(token))) return false;
+          if (forbiddenPatterns.some((pattern) => pattern.test(content))) return false;
+          const renameOnly = content
+            .replace(/\/hapo:([a-z0-9-]+)/gi, (_m, name) => `$hapo-${name}`)
+            .replace(/\bhapo:([a-z0-9-]+)/gi, (_m, name) => `hapo-${name}`);
+          return normalize(content, relative) === renameOnly;
+        });
+      },
     },
     {
       label: "Specs primary flow is file-first while legacy kernel remains isolated",
