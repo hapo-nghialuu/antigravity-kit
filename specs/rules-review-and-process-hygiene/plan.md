@@ -67,3 +67,5 @@ Tasks are sequential: Task 02 asserts placement of the exact bytes authored by T
 | R-10 | accepted | Wrong environment declarations and a trivial oracle | both tasks Artifacts/Oracle | static-only measured at 528 executed, exit 0, no `.logs` written, `git status` unchanged; `provenance.cjs:157-166` confirms source-tree `.logs` is not excluded | PASS | closed |
 
 Sweep: 3 files reread / 38 citations plus 6 structural checks / 12 stale references fixed / 0 conflicts left. The full-suite wall clock above ten minutes remains unreplayed and is declared as an environment expectation, not a proof.
+
+- C3 (2026-09-02): the user accepted completion from the current receipts. Landed as `8a86590` (payload and guards) plus `47e627d` (packet and receipt rebinding), pushed to `dev`. Declared limitations: this repository's per-machine installed `.codex/rules` and root `AGENTS.md` still predate the change and need an installer run, and no live-model adherence is claimed for either rule.
