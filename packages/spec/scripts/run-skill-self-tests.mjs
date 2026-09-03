@@ -4814,6 +4814,26 @@ async function runStaticSemanticTests() {
         !content.includes('hooks/skill-router.cjs'),
     },
     {
+      label: "strategist keeps the AgentKit autonomy contract and claims no execution proof",
+      file: "src/claude/agents/strategist.md",
+      assert: (content) =>
+        content.includes("model: fable") &&
+        content.includes("Everything the caller needs must be in your single final message") &&
+        content.includes("Never ask the user or the caller a question") &&
+        content.includes("Advisory-only: never edit project code or scaffold files") &&
+        content.includes("Your advice is not execution proof") &&
+        content.includes("substitutes the newest Opus it does allow"),
+    },
+    {
+      label: "model escalation reaches the strategist before the user and grants no authority",
+      file: "src/claude/rules/orchestrator.md",
+      assert: (content) =>
+        content.includes("## Model Escalation") &&
+        content.includes("spawn the `strategist` agent for counsel instead") &&
+        content.includes("Counsel is not execution proof") &&
+        content.includes("Escalate to the user when the strategist also cannot"),
+    },
+    {
       label: "PreCompact captures re-derivable anchors and claims no authorization",
       file: "src/claude/hooks/precompact.cjs",
       assert: (content) =>

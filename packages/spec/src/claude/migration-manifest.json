@@ -51,7 +51,8 @@
       "researcher.md",
       "spec-maker.md",
       "ui-ux-designer.md",
-      "deployer.md"
+      "deployer.md",
+      "strategist.md"
     ]
   },
   "scripts": {

@@ -91,7 +91,13 @@ Task cannot be completed as scoped. Never retry with the same inputs — instead
 ### `NEEDS_INFO`
 Agent lacks information to proceed. Supply the missing context and re-dispatch.
 
-> If an agent fails the same task **3+ times**, stop retrying and escalate to the user.
+> If an agent fails the same task **3+ times**, stop retrying and escalate.
+
+## Model Escalation
+
+When the current session or a subagent runs on a model below `fable` (e.g. `opus`, `sonnet`, `haiku`) and hits a hard problem — repeated failed attempts, a high-stakes design fork, or fuzzy requirements — spawn the `strategist` agent for counsel instead of switching the session model. It runs autonomously on the strongest available model and returns full advice in one reply, with no interview and no user round-trips. Give it the task, evidence gathered so far, approaches tried, and the specific question. It advises only; the caller stays responsible for the implementation.
+
+Counsel is not execution proof: it cannot close a task, satisfy a Verification Plan, or stand in for a Receipt. Escalate to the user when the strategist also cannot resolve it, or when the fork is one only the user may decide.
 
 ---
 
