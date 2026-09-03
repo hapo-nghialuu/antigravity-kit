@@ -10,52 +10,27 @@ const {
   managedRange,
   upsertManagedCodexBlock
 } = require('../lib/codex-install');
+const { mergeCodexHooks } = require('./codex-hooks');
 
 const SRC = path.join(__dirname, '../../src');
 const CODEX_SRC = path.join(SRC, 'codex');
 
+// hooks.json is merged by `codex-hooks.js`, not copied: it is a shared config file
+// the user also writes to, so a verbatim copy would either preserve CafeKit's stale
+// hooks or destroy the user's.
 const CODEX_OWN_RUNTIME = [
   ['gitignore', '.gitignore'],
-  ['runtime.json', 'runtime.json'],
-  ['hooks.json', 'hooks.json']
+  ['runtime.json', 'runtime.json']
 ];
 
-const WINDOWS_HOOK_COMMAND = /^node "\.codex\/hooks\/([a-z0-9-]+\.cjs)"$/;
-
-function materializeWindowsHookCommands(content, projectRoot = process.cwd()) {
-  const config = JSON.parse(content);
-  const canonicalRoot = fs.realpathSync(projectRoot);
-
-  for (const groups of Object.values(config.hooks || {})) {
-    for (const group of groups) {
-      for (const handler of group.hooks || []) {
-        if (typeof handler.commandWindows !== 'string') continue;
-        const match = handler.commandWindows.match(WINDOWS_HOOK_COMMAND);
-        if (!match) {
-          throw new Error(`Unsupported Codex Windows hook command: ${handler.commandWindows}`);
-        }
-        const hookPath = path.join(canonicalRoot, '.codex', 'hooks', match[1]);
-        const encodedPath = Buffer.from(hookPath, 'utf8').toString('base64url');
-        handler.commandWindows = (
-          'node -e "process.argv[1]=Buffer.from(process.argv[1],\'base64url\').toString(\'utf8\');require(\'module\').runMain()" ' +
-          encodedPath
-        );
-      }
-    }
-  }
-
-  return `${JSON.stringify(config, null, 2)}\n`;
-}
-
-function writeSourceFile(ctx, platformKey, src, dest, label, transform) {
+function writeSourceFile(ctx, platformKey, src, dest, label) {
   const platform = PLATFORMS[platformKey];
   const { action } = writeManagedFile({
     src,
     dest,
     platformFolder: platform.folder,
     ctx,
-    tracker: ctx.trackers[platformKey],
-    transform
+    tracker: ctx.trackers[platformKey]
   });
   report(ctx, action, label);
 }
@@ -68,10 +43,7 @@ function installRuntimeFiles(ctx, platformKey) {
       platformKey,
       path.join(CODEX_SRC, sourceRel),
       path.join(platform.folder, targetRel),
-      `Codex runtime: ${targetRel}`,
-      sourceRel === 'hooks.json'
-        ? (content) => materializeWindowsHookCommands(content, process.cwd())
-        : undefined
+      `Codex runtime: ${targetRel}`
     );
   }
   writeSourceFile(
@@ -81,6 +53,8 @@ function installRuntimeFiles(ctx, platformKey) {
     path.join('.agents', '.gitignore'),
     'Codex skills: .agents/.gitignore'
   );
+
+  mergeCodexHooks(ctx, platformKey);
 
   const agg = copyManagedTree({
     src: path.join(CODEX_SRC, 'hooks'),
@@ -159,4 +133,4 @@ function installCodexRuntime(ctx, platformKey) {
   return ctx;
 }
 
-module.exports = { installCodexRuntime, materializeWindowsHookCommands };
+module.exports = { installCodexRuntime };
