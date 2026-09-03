@@ -122,6 +122,7 @@
       "runtime.json",
       "status.cjs",
       "hooks/session.cjs",
+      "hooks/precompact.cjs",
       "hooks/docs-sync.cjs",
       "hooks/agent.cjs",
       "hooks/usage.cjs",

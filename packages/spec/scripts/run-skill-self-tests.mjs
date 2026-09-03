@@ -4814,6 +4814,15 @@ async function runStaticSemanticTests() {
         !content.includes('hooks/skill-router.cjs'),
     },
     {
+      label: "PreCompact captures re-derivable anchors and claims no authorization",
+      file: "src/claude/hooks/precompact.cjs",
+      assert: (content) =>
+        content.includes("Only facts the runtime can re-derive are recorded") &&
+        content.includes("nothing here grants an authorization") &&
+        content.includes("compact-recovery.json") &&
+        content.includes("hook-state-dir.cjs"),
+    },
+    {
       label: "CafeKit runtime config drives shared hook config",
       file: "src/claude/hooks/lib/config.cjs",
       assert: (content) =>

@@ -261,6 +261,32 @@ try {
     console.log('Any pending confirmations requested via AskUserQuestion might have been lost.');
     console.log('Do not proceed without explicitly asking the user again to ensure safety.');
     console.log('Use AskUserQuestion: "The chat context was compressed. Do I still have permission to proceed?"');
+
+    // Anchors captured by the PreCompact hook. These are re-derivable facts, not
+    // proof and not an authorization: they save the session from rebuilding its
+    // bearings, and nothing more.
+    try {
+      const fs2 = require('fs'), p2 = require('path');
+      const file = p2.join(require('./lib/hook-state-dir.cjs').hookStateDir(), 'compact-recovery.json');
+      const record = JSON.parse(fs2.readFileSync(file, 'utf8'));
+      const parts = [];
+      if (record.branch) parts.push(`branch ${record.branch}`);
+      if (record.head) parts.push(`HEAD ${record.head}`);
+      if (typeof record.dirty_count === 'number') parts.push(`${record.dirty_count} uncommitted path(s)`);
+      console.log('\n=== State before compaction ===');
+      if (record.captured_at) console.log(`Captured: ${record.captured_at}`);
+      if (parts.length) console.log(`Repository: ${parts.join(' | ')}`);
+      const workflow = record.workflow;
+      if (workflow && workflow.feature) {
+        const counts = Object.entries(workflow.counts || {}).map(([k, v]) => `${v} ${k}`).join(', ');
+        console.log(`Feature: ${workflow.feature}${counts ? ` (${counts})` : ''}`);
+        if (Array.isArray(workflow.in_progress) && workflow.in_progress.length > 0) {
+          console.log(`In flight: ${workflow.in_progress.join(', ')}`);
+        }
+      }
+      console.log('Re-read these from disk before acting; they describe the moment before compaction.');
+      console.log('=== End of pre-compaction state ===');
+    } catch (_) { /* no capture available */ }
   }
 
   process.exit(0);
