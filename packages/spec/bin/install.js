@@ -31,6 +31,7 @@ const {
   copyClaudeMdFile,
   ensureSharedAgentsMdCore,
   copyRulesDirectory,
+  copyOutputStylesDirectory,
   removeObsoleteAgents
 } = require('./phases/claude-runtime');
 const { reconcileSkillInventory } = require('./phases/skill-inventory');
@@ -70,6 +71,7 @@ function installPlatform(ctx, platformKey) {
     mergeClaudeSettings(ctx, platformKey);
     copyClaudeMdFile(ctx, platformKey);
     copyRulesDirectory(ctx, platformKey);
+    copyOutputStylesDirectory(ctx, platformKey);
   }
 
   if (platformKey === 'codex') {

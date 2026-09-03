@@ -276,8 +276,31 @@ function copyRulesDirectory(ctx, platformKey) {
   report(ctx, treeAction(agg), 'rules/ directory');
 }
 
+/**
+ * Copy the output-styles/ tree. Claude Code discovers these under `.claude/`; Codex CLI
+ * has no equivalent surface, so this is the sole guard rather than a platform capability.
+ */
+function copyOutputStylesDirectory(ctx, platformKey) {
+  if (platformKey !== 'claude') return;
+
+  const src = path.join(SRC, 'claude/output-styles');
+  const dest = getRuntimeSupportTargetDir(platformKey, 'output-styles');
+  if (!fs.existsSync(src)) {
+    ctx.ui.warn('output-styles/ directory not found');
+    ctx.results.missingDependencies++;
+    return;
+  }
+
+  const transform = getCopyOptions(platformKey, {}).transform;
+  const agg = copyManagedTree({
+    src, dest, platformFolder: PLATFORMS[platformKey].folder, ctx, tracker: ctx.trackers[platformKey], transform
+  });
+  report(ctx, treeAction(agg), 'output-styles/ directory');
+}
+
 module.exports = {
   copyRoutingFile,
+  copyOutputStylesDirectory,
   copyClaudeRuntimeFiles,
   removeObsoleteClaudeRuntimeFiles,
   copyClaudeMdFile,
