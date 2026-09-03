@@ -90,7 +90,7 @@ try {
 } catch (e) {
   try {
     const fs = require('fs'), p = require('path');
-    const d = p.join(__dirname, '.logs');
+    const d = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     fs.appendFileSync(p.join(d, 'hook-log.jsonl'),
       JSON.stringify({ ts: new Date().toISOString(), hook: 'agent', status: 'crash', error: e.message }) + '\n');

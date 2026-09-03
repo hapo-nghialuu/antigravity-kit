@@ -44,7 +44,7 @@ function projectRoot(payload = {}) {
 
 function logCrash(error) {
   try {
-    const d = path.join(__dirname, '.logs');
+    const d = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     fs.appendFileSync(
       path.join(d, 'hook-log.jsonl'),
@@ -202,7 +202,7 @@ try {
     process.exit(0);
   }
   const taskRegistry = resolved.taskRegistry || activeSpec.task_registry || {};
-  const cacheFile = path.join(__dirname, '.logs', 'spec-gate-last.json');
+  const cacheFile = path.join(require('./lib/hook-state-dir.cjs').hookStateDir(), 'spec-gate-last.json');
   const cacheExists = fs.existsSync(cacheFile);
   let cache = {};
   if (cacheExists) {

@@ -92,11 +92,8 @@ try {
 } catch (e) {
   // Ghi log lỗi ẩn danh nếu sập hook
   try {
-    const fs = require('fs'), p = require('path'), os = require('os');
-    const isSourceTree = __dirname.includes(`${p.sep}packages${p.sep}spec${p.sep}src`);
-    const d = isSourceTree
-      ? p.join(os.tmpdir(), 'cafekit-hook-logs', 'claude-docs-sync')
-      : p.join(__dirname, '.logs');
+    const fs = require('fs'), p = require('path');
+    const d = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     fs.appendFileSync(p.join(d, 'hook-log.jsonl'),
       JSON.stringify({ ts: new Date().toISOString(), hook: 'docs-sync', status: 'crash', error: e.message }) + '\n');

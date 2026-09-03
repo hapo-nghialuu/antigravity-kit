@@ -6,6 +6,7 @@ const path = require('path');
 const {
   atomicWrite,
   getHookContext,
+  hookStateDir,
   logCrash,
   readPayload
 } = require('./lib/hook-context.cjs');
@@ -132,13 +133,7 @@ try {
   const currentStatuses = processWorkflow
     ? Object.fromEntries(Object.entries(registry).map(([taskPath, task]) => [taskPath, task?.status || 'pending']))
     : taskStatusMap(activeSpec);
-  const cacheFile = path.join(
-    projectRoot,
-    '.codex',
-    'hooks',
-    '.logs',
-    'spec-gate-last.json'
-  );
+  const cacheFile = path.join(hookStateDir(projectRoot), 'spec-gate-last.json');
   const cacheExists = fs.existsSync(cacheFile);
   let cache = {};
   if (cacheExists) {

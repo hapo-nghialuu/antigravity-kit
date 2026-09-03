@@ -187,7 +187,7 @@ async function main() {
   try {
     const fs = require('fs');
     const p = require('path');
-    const logDir = p.join(__dirname, '.logs');
+    const logDir = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
     fs.appendFileSync(p.join(logDir, 'hook-log.jsonl'),
       JSON.stringify({ ts: new Date().toISOString(), hook: p.basename(__filename, '.cjs'), status: 'crash', error: e.message }) + '\n');

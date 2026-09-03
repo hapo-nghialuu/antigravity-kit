@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   getHookContext,
+  hookStateDir,
   logCrash,
   readPayload,
   resolveProjectPath
@@ -15,7 +16,7 @@ function reservationFile(projectRoot, sessionId) {
     .update(String(sessionId || 'unknown'))
     .digest('hex')
     .slice(0, 16);
-  return path.join(projectRoot, '.codex', 'hooks', '.logs', `rules-${key}.json`);
+  return path.join(hookStateDir(projectRoot), `rules-${key}.json`);
 }
 
 /** Reserve one injection slot per session. Returns null on reservation errors. */

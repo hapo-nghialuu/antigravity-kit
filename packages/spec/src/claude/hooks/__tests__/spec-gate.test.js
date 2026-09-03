@@ -2,8 +2,9 @@
 
 // Behavioral tests for spec-gate.cjs (Stop completion gate). The hook is run as
 // a real subprocess: a Stop payload is piped to stdin; we assert exit code and
-// whether stdout carries {"decision":"block",...}. Cache lives under the hook's
-// own .logs/ dir (shared), so each test seeds/clears it deliberately.
+// whether stdout carries {"decision":"block",...}. The hook resolves its own
+// state directory; running from source that is a temp directory rather than the
+// source tree, and it is shared, so each test seeds/clears it deliberately.
 
 const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert');
@@ -14,7 +15,8 @@ const os = require('node:os');
 const path = require('node:path');
 
 const HOOK = path.join(__dirname, '..', 'spec-gate.cjs');
-const CACHE = path.join(__dirname, '..', '.logs', 'spec-gate-last.json');
+const { hookStateDir } = require(path.join(__dirname, '..', 'lib', 'hook-state-dir.cjs'));
+const CACHE = path.join(hookStateDir(), 'spec-gate-last.json');
 const PROVENANCE = require(path.join(__dirname, '..', '..', 'scripts', 'provenance.cjs'));
 const POLICY = require(path.join(__dirname, '..', '..', 'scripts', 'workflow-policy.cjs'));
 const FEATURE = 'demo';
@@ -286,6 +288,11 @@ function installClaudeGate(root, policyMode = 'valid') {
   fs.mkdirSync(hooks, { recursive: true });
   fs.mkdirSync(scripts, { recursive: true });
   fs.copyFileSync(HOOK, path.join(hooks, 'spec-gate.cjs'));
+  fs.mkdirSync(path.join(hooks, 'lib'), { recursive: true });
+  fs.copyFileSync(
+    path.join(__dirname, '..', 'lib', 'hook-state-dir.cjs'),
+    path.join(hooks, 'lib', 'hook-state-dir.cjs'),
+  );
   for (const name of [
     'completion-authority-check.cjs', 'completion-authority-state.cjs', 'semantic-review-authority.cjs',
   ]) fs.copyFileSync(path.join(__dirname, '..', name), path.join(hooks, name));

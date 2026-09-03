@@ -280,7 +280,7 @@ try {
   try {
     const fs = require('fs');
     const path = require('path');
-    const logDir = path.join(__dirname, '.logs');
+    const logDir = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
     fs.appendFileSync(
       path.join(logDir, 'hook-log.jsonl'),

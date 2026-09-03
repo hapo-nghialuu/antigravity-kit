@@ -16,7 +16,7 @@ const path = require('path');
 
 function logCrash(error) {
   try {
-    const d = path.join(__dirname, '.logs');
+    const d = require('./lib/hook-state-dir.cjs').hookStateDir();
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     fs.appendFileSync(
       path.join(d, 'hook-log.jsonl'),
@@ -182,7 +182,7 @@ try {
     total: taskEntries.length,
     featureReceiptPresent,
   });
-  const cacheFile = path.join(__dirname, '.logs', 'tollgate-last.txt');
+  const cacheFile = path.join(require('./lib/hook-state-dir.cjs').hookStateDir(), 'tollgate-last.txt');
 
   let lastKey = '';
   if (stateKey) {

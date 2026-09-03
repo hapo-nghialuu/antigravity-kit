@@ -88,6 +88,12 @@ function installClaudeRuntimeClosure(fixtureRoot, entry = 'hooks/spec-gate.cjs')
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(path.join(hooksRoot, hook), target);
   }
+  // Hook helpers the raw-copied hooks require at runtime.
+  for (const helper of ['hook-state-dir.cjs']) {
+    const target = path.join(destinationRoot, 'hooks', 'lib', helper);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(hooksRoot, 'lib', helper), target);
+  }
   return path.join(destinationRoot, entry);
 }
 
@@ -1578,8 +1584,6 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
     );
     // Clear cache to simulate fresh first-run with valid receipt
     try { fs.unlinkSync(path.join(claude, 'hooks', '.logs', 'spec-gate-last.json')); } catch {}
-    try { fs.unlinkSync(path.join(__dirname, '..', '.logs', 'spec-gate-last.json')); } catch {}
-    // Need to clear the cache that the hook uses (under claude hooks .logs) - we already cleared above
     // Re-run with valid receipt - should not block
     const result2 = spawnSync(process.execPath, [specGate], {
       cwd: root,
@@ -1590,7 +1594,6 @@ test('first-run cache bypass is blocked - canonical receipt required even withou
     assert.equal(result2.stdout, '', 'valid canonical receipt on first run must not block');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
-    try { fs.unlinkSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/.logs/spec-gate-last.json')); } catch {}
   }
 });
 

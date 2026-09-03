@@ -7,6 +7,7 @@ const path = require('path');
 const {
   atomicWrite,
   getHookContext,
+  hookStateDir,
   logCrash,
   readPayload
 } = require('./lib/hook-context.cjs');
@@ -21,7 +22,7 @@ function cacheFile(projectRoot, sessionId) {
     .update(String(sessionId || 'unknown'))
     .digest('hex')
     .slice(0, 16);
-  return path.join(projectRoot, '.codex', 'hooks', '.logs', `tollgate-${key}.txt`);
+  return path.join(hookStateDir(projectRoot), `tollgate-${key}.txt`);
 }
 
 try {

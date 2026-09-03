@@ -113,12 +113,25 @@ function atomicWrite(file, content, mode = 0o600) {
   fs.renameSync(temp, file);
 }
 
+/**
+ * Where a hook keeps its own generated state: crash logs, session reservations
+ * and the gate/tollgate caches.
+ *
+ * Installed, that is `<project>/.codex/hooks/.logs/`. Under this package's own
+ * tests PROJECT_ROOT resolves to `packages/spec/src`, so the same write lands in
+ * the source tree; it accumulated silently there because the repository ignores
+ * `.codex` at any depth. Source-tree runs therefore write to a temp directory.
+ */
+function hookStateDir(projectRoot) {
+  const root = projectRoot || PROJECT_ROOT;
+  return String(root).includes(`${path.sep}packages${path.sep}spec${path.sep}src`)
+    ? path.join(require('os').tmpdir(), 'cafekit-hook-logs', 'codex')
+    : path.join(root, '.codex', 'hooks', '.logs');
+}
+
 function logCrash(hook, error) {
   try {
-    const isSourceTree = PROJECT_ROOT.includes(`${path.sep}packages${path.sep}spec${path.sep}src`);
-    const dir = isSourceTree
-      ? path.join(require('os').tmpdir(), 'cafekit-hook-logs', 'codex', hook)
-      : path.join(PROJECT_ROOT, '.codex', 'hooks', '.logs');
+    const dir = hookStateDir(PROJECT_ROOT);
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(
       path.join(dir, 'hook-log.jsonl'),
@@ -138,6 +151,7 @@ module.exports = {
   PROJECT_ROOT,
   atomicWrite,
   getHookContext,
+  hookStateDir,
   logCrash,
   readPayload,
   readRuntime,

@@ -5490,6 +5490,48 @@ async function runSettingsManifestConsistencyCheck() {
  * returned before restoring the saved locale when !interactive, so
  * patchRuntimeLocale clobbered the label with the 'en' default on every upgrade.
  */
+/**
+ * Runs last: no suite above may leave hook state inside the source tree.
+ *
+ * Hooks resolve their own state directory and send source-tree runs to a temp
+ * directory, because an untracked `.logs/` under `src/` changes the worktree
+ * digest that receipt provenance binds to. That made the completion gate report
+ * every done task as stale three times before the cause was found, so the
+ * invariant is checked rather than remembered.
+ */
+async function runSourceTreeCleanlinessCheck() {
+  const sourceRoot = join(packageRoot, "src");
+  const offenders = [];
+
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const absolute = join(dir, entry.name);
+      if (entry.name === ".logs") offenders.push(absolute);
+      else await walk(absolute);
+    }
+  }
+
+  console.log("\n[skill-test] source tree stays free of hook state");
+  await walk(sourceRoot);
+  if (offenders.length > 0) {
+    console.error(
+      `[FAIL] hook state written into the source tree: ${offenders.join(", ")}. `
+      + "Use hooks/lib/hook-state-dir.cjs (Claude) or hookStateDir() from "
+      + "hooks/lib/hook-context.cjs (Codex) instead of a path built from the hook's own location.",
+    );
+    process.exit(1);
+  }
+  console.log("Ran 1 test in source tree cleanliness");
+  return 1;
+}
+
 async function runLocalePreservationFixtureTest() {
   const root = await mkdtemp(join(tmpdir(), "cafekit-installer-locale-"));
 
@@ -6331,6 +6373,8 @@ async function main() {
     console.error("[NO_TESTS] skill self-test pipeline ran 0 tests");
     process.exit(1);
   }
+
+  totalTests += await runSourceTreeCleanlinessCheck();
 
   console.log(`\n[skill-test] PASS: ${totalTests} tests executed`);
 }
