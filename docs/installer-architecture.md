@@ -48,7 +48,8 @@ bin/lib/
 ## Run sequence
 
 1. **Lock** — acquire `.cafekit.lock`; refuse if a live PID owns it, reclaim if stale.
-2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`), load the
+2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`,
+   `--with-document-skills`/`--without-document-skills`), load the
    migration manifest, init results counters.
 3. **Select platforms** — honor `--platform`, otherwise restore installed/detected
    `.claude/` and `.codex/` runtimes or prompt.
@@ -70,6 +71,28 @@ bin/lib/
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
 10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
+
+## Optional document skills
+
+The install inventory has two tiers. Core skills always install. The document
+bundle — `docs`, `docx`, `pdf`, `pptx`, `xlsx`, `ai-multimodal` — is optional and
+off by default on a fresh install; an interactive run prompts once, and
+`--with-document-skills` / `--without-document-skills` decide it non-interactively.
+The two flags are mutually exclusive.
+
+The selection persists per runtime under `schemaVersion: 2`. A legacy
+`schemaVersion: 1` install keeps the bundle on its first upgrade, so an existing
+project does not silently lose skills it already had. Opting out prunes only
+pristine CafeKit-owned copies of those directories; a file the user edited is
+left in place.
+
+Six broad engineering skills — `backend-development`, `frontend-development`,
+`frontend-design`, `mobile-development`, `devops`, `react-best-practices` — are no
+longer installed and are pruned ownership-aware on both runtimes.
+
+The optional `docs` skill does not gate the documentation runtime: the
+`docs-sync` hook, `validate-docs.cjs`, and the `docs-keeper` agent stay core
+assets whether or not the bundle is installed.
 
 ## Ownership model
 
