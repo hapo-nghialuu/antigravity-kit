@@ -13,9 +13,9 @@ description: CafeKit runtime と workflow のよくある質問。
 
 いいえ。Current releases は Claude Code と Codex CLI を support します。OpenCode support は CafeKit 0.17 で終了し、0.16 command map は historical migration 用だけに残ります。
 
-## すべての task に `/hapo:specs` が必要ですか？
+## すべての task に `/cf:specs` が必要ですか？
 
-いいえ。meaningful feature work には specs を使います。bugs には `/hapo:debug` と `/hapo:fix` を使います。小さな local fix は full spec を必要としない場合があります。
+いいえ。meaningful feature work には specs を使います。bugs には `/cf:debug` と `/cf:fix` を使います。小さな local fix は full spec を必要としない場合があります。
 
 ## なぜ task files が重要ですか？
 
@@ -31,4 +31,4 @@ task files は scope、steps、completion criteria、evidence を保存します
 
 ## production bug は何を使いますか？
 
-root cause が不明なら `/hapo:debug` から始めます。diagnosis 後、または bug と target fix が明確なら `/hapo:fix` を使います。
+root cause が不明なら `/cf:debug` から始めます。diagnosis 後、または bug と target fix が明確なら `/cf:fix` を使います。

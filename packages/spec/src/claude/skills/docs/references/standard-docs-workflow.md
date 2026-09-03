@@ -1,6 +1,6 @@
 # Standard Docs Workflow
 
-Use this shared contract for `/hapo:docs --init`, `/hapo:docs --update`, and `/hapo:docs --summarize`.
+Use this shared contract for `/cf:docs --init`, `/cf:docs --update`, and `/cf:docs --summarize`.
 
 Then load the mode-specific reference:
 
@@ -70,7 +70,7 @@ Normal docs are current-state living docs. Ground them in:
 - source code that implements the documented behavior
 - tests, CI, deploy config, schemas, migrations, routes when relevant
 
-Use `hapo:scout` or targeted `rg`/file reads when the project is large. Keep broad scanning scoped by real project areas.
+Use `cf:scout` or targeted `rg`/file reads when the project is large. Keep broad scanning scoped by real project areas.
 
 ### 3. Author Concisely
 

@@ -37,19 +37,19 @@ const labels = {
 };
 
 const supportSkills = [
-  ['hapo:route', 'Semantic routing is not deterministic; use it only to escalate material ambiguity, chaining, domains, or risk.'],
-  ['hapo:research', 'Adaptive evidence for uncertain decisions, with traceable claims and explicit gaps; it does not implement or guarantee the recommendation.'],
-  ['hapo:loop', 'Explicit-only bounded experiments requiring Goal, isolated Scope, numeric Metric and Direction, reproducible Baseline, distinct Guard, noise policy and minimum delta, budget, and stop conditions; returns a base-bound isolated patch handoff without guaranteed improvement.'],
-  ['hapo:ui-ux-pro-max', 'UI/UX rules, accessibility, layout, motion, and design intelligence.'],
-  ['hapo:web-testing', 'Playwright, Vitest, k6, visual, a11y, and performance testing.'],
-  ['hapo:agent-browser', 'Context-efficient browser automation snapshots.'],
-  ['hapo:chrome-devtools', 'Puppeteer automation, screenshots, console, and ARIA checks.'],
-  ['hapo:docs', 'Document capability, optional and available only when installed; supports project documentation and source-backed reconstruction.'],
-  ['hapo:ai-multimodal (optional)', 'Image, audio, video, OCR, transcript, and document analysis.'],
-  ['hapo:docx (optional)', 'Word document creation, extraction, editing, comments, and redlines.'],
-  ['hapo:pdf (optional)', 'PDF extraction, creation, forms, merge, split, and batch work.'],
-  ['hapo:pptx (optional)', 'PowerPoint creation, editing, templates, and slide generation.'],
-  ['hapo:xlsx (optional)', 'Spreadsheet creation, formulas, charts, analysis, and recalculation.'],
+  ['cf:route', 'Semantic routing is not deterministic; use it only to escalate material ambiguity, chaining, domains, or risk.'],
+  ['cf:research', 'Adaptive evidence for uncertain decisions, with traceable claims and explicit gaps; it does not implement or guarantee the recommendation.'],
+  ['cf:loop', 'Explicit-only bounded experiments requiring Goal, isolated Scope, numeric Metric and Direction, reproducible Baseline, distinct Guard, noise policy and minimum delta, budget, and stop conditions; returns a base-bound isolated patch handoff without guaranteed improvement.'],
+  ['cf:ui-ux-pro-max', 'UI/UX rules, accessibility, layout, motion, and design intelligence.'],
+  ['cf:web-testing', 'Playwright, Vitest, k6, visual, a11y, and performance testing.'],
+  ['cf:agent-browser', 'Context-efficient browser automation snapshots.'],
+  ['cf:chrome-devtools', 'Puppeteer automation, screenshots, console, and ARIA checks.'],
+  ['cf:docs', 'Document capability, optional and available only when installed; supports project documentation and source-backed reconstruction.'],
+  ['cf:ai-multimodal (optional)', 'Image, audio, video, OCR, transcript, and document analysis.'],
+  ['cf:docx (optional)', 'Word document creation, extraction, editing, comments, and redlines.'],
+  ['cf:pdf (optional)', 'PDF extraction, creation, forms, merge, split, and batch work.'],
+  ['cf:pptx (optional)', 'PowerPoint creation, editing, templates, and slide generation.'],
+  ['cf:xlsx (optional)', 'Spreadsheet creation, formulas, charts, analysis, and recalculation.'],
 ];
 
 function normalizeLocale(locale: string): Locale {

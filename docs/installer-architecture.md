@@ -149,7 +149,7 @@ and logs so partial un-ignores and force-adds stay safer.
 `npx @haposoft/cafekit --platform codex` installs:
 
 ```text
-.agents/skills/             native skills (`$hapo-*`, discoverable via `/skills`)
+.agents/skills/             native skills (`$cf-*`, discoverable via `/skills`)
 .codex/agents/*.toml        auto-discovered snake_case custom agents
 .codex/hooks.json           project lifecycle registration
 .codex/hooks/               native event handlers and state/privacy libraries
@@ -161,7 +161,7 @@ AGENTS.md                    shared CafeKit CORE block (once) plus the runtime-s
 Codex uses root `AGENTS.md` as its native project instruction surface, and Claude imports that file through `CLAUDE.md`. In combined installs, the shared CORE block (`<!-- CAFEKIT CORE START/END -->`) remains runtime-neutral while the Codex managed markers preserve ownership and user bytes.
 
 **Combined-install boundary (fail-safe by ownership, not filesystem isolation):**
-- `CORE` is runtime-neutral by contract: it contains no runtime-specific tool names, paths, or commands (`Codex`, `.codex`, `$hapo-`, `/hapo:` are forbidden in CORE — enforced by installer tests).
+- `CORE` is runtime-neutral by contract: it contains no runtime-specific tool names, paths, or commands (`Codex`, `.codex`, `$cf-`, `/cf:` are forbidden in CORE — enforced by installer tests).
 - Each runtime owns exactly one additional managed block (Codex: `<!-- CAFEKIT CODEX START/END -->`). The block header states an explicit ignore contract: non-owners must ignore that block and consume only `CORE` plus their native block. If ownership cannot be determined, the file is treated as `CORE`-only (fail-safe).
 - Markers are not a filesystem isolation boundary — they are an ownership/ignore contract. Tests assert no cross-runtime directive leakage (e.g., Codex block not treated as Claude instructions, and `CORE` stays neutral). Do not claim cross-runtime instruction isolation until a native alternate entrypoint is proven for the affected runtime.
 

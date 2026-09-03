@@ -193,8 +193,8 @@ test('explicit opt-in installs all six optional skills on both runtimes', () => 
       ], { cwd: root, encoding: 'utf8' });
       assert.equal(catalog.status, 0, catalog.stderr);
       const catalogData = JSON.parse(catalog.stdout);
-      assert.equal(catalogData.skills.some((skill) => skill.public_id === 'hapo:route'), true);
-      assert.equal(catalogData.skills.some((skill) => skill.public_id === 'hapo:docs'), true);
+      assert.equal(catalogData.skills.some((skill) => skill.public_id === 'cf:route'), true);
+      assert.equal(catalogData.skills.some((skill) => skill.public_id === 'cf:docs'), true);
       const metadata = JSON.parse(fs.readFileSync(path.join(platform.folder, 'cafekit.json'), 'utf8'));
       assert.deepEqual(metadata.documentSkills, {
         enabled: true,
@@ -228,7 +228,7 @@ test('modified retired skill is preserved but excluded from automatic routing', 
     const retiredRoot = path.join(root, '.claude', 'skills', 'backend-development');
     fs.mkdirSync(retiredRoot, { recursive: true });
     fs.writeFileSync(path.join(retiredRoot, 'SKILL.md'), [
-      '---', 'name: hapo:backend-development',
+      '---', 'name: cf:backend-development',
       'description: "User-modified retired skill."', '---', '# Preserved', '',
     ].join('\n'));
     const result = spawnSync(process.execPath, [

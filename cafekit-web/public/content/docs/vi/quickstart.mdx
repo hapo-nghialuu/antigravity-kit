@@ -16,7 +16,7 @@ npx @haposoft/cafekit
 ## 2. Tạo và review spec
 
 ```text
-/hapo:specs Build a meeting transcript extension with AI summaries
+/cf:specs Build a meeting transcript extension with AI summaries
 ```
 
 Specs mở C1 rồi tạo:
@@ -32,7 +32,7 @@ Tại C2, accept findings, yêu cầu sửa hoặc KEEP một named limitation. 
 ## 3. Explicit implementation
 
 ```text
-/hapo:develop <feature>
+/cf:develop <feature>
 ```
 
 Develop chạy từng unblocked task, chạy exact planned proof và để controller ghi final inline Receipt.
@@ -40,8 +40,8 @@ Develop chạy từng unblocked task, chạy exact planned proof và để contr
 ## 4. Verify và review
 
 ```text
-/hapo:test --full
-/hapo:code-review --pending
+/cf:test --full
+/cf:code-review --pending
 ```
 
 `NO_TESTS` và zero executed tests không phải pass.
@@ -49,7 +49,7 @@ Develop chạy từng unblocked task, chạy exact planned proof và để contr
 ## 5. Sync và đóng
 
 ```text
-/hapo:sync <feature>
+/cf:sync <feature>
 ```
 
 Sync chỉ state và proof đã quan sát. Tại C3, user quyết định receipts hiện tại và unresolved limitations đã đủ để đóng chưa.

@@ -29,18 +29,18 @@ command の alias ではありません。
 
 | Claude Code command | Legacy OpenCode 0.16 command | Purpose |
 |---|---|---|
-| `/hapo:ask` | `/question` | Project と technical questions に repo-first evidence で回答。 |
-| `/hapo:brainstorm` | `/brainstorm` | spec 前に idea を明確化。 |
-| `/hapo:specs` | `/specs` | C1/C2 を通じて process-first plan と flat tasks を作成。 |
-| `/hapo:develop` | `/develop` | Approved flat task を one at a time で execute。 |
-| `/hapo:test` | `/test` | task-aware verification。 |
-| `/hapo:code-review` | `/code-review` | regressions と security の review。 |
-| `/hapo:sync` | — | Observed task Status と final inline Receipt を sync。 |
-| `/hapo:debug` | `/debug` | fix 前に diagnose。 |
-| `/hapo:fix` | `/hotfix` | narrow diagnosed fixes。 |
-| `/hapo:docs` | `/docs` | Optional bundle: docs の create、update、summarize、reconstruct。 |
-| `/hapo:scout` | `/inspect` | source files と structure の scout。 |
-| `/hapo:route` | — | material work に対して最短の installed chain を構成。 |
+| `/cf:ask` | `/question` | Project と technical questions に repo-first evidence で回答。 |
+| `/cf:brainstorm` | `/brainstorm` | spec 前に idea を明確化。 |
+| `/cf:specs` | `/specs` | C1/C2 を通じて process-first plan と flat tasks を作成。 |
+| `/cf:develop` | `/develop` | Approved flat task を one at a time で execute。 |
+| `/cf:test` | `/test` | task-aware verification。 |
+| `/cf:code-review` | `/code-review` | regressions と security の review。 |
+| `/cf:sync` | — | Observed task Status と final inline Receipt を sync。 |
+| `/cf:debug` | `/debug` | fix 前に diagnose。 |
+| `/cf:fix` | `/hotfix` | narrow diagnosed fixes。 |
+| `/cf:docs` | `/docs` | Optional bundle: docs の create、update、summarize、reconstruct。 |
+| `/cf:scout` | `/inspect` | source files と structure の scout。 |
+| `/cf:route` | — | material work に対して最短の installed chain を構成。 |
 
 過去の OpenCode 0.16 install では、installer が main implementation surface の slash commands を生成していました。`sync` skill は shared skill bundle に含まれていましたが、installer は `/sync` OpenCode wrapper を生成しませんでした。
 
@@ -50,7 +50,7 @@ Native selection は progressive disclosure を使います。Live catalog の
 metadata で candidate を特定し、選択した `SKILL.md` で contract を読み、
 必要な references だけを追加で読みます。Explicit または明確な low-risk
 work は installed skill を直接 invoke します。曖昧、multi-step、
-multi-domain、elevated-risk の場合だけ `hapo:route` を使います。Skill や
+multi-domain、elevated-risk の場合だけ `cf:route` を使います。Skill や
 agent が存在しない場合は、安全なら inline で続行し、それ以外は gap を
 明示します。Optional document skills は installed の場合だけ利用できます。
 

@@ -1,5 +1,5 @@
 ---
-name: hapo:route
+name: cf:route
 description: "Route ambiguous, multi-step, multi-domain, or risk-elevated work through the shortest valid chain of installed CafeKit skills and agents."
 user-invocable: true
 when_to_use: "Use when no single obvious installed skill covers the request; skip for an explicitly named skill, one clear low-risk intent, or a direct factual answer."

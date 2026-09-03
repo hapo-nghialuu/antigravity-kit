@@ -1733,7 +1733,7 @@ function evaluateFlashPromotion(task, verdict, proof = 'Verification: PASS', cap
       status: 'in_progress',
       receipt: 'FLASH_UNVERIFIED',
       blocker: normalized.diagnostic === 'NO_TESTS'
-        ? 'awaiting test proof from /hapo:test <feature>'
+        ? 'awaiting test proof from /cf:test <feature>'
         : normalized.diagnostic === 'PARTIAL'
           ? 'verification is partial; awaiting complete test proof'
           : `verification returned ${normalized.verdict}`,

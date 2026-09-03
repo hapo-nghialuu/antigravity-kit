@@ -2,7 +2,7 @@
 ## Codex runtime
 
 - Repository instructions live in `AGENTS.md`.
-- CafeKit skills live in `.agents/skills/`; invoke them as `$hapo-<name>` or browse with `/skills`. Edit skills in the project, not in a global skills directory.
+- CafeKit skills live in `.agents/skills/`; invoke them as `$cf-<name>` or browse with `/skills`. Edit skills in the project, not in a global skills directory.
 - Run Python skill scripts with the project venv:
   - macOS/Linux: `.agents/skills/.venv/bin/python3 scripts/<script>.py`
   - Windows: `.agents\\skills\\.venv\\Scripts\\python.exe scripts\\<script>.py`
@@ -11,7 +11,7 @@
 - For skill selection, read `.codex/rules/skill-workflow-routing.md` and
   `.codex/rules/skill-domain-routing.md`. When capability presence is uncertain,
   run `node .codex/scripts/generate-skill-catalog.cjs --skills`; its Codex-bound
-  root is `.agents/skills`. Use `$hapo-route` only for ambiguous, multi-step,
+  root is `.agents/skills`. Use `$cf-route` only for ambiguous, multi-step,
   multi-domain, or risk-elevated work; explicit, obvious, and factual intents
   stay direct.
 - Consult `.codex/rules/review-audit-self-decision.md` before applying audit
@@ -19,13 +19,13 @@
   `.codex/rules/process-management.md` whenever a task starts, reuses, or ends
   long-running processes.
 - Project hooks live in `.codex/hooks.json`; review trusted hooks with `/hooks`.
-- New Specs work uses the process-first flow. `$hapo-specs` opens C1, writes
+- New Specs work uses the process-first flow. `$cf-specs` opens C1, writes
   `specs/<feature>/plan.md` with flat `task-NN-*.md` files beside it, then opens
   C2 after adversarial review. It never starts implementation.
-- Start implementation only through a new explicit `$hapo-develop` invocation.
+- Start implementation only through a new explicit `$cf-develop` invocation.
   Execute one unblocked task at a time; each task has exactly one `Status:`
   field and the controller is its sole state-and-proof writer.
-- Use `$hapo-sync` for surgical updates to observed file state. A done task
+- Use `$cf-sync` for surgical updates to observed file state. A done task
   requires a canonical final inline `## Receipt` with the exact command,
   `Exit: 0`, `Verification: PASS`, runtime-derived Base and Head values, and
   non-empty fenced current output.

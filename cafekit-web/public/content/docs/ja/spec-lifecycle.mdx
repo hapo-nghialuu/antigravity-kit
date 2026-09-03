@@ -20,7 +20,7 @@ request
   -> adversarial review
   -> C2: accept、revise、または named finding を KEEP
   -> planning stop
-  -> 新しい explicit /hapo:develop invocation
+  -> 新しい explicit /cf:develop invocation
   -> exact verification + final inline Receipt
   -> C3: proof と limitations が十分か user が決定
 ```
@@ -57,7 +57,7 @@ Task に必要な内容:
 
 ## Execution and proof
 
-`/hapo:develop <feature>` は one unblocked task を選び、real integration path を scout、task boundary だけを実装し、exact proof command を実行します。Controller だけが task state と proof を書きます。
+`/cf:develop <feature>` は one unblocked task を選び、real integration path を scout、task boundary だけを実装し、exact proof command を実行します。Controller だけが task state と proof を書きます。
 
 Done task は exact command、`Exit: 0`、`Verification: PASS`、runtime-derived `Base`/`Head`、non-empty fenced current output を持つ current final inline Receipt が必要です。
 
@@ -65,7 +65,7 @@ Done task は exact command、`Exit: 0`、`Verification: PASS`、runtime-derived
 
 ## Sync boundary
 
-`/hapo:sync` は observed task Status と inline Receipt だけを surgical update します。Execution、approval、readiness、completion は捏造しません。
+`/cf:sync` は observed task Status と inline Receipt だけを surgical update します。Execution、approval、readiness、completion は捏造しません。
 
 ## Legacy compatibility
 

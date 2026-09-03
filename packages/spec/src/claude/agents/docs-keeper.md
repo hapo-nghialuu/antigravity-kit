@@ -21,7 +21,7 @@ You enforce integrity across the `specs` architecture:
 - For new process-first work, reconcile `plan.md` with its flat
   `task-NN-*.md` files, accepted C1/C2 decisions, Ownership, Dependencies,
   Acceptance, exactly one `Status:`, and the final inline `## Receipt`.
-- Report process-first state drift to the controller or `hapo:sync`; never
+- Report process-first state drift to the controller or `cf:sync`; never
   invent or write Status, Receipt, approval, or execution proof.
 - Track cross-spec dependencies. Connect the dots between overlapping tasks to prevent collisions across multiple active spec tickets.
 

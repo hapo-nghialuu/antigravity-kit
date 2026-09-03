@@ -20,7 +20,7 @@ request
   -> adversarial review
   -> C2: accept, revise, hoặc KEEP named findings
   -> dừng planning
-  -> invocation /hapo:develop mới và rõ ràng
+  -> invocation /cf:develop mới và rõ ràng
   -> exact verification + final inline Receipt
   -> C3: user quyết định proof và limitations đã đủ chưa
 ```
@@ -57,7 +57,7 @@ Mỗi task cần có:
 
 ## Execution và proof
 
-`/hapo:develop <feature>` chọn một unblocked task, scout integration path thật, chỉ implement boundary đó và chạy exact proof command. Controller là bên duy nhất ghi state và proof.
+`/cf:develop <feature>` chọn một unblocked task, scout integration path thật, chỉ implement boundary đó và chạy exact proof command. Controller là bên duy nhất ghi state và proof.
 
 Task `done` cần final inline Receipt hiện tại gồm exact command, `Exit: 0`, `Verification: PASS`, runtime-derived `Base`/`Head` và fenced current output không rỗng.
 
@@ -65,7 +65,7 @@ Task `done` cần final inline Receipt hiện tại gồm exact command, `Exit: 
 
 ## Sync boundary
 
-`/hapo:sync` chỉ update Status và inline Receipt đã quan sát. Nó không bịa execution, approval, readiness hay completion.
+`/cf:sync` chỉ update Status và inline Receipt đã quan sát. Nó không bịa execution, approval, readiness hay completion.
 
 ## Legacy compatibility
 

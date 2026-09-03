@@ -3,7 +3,7 @@ import { CheckCircle2, ClipboardCheck, Code2, FileText, GitBranch, ShieldCheck, 
 const stages = [
   {
     icon: FileText,
-    command: '/hapo:specs',
+    command: '/cf:specs',
     title: 'Specify',
     detail: 'Create requirements, research, design, task packets, and validation gates before code starts.',
   },
@@ -15,25 +15,25 @@ const stages = [
   },
   {
     icon: Code2,
-    command: '/hapo:develop',
+    command: '/cf:develop',
     title: 'Build',
     detail: 'Implement one approved task at a time after task-aware inspection of real entrypoints.',
   },
   {
     icon: TestTube2,
-    command: '/hapo:test',
+    command: '/cf:test',
     title: 'Verify',
     detail: 'Run exact commands, prove reachability, and reject fake green results such as zero-test passes.',
   },
   {
     icon: ShieldCheck,
-    command: '/hapo:code-review',
+    command: '/cf:code-review',
     title: 'Review',
     detail: 'Check spec compliance, code quality, edge cases, security, and regression risk before closeout.',
   },
   {
     icon: GitBranch,
-    command: '/hapo:sync',
+    command: '/cf:sync',
     title: 'Sync',
     detail: 'Update task Status and its inline Receipt only after proof, or audit drift before continuing.',
   },

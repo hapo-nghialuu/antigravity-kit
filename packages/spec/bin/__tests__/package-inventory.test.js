@@ -811,8 +811,8 @@ function packedResearchLoopIssues(project, platform) {
     ([key, value]) => [key, value.replace(/\s+/g, ' ').trim()]
   ));
   const issues = new Set();
-  const publicResearch = platform === 'codex' ? 'name: hapo-research' : 'name: hapo:research';
-  const publicLoop = platform === 'codex' ? 'name: hapo-loop' : 'name: hapo:loop';
+  const publicResearch = platform === 'codex' ? 'name: cf-research' : 'name: cf:research';
+  const publicLoop = platform === 'codex' ? 'name: cf-loop' : 'name: cf:loop';
   if (!values.research.includes(publicResearch)
     || !values.research.includes('Choose the smallest depth that can support the decision:')
     || !values.research.includes('Use delegated researchers only as optional acceleration')
@@ -1737,8 +1737,8 @@ function assertCombinedInstructionIsolation(root) {
     [claude, '<!-- CAFEKIT CLAUDE START -->']
   ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
 
-  assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/hapo:|\$hapo-/i);
-  assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$hapo-/i);
+  assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/cf:|\$cf-/i);
+  assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$cf-/i);
   assert.match(codexBlock, /native project instruction surface is root `AGENTS\.md`/);
   assert.match(agents, /shared-root trade-off is intentional/);
   // H5 ownership/ignore contract
@@ -1747,7 +1747,7 @@ function assertCombinedInstructionIsolation(root) {
   assert.match(codexBlock, /owned by Codex/i);
   assert.match(codexBlock, /If you are Claude Code or any other runtime, ignore this entire Codex block/i);
   assert.doesNotMatch(codexBlock, /If you are Codex CLI or any other runtime, ignore this entire Codex block/i);
-  assert.doesNotMatch(core, /\$hapo-|hapo:/i);
+  assert.doesNotMatch(core, /\$cf-|cf:/i);
   assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT CODEX /);
 }
 function stableInstallSnapshot(root, platforms) {
@@ -2251,14 +2251,14 @@ function assertTransforms(root, platform) {
   const scout = fs.readFileSync(path.join(skillRoot, 'inspect', 'SKILL.md'), 'utf8');
   const ask = fs.readFileSync(path.join(skillRoot, 'question', 'SKILL.md'), 'utf8');
   if (platform === 'codex') {
-    assert.match(content, /\$hapo-develop/);
-    assert.doesNotMatch(content, /\/hapo:develop/);
-    assert.match(scout, /^name:\s*hapo-scout$/m);
-    assert.match(ask, /^name:\s*hapo-ask$/m);
+    assert.match(content, /\$cf-develop/);
+    assert.doesNotMatch(content, /\/cf:develop/);
+    assert.match(scout, /^name:\s*cf-scout$/m);
+    assert.match(ask, /^name:\s*cf-ask$/m);
   } else {
-    assert.match(content, /\/hapo:develop/);
-    assert.match(scout, /^name:\s*hapo:scout$/m);
-    assert.match(ask, /^name:\s*hapo:ask$/m);
+    assert.match(content, /\/cf:develop/);
+    assert.match(scout, /^name:\s*cf:scout$/m);
+    assert.match(ask, /^name:\s*cf:ask$/m);
   }
   assert.equal(fs.existsSync(path.join(skillRoot, 'scout')), false);
   assert.equal(fs.existsSync(path.join(skillRoot, 'ask')), false);
@@ -2302,12 +2302,12 @@ test('packed core-only installs reject optional capability routing', () => {
       });
       assert.equal(catalogResult.status, 0, catalogResult.stderr);
       const catalog = JSON.parse(catalogResult.stdout);
-      assert.ok(catalog.skills.some((skill) => skill.public_id === 'hapo:route'));
-      assert.equal(catalog.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+      assert.ok(catalog.skills.some((skill) => skill.public_id === 'cf:route'));
+      assert.equal(catalog.skills.some((skill) => skill.public_id === 'cf:docs'), false);
       assert.deepEqual(routeProjectionIssues(installedRouteFiles(project, platform)), []);
     }
     const domain = fs.readFileSync(path.join(project, '.claude/rules/skill-domain-routing.md'), 'utf8');
-    assert.doesNotMatch(domain, /\/hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/);
+    assert.doesNotMatch(domain, /\/cf:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -2531,10 +2531,10 @@ test('repository and package guides document adaptive Research and bounded Loop'
     package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
   };
   for (const [name, guide] of Object.entries(guides)) {
-    assert.match(guide, /hapo:research/, `${name} names Claude Research`);
-    assert.match(guide, /hapo:loop/, `${name} names Claude Loop`);
-    assert.match(guide, /\$hapo-research/, `${name} names Codex Research`);
-    assert.match(guide, /\$hapo-loop/, `${name} names Codex Loop`);
+    assert.match(guide, /cf:research/, `${name} names Claude Research`);
+    assert.match(guide, /cf:loop/, `${name} names Claude Loop`);
+    assert.match(guide, /\$cf-research/, `${name} names Codex Research`);
+    assert.match(guide, /\$cf-loop/, `${name} names Codex Loop`);
     assert.match(guide, /Quick, Standard, or Deep/, `${name} documents adaptive Research depth`);
     assert.match(guide, /explicit-only|never selected automatically/i, `${name} keeps Loop explicit-only`);
     for (const field of ['Goal', 'Scope', 'Metric', 'Direction', 'Baseline', 'Guard', 'minimum delta', 'budget']) {
@@ -2544,15 +2544,15 @@ test('repository and package guides document adaptive Research and bounded Loop'
     assert.match(guide, /detached worktree/, `${name} documents Loop isolation`);
     assert.match(guide, /base-bound (?:isolated )?patch handoff/, `${name} documents Loop handoff`);
     assert.match(guide, /does not .{0,80}guarantee|never .{0,80}guarantee/is, `${name} rejects guarantees`);
-    assert.doesNotMatch(guide, /hapo[:-]autoresearch/, `${name} does not advertise Autoresearch`);
+    assert.doesNotMatch(guide, /cf[:-]autoresearch/, `${name} does not advertise Autoresearch`);
   }
 
   const catalog = fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../cafekit-web/src/components/docs/catalog-visuals.tsx'), 'utf8');
   const overview = fs.readFileSync(path.resolve(PACKAGE_ROOT, '../../cafekit-web/src/components/docs/skill-overview.tsx'), 'utf8');
   assert.match(catalog, /\['Bounded optimization', \['loop'\]\]/);
   assert.match(catalog, /proportional, traceable evidence/);
-  assert.match(overview, /\['hapo:research'/);
-  assert.match(overview, /\['hapo:loop'/);
+  assert.match(overview, /\['cf:research'/);
+  assert.match(overview, /\['cf:loop'/);
   for (const field of ['Goal', 'Scope', 'Metric', 'Direction', 'Baseline', 'Guard', 'noise policy', 'minimum delta', 'budget']) {
     assert.match(overview, new RegExp(field, 'i'), `website documents Loop field ${field}`);
   }
@@ -2708,8 +2708,8 @@ test('packed Claude and Codex installs reject adaptive Fix semantic weakenings',
     const runtimeClosure = packedRuntimeClosure(path.join(root, 'runtime-closure'));
     assertCleanInventory(packedInventory(tarball));
     const layouts = {
-      claude: { skillsRoot: '.claude/skills/hotfix', refPrefix: 'hapo:' },
-      codex: { skillsRoot: '.agents/skills/hotfix', refPrefix: 'hapo-' },
+      claude: { skillsRoot: '.claude/skills/hotfix', refPrefix: 'cf:' },
+      codex: { skillsRoot: '.agents/skills/hotfix', refPrefix: 'cf-' },
     };
     const exercised = new Set();
     for (const [platform, layout] of Object.entries(layouts)) {
@@ -2778,12 +2778,12 @@ test('repository and package guides document adaptive Fix usage', () => {
     package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
   };
   for (const [name, guide] of Object.entries(guides)) {
-    assert.match(guide, /hapo:fix/, `${name} guide names Fix`);
-    assert.doesNotMatch(guide, /hapo:hotfix|hapo-hotfix/, `${name} guide drops the old public name`);
+    assert.match(guide, /cf:fix/, `${name} guide names Fix`);
+    assert.doesNotMatch(guide, /cf:hotfix|cf-hotfix/, `${name} guide drops the old public name`);
     assert.match(guide, /Quick\/local/, `${name} guide documents quick depth`);
     assert.match(guide, /Incident\/deep/, `${name} guide documents incident depth`);
     assert.match(guide, /PASS \| PASS_WITH_WARNINGS \| FAIL \| BLOCKED/, `${name} guide documents shared verdicts`);
-    assert.match(guide, /debug handoff|hapo:debug[^\n]*handoff/i, `${name} guide documents the debug handoff`);
+    assert.match(guide, /debug handoff|cf:debug[^\n]*handoff/i, `${name} guide documents the debug handoff`);
     assert.doesNotMatch(guide, /hotfix[^\n]*\b\d+(?:\.\d+)?\s*(?:%|x faster|seconds|minutes|ms)\b/i, `${name} guide must not invent timing claims`);
   }
 });
@@ -2794,7 +2794,7 @@ test('localized reference guides keep OpenCode mappings historical', () => {
     fs.readFileSync(path.join(docsRoot, locale, 'reference.mdx'), 'utf8'));
   for (const reference of references) {
     assert.match(reference, /Legacy OpenCode 0\.16 command/);
-    assert.match(reference, /hapo:fix/);
+    assert.match(reference, /cf:fix/);
     assert.doesNotMatch(reference, /OpenCode currently|OpenCode hiện có|OpenCode は main implementation surface/);
   }
 });
@@ -2820,10 +2820,10 @@ test('website keeps process-first docs, canonical public names, and historical l
     .map((file) => fs.readFileSync(file, 'utf8'))
     .join('\n');
 
-  assert.doesNotMatch(currentCorpus, /hapo:generate-graph|\/generate-graph/);
+  assert.doesNotMatch(currentCorpus, /cf:generate-graph|\/generate-graph/);
   assert.doesNotMatch(
     currentCorpus,
-    /\bspec\.json\b|\btask_registry\b|tasks\/task-R|task-R\*|hapo:specs --validate|registry sync/
+    /\bspec\.json\b|\btask_registry\b|tasks\/task-R|task-R\*|cf:specs --validate|registry sync/
   );
   assert.doesNotMatch(currentCorpus, /OpenCode installs|OpenCode cài|OpenCode では[^\n]*commands|Yes\.[^\n]*OpenCode|Có\.[^\n]*OpenCode|はい。[^\n]*OpenCode/i);
 
@@ -2989,7 +2989,7 @@ test('repository and package guides document adaptive Docs usage', () => {
     package: fs.readFileSync(path.join(PACKAGE_ROOT, 'README.md'), 'utf8'),
   };
   for (const [name, guide] of Object.entries(guides)) {
-    assert.match(guide, /hapo:docs/, `${name} guide names docs`);
+    assert.match(guide, /cf:docs/, `${name} guide names docs`);
     assert.match(guide, /post-task docs checkpoint/i, `${name} guide documents the checkpoint`);
     assert.match(guide, /Delegation Gate/, `${name} guide documents the gate`);
     assert.match(guide, /Observed \| Inferred \| Unknown/, `${name} guide documents the evidence taxonomy`);

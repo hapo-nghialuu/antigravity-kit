@@ -114,7 +114,7 @@ Classify each issue by severity (no numeric scoring):
 - **Medium Issues:** [N]
 - **Scope:** [N files, ~N lines of code]
 - **Verdict:** [PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED]
-- **PASS:** no Critical or High findings and no blocking Medium finding. The definition of `PASS` defers to `hapo:code-review`; do not redefine it with local severity counts.
+- **PASS:** no Critical or High findings and no blocking Medium finding. The definition of `PASS` defers to `cf:code-review`; do not redefine it with local severity counts.
 - **PASS_WITH_WARNINGS:** only documented non-blocking findings remain. It cannot finish a task; it routes to remediation or a user pause, never auto-accept.
 - **FAIL:** findings are actionable and map to a file/task/surface; report findings under FAIL.
 - **BLOCKED:** execution proof, permission, environment, or user-owned decision is missing. Stop without blind retries.

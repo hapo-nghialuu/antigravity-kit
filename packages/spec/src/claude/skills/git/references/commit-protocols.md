@@ -36,4 +36,4 @@ git add -A && git diff --cached --stat && git diff --cached --name-only
 ## Xử lý Vướng Mắc Git (Error Handling via Bash)
 - **Có Secret bị rò rỉ:** Cảnh báo đỏ. Gọi lệnh xoá file đó khỏi staged `git rm --cached <file>`. Cảnh cáo người dùng.
 - **Push bị báo Rejected:** Cấm dùng `--force` mù quáng. Yêu cầu chạy Bash: `git pull --rebase origin <branch>`.
-- **Merge Conflicts:** Báo "BLOCKED", in lệnh Bash hướng dẫn người dùng chạy command giải quyết hoặc gọi agent `hapo:develop` xử lý conflict file.
+- **Merge Conflicts:** Báo "BLOCKED", in lệnh Bash hướng dẫn người dùng chạy command giải quyết hoặc gọi agent `cf:develop` xử lý conflict file.

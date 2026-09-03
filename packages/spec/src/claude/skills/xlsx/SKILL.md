@@ -1,5 +1,5 @@
 ---
-name: hapo:xlsx
+name: cf:xlsx
 description: Create, edit, analyze spreadsheets (.xlsx, .csv, .tsv). Use for Excel formulas, data analysis, visualization, formatting, pivot tables, charts, formula recalculation.
 license: Proprietary. LICENSE.txt has complete terms
 user-invocable: true

@@ -1,6 +1,6 @@
-# Hướng dẫn sử dụng `hapo:specs` — process-first planning
+# Hướng dẫn sử dụng `cf:specs` — process-first planning
 
-`hapo:specs` biến một ý tưởng thành một packet có thể đọc, review và thực thi
+`cf:specs` biến một ý tưởng thành một packet có thể đọc, review và thực thi
 bằng Markdown thuần. Layout chính là `specs/<feature>/plan.md` kèm các file
 `task-NN-<slug>.md` nằm cạnh nó. Luồng mới không dạy registry cũ; phần đó chỉ
 còn ở legacy adapter.
@@ -33,7 +33,7 @@ overlay, sau đó yêu cầu non-direct mới chọn độ sâu Standard hoặc 
 đủ dùng. Chỉ parse control trong leading control segment. Ba exact flag
 single-use `--deep`, `--visual`, `--advice` có thể kết hợp theo mọi thứ tự;
 unknown hoặc duplicate leading `--*` phải dừng với usage và không thực hiện hành
-động. `--` kết thúc control; dùng `/hapo:brainstorm -- --dry-run` khi nội dung
+động. `--` kết thúc control; dùng `/cf:brainstorm -- --dry-run` khi nội dung
 literal bắt đầu bằng flag.
 
 `--deep` chỉ tăng độ sâu cho non-direct analysis. `--visual` chỉ đổi cách trình
@@ -145,7 +145,7 @@ kết quả timing hay execution Receipt nào được tạo.
 
 ## Test proof handoff
 
-Với process-first packet, `hapo:test` đọc byte hiện tại của `plan.md` và flat
+Với process-first packet, `cf:test` đọc byte hiện tại của `plan.md` và flat
 `task-NN-*.md`, chạy đúng Command cùng từng Named probe trong Verification Plan,
 rồi trả một machine handoff `test-proof-v1`. Test không ghi `Status:` hay inline
 `## Receipt`; Develop controller là writer duy nhất sau khi payload và review đều
@@ -196,10 +196,10 @@ Receipt không hợp lệ nếu thiếu fenced output, thiếu `Exit: 0`, thiế
 
 ## Develop và Sync
 
-- `hapo:develop <feature>` tái dùng C1/C2 đã duyệt, chọn task đầu tiên có
+- `cf:develop <feature>` tái dùng C1/C2 đã duyệt, chọn task đầu tiên có
   dependency hợp lệ theo thứ tự trong `plan.md`, rồi tiếp tục tuần tự tới blocker
   thật hoặc C3. Không hỏi lại ở mỗi task.
-- `hapo:develop <feature> task-NN-<slug>.md` chỉ làm đúng task được chỉ định,
+- `cf:develop <feature> task-NN-<slug>.md` chỉ làm đúng task được chỉ định,
   không chạm sibling và dừng ngay sau sync thành công.
 - Trạng thái `paused`, `blocked`, dependency không hợp lệ, nhiều task
   `in_progress`, hoặc concurrent drift đều fail-stop. Một task `in_progress` bị
@@ -214,7 +214,7 @@ Receipt không hợp lệ nếu thiếu fenced output, thiếu `Exit: 0`, thiế
   metrics, không phải đo wall-clock hay cam kết tốc độ. Source/installed checks
   cũng không chứng minh hành vi model thật; live-model adherence là
   `[UNVERIFIED]` nếu chưa có host invocation.
-- `hapo:sync` chỉ cập nhật observed state của task file và receipt.
+- `cf:sync` chỉ cập nhật observed state của task file và receipt.
 - `sync-finalize` chỉ dùng để promote một task flash/unverified sau khi có fresh
   canonical PASS.
 

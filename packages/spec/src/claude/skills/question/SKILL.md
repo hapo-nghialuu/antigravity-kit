@@ -1,5 +1,5 @@
 ---
-name: hapo:ask
+name: cf:ask
 description: "Answer questions with evidence. Use when the user asks about project behavior, source code, specs, docs, configuration, dependencies, or external technical information; inspect the repo first, use internet/current docs when repo evidence is insufficient, and ask back only when the question cannot be answered safely."
 user-invocable: true
 when_to_use: "Invoke to answer project or technical questions with repo-first evidence."
@@ -12,7 +12,7 @@ metadata:
 ---
 # Ask Skill
 
-`hapo:ask` is an evidence-backed question-answering skill. It answers user questions by checking the local project first, then external/current sources when the repository cannot answer the question.
+`cf:ask` is an evidence-backed question-answering skill. It answers user questions by checking the local project first, then external/current sources when the repository cannot answer the question.
 
 ## Core Stance
 
@@ -29,7 +29,7 @@ The output is an answer, evidence, confidence, and a follow-up only when needed.
 
 ## When To Use
 
-Use `hapo:ask` when the user asks:
+Use `cf:ask` when the user asks:
 - "What does X do in this system?"
 - "Where is this flow handled?"
 - "What is the current config/version/package?"
@@ -41,13 +41,13 @@ Use `hapo:ask` when the user asks:
 
 Do not use it when:
 - The user asks to implement, fix, debug, test, commit, or publish.
-- The user wants ideation/tradeoff exploration; use `hapo:brainstorm`.
-- The user wants a formal spec; use `hapo:specs`.
+- The user wants ideation/tradeoff exploration; use `cf:brainstorm`.
+- The user wants a formal spec; use `cf:specs`.
 - The user wants full legacy documentation reconstruction: use
-  `hapo:docs --reconstruct` when the optional document bundle is installed;
-  otherwise use `hapo:scout` plus source evidence, or explain how to install the
+  `cf:docs --reconstruct` when the optional document bundle is installed;
+  otherwise use `cf:scout` plus source evidence, or explain how to install the
   bundle with `npx @haposoft/cafekit --with-document-skills`.
-- The user wants root-cause diagnosis for a failure; use `hapo:debug`.
+- The user wants root-cause diagnosis for a failure; use `cf:debug`.
 
 ## Modes
 
@@ -80,7 +80,7 @@ Repo evidence priority:
 3. source files, tests, scripts, package manifests, config files
 4. git history only when the question asks about changes or provenance
 
-Use focused search (`rg`, targeted file reads) instead of broad scans. Use `hapo:scout` when the user asks where something lives or the source surface is unclear.
+Use focused search (`rg`, targeted file reads) instead of broad scans. Use `cf:scout` when the user asks where something lives or the source surface is unclear.
 
 External evidence:
 - Use external/current docs when repo evidence is absent, stale, or not authoritative.
@@ -141,7 +141,7 @@ Use `templates/question.md` when the user asks to save or document the answer.
 ### Source Question
 
 ```text
-/hapo:ask "In this system, which file does cafekit use to toggle skill routing?"
+/cf:ask "In this system, which file does cafekit use to toggle skill routing?"
 ```
 
 Expected behavior:
@@ -152,7 +152,7 @@ Expected behavior:
 ### Mixed Source + Web Question
 
 ```text
-/hapo:ask "Which React version does this project use, and does that version still match current best practice?" --both
+/cf:ask "Which React version does this project use, and does that version still match current best practice?" --both
 ```
 
 Expected behavior:
@@ -163,7 +163,7 @@ Expected behavior:
 ### Ask Back
 
 ```text
-/hapo:ask "Is this system stable?"
+/cf:ask "Is this system stable?"
 ```
 
 Expected behavior:

@@ -10,13 +10,13 @@ description: The main CafeKit path from bounded intent to verified change.
 ## Main path
 
 ```text
-/hapo:brainstorm         # optional when intent or architecture is unresolved
-  -> /hapo:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
+/cf:brainstorm         # optional when intent or architecture is unresolved
+  -> /cf:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
   -> stop planning
-  -> /hapo:develop       # new explicit invocation; one unblocked task at a time
-  -> /hapo:test          # smallest adequate real proof
-  -> /hapo:code-review   # correctness, security, regressions, contract drift
-  -> /hapo:sync          # observed Status and inline Receipt only
+  -> /cf:develop       # new explicit invocation; one unblocked task at a time
+  -> /cf:test          # smallest adequate real proof
+  -> /cf:code-review   # correctness, security, regressions, contract drift
+  -> /cf:sync          # observed Status and inline Receipt only
   -> C3                  # user completion decision
 ```
 
@@ -46,12 +46,12 @@ The controller alone updates task Status and canonical Receipt. Sync may reconci
 
 | Situation | Route |
 |---|---|
-| Need an evidence-backed answer | `/hapo:ask` |
-| Need scoped codebase discovery | `/hapo:scout` |
-| Root cause unknown | `/hapo:debug` |
-| Diagnosed bug needs repair | `/hapo:fix` |
-| Existing system lacks reliable docs | `/hapo:docs --reconstruct <scope>` |
-| Uncertain technical decision | `/hapo:research` |
-| Explicit bounded numeric optimization | `/hapo:loop` |
+| Need an evidence-backed answer | `/cf:ask` |
+| Need scoped codebase discovery | `/cf:scout` |
+| Root cause unknown | `/cf:debug` |
+| Diagnosed bug needs repair | `/cf:fix` |
+| Existing system lacks reliable docs | `/cf:docs --reconstruct <scope>` |
+| Uncertain technical decision | `/cf:research` |
+| Explicit bounded numeric optimization | `/cf:loop` |
 
-Claude Code uses `/hapo:*`; Codex CLI uses native `$hapo-*` skills. OpenCode commands are historical 0.16-only compatibility notes.
+Claude Code uses `/cf:*`; Codex CLI uses native `$cf-*` skills. OpenCode commands are historical 0.16-only compatibility notes.

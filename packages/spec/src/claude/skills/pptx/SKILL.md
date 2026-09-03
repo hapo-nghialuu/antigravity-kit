@@ -1,5 +1,5 @@
 ---
-name: hapo:pptx
+name: cf:pptx
 description: Create, edit, analyze .pptx PowerPoint files. Use for presentations, slides, layouts, speaker notes, template modification, content extraction, slide generation.
 license: Proprietary. LICENSE.txt has complete terms
 user-invocable: true

@@ -26,7 +26,7 @@ export const tutorialContentEn: TutorialContent = {
       label: "Prepare",
       title: "What you need before starting",
       narrative: [
-        "CafeKit runs inside Claude Code — an AI coding assistant you control from your terminal. You type /hapo:* commands inside a Claude Code session, not in a regular terminal prompt.",
+        "CafeKit runs inside Claude Code — an AI coding assistant you control from your terminal. You type /cf:* commands inside a Claude Code session, not in a regular terminal prompt.",
         "You'll need three things ready. Once you have them, come back and click Next.",
       ],
       links: [
@@ -66,10 +66,10 @@ export const tutorialContentEn: TutorialContent = {
       label: "Create spec",
       title: "Create your first spec",
       narrative: [
-        "Now open a Claude Code session inside your project by running claude in the terminal. You are now inside Claude Code — this is where you type /hapo:* commands.",
+        "Now open a Claude Code session inside your project by running claude in the terminal. You are now inside Claude Code — this is where you type /cf:* commands.",
         "A spec is a written contract that describes what you want to build before code starts. Specs first asks C1 to lock scope, writes the plan and flat tasks, then presents C2 findings for your decision.",
       ],
-      command: "/hapo:specs Build a word counter that counts words in a sentence",
+      command: "/cf:specs Build a word counter that counts words in a sentence",
       outputs: [
         { kind: "output", text: "C1 → confirm outcome, scope, exclusions, and constraints" },
         { kind: "success", text: "✓ specs/word-counter/plan.md" },
@@ -82,7 +82,7 @@ export const tutorialContentEn: TutorialContent = {
         "task-01-count-words.md — one outcome, one Status field, and a planned proof command",
       ],
       troubleshooting: [
-        { problem: "/hapo:specs not recognized", fix: "Make sure you ran npx @haposoft/cafekit in this project. Check that .claude/ exists." },
+        { problem: "/cf:specs not recognized", fix: "Make sure you ran npx @haposoft/cafekit in this project. Check that .claude/ exists." },
         { problem: "Command runs but no output", fix: "You may be in a regular terminal, not a Claude Code session. Run claude first, then try again." },
       ],
       glossary: [
@@ -101,7 +101,7 @@ export const tutorialContentEn: TutorialContent = {
       outputs: [
         { kind: "output", text: "recording C2 decisions in plan.md…" },
         { kind: "success", text: "✓ scope and findings accepted" },
-        { kind: "success", text: "✓ ready for a new explicit /hapo:develop invocation" },
+        { kind: "success", text: "✓ ready for a new explicit /cf:develop invocation" },
       ],
       youWillSee: [
         "C2 decisions are durable in plan.md",
@@ -118,7 +118,7 @@ export const tutorialContentEn: TutorialContent = {
       narrative: [
         "Now implement — one task at a time. CafeKit reads the task file, checks what needs to be built, and implements it. After coding it runs a quality gate: build, evidence, and review must all pass.",
       ],
-      command: "/hapo:develop word-counter",
+      command: "/cf:develop word-counter",
       outputs: [
         { kind: "output", text: "reading plan.md and task-01-count-words.md…" },
         { kind: "output", text: "implementing countWords()…" },
@@ -143,7 +143,7 @@ export const tutorialContentEn: TutorialContent = {
       narrative: [
         "Run the test suite. CafeKit checks build, types, and tests — and rejects shallow results. A command that exits 0 while running zero tests is NOT a pass.",
       ],
-      command: "/hapo:test",
+      command: "/cf:test",
       outputs: [
         { kind: "output", text: "detecting test runner…" },
         { kind: "output", text: "running test suite…" },
@@ -155,8 +155,8 @@ export const tutorialContentEn: TutorialContent = {
         "verdict: PASS — build, types, and tests all green",
       ],
       troubleshooting: [
-        { problem: "verdict: NO_TESTS", fix: "No test file found. Add a test for countWords() and run /hapo:test again. Zero tests is not a pass." },
-        { problem: "Tests fail", fix: "Read the error. Fix the implementation or the test, then re-run /hapo:test." },
+        { problem: "verdict: NO_TESTS", fix: "No test file found. Add a test for countWords() and run /cf:test again. Zero tests is not a pass." },
+        { problem: "Tests fail", fix: "Read the error. Fix the implementation or the test, then re-run /cf:test." },
       ],
       glossary: [
         { term: "NO_TESTS", definition: "No test suite ran. Never a passing result — tasks require real evidence." },
@@ -170,19 +170,19 @@ export const tutorialContentEn: TutorialContent = {
         "Run a code review to catch any issues, then sync the task state to done. A task is only done when implementation, evidence, tests, and review all agree.",
         "After review passes, sync only observed state. C3 is the final human decision that the current receipts and named limitations are good enough to close the feature.",
       ],
-      command: "/hapo:code-review",
+      command: "/cf:code-review",
       outputs: [
         { kind: "output", text: "reviewing word-counter implementation…" },
         { kind: "success", text: "✓ spec compliance: ok" },
         { kind: "success", text: "✓ no critical findings" },
-        { kind: "output", text: "next: /hapo:sync word-counter, then review C3" },
+        { kind: "output", text: "next: /cf:sync word-counter, then review C3" },
       ],
       youWillSee: [
         "no critical findings — ready to mark done",
         "task Status and inline Receipt remain synchronized after sync",
       ],
       troubleshooting: [
-        { problem: "Critical findings in review", fix: "Fix the issues, re-run /hapo:test, then /hapo:code-review again before syncing." },
+        { problem: "Critical findings in review", fix: "Fix the issues, re-run /cf:test, then /cf:code-review again before syncing." },
       ],
     },
   ],

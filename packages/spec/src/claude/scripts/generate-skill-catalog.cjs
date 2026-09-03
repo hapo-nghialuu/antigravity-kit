@@ -119,12 +119,12 @@ function parseKeywords(value) {
 }
 
 function publicIdentity(name) {
-  const match = String(name).match(/^hapo(?::|-)([a-z0-9]+(?:-[a-z0-9]+)*)$/);
-  return match ? `hapo:${match[1]}` : null;
+  const match = String(name).match(/^cf(?::|-)([a-z0-9]+(?:-[a-z0-9]+)*)$/);
+  return match ? `cf:${match[1]}` : null;
 }
 
 function expectedIdentity(directory) {
-  return `hapo:${PUBLIC_SUFFIX_BY_DIRECTORY[directory] || directory}`;
+  return `cf:${PUBLIC_SUFFIX_BY_DIRECTORY[directory] || directory}`;
 }
 
 function diagnostic(code, directory, message) {

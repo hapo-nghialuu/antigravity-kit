@@ -25,7 +25,7 @@ processes stay behind.
   with `lsof -i :PORT` or `ss -ltnp` on macOS and Linux, `netstat -ano` on
   Windows.
 - Stop what you started when its task, session, or worktree ends. Before a
-  `hapo:develop` wave releases a worktree, terminate that worktree's background
+  `cf:develop` wave releases a worktree, terminate that worktree's background
   processes so nothing is left orphaned.
 - Reconcile periodically: list your running dev processes (`ps`, `lsof`) and
   stop the ones that no longer map to an active task or worktree.

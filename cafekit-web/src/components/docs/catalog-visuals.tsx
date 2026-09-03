@@ -1,7 +1,7 @@
 import { Bot, Boxes, Braces, Bug, FileSearch, GitPullRequest, Laptop, Layers3, PenTool, Shield, Sparkles, TestTube2, Wrench } from 'lucide-react';
 
 const skillGroups: Array<[string, string[]]> = [
-  ['Routing — semantic, not deterministic', ['hapo:route']],
+  ['Routing — semantic, not deterministic', ['cf:route']],
   ['Core workflow', ['specs', 'develop', 'test', 'code-review', 'sync', 'git']],
   ['Pre-spec discovery', ['ask', 'brainstorm', 'scout', 'research']],
   ['Bounded optimization', ['loop']],

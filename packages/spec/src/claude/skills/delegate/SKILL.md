@@ -1,5 +1,5 @@
 ---
-name: hapo:delegate
+name: cf:delegate
 description: "Delegate implementation tasks from Claude Code to external CLI agents (Codex or Grok). Covers task-brief authoring, non-interactive dispatch, permission setup, background monitoring, resume, and independent verification of the returned work."
 user-invocable: true
 when_to_use: "Invoke when the user asks to assign/offload a coding task to codex or grok, or to run work on an external agent CLI."

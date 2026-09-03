@@ -10,13 +10,13 @@ description: Bounded intent から verified change までの CafeKit main path�
 ## Main path
 
 ```text
-/hapo:brainstorm         # intent または architecture が未解決なら optional
-  -> /hapo:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
+/cf:brainstorm         # intent または architecture が未解決なら optional
+  -> /cf:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
   -> planning stop
-  -> /hapo:develop       # new explicit invocation; one unblocked task
-  -> /hapo:test          # smallest adequate real proof
-  -> /hapo:code-review   # correctness, security, regression, contract drift
-  -> /hapo:sync          # observed Status と inline Receipt のみ
+  -> /cf:develop       # new explicit invocation; one unblocked task
+  -> /cf:test          # smallest adequate real proof
+  -> /cf:code-review   # correctness, security, regression, contract drift
+  -> /cf:sync          # observed Status と inline Receipt のみ
   -> C3                  # user completion decision
 ```
 
@@ -46,12 +46,12 @@ Controller だけが task Status と canonical Receipt を更新します。Sync
 
 | Situation | Route |
 |---|---|
-| Evidence-backed answer | `/hapo:ask` |
-| Scoped codebase discovery | `/hapo:scout` |
-| Root cause unknown | `/hapo:debug` |
-| Diagnosed bug repair | `/hapo:fix` |
-| Existing system lacks reliable docs | `/hapo:docs --reconstruct <scope>` |
-| Uncertain technical decision | `/hapo:research` |
-| Explicit bounded numeric optimization | `/hapo:loop` |
+| Evidence-backed answer | `/cf:ask` |
+| Scoped codebase discovery | `/cf:scout` |
+| Root cause unknown | `/cf:debug` |
+| Diagnosed bug repair | `/cf:fix` |
+| Existing system lacks reliable docs | `/cf:docs --reconstruct <scope>` |
+| Uncertain technical decision | `/cf:research` |
+| Explicit bounded numeric optimization | `/cf:loop` |
 
-Claude Code は `/hapo:*`、Codex CLI は native `$hapo-*` skills。OpenCode commands は historical 0.16 notes のみです。
+Claude Code は `/cf:*`、Codex CLI は native `$cf-*` skills。OpenCode commands は historical 0.16 notes のみです。

@@ -1,5 +1,5 @@
 ---
-name: hapo:ai-multimodal
+name: cf:ai-multimodal
 description: Analyze images/audio/video/documentation with Gemini API. Use for vision analysis, transcription, OCR, design extraction, and deep multimodal understanding.
 license: MIT
 user-invocable: true

@@ -220,7 +220,7 @@ try {
   if (staleFlashTasks.length > 0) {
     process.stdout.write(JSON.stringify({
       decision: 'block',
-      reason: `Completion gate: ${staleFlashTasks.length} task(s) marked done with FLASH_UNVERIFIED (${staleFlashTasks.join(', ')}). Run /hapo:test for exact proof, then use explicit sync-finalize.`
+      reason: `Completion gate: ${staleFlashTasks.length} task(s) marked done with FLASH_UNVERIFIED (${staleFlashTasks.join(', ')}). Run /cf:test for exact proof, then use explicit sync-finalize.`
     }) + '\n');
     process.exit(0);
   }

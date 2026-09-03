@@ -16,8 +16,8 @@ description: Frozen historical migration notes for the last OpenCode-supported C
 ```
 .opencode/
 ├── skills/         # Self-contained skill packs
-├── agents/         # Subagent prompts (no hapo: prefix)
-├── commands/       # Slash commands without hapo: prefix
+├── agents/         # Subagent prompts (no cf: prefix)
+├── commands/       # Slash commands without cf: prefix
 ├── plugins/        # TypeScript plugins (see below)
 ├── rules/          # Workflow, dev, docs, hook, state-sync rules
 ├── scripts/        # Helper scripts
@@ -49,7 +49,7 @@ OpenCode lacks a per-prompt injection channel, so `rules.ts` upserts a managed b
 
 ## Commands
 
-OpenCode intentionally drops the `hapo:` prefix:
+OpenCode intentionally drops the `cf:` prefix:
 
 ```
 /question     /brainstorm    /specs       /develop

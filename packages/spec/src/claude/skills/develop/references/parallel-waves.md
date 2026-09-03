@@ -1,4 +1,4 @@
-# Parallel waves — `hapo:develop --parallel`
+# Parallel waves — `cf:develop --parallel`
 
 Load this reference only for explicit parallel execution. The goal is bounded concurrency with immutable provenance and one state writer.
 

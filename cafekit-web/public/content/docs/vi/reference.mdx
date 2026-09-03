@@ -29,18 +29,18 @@ không phải alias cho command Claude hoặc Codex hiện tại.
 
 | Claude Code command | Legacy OpenCode 0.16 command | Purpose |
 |---|---|---|
-| `/hapo:ask` | `/question` | Trả lời câu hỏi về project và kỹ thuật bằng source evidence trước. |
-| `/hapo:brainstorm` | `/brainstorm` | Làm rõ idea trước khi spec. |
-| `/hapo:specs` | `/specs` | Tạo process-first plan và flat tasks qua C1/C2. |
-| `/hapo:develop` | `/develop` | Execute từng approved flat task. |
-| `/hapo:test` | `/test` | Task-aware verification. |
-| `/hapo:code-review` | `/code-review` | Review regressions và security. |
-| `/hapo:sync` | — | Sync observed task Status và final inline Receipt. |
-| `/hapo:debug` | `/debug` | Diagnose trước khi fix. |
-| `/hapo:fix` | `/hotfix` | Narrow diagnosed fixes. |
-| `/hapo:docs` | `/docs` | Bundle tuỳ chọn: create, update, summarize, reconstruct docs. |
-| `/hapo:scout` | `/inspect` | Scout source files và structure. |
-| `/hapo:route` | — | Ghép chuỗi installed ngắn nhất cho công việc cần định tuyến. |
+| `/cf:ask` | `/question` | Trả lời câu hỏi về project và kỹ thuật bằng source evidence trước. |
+| `/cf:brainstorm` | `/brainstorm` | Làm rõ idea trước khi spec. |
+| `/cf:specs` | `/specs` | Tạo process-first plan và flat tasks qua C1/C2. |
+| `/cf:develop` | `/develop` | Execute từng approved flat task. |
+| `/cf:test` | `/test` | Task-aware verification. |
+| `/cf:code-review` | `/code-review` | Review regressions và security. |
+| `/cf:sync` | — | Sync observed task Status và final inline Receipt. |
+| `/cf:debug` | `/debug` | Diagnose trước khi fix. |
+| `/cf:fix` | `/hotfix` | Narrow diagnosed fixes. |
+| `/cf:docs` | `/docs` | Bundle tuỳ chọn: create, update, summarize, reconstruct docs. |
+| `/cf:scout` | `/inspect` | Scout source files và structure. |
+| `/cf:route` | — | Ghép chuỗi installed ngắn nhất cho công việc cần định tuyến. |
 
 Với bản cài OpenCode 0.16 lịch sử, installer từng tạo slash commands cho surface implementation chính. Skill `sync` được ship trong shared skill bundle, nhưng installer không tạo wrapper `/sync` cho OpenCode.
 
@@ -49,7 +49,7 @@ Với bản cài OpenCode 0.16 lịch sử, installer từng tạo slash command
 Native selection dùng progressive disclosure: metadata của live catalog xác
 định candidate, `SKILL.md` đã chọn định nghĩa contract, rồi chỉ các references
 liên quan mới được đọc. Với yêu cầu explicit hoặc low-risk rõ ràng, invoke trực
-tiếp installed skill. Chỉ dùng `hapo:route` khi yêu cầu mơ hồ, nhiều bước, nhiều
+tiếp installed skill. Chỉ dùng `cf:route` khi yêu cầu mơ hồ, nhiều bước, nhiều
 domain, hoặc risk cao. Nếu skill hay agent không có, tiếp tục inline khi an toàn
 hoặc báo rõ gap; document skills tuỳ chọn chỉ dùng khi đã cài.
 

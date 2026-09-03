@@ -13,9 +13,9 @@ description: Common questions about CafeKit's runtime and workflow.
 
 No. Current releases support Claude Code and Codex CLI. OpenCode support ended in CafeKit 0.17; the site keeps the frozen 0.16 command map only for migration history.
 
-## Should every task start with `/hapo:specs`?
+## Should every task start with `/cf:specs`?
 
-No. Use specs for meaningful feature work. Use `/hapo:debug` and `/hapo:fix` for bugs. Tiny local fixes may not need a full spec.
+No. Use specs for meaningful feature work. Use `/cf:debug` and `/cf:fix` for bugs. Tiny local fixes may not need a full spec.
 
 ## Why does CafeKit care about task files?
 
@@ -31,4 +31,4 @@ No. `done` requires fresh verification and a current final inline Receipt in the
 
 ## What should I use for production bugs?
 
-Start with `/hapo:debug` when root cause is unknown. Use `/hapo:fix` after diagnosis or when the bug and target fix are already clear.
+Start with `/cf:debug` when root cause is unknown. Use `/cf:fix` after diagnosis or when the bug and target fix are already clear.

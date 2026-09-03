@@ -30,28 +30,28 @@ copies from an existing install. User-modified skill files are preserved.
 ## What It Is
 
 CafeKit installs a native runtime bundle for each supported coding agent:
-- `hapo:ask` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
-- `hapo:scout` for fast scoped discovery of files, entrypoints, call paths, and blast radius
-- `hapo:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
-- `hapo:research` for proportional, traceable evidence when a technical decision remains uncertain
-- `hapo:route` for ambiguous, multi-step, multi-domain, or elevated-risk work that needs the shortest valid installed chain
-- `hapo:loop` for explicit-only, bounded numeric optimization in an isolated worktree
-- `hapo:specs` for structured specification work
-- `hapo:develop` for implementation after technical spec readiness and an explicit invocation
-- `hapo:debug` and `hapo:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
-- optional `hapo:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install — `hapo:docs` consumes a post-task docs checkpoint (`none | minor | major`, updating only affected existing docs), gates delegation behind the Delegation Gate, and keeps the `Observed | Inferred | Unknown` evidence taxonomy
-- `hapo:test` and `hapo:code-review` for verification
+- `cf:ask` for evidence-backed questions about source code, docs, specs, config, dependencies, or external technical knowledge
+- `cf:scout` for fast scoped discovery of files, entrypoints, call paths, and blast radius
+- `cf:brainstorm` for unresolved product or architecture choices, with proportional routing before delivery
+- `cf:research` for proportional, traceable evidence when a technical decision remains uncertain
+- `cf:route` for ambiguous, multi-step, multi-domain, or elevated-risk work that needs the shortest valid installed chain
+- `cf:loop` for explicit-only, bounded numeric optimization in an isolated worktree
+- `cf:specs` for structured specification work
+- `cf:develop` for implementation after technical spec readiness and an explicit invocation
+- `cf:debug` and `cf:fix` for evidence-first diagnosis and root-cause repairs — every repair consumes the debug handoff before mutation; Quick/local stays direct; Standard and Incident/deep bound outcome, constraints, non-goals, and acceptance; complex repairs use post-diagnosis research, brainstorm, and staged planning only when the evidence leaves a real decision; all depths retain shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts
+- optional `cf:docs`, DOCX, PDF, PPTX, XLSX, and multimodal skills when selected during install — `cf:docs` consumes a post-task docs checkpoint (`none | minor | major`, updating only affected existing docs), gates delegation behind the Delegation Gate, and keeps the `Observed | Inferred | Unknown` evidence taxonomy
+- `cf:test` and `cf:code-review` for verification
 - supporting hooks, agents, rules, and platform-native runtime integration
 - a configurable Claude statusline driven by `.claude/runtime.json` — `"statusline"` picks the mode (`full`/`compact`/`minimal`/`none`), `statuslineColors` toggles ANSI colors, and an optional `statuslineLayout` (`{ "lines": [["model", "context"], ["directory", "git"]] }`) composes lines from the section ids `model`, `context`, `quota`, `directory`, `git`, `plan`, `cost`, `changes`; leaving the key out keeps the default output unchanged
 
 CafeKit uses rule-based skill routing guidance and an installed skill catalog.
-Agents choose the right `hapo:*` skill from workflow/domain rules instead of
+Agents choose the right `cf:*` skill from workflow/domain rules instead of
 using an automatic prompt-scoring hook.
 
 Skill loading uses progressive disclosure: catalog metadata identifies a
 candidate, its selected `SKILL.md` defines the contract, and only its needed
 references are read. Invoke a valid installed skill directly; escalate to
-`hapo:route` only when classification or chaining is material. If a skill or
+`cf:route` only when classification or chaining is material. If a skill or
 agent is absent, continue inline when safe or name the gap—never invent it.
 Hooks are not a skill router and do not auto-select skills. Source and installed
 projection parity is tested; live-model adherence remains `UNPROVEN` and is not
@@ -60,11 +60,11 @@ deterministic.
 Core routes (shown with Claude Code syntax):
 
 ```text
-Feature: Idea -> /hapo:brainstorm (if choices remain) -> explicit /hapo:specs -> /hapo:develop -> /hapo:test -> /hapo:code-review
-Bug/failure: /hapo:debug -> /hapo:fix only when the user requested a fix
-Product/architecture exploration: /hapo:brainstorm -> chat recommendation -> stop
-Uncertain technical decision: /hapo:research -> traceable evidence -> decision handoff
-Explicit numeric optimization: /hapo:loop -> bounded isolated experiments -> patch handoff
+Feature: Idea -> /cf:brainstorm (if choices remain) -> explicit /cf:specs -> /cf:develop -> /cf:test -> /cf:code-review
+Bug/failure: /cf:debug -> /cf:fix only when the user requested a fix
+Product/architecture exploration: /cf:brainstorm -> chat recommendation -> stop
+Uncertain technical decision: /cf:research -> traceable evidence -> decision handoff
+Explicit numeric optimization: /cf:loop -> bounded isolated experiments -> patch handoff
 ```
 
 ## Quick Start
@@ -72,29 +72,29 @@ Explicit numeric optimization: /hapo:loop -> bounded isolated experiments -> pat
 Claude Code:
 
 ```bash
-/hapo:ask "Which config file controls CafeKit runtime behavior in this project?"
-/hapo:scout "Find the runtime entrypoints for skill installation"
-/hapo:brainstorm Explore approaches for a meeting transcript extension
-/hapo:research Compare current local-first search libraries for this repository
-/hapo:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
-/hapo:specs Build a meeting transcript extension with AI summaries
-/hapo:develop meet-transcript-mvp
-/hapo:test --full
-/hapo:code-review --pending
+/cf:ask "Which config file controls CafeKit runtime behavior in this project?"
+/cf:scout "Find the runtime entrypoints for skill installation"
+/cf:brainstorm Explore approaches for a meeting transcript extension
+/cf:research Compare current local-first search libraries for this repository
+/cf:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+/cf:specs Build a meeting transcript extension with AI summaries
+/cf:develop meet-transcript-mvp
+/cf:test --full
+/cf:code-review --pending
 ```
 
 Codex CLI uses native skills from `.agents/skills/`:
 
 ```text
-$hapo-ask "Which config controls CafeKit runtime behavior?" --repo
-$hapo-scout "Find the runtime entrypoints for skill installation"
-$hapo-brainstorm Explore approaches for a meeting transcript extension
-$hapo-research Compare current local-first search libraries for this repository
-$hapo-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
-$hapo-specs Build a meeting transcript extension with AI summaries
-$hapo-develop meet-transcript-mvp
-$hapo-test --full
-$hapo-code-review --pending
+$cf-ask "Which config controls CafeKit runtime behavior?" --repo
+$cf-scout "Find the runtime entrypoints for skill installation"
+$cf-brainstorm Explore approaches for a meeting transcript extension
+$cf-research Compare current local-first search libraries for this repository
+$cf-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+$cf-specs Build a meeting transcript extension with AI summaries
+$cf-develop meet-transcript-mvp
+$cf-test --full
+$cf-code-review --pending
 ```
 
 Use `/skills` to browse installed skills. Trust the repository, then review
@@ -116,8 +116,8 @@ does not apply, commit, push, or guarantee an improvement.
 With the optional document skills installed, existing or legacy systems can use:
 
 ```bash
-/hapo:docs --reconstruct apps/legacy-admin
-/hapo:specs Modernize the approved as-is docs with CSV export and split admin/operator permissions
+/cf:docs --reconstruct apps/legacy-admin
+/cf:specs Modernize the approved as-is docs with CSV export and split admin/operator permissions
 ```
 
 The reconstruct run writes an evidence-backed as-is docs bundle plus a self-contained HTML overview for human review before specs begin.

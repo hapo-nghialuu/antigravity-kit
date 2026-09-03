@@ -1,5 +1,5 @@
 ---
-name: hapo:loop
+name: cf:loop
 description: "Run an explicit, bounded optimization loop against a numeric metric while a separate correctness guard protects the result."
 user-invocable: true
 when_to_use: "Use only when the user explicitly requests measurable iterative optimization and supplies a safe Metric and Guard contract."

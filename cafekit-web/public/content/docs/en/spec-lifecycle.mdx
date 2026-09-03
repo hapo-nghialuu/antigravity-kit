@@ -20,7 +20,7 @@ request
   -> adversarial review
   -> C2: accept, revise, or KEEP named findings
   -> stop planning
-  -> new explicit /hapo:develop invocation
+  -> new explicit /cf:develop invocation
   -> exact verification + final inline Receipt
   -> C3: user decides whether proof and limitations are sufficient
 ```
@@ -57,7 +57,7 @@ Every task should state:
 
 ## Execution and proof
 
-`/hapo:develop <feature>` selects one unblocked task, scouts the real integration path, implements only that boundary, and runs the task's exact proof command. The controller is the sole writer of task state and proof.
+`/cf:develop <feature>` selects one unblocked task, scouts the real integration path, implements only that boundary, and runs the task's exact proof command. The controller is the sole writer of task state and proof.
 
 A done task requires a current final inline Receipt containing:
 
@@ -71,7 +71,7 @@ A done task requires a current final inline Receipt containing:
 
 ## Sync boundary
 
-`/hapo:sync` performs surgical updates to observed task Status and inline Receipts. It does not invent execution, approval, readiness, or completion.
+`/cf:sync` performs surgical updates to observed task Status and inline Receipts. It does not invent execution, approval, readiness, or completion.
 
 ## Legacy compatibility
 

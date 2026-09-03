@@ -26,7 +26,7 @@ export const tutorialContentVi: TutorialContent = {
       label: "Chuẩn bị",
       title: "Bạn cần gì trước khi bắt đầu",
       narrative: [
-        "CafeKit chạy bên trong Claude Code — một AI coding assistant bạn điều khiển từ terminal. Các lệnh /hapo:* được gõ TRONG phiên Claude Code, không phải trong terminal thông thường.",
+        "CafeKit chạy bên trong Claude Code — một AI coding assistant bạn điều khiển từ terminal. Các lệnh /cf:* được gõ TRONG phiên Claude Code, không phải trong terminal thông thường.",
         "Chuẩn bị 3 thứ sau. Khi đã xong, quay lại đây và bấm Tiếp theo.",
       ],
       links: [
@@ -67,10 +67,10 @@ export const tutorialContentVi: TutorialContent = {
       label: "Tạo spec",
       title: "Tạo spec đầu tiên",
       narrative: [
-        "Mở phiên Claude Code trong project bằng cách chạy claude trong terminal. Bây giờ bạn đang ở trong Claude Code — đây là nơi gõ các lệnh /hapo:*.",
+        "Mở phiên Claude Code trong project bằng cách chạy claude trong terminal. Bây giờ bạn đang ở trong Claude Code — đây là nơi gõ các lệnh /cf:*.",
         "Spec là bản hợp đồng mô tả điều bạn muốn xây dựng TRƯỚC khi code. Chạy lệnh dưới đây trong Claude Code.",
       ],
-      command: "/hapo:specs Build a word counter that counts words in a sentence",
+      command: "/cf:specs Build a word counter that counts words in a sentence",
       outputs: [
         { kind: "output", text: "C1 → xác nhận outcome, scope, exclusions và constraints" },
         { kind: "success", text: "✓ specs/word-counter/plan.md" },
@@ -83,7 +83,7 @@ export const tutorialContentVi: TutorialContent = {
         "task-01-count-words.md — một outcome, một Status và planned proof command",
       ],
       troubleshooting: [
-        { problem: "/hapo:specs không được nhận diện", fix: "Đảm bảo đã chạy npx @haposoft/cafekit trong project này. Kiểm tra .claude/ tồn tại." },
+        { problem: "/cf:specs không được nhận diện", fix: "Đảm bảo đã chạy npx @haposoft/cafekit trong project này. Kiểm tra .claude/ tồn tại." },
         { problem: "Lệnh chạy nhưng không có output", fix: "Bạn có thể đang ở terminal thường, không phải phiên Claude Code. Chạy claude trước rồi thử lại." },
       ],
       glossary: [
@@ -102,14 +102,14 @@ export const tutorialContentVi: TutorialContent = {
       outputs: [
         { kind: "output", text: "ghi quyết định C2 vào plan.md…" },
         { kind: "success", text: "✓ scope và findings đã được chấp nhận" },
-        { kind: "success", text: "✓ sẵn sàng cho invocation /hapo:develop mới" },
+        { kind: "success", text: "✓ sẵn sàng cho invocation /cf:develop mới" },
       ],
       youWillSee: [
         "Quyết định C2 được lưu bền vững trong plan.md",
         "Planning dừng tại đây; implementation bắt đầu bằng command develop mới",
       ],
       troubleshooting: [
-        { problem: "Validation trả về lỗi", fix: "Đọc kỹ output lỗi. Thường do thiếu trường trong plan.md hoặc task file không khớp. Chạy lại /hapo:specs để tạo mới." },
+        { problem: "Validation trả về lỗi", fix: "Đọc kỹ output lỗi. Thường do thiếu trường trong plan.md hoặc task file không khớp. Chạy lại /cf:specs để tạo mới." },
       ],
     },
     {
@@ -119,7 +119,7 @@ export const tutorialContentVi: TutorialContent = {
       narrative: [
         "Bây giờ mới implement — từng task một. CafeKit đọc file task, kiểm tra những gì cần xây dựng và implement. Sau khi code xong, nó chạy quality gate: build, evidence và review đều phải pass.",
       ],
-      command: "/hapo:develop word-counter",
+      command: "/cf:develop word-counter",
       outputs: [
         { kind: "output", text: "đang đọc task-01-count-words.md…" },
         { kind: "output", text: "đang implement countWords()…" },
@@ -144,7 +144,7 @@ export const tutorialContentVi: TutorialContent = {
       narrative: [
         "Chạy test suite. CafeKit kiểm tra build, types và tests — và từ chối kết quả hời hợt. Một lệnh thoát 0 trong khi chạy 0 test KHÔNG phải là pass.",
       ],
-      command: "/hapo:test",
+      command: "/cf:test",
       outputs: [
         { kind: "output", text: "đang nhận diện test runner…" },
         { kind: "output", text: "đang chạy test suite…" },
@@ -156,8 +156,8 @@ export const tutorialContentVi: TutorialContent = {
         "verdict: PASS — build, types và tests đều xanh",
       ],
       troubleshooting: [
-        { problem: "verdict: NO_TESTS", fix: "Không tìm thấy file test. Thêm test cho countWords() và chạy lại /hapo:test. Zero test không phải pass." },
-        { problem: "Tests fail", fix: "Đọc output lỗi. Fix implementation hoặc test rồi chạy lại /hapo:test." },
+        { problem: "verdict: NO_TESTS", fix: "Không tìm thấy file test. Thêm test cho countWords() và chạy lại /cf:test. Zero test không phải pass." },
+        { problem: "Tests fail", fix: "Đọc output lỗi. Fix implementation hoặc test rồi chạy lại /cf:test." },
       ],
       glossary: [
         { term: "NO_TESTS", definition: "Không có test suite nào chạy. KHÔNG phải kết quả pass — task cần evidence thật." },
@@ -169,21 +169,21 @@ export const tutorialContentVi: TutorialContent = {
       title: "Review và đánh dấu hoàn thành",
       narrative: [
         "Chạy code review để bắt các vấn đề, rồi sync trạng thái task thành done. Task chỉ được coi là done khi implementation, evidence, tests và review đều đồng ý.",
-        "Sau khi review pass, chạy: /hapo:sync word-counter task-01-count-words.md done",
+        "Sau khi review pass, chạy: /cf:sync word-counter task-01-count-words.md done",
       ],
-      command: "/hapo:code-review",
+      command: "/cf:code-review",
       outputs: [
         { kind: "output", text: "đang review implementation word-counter…" },
         { kind: "success", text: "✓ spec compliance: ok" },
         { kind: "success", text: "✓ không có critical finding" },
-        { kind: "output", text: "tiếp theo: /hapo:sync word-counter task-01-count-words.md done" },
+        { kind: "output", text: "tiếp theo: /cf:sync word-counter task-01-count-words.md done" },
       ],
       youWillSee: [
         "no critical findings — sẵn sàng đánh dấu done",
         "Status và inline Receipt của task vẫn đồng bộ sau sync",
       ],
       troubleshooting: [
-        { problem: "Review tìm thấy critical issues", fix: "Fix các vấn đề, chạy lại /hapo:test, rồi /hapo:code-review trước khi sync." },
+        { problem: "Review tìm thấy critical issues", fix: "Fix các vấn đề, chạy lại /cf:test, rồi /cf:code-review trước khi sync." },
       ],
     },
   ],

@@ -1,5 +1,5 @@
 ---
-name: hapo:research
+name: cf:research
 description: "Research technical decisions with proportional depth, traceable evidence, explicit uncertainty, and project-fit recommendations."
 user-invocable: true
 when_to_use: "Use for external technical facts, architecture comparisons, or decisions whose uncertainty needs multi-source evidence."

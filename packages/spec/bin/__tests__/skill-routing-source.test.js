@@ -59,15 +59,15 @@ test('skill routing consumes live catalog without fixed optional commands', () =
     installScanner(SCANNER, codexScript, (content) => normalizeCodexBody(content, SCANNER));
 
     writeSkill(path.join(root, '.claude/skills'), 'question', {
-      name: 'hapo:ask', description: 'Answer with evidence.', when: 'Use for factual questions.',
+      name: 'cf:ask', description: 'Answer with evidence.', when: 'Use for factual questions.',
       category: 'utilities', keywords: ['answer', 'evidence'],
     });
     writeSkill(path.join(root, '.claude/skills'), 'docs', {
-      name: 'hapo:docs', description: 'Work with docs.', when: 'Use for documentation.',
+      name: 'cf:docs', description: 'Work with docs.', when: 'Use for documentation.',
       category: 'documents', keywords: ['docs'],
     });
     writeSkill(path.join(root, '.agents/skills'), 'question', {
-      name: 'hapo-ask', description: 'Answer with evidence.', when: 'Use for factual questions.',
+      name: 'cf-ask', description: 'Answer with evidence.', when: 'Use for factual questions.',
       category: 'utilities', keywords: ['answer', 'evidence'],
     });
 
@@ -75,9 +75,9 @@ test('skill routing consumes live catalog without fixed optional commands', () =
     const codex = runCatalog(codexScript, root);
     assert.equal(claude.root, fs.realpathSync(path.join(root, '.claude/skills')));
     assert.equal(codex.root, fs.realpathSync(path.join(root, '.agents/skills')));
-    assert.deepEqual(claude.skills.map((skill) => skill.public_id), ['hapo:ask', 'hapo:docs']);
-    assert.deepEqual(codex.skills.map((skill) => skill.public_id), ['hapo:ask']);
-    assert.equal(codex.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+    assert.deepEqual(claude.skills.map((skill) => skill.public_id), ['cf:ask', 'cf:docs']);
+    assert.deepEqual(codex.skills.map((skill) => skill.public_id), ['cf:ask']);
+    assert.equal(codex.skills.some((skill) => skill.public_id === 'cf:docs'), false);
   });
 
   const workflow = fs.readFileSync(path.join(PACKAGE_ROOT, 'src/claude/rules/skill-workflow-routing.md'), 'utf8');
@@ -88,7 +88,7 @@ test('skill routing consumes live catalog without fixed optional commands', () =
   assert.match(workflow.replace(/\s+/g, ' '), /numeric optimization capability remains explicit-only/);
   assert.match(domain, /examples below are intent hints, not a copied installed inventory/);
   assert.match(domain, /document\/artifact work \| use only a matching installed optional capability/);
-  assert.doesNotMatch(domain, /\/hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/);
+  assert.doesNotMatch(domain, /\/cf:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/);
   assert.match(codexEntry, /node \.codex\/scripts\/generate-skill-catalog\.cjs --skills/);
   assert.match(codexEntry, /Codex-bound[\s\S]*\.agents\/skills/);
 });
@@ -97,44 +97,44 @@ test('skill catalog exposes discriminating routing metadata', () => {
   withTempRoot((root) => {
     const skills = path.join(root, 'skills');
     writeSkill(skills, 'route', {
-      name: 'hapo:route', description: 'Choose a bounded chain.',
+      name: 'cf:route', description: 'Choose a bounded chain.',
       when: 'Use for ambiguous multi-step work.', category: 'utilities',
       keywords: ['routing', 'risk'],
     });
     writeSkill(skills, 'question', {
-      name: 'hapo:ask', description: 'First duplicate.', when: 'Use for questions.',
+      name: 'cf:ask', description: 'First duplicate.', when: 'Use for questions.',
       category: 'utilities', keywords: ['answer'],
     });
     writeSkill(skills, 'ask', {
-      name: 'hapo:ask', description: 'Second duplicate.', when: 'Use for questions.',
+      name: 'cf:ask', description: 'Second duplicate.', when: 'Use for questions.',
       category: 'utilities', keywords: ['answer'],
     });
-    writeSkill(skills, 'missing-description', { name: 'hapo:missing-description' });
-    writeSkill(skills, 'mismatch', { name: 'hapo:wrong', description: 'Wrong folder.' });
+    writeSkill(skills, 'missing-description', { name: 'cf:missing-description' });
+    writeSkill(skills, 'mismatch', { name: 'cf:wrong', description: 'Wrong folder.' });
     writeSkill(skills, 'malformed', { raw: '# no frontmatter\n' });
     writeSkill(skills, 'bad-line', {
-      raw: '---\nname: hapo:bad-line\ndescription: Valid-looking description.\nthis is not yaml\n---\n',
+      raw: '---\nname: cf:bad-line\ndescription: Valid-looking description.\nthis is not yaml\n---\n',
     });
     writeSkill(skills, 'unterminated', {
-      raw: '---\nname: hapo:unterminated\ndescription: "unterminated\n---\n',
+      raw: '---\nname: cf:unterminated\ndescription: "unterminated\n---\n',
     });
     writeSkill(skills, 'blank-description', {
-      raw: '---\nname: hapo:blank-description\ndescription: "   "\n---\n',
+      raw: '---\nname: cf:blank-description\ndescription: "   "\n---\n',
     });
     writeSkill(skills, 'invalid-flow', {
-      raw: '---\nname: hapo:invalid-flow\ndescription: [unterminated\n---\n',
+      raw: '---\nname: cf:invalid-flow\ndescription: [unterminated\n---\n',
     });
     writeSkill(skills, 'duplicate-key', {
-      raw: '---\nname: hapo:wrong\nname: hapo:duplicate-key\ndescription: Duplicate name.\n---\n',
+      raw: '---\nname: cf:wrong\nname: cf:duplicate-key\ndescription: Duplicate name.\n---\n',
     });
     writeSkill(skills, 'backend-development', {
-      name: 'hapo:backend-development', description: 'User-modified retired skill.',
+      name: 'cf:backend-development', description: 'User-modified retired skill.',
     });
 
     const catalog = runCatalog(SCANNER, root, ['--json', '--root', skills]);
-    assert.deepEqual(catalog.skills.map((skill) => skill.public_id), ['hapo:route']);
+    assert.deepEqual(catalog.skills.map((skill) => skill.public_id), ['cf:route']);
     assert.deepEqual(catalog.skills[0], {
-      name: 'hapo:route', public_id: 'hapo:route', directory: 'route',
+      name: 'cf:route', public_id: 'cf:route', directory: 'route',
       description: 'Choose a bounded chain.', when_to_use: 'Use for ambiguous multi-step work.',
       category: 'utilities', keywords: ['routing', 'risk'], user_invocable: true,
       has_references: false, has_scripts: false,
@@ -159,7 +159,7 @@ test('skill catalog exposes discriminating routing metadata', () => {
     .filter((item) => item.code === 'retired_skill').map((item) => item.directory).sort();
   assert.deepEqual(retiredDiagnostics, [...MANIFEST.obsolete.skills].sort());
   assert.equal(sourceCatalog.skills.some((skill) => MANIFEST.obsolete.skills.includes(skill.directory)), false);
-  const route = sourceCatalog.skills.find((skill) => skill.public_id === 'hapo:route');
+  const route = sourceCatalog.skills.find((skill) => skill.public_id === 'cf:route');
   assert.ok(route?.description && route.when_to_use && route.category && route.keywords.length > 0);
 });
 

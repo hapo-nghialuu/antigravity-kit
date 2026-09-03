@@ -1,5 +1,5 @@
 ---
-name: hapo:pdf
+name: cf:pdf
 description: Extract text/tables, create, merge, split PDFs. Fill PDF forms programmatically. Use for PDF processing, generation, form filling, document analysis, batch operations.
 license: Proprietary. LICENSE.txt has complete terms
 user-invocable: true

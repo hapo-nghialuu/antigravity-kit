@@ -243,11 +243,11 @@ function normalizeRuntimePaths(content) {
 
 function normalizeSkillNames(content) {
   return content
-    .replace(/\/hapo:([a-z0-9-]+)/gi, (_match, name) => `$hapo-${name}`)
-    .replace(/\bhapo:([a-z0-9-]+)/gi, (_match, name) => `hapo-${name}`)
+    .replace(/\/cf:([a-z0-9-]+)/gi, (_match, name) => `$cf-${name}`)
+    .replace(/\bcf:([a-z0-9-]+)/gi, (_match, name) => `cf-${name}`)
     .replace(
       /(^|[\s("'`→])\/(brainstorm|code-review|debug|develop|docs|frontend-design|git|hotfix|inspect|question|research|specs|test)(?=$|[\s<`),.:])/gim,
-      (_match, prefix, name) => `${prefix}$hapo-${name}`
+      (_match, prefix, name) => `${prefix}$cf-${name}`
     );
 }
 

@@ -26,7 +26,7 @@ export const tutorialContentJa: TutorialContent = {
       label: "準備",
       title: "開始前に必要なもの",
       narrative: [
-        "CafeKit は Claude Code の中で動作します — ターミナルから操作する AI コーディングアシスタントです。/hapo:* コマンドは通常のターミナルではなく、Claude Code セッションの中で入力します。",
+        "CafeKit は Claude Code の中で動作します — ターミナルから操作する AI コーディングアシスタントです。/cf:* コマンドは通常のターミナルではなく、Claude Code セッションの中で入力します。",
         "3 つのものを準備してください。準備ができたら「次へ」をクリックしてください。",
       ],
       links: [
@@ -67,10 +67,10 @@ export const tutorialContentJa: TutorialContent = {
       label: "spec 作成",
       title: "最初の spec を作る",
       narrative: [
-        "ターミナルで claude を実行してプロジェクト内の Claude Code セッションを開きます。ここが /hapo:* コマンドを入力する場所です。",
+        "ターミナルで claude を実行してプロジェクト内の Claude Code セッションを開きます。ここが /cf:* コマンドを入力する場所です。",
         "spec とは、コードを書く前に何を作るかを記述した「契約書」です。以下のコマンドを Claude Code 内で実行してください。",
       ],
-      command: "/hapo:specs Build a word counter that counts words in a sentence",
+      command: "/cf:specs Build a word counter that counts words in a sentence",
       outputs: [
         { kind: "output", text: "C1 → outcome、scope、exclusions、constraints を確認" },
         { kind: "success", text: "✓ specs/word-counter/plan.md" },
@@ -83,7 +83,7 @@ export const tutorialContentJa: TutorialContent = {
         "task-01-count-words.md — one outcome、one Status、planned proof command",
       ],
       troubleshooting: [
-        { problem: "/hapo:specs が認識されない", fix: "このプロジェクトで npx @haposoft/cafekit を実行済みか確認。.claude/ が存在するか確認。" },
+        { problem: "/cf:specs が認識されない", fix: "このプロジェクトで npx @haposoft/cafekit を実行済みか確認。.claude/ が存在するか確認。" },
         { problem: "コマンドが実行されるが出力がない", fix: "通常のターミナルにいる可能性があります。claude を実行して Claude Code セッションを開いてから再試行。" },
       ],
       glossary: [
@@ -102,14 +102,14 @@ export const tutorialContentJa: TutorialContent = {
       outputs: [
         { kind: "output", text: "C2 decisions を plan.md に記録中…" },
         { kind: "success", text: "✓ scope と findings を accepted" },
-        { kind: "success", text: "✓ 新しい /hapo:develop invocation の準備完了" },
+        { kind: "success", text: "✓ 新しい /cf:develop invocation の準備完了" },
       ],
       youWillSee: [
         "C2 decisions は plan.md に永続化される",
         "Planning はここで停止し、implementation は新しい develop command で始まる",
       ],
       troubleshooting: [
-        { problem: "検証でエラーが返る", fix: "エラー出力を確認。通常は plan.md のフィールド不足か task ファイルの不一致。/hapo:specs を再実行。" },
+        { problem: "検証でエラーが返る", fix: "エラー出力を確認。通常は plan.md のフィールド不足か task ファイルの不一致。/cf:specs を再実行。" },
       ],
     },
     {
@@ -119,7 +119,7 @@ export const tutorialContentJa: TutorialContent = {
       narrative: [
         "いよいよ実装です — 1 task ずつ進めます。CafeKit は task ファイルを読み、何を作るかを確認し、実装します。コーディング後は quality gate（build + evidence + review）を実行します。",
       ],
-      command: "/hapo:develop word-counter",
+      command: "/cf:develop word-counter",
       outputs: [
         { kind: "output", text: "task-01-count-words.md を読み込み中…" },
         { kind: "output", text: "countWords() を実装中…" },
@@ -144,7 +144,7 @@ export const tutorialContentJa: TutorialContent = {
       narrative: [
         "テストスイートを実行します。CafeKit は build、types、tests を確認し、表面的な結果を拒否します。0 件のテストで終了コード 0 になるコマンドは pass ではありません。",
       ],
-      command: "/hapo:test",
+      command: "/cf:test",
       outputs: [
         { kind: "output", text: "test runner を検出中…" },
         { kind: "output", text: "test suite を実行中…" },
@@ -156,8 +156,8 @@ export const tutorialContentJa: TutorialContent = {
         "verdict: PASS — build、types、tests すべてグリーン",
       ],
       troubleshooting: [
-        { problem: "verdict: NO_TESTS", fix: "テストファイルが見つかりません。countWords() のテストを追加して /hapo:test を再実行。0 件テストは pass ではありません。" },
-        { problem: "テストが失敗する", fix: "エラー出力を確認。実装またはテストを修正し、/hapo:test を再実行。" },
+        { problem: "verdict: NO_TESTS", fix: "テストファイルが見つかりません。countWords() のテストを追加して /cf:test を再実行。0 件テストは pass ではありません。" },
+        { problem: "テストが失敗する", fix: "エラー出力を確認。実装またはテストを修正し、/cf:test を再実行。" },
       ],
       glossary: [
         { term: "NO_TESTS", definition: "テストスイートが実行されなかった。絶対に pass ではありません — task には本物の evidence が必要。" },
@@ -169,21 +169,21 @@ export const tutorialContentJa: TutorialContent = {
       title: "レビューして完了にする",
       narrative: [
         "コードレビューで問題を確認してから、task の状態を done に sync します。implementation、evidence、tests、review がすべて一致したときだけ task は done です。",
-        "レビュー通過後: /hapo:sync word-counter task-01-count-words.md done を実行してください。",
+        "レビュー通過後: /cf:sync word-counter task-01-count-words.md done を実行してください。",
       ],
-      command: "/hapo:code-review",
+      command: "/cf:code-review",
       outputs: [
         { kind: "output", text: "word-counter の実装をレビュー中…" },
         { kind: "success", text: "✓ spec compliance: ok" },
         { kind: "success", text: "✓ critical finding なし" },
-        { kind: "output", text: "次: /hapo:sync word-counter task-01-count-words.md done" },
+        { kind: "output", text: "次: /cf:sync word-counter task-01-count-words.md done" },
       ],
       youWillSee: [
         "no critical findings — done にする準備完了",
         "Sync 後も task Status と inline Receipt が一致する",
       ],
       troubleshooting: [
-        { problem: "レビューで critical issue が見つかった", fix: "問題を修正し、/hapo:test → /hapo:code-review の順で再実行してから sync。" },
+        { problem: "レビューで critical issue が見つかった", fix: "問題を修正し、/cf:test → /cf:code-review の順で再実行してから sync。" },
       ],
     },
   ],

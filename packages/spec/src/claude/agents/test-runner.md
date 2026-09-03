@@ -98,7 +98,7 @@ raw_output, redactions, payload_sha256
 
 Use only `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. Payload and branch shapes,
 count attribution, nullable pre-execution rules, stable digest, redaction labels,
-and aggregation must match `hapo:test/references/execution-strategy.md` exactly.
+and aggregation must match `cf:test/references/execution-strategy.md` exactly.
 Unknown fields/verdicts fail closed. `test-proof-v1` preserves the Develop proof
 inputs: command, exit, counts, raw output, reachability, proof level, expected,
 observed, and current Base/Head provenance.

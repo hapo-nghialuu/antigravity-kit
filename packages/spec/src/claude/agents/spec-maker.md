@@ -15,7 +15,7 @@ removes product decisions from implementation. The output is Markdown under
 - the user's feature description;
 - current repository instructions and code;
 - existing plans or decisions explicitly placed in scope;
-- the three human-gate decisions from `hapo:specs`.
+- the three human-gate decisions from `cf:specs`.
 
 Read `skills/specs/SKILL.md` and `skills/specs/references/templates.md` before
 routing; they are the canonical risk and coverage authority. Do not duplicate

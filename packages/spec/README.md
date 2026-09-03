@@ -159,18 +159,18 @@ The Claude statusline reads three keys from `.claude/runtime.json`:
 
 CafeKit ships many skills, but the main release surface is:
 
-- `/hapo:ask <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
-- `/hapo:scout <search-target>`: discover relevant files locally first, delegating only for permitted broad independent scopes
-- `/hapo:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
-- `/hapo:research <decision>`: choose proportional depth and return traceable evidence for an uncertain technical decision
-- `/hapo:route <material-request>`: classify ambiguous, multi-step, multi-domain, or elevated-risk work and compose the shortest valid installed chain
-- `/hapo:loop <bounded-experiment>`: run explicit-only numeric optimization in an isolated worktree and return a base-bound patch handoff
-- `/hapo:specs <feature-description>`: create or resume a structured spec workflow
-- `/hapo:develop <feature-name>`: implement from approved spec artifacts
-- `/hapo:debug <issue>`: run adaptive-depth, diagnostic-only root-cause analysis with elimination and prevention-aware handoff
-- `/hapo:fix <issue>`: repair the diagnosed root cause with proportional depth; Quick/local stays direct, while Standard and Incident/deep bound the repair and use post-diagnosis research, brainstorm, or staged planning only when evidence leaves a real decision; every path consumes the `hapo:debug` handoff and reports shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts through verification, prevention, and side-effect gates
-- `/hapo:test [scope|--full]`: run verification and return a structured verdict
-- `/hapo:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
+- `/cf:ask <question> [--repo|--web|--both|--brief|--deep]`: answer questions using repo evidence first, then external/current sources when local evidence is insufficient
+- `/cf:scout <search-target>`: discover relevant files locally first, delegating only for permitted broad independent scopes
+- `/cf:brainstorm <idea-or-problem>`: scout the repo, clarify exact requirements, compare approaches, and hand off to specs
+- `/cf:research <decision>`: choose proportional depth and return traceable evidence for an uncertain technical decision
+- `/cf:route <material-request>`: classify ambiguous, multi-step, multi-domain, or elevated-risk work and compose the shortest valid installed chain
+- `/cf:loop <bounded-experiment>`: run explicit-only numeric optimization in an isolated worktree and return a base-bound patch handoff
+- `/cf:specs <feature-description>`: create or resume a structured spec workflow
+- `/cf:develop <feature-name>`: implement from approved spec artifacts
+- `/cf:debug <issue>`: run adaptive-depth, diagnostic-only root-cause analysis with elimination and prevention-aware handoff
+- `/cf:fix <issue>`: repair the diagnosed root cause with proportional depth; Quick/local stays direct, while Standard and Incident/deep bound the repair and use post-diagnosis research, brainstorm, or staged planning only when evidence leaves a real decision; every path consumes the `cf:debug` handoff and reports shared `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED` verdicts through verification, prevention, and side-effect gates
+- `/cf:test [scope|--full]`: run verification and return a structured verdict
+- `/cf:code-review [scope|--pending]`: adversarial review focused on correctness, regressions, and security
 
 ### Adaptive Brainstorm controls
 
@@ -179,7 +179,7 @@ analysis overlay, then non-direct work selects the smallest adequate Standard or
 Deep depth. Controls are parsed only from the leading control segment. Combine
 the single-use exact flags `--deep`, `--visual`, and `--advice` in any order;
 an unknown or duplicate leading `--*` stops with usage and no action. `--` ends
-controls, so literal flag content can start with `/hapo:brainstorm -- --dry-run`.
+controls, so literal flag content can start with `/cf:brainstorm -- --dry-run`.
 
 `--deep` raises non-direct analysis depth only. `--visual` changes presentation
 and falls back to text. `--advice` uses the advisory brainstormer only after a
@@ -191,13 +191,13 @@ execution authority.
 
 ### Adaptive Research and bounded Loop
 
-Use `/hapo:research` when the result is a decision: Quick, Standard, or Deep
+Use `/cf:research` when the result is a decision: Quick, Standard, or Deep
 research binds material claims to a URL or repository anchor, authority,
 date/version, applicability, and `confirmed`, `inferred`, or `unresolved`
 state. Research returns evidence and tradeoffs; it does not implement the
 recommendation or guarantee correctness.
 
-Use `/hapo:loop` only by explicit request and only after its preflight freezes
+Use `/cf:loop` only by explicit request and only after its preflight freezes
 Goal, isolated Scope, finite numeric Metric and Direction, reproducible
 Baseline, distinct Guard, noise policy and minimum delta, budget, and stop
 conditions. Each iteration stays in a detached worktree. The result is a
@@ -205,10 +205,10 @@ base-bound isolated patch handoff, never an automatic apply, commit, push, or
 guarantee of improvement.
 
 ```text
-/hapo:research Compare current local-first search libraries for this repository
-/hapo:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
-$hapo-research Compare current local-first search libraries for this repository
-$hapo-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+/cf:research Compare current local-first search libraries for this repository
+/cf:loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
+$cf-research Compare current local-first search libraries for this repository
+$cf-loop Goal="reduce parser latency" Scope="packages/parser" Metric="median ms, lower" Baseline="pinned base" Guard="npm test" Noise="MAD; minimum delta 2%" Budget="10 iterations" Stop="budget, drift, or failed guard"
 ```
 
 Optional document skills are `docs`, `docx`, `pdf`, `pptx`, `xlsx`, and
@@ -223,7 +223,7 @@ Fresh non-interactive installs leave them out by default. Use
 copies; user-modified files are preserved. Documentation validators, hooks,
 and the `docs-keeper` agent remain part of the core runtime.
 
-When installed, `hapo:docs` consumes a post-task docs checkpoint from
+When installed, `cf:docs` consumes a post-task docs checkpoint from
 Develop/Sync (`none | minor | major` — `none` reports only, `minor`/`major`
 update only affected existing docs, and a checkpoint never invents a new
 document), dispatches `docs-keeper` or parallel readers only through the
@@ -239,13 +239,13 @@ node .claude/scripts/generate-skill-catalog.cjs --skills
 Routing uses progressive disclosure: live catalog metadata selects a candidate,
 the selected `SKILL.md` supplies its contract, and only relevant references are
 loaded. Invoke an installed skill directly for explicit or obvious low-risk
-work; use `hapo:route` only when classification or chaining is material. When a
+work; use `cf:route` only when classification or chaining is material. When a
 capability or agent is absent, continue inline when safe or name the gap.
 Hooks are not a skill router and never grant capability presence or authority. Source
 and installed projections are verified; live-model adherence remains
 `UNPROVEN`, not deterministic.
 
-On Codex, invoke the transformed native skill names as `$hapo-<name>` or browse
+On Codex, invoke the transformed native skill names as `$cf-<name>` or browse
 them with `/skills`. Explicit custom-agent delegation uses snake_case agent
 names and `fork_turns: "none"`.
 
@@ -254,36 +254,36 @@ names and `fork_turns: "none"`.
 Claude Code:
 
 ```bash
-/hapo:ask "Which files define the current CafeKit install/runtime behavior?" --repo
-/hapo:scout "Find the runtime entrypoints for skill installation"
-/hapo:brainstorm Explore approaches for a Google Meet transcript extension
-/hapo:research Compare current transcript storage options for this repository
-/hapo:specs Build a Google Meet transcript extension with AI summaries
-/hapo:develop meet-transcript-mvp
-/hapo:test meet-transcript-mvp --full
-/hapo:code-review meet-transcript-mvp --pending
+/cf:ask "Which files define the current CafeKit install/runtime behavior?" --repo
+/cf:scout "Find the runtime entrypoints for skill installation"
+/cf:brainstorm Explore approaches for a Google Meet transcript extension
+/cf:research Compare current transcript storage options for this repository
+/cf:specs Build a Google Meet transcript extension with AI summaries
+/cf:develop meet-transcript-mvp
+/cf:test meet-transcript-mvp --full
+/cf:code-review meet-transcript-mvp --pending
 ```
 
 Codex CLI:
 
 ```text
-$hapo-ask "Which files define the current CafeKit runtime?" --repo
-$hapo-scout "Find the runtime entrypoints for skill installation"
-$hapo-brainstorm Explore approaches for a Google Meet transcript extension
-$hapo-research Compare current transcript storage options for this repository
-$hapo-specs Build a Google Meet transcript extension with AI summaries
-$hapo-develop meet-transcript-mvp
-$hapo-test meet-transcript-mvp --full
-$hapo-code-review meet-transcript-mvp --pending
+$cf-ask "Which files define the current CafeKit runtime?" --repo
+$cf-scout "Find the runtime entrypoints for skill installation"
+$cf-brainstorm Explore approaches for a Google Meet transcript extension
+$cf-research Compare current transcript storage options for this repository
+$cf-specs Build a Google Meet transcript extension with AI summaries
+$cf-develop meet-transcript-mvp
+$cf-test meet-transcript-mvp --full
+$cf-code-review meet-transcript-mvp --pending
 ```
 
 Reconstruct as-is docs from a legacy codebase:
 
 ```bash
-/hapo:docs --reconstruct apps/legacy-admin
+/cf:docs --reconstruct apps/legacy-admin
 ```
 
-The reconstruct bundle includes as-is markdown/JSON evidence and a self-contained `overview.html` review dashboard before the approved docs are handed to `/hapo:specs`.
+The reconstruct bundle includes as-is markdown/JSON evidence and a self-contained `overview.html` review dashboard before the approved docs are handed to `/cf:specs`.
 
 ## Codex hook safety
 
@@ -304,9 +304,9 @@ specs/<feature-name>/
 └── task-NN-<slug>.md
 ```
 
-The process-first workflow has three human decision gates. `hapo:specs` opens
+The process-first workflow has three human decision gates. `cf:specs` opens
 C1 to fix scope before authoring and C2 to resolve adversarial findings, then
-stops. A later explicit `hapo:develop` invocation executes the tasks and
+stops. A later explicit `cf:develop` invocation executes the tasks and
 presents C3 for closeout only after real execution proof. Each task has one
 `Status:` field and keeps its canonical `## Receipt` inline, including the
 exact Verification Plan command, `Exit: 0`, `Verification: PASS`,

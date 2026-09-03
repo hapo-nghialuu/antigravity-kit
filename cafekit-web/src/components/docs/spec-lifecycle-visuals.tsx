@@ -5,7 +5,7 @@ const lifecycleStages = [
     icon: SearchCheck,
     label: '01',
     title: 'C1 scope',
-    command: '/hapo:specs',
+    command: '/cf:specs',
     detail: 'Scout proportionally, resolve ambiguity, and record the user-approved scope and exclusions.',
   },
   {
@@ -33,21 +33,21 @@ const lifecycleStages = [
     icon: Code2,
     label: '05',
     title: 'Develop',
-    command: '/hapo:develop',
+    command: '/cf:develop',
     detail: 'Implement one unblocked task after task-aware inspection of real entrypoints and blast radius.',
   },
   {
     icon: ShieldCheck,
     label: '06',
     title: 'Proof',
-    command: '/hapo:test + /hapo:code-review',
+    command: '/cf:test + /cf:code-review',
     detail: 'Run exact evidence commands, prove reachability, and reject scope drift or hidden placeholders.',
   },
   {
     icon: GitBranch,
     label: '07',
     title: 'Sync',
-    command: '/hapo:sync',
+    command: '/cf:sync',
     detail: 'Write Status and inline Receipt only after proof, then present evidence and limitations for C3.',
   },
 ];

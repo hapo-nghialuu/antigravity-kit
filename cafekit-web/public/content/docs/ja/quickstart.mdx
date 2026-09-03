@@ -16,7 +16,7 @@ npx @haposoft/cafekit
 ## 2. Spec creation and review
 
 ```text
-/hapo:specs Build a meeting transcript extension with AI summaries
+/cf:specs Build a meeting transcript extension with AI summaries
 ```
 
 Specs は C1 を開き、次を作成します:
@@ -32,7 +32,7 @@ C2 で findings を accept、revision request、または named limitation と�
 ## 3. Explicit implementation
 
 ```text
-/hapo:develop <feature>
+/cf:develop <feature>
 ```
 
 Develop は one unblocked task ずつ実行し、exact planned proof を run、controller が final inline Receipt を書きます。
@@ -40,8 +40,8 @@ Develop は one unblocked task ずつ実行し、exact planned proof を run、c
 ## 4. Verify and review
 
 ```text
-/hapo:test --full
-/hapo:code-review --pending
+/cf:test --full
+/cf:code-review --pending
 ```
 
 `NO_TESTS` と zero executed tests は pass ではありません。
@@ -49,7 +49,7 @@ Develop は one unblocked task ずつ実行し、exact planned proof を run、c
 ## 5. Sync and close
 
 ```text
-/hapo:sync <feature>
+/cf:sync <feature>
 ```
 
 Sync は observed state と proof だけを更新します。C3 で user が current receipts と unresolved limitations が close に十分か決定します。

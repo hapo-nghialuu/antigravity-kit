@@ -4,12 +4,12 @@ How to handle code review results after a fix is implemented. Ensures quality wi
 
 ## Default Review Handling
 
-The agent reviews its own fix using `hapo:code-review` and applies the verdict. Every review returns exactly one verdict from the shared surface: `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. The definition of `PASS` defers to `hapo:code-review`; Fix never redefines it with local severity thresholds.
+The agent reviews its own fix using `cf:code-review` and applies the verdict. Every review returns exactly one verdict from the shared surface: `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`. The definition of `PASS` defers to `cf:code-review`; Fix never redefines it with local severity thresholds.
 
 ```
 attempt = 0
 LOOP:
-  1. Trigger hapo:code-review → receives: verdict and severity-classified findings
+  1. Trigger cf:code-review → receives: verdict and severity-classified findings
 
   2. Evaluate:
      IF verdict == PASS:
@@ -43,7 +43,7 @@ A blocked review is never retried unchanged.
 
 When the fix touches production-critical code, changes public contracts, introduces a behavior change, or the user explicitly requests review control:
 
-1. Run `hapo:code-review` → collect verdict + severity findings
+1. Run `cf:code-review` → collect verdict + severity findings
 2. Present a structured summary to user:
    ```
    ┌──────────────────────────────────┐

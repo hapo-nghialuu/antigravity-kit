@@ -109,19 +109,19 @@ const translations: Record<Locale, LandingTranslations> = {
             },
             {
               title: "Result",
-              description: "The repo is ready for `hapo:*` workflows immediately.",
+              description: "The repo is ready for `cf:*` workflows immediately.",
             },
           ],
         },
         {
-          tab: "/hapo:specs",
+          tab: "/cf:specs",
           title: "Create the feature contract",
           description:
             "Confirm C1 scope, write `plan.md` and flat tasks, then resolve adversarial findings at C2 before implementation starts.",
           highlights: [
             "Creates `specs/<feature>/plan.md` with flat `task-NN-*.md` files.",
             "Runs adversarial review and resolves material findings at C2.",
-            "Stops after planning so implementation begins only through a new explicit `/hapo:develop` invocation.",
+            "Stops after planning so implementation begins only through a new explicit `/cf:develop` invocation.",
           ],
           notes: [
             {
@@ -132,12 +132,12 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Task packets",
               description:
-                "Each flat `task-NN-*.md` becomes one execution boundary for `/hapo:develop`.",
+                "Each flat `task-NN-*.md` becomes one execution boundary for `/cf:develop`.",
             },
           ],
         },
         {
-          tab: "/hapo:develop",
+          tab: "/cf:develop",
           title: "Implement one task packet at a time",
           description:
             "Ship code through a verified task loop instead of coding the whole feature in one pass.",
@@ -159,7 +159,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:test",
+          tab: "/cf:test",
           title: "Verify with real build and runtime signals",
           description:
             "Run task-aware verification that prioritizes exact commands, prechecks, and runtime proof over shallow green checkmarks.",
@@ -182,14 +182,14 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:code-review",
+          tab: "/cf:code-review",
           title: "Review for regressions and security",
           description:
             "Run adversarial review after testing so the final merge candidate is checked for correctness, regressions, and contract drift.",
           highlights: [
             "Findings-first review output keeps focus on real bugs and risk.",
             "Flags security, behavior drift, and missing verification evidence.",
-            "Pairs cleanly with `hapo:test` during the quality gate.",
+            "Pairs cleanly with `cf:test` during the quality gate.",
           ],
           notes: [
             {
@@ -204,7 +204,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:git",
+          tab: "/cf:git",
           title: "Commit and push safely",
           description:
             "Use native Git operations for commits, pushes, PR prep, and safe worktree flows once code is verified.",
@@ -216,7 +216,7 @@ const translations: Record<Locale, LandingTranslations> = {
           notes: [
             {
               title: "Command surface",
-              description: "Use `/hapo:git commit` and `/hapo:git push` after review is green.",
+              description: "Use `/cf:git commit` and `/cf:git push` after review is green.",
             },
             {
               title: "Safety",
@@ -226,7 +226,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:deploy",
+          tab: "/cf:deploy",
           title: "Ship with a deployment handoff",
           description:
             "Treat this as the final release surface after runtime verification, review, and Git handoff are complete.",
@@ -244,7 +244,7 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Release input",
               description:
-                "Only ship code that already passed `hapo:test`, `hapo:code-review`, and `hapo:git`.",
+                "Only ship code that already passed `cf:test`, `cf:code-review`, and `cf:git`.",
             },
           ],
         },
@@ -334,19 +334,19 @@ const translations: Record<Locale, LandingTranslations> = {
             },
             {
               title: "Kết quả",
-              description: "Repo sẵn sàng chạy `hapo:*` workflow ngay.",
+              description: "Repo sẵn sàng chạy `cf:*` workflow ngay.",
             },
           ],
         },
         {
-          tab: "/hapo:specs",
+          tab: "/cf:specs",
           title: "Tạo contract cho feature",
           description:
             "Xác nhận C1 scope, viết `plan.md` và flat tasks, rồi giải quyết adversarial findings tại C2 trước implementation.",
           highlights: [
             "Tạo `specs/<feature>/plan.md` cùng các file phẳng `task-NN-*.md`.",
             "Chạy adversarial review và xử lý findings quan trọng tại C2.",
-            "Dừng sau planning; implementation chỉ bắt đầu bằng một lượt gọi `/hapo:develop` mới và rõ ràng.",
+            "Dừng sau planning; implementation chỉ bắt đầu bằng một lượt gọi `/cf:develop` mới và rõ ràng.",
           ],
           notes: [
             {
@@ -357,12 +357,12 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Task packet",
               description:
-                "Mỗi file phẳng `task-NN-*.md` là một biên thực thi cho `/hapo:develop`.",
+                "Mỗi file phẳng `task-NN-*.md` là một biên thực thi cho `/cf:develop`.",
             },
           ],
         },
         {
-          tab: "/hapo:develop",
+          tab: "/cf:develop",
           title: "Triển khai từng task packet",
           description:
             "Code theo verified task loop thay vì làm cả feature trong một lượt dài.",
@@ -385,7 +385,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:test",
+          tab: "/cf:test",
           title: "Verify bằng tín hiệu thật",
           description:
             "Chạy verification theo đúng task, ưu tiên exact commands, prechecks và runtime proof thay vì green check hời hợt.",
@@ -408,14 +408,14 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:code-review",
+          tab: "/cf:code-review",
           title: "Review để chặn regression và lỗi bảo mật",
           description:
             "Chạy review sau test để candidate cuối cùng được kiểm tra về correctness, regressions và contract drift.",
           highlights: [
             "Output findings-first giữ trọng tâm vào bug và rủi ro thật.",
             "Bắt lỗi security, behavior drift và thiếu verification evidence.",
-            "Ghép tự nhiên với `hapo:test` trong quality gate.",
+            "Ghép tự nhiên với `cf:test` trong quality gate.",
           ],
           notes: [
             {
@@ -430,7 +430,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:git",
+          tab: "/cf:git",
           title: "Commit và push an toàn",
           description:
             "Dùng Git operations native cho commit, push, PR prep và safe worktree flows sau khi code đã verify.",
@@ -443,7 +443,7 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Command surface",
               description:
-                "Dùng `/hapo:git commit` và `/hapo:git push` sau khi review đã xanh.",
+                "Dùng `/cf:git commit` và `/cf:git push` sau khi review đã xanh.",
             },
             {
               title: "Safety",
@@ -453,7 +453,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:deploy",
+          tab: "/cf:deploy",
           title: "Ship qua bước handoff deploy",
           description:
             "Xem đây là mặt cuối của release sau khi verification, review và Git handoff đã hoàn tất.",
@@ -471,7 +471,7 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Điều kiện release",
               description:
-                "Chỉ ship code đã qua `hapo:test`, `hapo:code-review` và `hapo:git`.",
+                "Chỉ ship code đã qua `cf:test`, `cf:code-review` và `cf:git`.",
             },
           ],
         },
@@ -561,19 +561,19 @@ const translations: Record<Locale, LandingTranslations> = {
             },
             {
               title: "Result",
-              description: "repo はすぐに `hapo:*` workflow を実行できます。",
+              description: "repo はすぐに `cf:*` workflow を実行できます。",
             },
           ],
         },
         {
-          tab: "/hapo:specs",
+          tab: "/cf:specs",
           title: "feature contract を作る",
           description:
             "C1 scope を確認し、`plan.md` と flat tasks を作成、implementation 前に C2 adversarial findings を解決します。",
           highlights: [
             "`specs/<feature>/plan.md` と flat な `task-NN-*.md` files を生成します。",
             "adversarial review を実行し、C2 で重要な findings を解決します。",
-            "planning 後に停止し、implementation は明示的な新しい `/hapo:develop` invocation でのみ開始します。",
+            "planning 後に停止し、implementation は明示的な新しい `/cf:develop` invocation でのみ開始します。",
           ],
           notes: [
             {
@@ -583,12 +583,12 @@ const translations: Record<Locale, LandingTranslations> = {
             },
             {
               title: "Task packet",
-              description: "flat な `task-NN-*.md` は `/hapo:develop` の実行境界になります。",
+              description: "flat な `task-NN-*.md` は `/cf:develop` の実行境界になります。",
             },
           ],
         },
         {
-          tab: "/hapo:develop",
+          tab: "/cf:develop",
           title: "task packet を1つずつ実装",
           description:
             "feature 全体を一気に書くのではなく、verified task loop で前に進みます。",
@@ -610,7 +610,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:test",
+          tab: "/cf:test",
           title: "実際の signal で verify",
           description:
             "浅い green check ではなく、exact commands、prechecks、runtime proof を優先して検証します。",
@@ -632,14 +632,14 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:code-review",
+          tab: "/cf:code-review",
           title: "regression と security を review",
           description:
             "test の後に adversarial review を行い、最後の merge candidate を correctness と security の観点で確認します。",
           highlights: [
             "findings-first の出力で bug と risk に集中できます。",
             "security、behavior drift、verification evidence の欠落を検出します。",
-            "`hapo:test` と自然に組み合わせられます。",
+            "`cf:test` と自然に組み合わせられます。",
           ],
           notes: [
             {
@@ -653,7 +653,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:git",
+          tab: "/cf:git",
           title: "安全に commit と push",
           description:
             "検証後の code を native Git operations で commit、push、PR 準備、worktree 管理へ繋げます。",
@@ -665,7 +665,7 @@ const translations: Record<Locale, LandingTranslations> = {
           notes: [
             {
               title: "Command surface",
-              description: "`/hapo:git commit` と `/hapo:git push` を使います。",
+              description: "`/cf:git commit` と `/cf:git push` を使います。",
             },
             {
               title: "Safety",
@@ -674,7 +674,7 @@ const translations: Record<Locale, LandingTranslations> = {
           ],
         },
         {
-          tab: "/hapo:deploy",
+          tab: "/cf:deploy",
           title: "deploy handoff で ship",
           description:
             "verification、review、Git handoff の後に来る最終 release surface として扱います。",
@@ -692,7 +692,7 @@ const translations: Record<Locale, LandingTranslations> = {
             {
               title: "Release input",
               description:
-                "`hapo:test`、`hapo:code-review`、`hapo:git` を通った code のみ ship します。",
+                "`cf:test`、`cf:code-review`、`cf:git` を通った code のみ ship します。",
             },
           ],
         },

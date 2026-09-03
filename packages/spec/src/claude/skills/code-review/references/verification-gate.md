@@ -25,7 +25,7 @@ To clear the Verification Gate, you must cite one of the following concrete proo
 - **Test Suite Logs:** Output showing tests ran and passed (e.g., `PASS src/components/Login.test.tsx`).
 - **Compilation/Build Status:** Terminal output proving the typescript compiler (`tsc`) or bundler succeeded with `Exit code: 0`.
 - **Linter Completion:** Output proving no syntax errors exist.
-- **Multimodal Visual Evidence:** `hapo:ai-multimodal` when installed, or another available runtime visual capability; otherwise report visual parity as `UNPROVEN`.
+- **Multimodal Visual Evidence:** `cf:ai-multimodal` when installed, or another available runtime visual capability; otherwise report visual parity as `UNPROVEN`.
 
 For Specs v2, accepted proof must be persisted by the test owner at
 `receipts/<task-basename>.md`; legacy `## Evidence` remains fallback-only. The

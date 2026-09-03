@@ -1,5 +1,5 @@
 ---
-name: hapo:sync
+name: cf:sync
 description: "Synchronize process-first task Status and inline Receipts without inventing proof; also preserves existing legacy Specs state."
 user-invocable: true
 when_to_use: "Invoke after implementation or verification changes a task's real state, or to audit a feature packet for drift."
@@ -19,11 +19,11 @@ state. Never infer proof, approval, review independence, or product readiness.
 ## Commands
 
 ```text
-/hapo:sync <feature> <task-NN-slug.md> in_progress
-/hapo:sync <feature> <task-NN-slug.md> blocked "reason"
-/hapo:sync <feature> <task-NN-slug.md> done
-/hapo:sync <feature> <task-NN-slug.md> sync-finalize
-/hapo:sync audit <feature>
+/cf:sync <feature> <task-NN-slug.md> in_progress
+/cf:sync <feature> <task-NN-slug.md> blocked "reason"
+/cf:sync <feature> <task-NN-slug.md> done
+/cf:sync <feature> <task-NN-slug.md> sync-finalize
+/cf:sync audit <feature>
 ```
 
 Resolve one regular direct-child task inside `specs/<feature>/`. Reject path

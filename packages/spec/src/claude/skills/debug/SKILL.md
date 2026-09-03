@@ -1,5 +1,5 @@
 ---
-name: hapo:debug
+name: cf:debug
 description: "Use before fixing any bug, failing test, CI/CD failure, production incident, performance issue, UI regression, flaky test, or unexpected behavior. Diagnostic-only root-cause workflow with evidence, hypotheses, blast-radius mapping, and verification plan."
 user-invocable: true
 when_to_use: "Invoke for evidence-first root-cause diagnosis before any fix."
@@ -31,7 +31,7 @@ Default: systematic diagnosis with no product-code edits, scout first.
 Depth changes evidence breadth, never the diagnostic-only gate or root-cause standard. Do not make a routine local failure perform incident ceremony merely because more tools are available.
 
 <DIAGNOSTIC-ONLY-GATE>
-`hapo:debug` is read-only for product code.
+`cf:debug` is read-only for product code.
 Do NOT edit product code, apply fixes, create migrations, or add regression tests as implementation.
 Do NOT change config, dependency versions, generated assets, or test snapshots to make the failure disappear.
 Temporary instrumentation is allowed only when it is the minimal way to observe hidden state; record the file/line, capture the proof, remove it before finishing, and report `Temporary instrumentation: removed`.
@@ -55,18 +55,18 @@ Do not ask generic questions before this step unless the issue cannot be located
 Do NOT recommend a fix until the root-cause contract is complete.
 Do NOT stop at the first plausible explanation. Test hypotheses against evidence.
 If 2+ hypotheses are refuted, change strategy before continuing.
-If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `hapo:fix` as ready.
+If evidence is insufficient, report `Root cause: unknown`, `Missing Evidence`, and `Next Diagnostic Action`; do not hand off to `cf:fix` as ready.
 Answer each item in one concrete sentence.
 If any answer contains 'probably', 'I think', 'something with', or 'maybe' — it is not an answer; gather evidence instead.
 </ROOT-CAUSE-GATE>
 
-If the user asks to fix while still inside `hapo:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `hapo:fix`.
+If the user asks to fix while still inside `cf:debug`, finish the debug report first. Then hand off only the completed root-cause contract to `cf:fix`.
 
 ## Process Flow
 
 ```mermaid
 flowchart TD
-    A[Issue Input] --> B[Step 1: Scout via hapo:scout]
+    A[Issue Input] --> B[Step 1: Scout via cf:scout]
     B --> C[Step 2: Capture Evidence]
     C --> D[Step 3: Pattern Analysis]
     D --> E[Step 4: Hypothesis Tests]
@@ -74,11 +74,11 @@ flowchart TD
     F --> G[Step 6: Verification + Prevention Handoff]
     G --> H[Diagnostic Report]
     H --> I{Fix requested?}
-    I -->|Yes| J[Hand off to hapo:fix]
+    I -->|Yes| J[Hand off to cf:fix]
     I -->|No| K[Stop after diagnosis]
 ```
 
-**This diagram is the authoritative workflow.** `hapo:debug` stops at diagnosis unless the user explicitly asks to fix.
+**This diagram is the authoritative workflow.** `cf:debug` stops at diagnosis unless the user explicitly asks to fix.
 
 ---
 
@@ -86,8 +86,8 @@ flowchart TD
 
 Understand the affected code before forming hypotheses.
 
-**Action:** Activate `hapo:scout` for the relevant scope.
-If `hapo:scout` is unavailable, use direct read-only reconnaissance (`rg`, file reads, test discovery, and `git log`) and state that fallback.
+**Action:** Activate `cf:scout` for the relevant scope.
+If `cf:scout` is unavailable, use direct read-only reconnaissance (`rg`, file reads, test discovery, and `git log`) and state that fallback.
 
 **Checklist:**
 - [ ] Project type, language, framework, runtime, and test runner identified
@@ -192,7 +192,7 @@ Do not collapse correlation into causation. The root cause must explain the mech
 
 ## Step 6: Blast Radius + Verification And Prevention Plan
 
-Prepare the handoff to `hapo:fix` or the user.
+Prepare the handoff to `cf:fix` or the user.
 
 **Verification plan must include:**
 - Original failing command or reproduction path
@@ -202,7 +202,7 @@ Prepare the handoff to `hapo:fix` or the user.
 - UI screenshot/console/network checks when relevant
 - Side-effect sweep from `.claude/references/debugger/side-effect-gate.md`
 
-For Incident/deep work, add recurrence-prevention candidates: missing invariant or validation layer, observability/alerting gap, and one regression scenario. These are evidence-backed handoff directions only; `hapo:debug` does not implement them.
+For Incident/deep work, add recurrence-prevention candidates: missing invariant or validation layer, observability/alerting gap, and one regression scenario. These are evidence-backed handoff directions only; `cf:debug` does not implement them.
 
 **Output:** `✓ Step 6: Verification planned - [commands/scenarios]`
 
@@ -266,10 +266,10 @@ For Incident/deep work, add recurrence-prevention candidates: missing invariant 
 
 ## Relationship To Fix
 
-- Use `hapo:debug` to determine what is wrong.
-- Use `hapo:fix` to change code only after the root-cause contract is complete.
+- Use `cf:debug` to determine what is wrong.
+- Use `cf:fix` to change code only after the root-cause contract is complete.
 - A `Root cause: unknown` report is not ready for Fix; continue diagnosis or ask for the missing artifact.
-- If `hapo:fix` verification fails, return to `hapo:debug` with the new evidence.
+- If `cf:fix` verification fails, return to `cf:debug` with the new evidence.
 
 ## References
 

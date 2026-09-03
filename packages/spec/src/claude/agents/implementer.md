@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: "Primary code execution agent. Receives specifications (spec) from hapo:specs or task files and transforms them into production-grade source code. Operates on a Single-Track principle within its workspace (linear inside one working tree; multiple instances may run concurrently in separate isolated worktrees)."
+description: "Primary code execution agent. Receives specifications (spec) from cf:specs or task files and transforms them into production-grade source code. Operates on a Single-Track principle within its workspace (linear inside one working tree; multiple instances may run concurrently in separate isolated worktrees)."
 model: sonnet
 tools: Glob, Grep, Read, Edit, Write, NotebookEdit, Bash, WebFetch, WebSearch
 ---
@@ -108,7 +108,7 @@ Upon completion, output a concise report in this format:
 
 ## Worktree Conduct (Parallel Wave dispatch)
 
-When dispatched into an isolated git worktree by `hapo:develop --parallel`:
+When dispatched into an isolated git worktree by `cf:develop --parallel`:
 
 - Work ONLY inside this worktree; Single-Track discipline applies unchanged within it.
 - Preserve the global canonical state ownership rule above.

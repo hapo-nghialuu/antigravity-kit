@@ -2,11 +2,11 @@ import { ArrowRight, CheckCircle2, CircleDashed, FileCheck2, GitBranch, ShieldCh
 import { cn } from '@/lib/utils';
 
 const flowSteps = [
-  ['/hapo:specs', 'Turn intent into scope, evidence, requirements, design, and task packets.'],
-  ['/hapo:develop', 'Implement one approved task packet, not the whole chat memory.'],
-  ['/hapo:test', 'Run exact evidence commands and runtime checks.'],
-  ['/hapo:code-review', 'Review for spec compliance, regressions, security, and drift.'],
-  ['/hapo:sync', 'Update process-first Status and inline Receipt only after proof, or audit drift.'],
+  ['/cf:specs', 'Turn intent into scope, evidence, requirements, design, and task packets.'],
+  ['/cf:develop', 'Implement one approved task packet, not the whole chat memory.'],
+  ['/cf:test', 'Run exact evidence commands and runtime checks.'],
+  ['/cf:code-review', 'Review for spec compliance, regressions, security, and drift.'],
+  ['/cf:sync', 'Update process-first Status and inline Receipt only after proof, or audit drift.'],
 ];
 
 const runtimeFiles = [

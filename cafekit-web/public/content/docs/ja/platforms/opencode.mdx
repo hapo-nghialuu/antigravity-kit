@@ -16,8 +16,8 @@ description: OpenCode を最後に support した CafeKit release の frozen mig
 ```
 .opencode/
 ├── skills/         # Self-contained skill packs
-├── agents/         # Subagent prompts (hapo: prefix なし)
-├── commands/       # Slash commands (hapo: prefix なし)
+├── agents/         # Subagent prompts (cf: prefix なし)
+├── commands/       # Slash commands (cf: prefix なし)
 ├── plugins/        # TypeScript plugins (下記参照)
 ├── rules/          # Workflow, dev, docs, hook, state-sync rules
 ├── scripts/        # Helper scripts
@@ -49,7 +49,7 @@ OpenCode には per-prompt の inject channel がないため、`rules.ts` は `
 
 ## Commands
 
-OpenCode は意図的に `hapo:` prefix を省略します。
+OpenCode は意図的に `cf:` prefix を省略します。
 
 ```
 /question     /brainstorm    /specs       /develop

@@ -1,5 +1,5 @@
 ---
-name: hapo:code-review
+name: cf:code-review
 description: "Review a change for correctness, security, and specification compliance without owning execution proof."
 user-invocable: true
 when_to_use: "Use for a pending diff, commit, PR, or explicitly scoped review."
@@ -14,7 +14,7 @@ metadata:
 
 Review evaluates correctness, security, scope, architecture, and specification
 compliance. It does not execute the test suite, create a canonical execution
-receipt, or turn a missing test result into a review-owned proof. `hapo:test`
+receipt, or turn a missing test result into a review-owned proof. `cf:test`
 owns execution proof; the single closeout owner combines both results.
 
 ## Input and depth
@@ -107,12 +107,12 @@ closeout result; only literal `PASS` can finish a task. `BLOCKED` means the revi
 decision is unavailable.
 
 ```markdown
-# Code Review Results [hapo:code-review]
+# Code Review Results [cf:code-review]
 
 **Verdict:** PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED
 **Target:** [PR | Commit | Path]
 **Assurance / risk:** [canonical policy input and relevant signals]
-**Execution proof:** test-proof-v1 consumed | unavailable (owned by hapo:test)
+**Execution proof:** test-proof-v1 consumed | unavailable (owned by cf:test)
 
 ## Findings
 - [Critical|High|Medium|Low] path:line — issue, failure scenario, evidence,
@@ -143,4 +143,4 @@ process-first packet.
 - `references/adversarial-review.md` — load for Critical/adversarial depth.
 - `references/verification-gate.md` — Legacy separate-receipt consumption only;
   process-first proof uses this skill's execution-proof boundary. Execution
-  always stays with `hapo:test`.
+  always stays with `cf:test`.

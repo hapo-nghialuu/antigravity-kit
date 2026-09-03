@@ -228,8 +228,8 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
       [agents, CODEX_START]
     ]) assert.equal((content.match(new RegExp(marker, 'g')) || []).length, 1);
 
-    assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/hapo:|\$hapo-/i);
-    assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$hapo-/i);
+    assert.doesNotMatch(core, /Claude|Codex|\.claude|\.codex|\/cf:|\$cf-/i);
+    assert.doesNotMatch(claudeBlock, /Codex|\.codex|\$cf-/i);
     assert.match(codex, /native project instruction surface is root `AGENTS\.md`/);
     assert.match(agents, /shared-root trade-off is intentional/);
     // H5 remediation: ownership/ignore contract must be explicit — not just marker presence
@@ -241,7 +241,7 @@ test('combined install keeps CORE neutral and records native shared-root trade-o
     assert.doesNotMatch(codex, /If you are Codex CLI or any other runtime, ignore this entire Codex block/i);
     assert.match(codex, /fail-safe/i);
     // CORE must not contain runtime-specific directives that would leak
-    assert.doesNotMatch(core, /\$hapo-|hapo:/i);
+    assert.doesNotMatch(core, /\$cf-|cf:/i);
     // No cross-runtime directive leakage: Claude block must not contain foreign runtime directives
     assert.doesNotMatch(claudeBlock, /<!-- CAFEKIT CODEX /);
     assert.doesNotMatch(codex, /<!-- CAFEKIT CORE /);

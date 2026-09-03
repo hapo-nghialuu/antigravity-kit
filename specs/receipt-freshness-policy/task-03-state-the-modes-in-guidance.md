@@ -25,7 +25,7 @@ receipt, so nobody infers a guarantee the code does not provide.
 - Modify: `packages/spec/src/claude/rules/workflow.md`
 - Modify: `packages/spec/src/codex/rules/state-sync.md`
 - Modify: `packages/spec/src/claude/skills/specs/SKILL.md`
-- Modify: `docs/hapo-specs-flow.html`
+- Modify: `docs/cf-specs-flow.html`
 - Modify: `packages/spec/scripts/run-skill-self-tests.mjs`
 
 ## Acceptance
@@ -38,7 +38,7 @@ receipt, so nobody infers a guarantee the code does not provide.
 - The skill's Machine boundary section records that the gate detects drift, not
   invention, and that a valid `Base`/`Head` pair can be produced without running the
   command. This is the limitation the user accepted at C2.
-- `docs/hapo-specs-flow.html:489` no longer states that the Stop gate revalidates
+- `docs/cf-specs-flow.html:489` no longer states that the Stop gate revalidates
   every done task.
 - No file gains a new schema, approval field or readiness bit.
 - A static probe asserts the new wording in all five documents and asserts that the

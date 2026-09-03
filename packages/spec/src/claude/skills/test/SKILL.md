@@ -1,5 +1,5 @@
 ---
-name: hapo:test
+name: cf:test
 description: "Execute the smallest adequate verification scope and own the canonical execution proof."
 user-invocable: true
 when_to_use: "Use after implementation, for a feature scope, or for an explicit test request."
@@ -12,7 +12,7 @@ metadata:
 ---
 # Test — execution proof owner
 
-`hapo:test` executes the smallest adequate real verification and owns the
+`cf:test` executes the smallest adequate real verification and owns the
 canonical execution result. For process-first work it returns one typed proof
 handoff to the controller; it never writes task state or the inline Receipt.
 Review consumes validated proof and never invents or duplicates execution.
@@ -20,15 +20,15 @@ Review consumes validated proof and never invents or duplicates execution.
 ## Usage
 
 ```text
-/hapo:test
-/hapo:test --full
-/hapo:test <scope-or-path>
-/hapo:test <feature-name>
-/hapo:test specs/<feature>
-/hapo:test specs/<feature>/task-NN-<slug>.md
-/hapo:test --ui <url>
-/hapo:test --ui-auth <url>
-/hapo:test --ui-flow <url>
+/cf:test
+/cf:test --full
+/cf:test <scope-or-path>
+/cf:test <feature-name>
+/cf:test specs/<feature>
+/cf:test specs/<feature>/task-NN-<slug>.md
+/cf:test --ui <url>
+/cf:test --ui-auth <url>
+/cf:test --ui-flow <url>
 ```
 
 ## Hard gates

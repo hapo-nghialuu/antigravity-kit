@@ -1,6 +1,6 @@
 ---
-name: hapo:fix
-description: "Use when asked to FIX a bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Uses hapo:debug for evidence-first diagnosis before any code change."
+name: cf:fix
+description: "Use when asked to FIX a bug, error, test failure, CI/CD issue, type error, lint error, log error, UI issue, or code problem. Uses cf:debug for evidence-first diagnosis before any code change."
 user-invocable: true
 when_to_use: "Invoke to fix a bug or failure with scout-first diagnosis before change."
 category: dev-tools
@@ -19,14 +19,14 @@ side effects. Evidence first, fix second.
 
 - `--quick` - Reduced-depth path for trivial issues (lint, type errors, syntax); still scout-first
 - `--parallel` - Fix independent issues concurrently, only through the Delegation Gate below
-- `--from-debug` - Start from an existing `hapo:debug` report and validate its contract before accepting it
+- `--from-debug` - Start from an existing `cf:debug` report and validate its contract before accepting it
 
 Default: deterministic scout-first fix. There is no initial mode selection step.
 
 ## Proportional depth
 
 Choose the smallest adequate depth from the diagnosed evidence. Depth vocabulary
-follows `hapo:debug`:
+follows `cf:debug`:
 
 - **Quick/local:** one deterministic syntax, lint, type, or isolated-test failure
   with obvious local scope. Quick mode only reduces depth; it never skips scout, pre-fix evidence, diagnosis, or before/after verification.
@@ -110,8 +110,8 @@ a concise markdown checklist is always sufficient.
 
 ```mermaid
 flowchart TD
-    A[Issue Input] --> B[Step 1: Scout via hapo:scout]
-    B --> C[Step 2: Diagnose via hapo:debug]
+    A[Issue Input] --> B[Step 1: Scout via cf:scout]
+    B --> C[Step 2: Diagnose via cf:debug]
     C --> D[Step 3: Select Depth]
     D --> E[Step 4: Implement Fix]
     E --> F[Step 5: Verify + Prevent]
@@ -130,7 +130,7 @@ If prose conflicts with this flow, follow the diagram.
 ## Step 1: Scout
 
 Understand the affected codebase before forming any hypotheses. Activate
-`hapo:scout` or perform an equivalent focused local scout (`rg` plus targeted
+`cf:scout` or perform an equivalent focused local scout (`rg` plus targeted
 reads) to map the blast radius.
 
 | Path | Scout depth |
@@ -143,9 +143,9 @@ reads) to map the blast radius.
 
 ---
 
-## Step 2: Diagnose via `hapo:debug`
+## Step 2: Diagnose via `cf:debug`
 
-Evidence-based root cause analysis; no guessing. Use `hapo:debug`, or validate
+Evidence-based root cause analysis; no guessing. Use `cf:debug`, or validate
 an existing debug report when `--from-debug` is provided. See
 `references/diagnosis-protocol.md` for the Fix-local checklist.
 
@@ -176,7 +176,7 @@ With `--from-debug`, validate the report before accepting it:
 - `Elimination Path` records the decisive observation for each removed or retained candidate;
 - `Recurrence-Prevention Handoff`, when present, carries evidence-backed candidates only.
 
-A report missing required fields routes back to diagnosis (`hapo:debug`); it
+A report missing required fields routes back to diagnosis (`cf:debug`); it
 does not enter implementation.
 
 If any contract field is vague or missing file:line/config/env evidence, keep
@@ -212,7 +212,7 @@ Workflows by depth:
 - **Standard:** implement the fix, add or update a regression test that fails without the fix and passes with it, run the relevant suite.
 - **Incident/deep:** after diagnosis, research only unresolved external facts. If
   multiple cause-aligned remedies or an architecture decision remain, use
-  `hapo:brainstorm` to compare 2-3 options against the bounded repair frame, then
+  `cf:brainstorm` to compare 2-3 options against the bounded repair frame, then
   write a concise staged implementation plan with dependencies and proof per
   stage. When diagnosis leaves one safe direct repair, skip research and
   brainstorm, record why it satisfies the frame, and implement it. Delegated
@@ -231,10 +231,10 @@ Workflows by depth:
 3. **Full check:** typecheck + lint + build + test (see `references/parallel-patterns.md` Pattern C).
 4. **Prevention guard (Standard+):** see `references/prevention-gate.md`; consume the debug report's recurrence candidates when present.
 5. **Side-effect gate:** sweep the full blast radius from Step 2 against the five checks in the gate above.
-6. **Review:** trigger `hapo:code-review`; see `references/review-cycle.md`.
+6. **Review:** trigger `cf:code-review`; see `references/review-cycle.md`.
 
 Verification and review report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`.
-The definition of `PASS` defers to `hapo:code-review`. `PASS_WITH_WARNINGS`
+The definition of `PASS` defers to `cf:code-review`. `PASS_WITH_WARNINGS`
 routes through the same remediation or user-pause path as `FAIL` and never
 auto-accepts. `BLOCKED` is terminal for the cycle; resolve the blocker instead
 of retrying. A review-only result is not execution proof; completion claims

@@ -1,5 +1,5 @@
 ---
-name: hapo:develop
+name: cf:develop
 description: "Implement an explicitly requested process-first feature or task, run its real verification, and close it with one evidence owner. Also supports existing legacy Specs packets."
 user-invocable: true
 when_to_use: "Use to implement a ready feature packet, one named task, or a clear low-risk change."
@@ -20,12 +20,12 @@ Develop never starts merely because Specs finished. The user invokes it.
 ## Usage and pre-state guard
 
 ```text
-/hapo:develop <feature>
-/hapo:develop specs/<feature>
-/hapo:develop <feature> task-02-<slug>.md
-/hapo:develop <feature> --flash
-/hapo:develop <feature> --parallel [N]
-/hapo:develop <feature> --notes
+/cf:develop <feature>
+/cf:develop specs/<feature>
+/cf:develop <feature> task-02-<slug>.md
+/cf:develop <feature> --flash
+/cf:develop <feature> --parallel [N]
+/cf:develop <feature> --notes
 ```
 
 `--notes` is opt-in. Only then load `references/implementation-notes-template.html`;
@@ -100,7 +100,7 @@ Flash is an explicit speed trade-off, never completion:
 - run only an available cheap syntax, typecheck, or compile preflight;
 - skip dedicated tests, extended manual checks, and review retry loops;
 - keep `Status: in_progress` and record `FLASH_UNVERIFIED` plus blocker
-  `awaiting /hapo:test <feature>`;
+  `awaiting /cf:test <feature>`;
 - do not unblock dependents or report Test PASS, Evidence PASS, production-ready, or done;
 - stop this invocation without chaining.
 

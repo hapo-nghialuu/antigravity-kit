@@ -1,5 +1,5 @@
 ---
-name: hapo:brainstorm
+name: cf:brainstorm
 description: "Turn unresolved product or architecture intent into a bounded decision contract, with proportional routing, evidence, and safe handoff."
 user-invocable: true
 when_to_use: "Use when material product, scope, or architecture choices remain; skip direct factual answers and already-concrete Specs work."
@@ -13,13 +13,13 @@ metadata:
 # Brainstorm — proportional pre-delivery design
 
 Turn unresolved intent into a bounded contract without turning clear work into
-an interview. `hapo:brainstorm` owns the workflow; `brainstormer` is an optional
+an interview. `cf:brainstorm` owns the workflow; `brainstormer` is an optional
 specialist for real architectural trade-offs.
 
 <HARD-GATE>
 Brainstorm never writes implementation, invokes Develop, or treats approval as
 implementation authority. Feature or documentation delivery may prepare context
-for a new explicit `hapo:specs` invocation; it never starts Specs implicitly.
+for a new explicit `cf:specs` invocation; it never starts Specs implicitly.
 </HARD-GATE>
 
 ## Control flags
@@ -51,9 +51,9 @@ Classify intent first. This routing never waives safety or permission rules.
    stale, or conflicting fields as gaps. Never infer approval. Hydration is not a
    terminal route; continue to exactly one intent route below.
 3. **Bug or failure:** before diagnosis, capture the repaired-behavior Outcome,
-   Constraints, Non-goals, and Acceptance evidence. Then use `hapo:debug` until
+   Constraints, Non-goals, and Acceptance evidence. Then use `cf:debug` until
    root cause is evidenced. Do not brainstorm fixes from a symptom. If at least
-   two cause-aligned remedies remain, compare 2–3 here. Hand off to `hapo:fix`
+   two cause-aligned remedies remain, compare 2–3 here. Hand off to `cf:fix`
    only when the user explicitly requested a fix; diagnosis-only work returns the
    root-cause report and stops.
 4. **Non-bug exploration only:** inspect enough evidence, give a chat
@@ -92,11 +92,11 @@ For feature/docs delivery and every bug/failure, resolve four user-owned fields:
 - **Non-goals:** nearby work excluded from this delivery.
 - **Acceptance:** observable evidence that proves completion.
 
-After front-door routing, run `hapo:scout` or a narrow equivalent before
+After front-door routing, run `cf:scout` or a narrow equivalent before
 technical design. Inspect relevant modules, patterns, docs/plans, contracts, and
 runtime constraints; summarize only useful findings in 3–6 bullets.
 
-For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` when the
+For supplied images, video, PDFs, or mockups, use `cf:ai-multimodal` when the
 optional document bundle is installed; otherwise use the runtime's available
 multimodal capability or report the evidence gap. Add a diagram only when it
 clarifies a material choice or flow.
@@ -197,7 +197,7 @@ requires explicit authority and creates no readiness, approval, proof, or
 execution state.
 
 - Feature/docs delivery: provide the approved summary and ask the user to invoke
-  `hapo:specs` explicitly in a new request.
+  `cf:specs` explicitly in a new request.
 - Diagnosed bug: follow the fix-authority rule in front-door routing.
 - Non-bug exploration: recommendation already returned in chat; stop.
 

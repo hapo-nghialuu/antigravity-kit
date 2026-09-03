@@ -37,7 +37,7 @@ intent.
 ## Scout First
 
 For questions answerable by reading the repository, scout before asking.
-`hapo:scout` owns discovery and `hapo:ask` owns the ask-back conditions; do not
+`cf:scout` owns discovery and `cf:ask` owns the ask-back conditions; do not
 restate that list here.
 
 ## Stable Code Artifacts

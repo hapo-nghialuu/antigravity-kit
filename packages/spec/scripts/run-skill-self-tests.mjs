@@ -553,7 +553,7 @@ async function runImplementationReadinessContractTests() {
     fail("an additional other:<verbatim> material boundary must remain valid");
   }
 
-  console.log(`✔ hapo:specs implementation-readiness checker rejects ${mutations.length} gate-specific source mutations`);
+  console.log(`✔ cf:specs implementation-readiness checker rejects ${mutations.length} gate-specific source mutations`);
   return mutations.length + 1;
 }
 
@@ -850,7 +850,7 @@ async function specsBundleLineDeltas() {
 
 async function runAdaptiveCoverageContractTests() {
   const fail = (message) => {
-    throw new Error(`[FAIL] hapo:specs adaptive coverage contract: ${message}`);
+    throw new Error(`[FAIL] cf:specs adaptive coverage contract: ${message}`);
   };
   const baseline = {
     skill: await readFile(join(packageRoot, "src/claude/skills/specs/SKILL.md"), "utf8"),
@@ -948,8 +948,8 @@ async function runAdaptiveCoverageContractTests() {
   const changed = deltas.filter(({ delta }) => delta !== null && delta !== 0)
     .map(({ relativePath, delta }) => `${relativePath} ${delta >= 0 ? "+" : ""}${delta}`)
     .join(", ");
-  console.log(`✔ hapo:specs adaptive coverage contract is complete and monotonic; bundle deltas: ${changed}; total ${total}/750`);
-  console.log(`✔ hapo:specs adaptive coverage checker rejects ${mutations.length} semantic weakenings`);
+  console.log(`✔ cf:specs adaptive coverage contract is complete and monotonic; bundle deltas: ${changed}; total ${total}/750`);
+  console.log(`✔ cf:specs adaptive coverage checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 3;
 }
 
@@ -1137,7 +1137,7 @@ async function runProcessTaskStatusContractTests() {
     }
   }
 
-  console.log(`✔ hapo:specs process-task status checker rejects ${mutations.length} semantic weakenings`);
+  console.log(`✔ cf:specs process-task status checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
 }
 
@@ -1152,13 +1152,13 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   hydrationFramework: "Hydration never selects the route; classify the remaining request afterward.",
   neverApproval: "Never infer approval.",
   bugContract: "before diagnosis, capture the repaired-behavior Outcome, Constraints, Non-goals, and Acceptance evidence.",
-  debugFirst: "Then use `hapo:debug` until root cause is evidenced. Do not brainstorm fixes from a symptom.",
+  debugFirst: "Then use `cf:debug` until root cause is evidenced. Do not brainstorm fixes from a symptom.",
   remedyCount: "If at least two cause-aligned remedies remain, compare 2–3 here.",
-  hotfixAuthority: "Hand off to `hapo:fix` only when the user explicitly requested a fix",
+  hotfixAuthority: "Hand off to `cf:fix` only when the user explicitly requested a fix",
   diagnosisStop: "diagnosis-only work returns the root-cause report and stops.",
   nonBugExploration: "Non-bug exploration only",
   explorationStop: "Do not request design approval, persist a report, or invoke another workflow without a new explicit request.",
-  explicitSpecs: "ask the user to invoke `hapo:specs` explicitly in a new request.",
+  explicitSpecs: "ask the user to invoke `cf:specs` explicitly in a new request.",
   noDevelop: "Brainstorm never writes implementation, invokes Develop, or treats approval as implementation authority.",
   materialChoice: "A material design choice exists only when at least two viable paths would satisfy the contract with meaningfully different consequences.",
   optionCount: "For a material choice, compare 2–3 mechanically distinct viable approaches",
@@ -1170,7 +1170,7 @@ const BRAINSTORM_CONTRACT_CLAUSES = {
   approvedPersistence: "Persist only approved decisions and semantics, only with user authority",
   configuredPath: "Use the repository's configured report path and naming convention.",
   redactPersistence: "Before writing, redact live secrets, credentials, private keys, access tokens, and unnecessary PII;",
-  visualEvidence: "For supplied images, video, PDFs, or mockups, use `hapo:ai-multimodal` when the optional document bundle is installed; otherwise use the runtime's available multimodal capability or report the evidence gap.",
+  visualEvidence: "For supplied images, video, PDFs, or mockups, use `cf:ai-multimodal` when the optional document bundle is installed; otherwise use the runtime's available multimodal capability or report the evidence gap.",
   touchpoints: "Technical touchpoints are evidence, not a fifth user-owned field.",
   riskSurfaces: "Raise only risks that can change the contract or approval path",
   decisionTruth: "Do not write \"user selected\" unless direct user text or the native input tool confirms it.",
@@ -1292,7 +1292,7 @@ function brainstormHasWorkflowDispatch(content, workflow, allowUserInvocation = 
   const escapedWorkflow = workflow.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
     "\\b(?:invoke|start|dispatch|launch|route|forward|run|execute|hand(?:\\s+|-)?off)\\b"
-      + `[^.!?;\\n]{0,100}?\\b(?:hapo:)?${escapedWorkflow}\\b`,
+      + `[^.!?;\\n]{0,100}?\\b(?:cf:)?${escapedWorkflow}\\b`,
     "gi",
   );
   const value = normalizeMarkdownWhitespace(content);
@@ -1508,9 +1508,9 @@ function brainstormContractIssues(input) {
     || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.direct))
     || !normalizeMarkdownWhitespace(directRoute).includes(normalizeMarkdownWhitespace(BRAINSTORM_CONTRACT_CLAUSES.readOnlyExploration))
     || brainstormHasDirectCeremony(directRemainder)
-    || !semantic.skill.includes("After front-door routing, run `hapo:scout`")
+    || !semantic.skill.includes("After front-door routing, run `cf:scout`")
     || semantic.skill.indexOf("## Front-door routing — before scout or questions")
-      > semantic.skill.indexOf("After front-door routing, run `hapo:scout`")) {
+      > semantic.skill.indexOf("After front-door routing, run `cf:scout`")) {
     issues.add("front-door-routing");
   }
   const bugIndex = frontDoor.indexOf("**Bug or failure:**");
@@ -1524,7 +1524,7 @@ function brainstormContractIssues(input) {
     issues.add("accepted-contract");
   }
 
-  const debugIndex = frontDoor.indexOf("`hapo:debug`", bugIndex);
+  const debugIndex = frontDoor.indexOf("`cf:debug`", bugIndex);
   const remedyIndex = frontDoor.indexOf("cause-aligned remedies", debugIndex);
   const explorationIndex = frontDoor.indexOf("**Non-bug exploration only:**");
   const featureIndex = frontDoor.indexOf("**Feature or documentation delivery:**", explorationIndex);
@@ -1678,7 +1678,7 @@ function brainstormContractIssues(input) {
 
 async function runBrainstormContractTests() {
   const fail = (message) => {
-    throw new Error(`[FAIL] hapo:brainstorm proportional routing contract: ${message}`);
+    throw new Error(`[FAIL] cf:brainstorm proportional routing contract: ${message}`);
   };
   const paths = {
     skill: { relativePath: "src/claude/skills/brainstorm/SKILL.md", baselineLines: BRAINSTORM_BASELINE_LINES.skill },
@@ -1707,7 +1707,7 @@ async function runBrainstormContractTests() {
 
   const safeStrengthenings = [
     [BRAINSTORM_CONTRACT_CLAUSES.explorationStop, `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Never invoke Fix from exploration. Do not invoke Develop.`],
-    [BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} The user may invoke \`hapo:specs\` in a new request.`],
+    [BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} The user may invoke \`cf:specs\` in a new request.`],
     [BRAINSTORM_CONTRACT_CLAUSES.redactPersistence, `${BRAINSTORM_CONTRACT_CLAUSES.redactPersistence} After final approval, save the draft.`],
     [BRAINSTORM_CONTRACT_CLAUSES.noDevelop, `${BRAINSTORM_CONTRACT_CLAUSES.noDevelop} The controller is forbidden to invoke Specs.`],
     [BRAINSTORM_CONTRACT_CLAUSES.finalApproval, `${BRAINSTORM_CONTRACT_CLAUSES.finalApproval} Avoid duplicate final approval.`],
@@ -1791,17 +1791,17 @@ async function runBrainstormContractTests() {
     { name: "accepted-contract-becomes-terminal", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hydrationTransition, to: "Hydration completes routing; stop here.", expected: ["accepted-contract"] },
     { name: "framework-hydration-selects-route", source: "framework", from: BRAINSTORM_CONTRACT_CLAUSES.hydrationFramework, to: "Hydration selects the final route.", expected: ["accepted-contract"] },
     { name: "bug-contract-drops-fields", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.bugContract, to: "before diagnosis, capture the repaired behavior.", expected: ["bug-routing"] },
-    { name: "bug-options-before-debug", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.debugFirst, to: "Compare remedies, then use `hapo:debug`.", expected: ["bug-routing"] },
+    { name: "bug-options-before-debug", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.debugFirst, to: "Compare remedies, then use `cf:debug`.", expected: ["bug-routing"] },
     { name: "bug-remedy-count-removed", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.remedyCount, to: "If remedies remain, compare any number here.", expected: ["bug-routing"] },
-    { name: "hotfix-without-authority", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority, to: "Hand off to `hapo:fix` whenever root cause is known", expected: ["bug-routing"] },
-    { name: "hotfix-contradictory-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Urgent incidents may invoke \`hapo:fix\` without user authority.`, expected: ["bug-routing"] },
+    { name: "hotfix-without-authority", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.hotfixAuthority, to: "Hand off to `cf:fix` whenever root cause is known", expected: ["bug-routing"] },
+    { name: "hotfix-contradictory-exception", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Urgent incidents may invoke \`cf:fix\` without user authority.`, expected: ["bug-routing"] },
     { name: "fix-hyphenated-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand-off to Fix immediately.`, expected: ["bug-routing"] },
     { name: "fix-object-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop} Hand off this request to Fix.`, expected: ["bug-routing"] },
     { name: "diagnosis-only-fix", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.diagnosisStop, to: "diagnosis-only work continues to Fix.", expected: ["bug-routing"] },
     { name: "exploration-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: "Request approval, persist a report, then stop.", expected: ["exploration-stop"] },
-    { name: "exploration-later-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Then invoke \`hapo:specs\`.`, expected: ["exploration-stop", "handoff-boundary"] },
-    { name: "implicit-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: "invoke `hapo:specs` immediately.", expected: ["handoff-boundary"] },
-    { name: "specs-additive-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Emergency exception: hand off to \`hapo:specs\` automatically.`, expected: ["handoff-boundary"] },
+    { name: "exploration-later-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explorationStop, to: `${BRAINSTORM_CONTRACT_CLAUSES.explorationStop} Then invoke \`cf:specs\`.`, expected: ["exploration-stop", "handoff-boundary"] },
+    { name: "implicit-specs", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: "invoke `cf:specs` immediately.", expected: ["handoff-boundary"] },
+    { name: "specs-additive-handoff", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Emergency exception: hand off to \`cf:specs\` automatically.`, expected: ["handoff-boundary"] },
     { name: "specs-forward-summary", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Forward the approved summary to Specs automatically.`, expected: ["handoff-boundary"] },
     { name: "specs-launch-workflow", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs, to: `${BRAINSTORM_CONTRACT_CLAUSES.explicitSpecs} Launch the Specs workflow.`, expected: ["handoff-boundary"] },
     { name: "develop-after-approval", source: "skill", from: BRAINSTORM_CONTRACT_CLAUSES.noDevelop, to: "Brainstorm may invoke Develop after approval.", expected: ["handoff-boundary"] },
@@ -1915,11 +1915,11 @@ async function runBrainstormContractTests() {
     if (!adaptiveMutations.some((mutation) => mutation.group === group)) fail(`adaptive mutation group ${group} is empty`);
   }
   const proportionalMutationCount = mutations.length - adaptiveMutations.length;
-  console.log(`✔ hapo:brainstorm proportional routing contract is complete and bounded; ${deltas}; total ${total}/${BRAINSTORM_BUNDLE_LIMIT}`);
-  console.log(`✔ hapo:brainstorm proportional routing checker rejects semantic weakenings; count=${proportionalMutationCount}`);
+  console.log(`✔ cf:brainstorm proportional routing contract is complete and bounded; ${deltas}; total ${total}/${BRAINSTORM_BUNDLE_LIMIT}`);
+  console.log(`✔ cf:brainstorm proportional routing checker rejects semantic weakenings; count=${proportionalMutationCount}`);
   const adaptiveMutationCount = adaptiveMutations.length;
-  console.log(`✔ hapo:brainstorm adaptive-depth contract is complete and bounded; groups=${actualAdaptiveGroups.length}`);
-  console.log(`✔ hapo:brainstorm adaptive-depth checker rejects semantic weakenings; count=${adaptiveMutationCount}`);
+  console.log(`✔ cf:brainstorm adaptive-depth contract is complete and bounded; groups=${actualAdaptiveGroups.length}`);
+  console.log(`✔ cf:brainstorm adaptive-depth checker rejects semantic weakenings; count=${adaptiveMutationCount}`);
   return mutations.length + 4;
 }
 
@@ -2190,8 +2190,8 @@ async function runTestPlanNativeContractTests() {
     }
   }
 
-  console.log("✔ hapo:test plan-native proof contract is complete and bounded");
-  console.log("✔ hapo:test plan-native checker rejects semantic weakenings");
+  console.log("✔ cf:test plan-native proof contract is complete and bounded");
+  console.log("✔ cf:test plan-native checker rejects semantic weakenings");
   return mutations.length + additiveMutations.length + 1;
 }
 
@@ -2322,20 +2322,20 @@ function developPlanNativeContractIssues(input) {
 
   const expectedHint = "argument-hint: \"[feature-name|specs-directory-path] [task-file] [--flash] [--parallel [N]] [--notes]\"";
   const expectedUsage = [
-    "/hapo:develop <feature>",
-    "/hapo:develop specs/<feature>",
-    "/hapo:develop <feature> task-02-<slug>.md",
-    "/hapo:develop <feature> --flash",
-    "/hapo:develop <feature> --parallel [N]",
-    "/hapo:develop <feature> --notes",
+    "/cf:develop <feature>",
+    "/cf:develop specs/<feature>",
+    "/cf:develop <feature> task-02-<slug>.md",
+    "/cf:develop <feature> --flash",
+    "/cf:develop <feature> --parallel [N]",
+    "/cf:develop <feature> --notes",
   ];
   const usageLines = markdownSectionUnderHeading(skill, "Usage and pre-state guard")
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => /^(?:\/hapo:develop|\$hapo-develop)\b/.test(line));
+    .filter((line) => /^(?:\/cf:develop|\$cf-develop)\b/.test(line));
   const modeHeadings = [...markdownSectionUnderHeading(skill, "Modes").matchAll(/^###\s+(.+?)\s*$/gm)]
     .map((match) => match[1]);
-  if (!/^name:\s*hapo:develop\s*$/m.test(skill)
+  if (!/^name:\s*cf:develop\s*$/m.test(skill)
     || !skill.includes(expectedHint)
     || !sameOrderedStrings(usageLines, expectedUsage)
     || !sameOrderedStrings(modeHeadings, [
@@ -2488,15 +2488,15 @@ async function runDevelopPlanNativeContractTests() {
       "canonical-source-name-drifts",
       "skill",
       "public-mode-drift",
-      "name: hapo:develop",
-      "name: hapo-develop",
+      "name: cf:develop",
+      "name: cf-develop",
     ),
     mutateClause(
       "canonical-usage-drifts-to-codex",
       "skill",
       "public-mode-drift",
-      "/hapo:develop specs/<feature>",
-      "$hapo-develop specs/<feature>",
+      "/cf:develop specs/<feature>",
+      "$cf-develop specs/<feature>",
     ),
     mutateClause(
       "live-adherence-promoted",
@@ -2546,8 +2546,8 @@ async function runDevelopPlanNativeContractTests() {
     }
   }
 
-  console.log("✔ hapo:develop plan-native continuous contract is complete and bounded");
-  console.log("✔ hapo:develop plan-native checker rejects semantic weakenings");
+  console.log("✔ cf:develop plan-native continuous contract is complete and bounded");
+  console.log("✔ cf:develop plan-native checker rejects semantic weakenings");
   return mutations.length + 1;
 }
 
@@ -2565,7 +2565,7 @@ function authoringInstructionIssues(sources) {
     .map((key) => outsideLegacySections(sources.get(key) || ""))
     .join("\n");
 
-  if (!/^name:\s*hapo:specs\s*$/m.test(skill)
+  if (!/^name:\s*cf:specs\s*$/m.test(skill)
     || !/^description:\s*\S.+$/m.test(skill)
     || !/^argument-hint:\s*["']?<feature-description>["']?\s*$/m.test(skill)) {
     issues.push("specs-frontmatter-drift");
@@ -2903,7 +2903,7 @@ function debugAdaptiveContractIssues(input) {
     || !skill.includes('argument-hint: "[issue] --quick|--ci|--frontend|--perf"')) {
     issues.add("proportional-depth");
   }
-  if (!skill.includes("`hapo:debug` is read-only for product code")
+  if (!skill.includes("`cf:debug` is read-only for product code")
     || !agent.includes("Never implement the repair")
     || !verification.includes("Debug owns the failing baseline and the proof plan")
     || verification.includes("Execution (Apply the Fix)")) {
@@ -2942,7 +2942,7 @@ function debugAdaptiveContractIssues(input) {
     || !parallel.includes("Reconnaissance is read-only")) {
     issues.add("delegation-gate");
   }
-  if (!agent.includes("Use `/hapo:scout` or focused local `rg`/reads")
+  if (!agent.includes("Use `/cf:scout` or focused local `rg`/reads")
     || agent.includes("less than 2 days old")
     || agent.includes("create/update a codebase summary")) {
     issues.add("targeted-discovery");
@@ -2977,7 +2977,7 @@ async function runDebugAdaptiveContractTests() {
     ["trace-stops-at-throw", "tracing", "deep-tracing", "symptom -> immediate cause -> caller/data boundary -> origin", "symptom -> thrown frame"],
     ["recurrence-is-removed", "sideEffects", "recurrence-handoff", "Observability/alerting gap", "Operational notes"],
     ["delegation-loses-user-gate", "parallel", "delegation-gate", "The user explicitly requested or permitted delegation or parallel agents", "Delegation seems useful"],
-    ["scout-becomes-mandatory-summary", "agent", "targeted-discovery", "Use `/hapo:scout` or focused local `rg`/reads", "Always create/update a codebase summary"],
+    ["scout-becomes-mandatory-summary", "agent", "targeted-discovery", "Use `/cf:scout` or focused local `rg`/reads", "Always create/update a codebase summary"],
   ];
   for (const [name, source, expectedIssue, from, to] of mutations) {
     const changed = { ...baseline, [source]: replaceDebugClauseOnce(baseline[source], from, to) };
@@ -2986,8 +2986,8 @@ async function runDebugAdaptiveContractTests() {
       throw new Error(`[FAIL] Debug adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:debug adaptive incident contract is complete and bounded");
-  console.log(`✔ hapo:debug adaptive incident checker rejects ${mutations.length} semantic weakenings`);
+  console.log("✔ cf:debug adaptive incident contract is complete and bounded");
+  console.log(`✔ cf:debug adaptive incident checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
 }
 
@@ -3004,9 +3004,9 @@ function hotfixAdaptiveContractIssues(input) {
   const issues = new Set();
   const { skill, diagnosis, review, parallel, prevention, specialized } = input;
   const parallelContract = parallel.replace(/\s+/g, " ").trim();
-  if (!skill.includes("name: hapo:fix")
+  if (!skill.includes("name: cf:fix")
     || !skill.includes("# Fix — root-cause repair workflow")
-    || skill.includes("name: hapo:hotfix")) {
+    || skill.includes("name: cf:hotfix")) {
     issues.add("public-rename");
   }
   if (!skill.includes("## Proportional depth")
@@ -3030,12 +3030,12 @@ function hotfixAdaptiveContractIssues(input) {
     issues.add("handoff-validation");
   }
   if (!skill.includes("report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`")
-    || !skill.includes("The definition of `PASS` defers to `hapo:code-review`")
+    || !skill.includes("The definition of `PASS` defers to `cf:code-review`")
     || !skill.includes("same remediation or user-pause path as `FAIL`")
     || skill.includes("Confidence score")
     || !review.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED")
     || !review.includes("Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry")
-    || !review.includes("The definition of `PASS` defers to `hapo:code-review`")
+    || !review.includes("The definition of `PASS` defers to `cf:code-review`")
     || !review.includes("only a fresh literal `PASS` enters finalization")
     || review.includes('"Approve anyway"')
     || review.includes('"Approve with known issues"')
@@ -3076,7 +3076,7 @@ function hotfixAdaptiveContractIssues(input) {
   }
   if (!skill.includes("after diagnosis, research only unresolved external facts")
     || !skill.includes("multiple cause-aligned remedies or an architecture decision remain")
-    || !skill.includes("`hapo:brainstorm` to compare 2-3 options")
+    || !skill.includes("`cf:brainstorm` to compare 2-3 options")
     || !skill.includes("concise staged implementation plan with dependencies and proof per")
     || !skill.includes("When diagnosis leaves one safe direct repair, skip research and")) {
     issues.add("deep-decision-route");
@@ -3122,7 +3122,7 @@ async function runHotfixAdaptiveContractTests() {
     throw new Error(`[FAIL] Hotfix adaptive contract: intact sources returned ${baselineIssues.join(", ")}`);
   }
   const mutations = [
-    ["public-name-reverts", "skill", "public-rename", "name: hapo:fix", "name: hapo:hotfix"],
+    ["public-name-reverts", "skill", "public-rename", "name: cf:fix", "name: cf:hotfix"],
     ["quick-skips-diagnosis", "skill", "proportional-depth", "Quick mode only reduces depth", "Quick mode may shorten diagnosis"],
     ["contract-loses-trigger", "skill", "causal-fields", "Trigger: event or input that activated the failure", "Activation note: whatever started the failure"],
     ["protocol-loses-contributing", "diagnosis", "causal-fields", "- Contributing factors: conditions that raised likelihood or impact but are not sufficient causes, or `none evidenced`", "- Side notes: optional context"],
@@ -3133,7 +3133,7 @@ async function runHotfixAdaptiveContractTests() {
     ["enum-drops-warnings", "skill", "verdict-surface", "report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`", "report `PASS | FAIL | BLOCKED`"],
     ["warnings-auto-accept", "review", "verdict-surface", "Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry", "Only `FAIL` enters remediation retry; `PASS_WITH_WARNINGS` auto-approves"],
     ["warnings-user-approve", "review", "verdict-surface", "only a fresh literal `PASS` enters finalization", '"Approve anyway" enters finalization'],
-    ["pass-redefined-locally", "review", "verdict-surface", "The definition of `PASS` defers to `hapo:code-review`; Fix never redefines it with local severity thresholds.", "The definition of `PASS` is local: no Critical, no High, at most one Medium."],
+    ["pass-redefined-locally", "review", "verdict-surface", "The definition of `PASS` defers to `cf:code-review`; Fix never redefines it with local severity thresholds.", "The definition of `PASS` is local: no Critical, no High, at most one Medium."],
     ["confidence-score-returns", "skill", "verdict-surface", "**Report:** root cause, changes made", "**Report:** Confidence score, root cause, changes made"],
     ["sweep-loses-repro-check", "skill", "side-effect-gate", "The original symptom no longer reproduces with the exact pre-fix command/user flow.", "The symptom appears resolved."],
     ["sweep-loses-module-tests", "skill", "side-effect-gate", "Modified files and transitively affected modules still pass relevant tests.", "Modified files look correct on re-read."],
@@ -3158,8 +3158,8 @@ async function runHotfixAdaptiveContractTests() {
       throw new Error(`[FAIL] Hotfix adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:fix adaptive contract is complete and bounded");
-  console.log(`✔ hapo:fix checker rejects ${mutations.length} semantic weakenings`);
+  console.log("✔ cf:fix adaptive contract is complete and bounded");
+  console.log(`✔ cf:fix checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
 }
 
@@ -3191,7 +3191,7 @@ function docsAdaptiveContractIssues(input) {
     || !skill.includes("update only affected existing docs, surgically")
     || !skill.includes("A checkpoint never invents a new document")
     || !skill.includes("never auto-selects `init` and overrides")
-    || !skill.includes("report the gap and recommend an explicit `/hapo:docs --init`")
+    || !skill.includes("report the gap and recommend an explicit `/cf:docs --init`")
     || !update.includes("A post-task checkpoint entry never switches to `init`")
     || !standard.includes("checkpoint contract in `../SKILL.md`")
     || skill.includes("checkpoint may create")) {
@@ -3205,7 +3205,7 @@ function docsAdaptiveContractIssues(input) {
   }
   if (!skill.includes("## Reconstruction Is Not Specs")
     || !skill.includes("- create `specs/<feature>/`")
-    || !skill.includes("- run `/hapo:develop`")
+    || !skill.includes("- run `/cf:develop`")
     || skill.includes("are advisory")) {
     issues.add("reconstruction-boundary");
   }
@@ -3247,7 +3247,7 @@ async function runDocsAdaptiveContractTests() {
     ["checkpoint-none-edits", "skill", "docs-checkpoint", "`none`: report that no docs change is needed and edit nothing.", "`none`: refresh the docs anyway."],
     ["checkpoint-invents-doc", "skill", "docs-checkpoint", "A checkpoint never invents a new document", "A checkpoint may create missing documents"],
     ["checkpoint-auto-init", "skill", "docs-checkpoint", "never auto-selects `init` and overrides", "may fall back to `init` and overrides"],
-    ["escape-path-removed", "skill", "docs-checkpoint", "report the gap and recommend an explicit `/hapo:docs --init`", "silently bootstrap the missing docs with `/hapo:docs"],
+    ["escape-path-removed", "skill", "docs-checkpoint", "report the gap and recommend an explicit `/cf:docs --init`", "silently bootstrap the missing docs with `/cf:docs"],
     ["update-checkpoint-switches", "update", "docs-checkpoint", "A post-task checkpoint entry never switches to `init`", "A checkpoint may switch to `init`"],
     ["standard-checkpoint-dropped", "standard", "docs-checkpoint", "checkpoint contract in `../SKILL.md`", "local judgment"],
     ["taxonomy-drops-inferred", "skill", "evidence-taxonomy", "Type: Observed | Inferred | Unknown", "Type: Observed | Unknown"],
@@ -3264,8 +3264,8 @@ async function runDocsAdaptiveContractTests() {
       throw new Error(`[FAIL] Docs adaptive contract mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:docs adaptive contract is complete and bounded");
-  console.log(`✔ hapo:docs checker rejects ${mutations.length} semantic weakenings`);
+  console.log("✔ cf:docs adaptive contract is complete and bounded");
+  console.log(`✔ cf:docs checker rejects ${mutations.length} semantic weakenings`);
   return mutations.length + 1;
 }
 
@@ -3429,8 +3429,8 @@ async function runResearchAdaptiveContractTests() {
       throw new Error(`[FAIL] Research adaptive mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:research adaptive evidence contract is complete and bounded");
-  console.log(`✔ hapo:research checker rejects semantic weakenings; count=${mutations.length}`);
+  console.log("✔ cf:research adaptive evidence contract is complete and bounded");
+  console.log(`✔ cf:research checker rejects semantic weakenings; count=${mutations.length}`);
   return mutations.length + 1;
 }
 
@@ -3538,7 +3538,7 @@ function routeContractIssues(input) {
 
   const corpus = Object.values(normalized).join(" ").toLowerCase();
   const issueIf = (issue, pattern) => { if (pattern.test(corpus)) issues.add(issue); };
-  issueIf("installed-only", /(?:always|must).{0,30}invoke.{0,30}hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal).{0,40}(?:even when|if).{0,20}(?:absent|not installed|unavailable)/);
+  issueIf("installed-only", /(?:always|must).{0,30}invoke.{0,30}cf:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal).{0,40}(?:even when|if).{0,20}(?:absent|not installed|unavailable)/);
   issueIf("installed-only", /(?:missing|absent|unavailable) agent.{0,50}(?:may|can|should).{0,30}(?:be synthesized|be invented|be assumed)/);
   issueIf("delegation-contract", /(?:always|may|can|should).{0,20}(?:blindly )?retry.{0,20}(?:blocked|needs_context).{0,40}(?:without change|unchanged|identical)|(?:^|[.!?]\s+)retry (?:a )?(?:blocked|needs_context) result once with identical inputs/);
   issueIf("authority", /(?:review|diagnosis|implementation|build)(?:(?!\b(?:never|not|cannot|can't)\b).){0,40}(?:authorizes|implies|grants|permits|allows).{0,30}(?:push|repair|deploy|publish|release)/);
@@ -3655,7 +3655,7 @@ async function runRouteContractTests() {
     ["terminal-class-removed", "taxonomy", "classification", "Classify by the final deliverable the user expects", "Classify by the first verb the user writes"],
     ["risk-averaged-down", "taxonomy", "classification", "Risk is the maximum risk of any retained link, never an average", "Risk is the average link risk"],
     ["domain-count-removed", "skill", "classification", "the number of material domains.", "the broad topic label."],
-    ["absent-docs-invoked", "skill", "installed-only", "## 3. Compose the shortest valid chain", "Always invoke hapo:docs even when it is not installed.\n\n## 3. Compose the shortest valid chain"],
+    ["absent-docs-invoked", "skill", "installed-only", "## 3. Compose the shortest valid chain", "Always invoke cf:docs even when it is not installed.\n\n## 3. Compose the shortest valid chain"],
     ["link-owner-optional", "chaining", "link-contract", "**Owner:** exactly one installed skill, installed agent, or the controller.", "**Owner:** any number of possible skills or agents."],
     ["collapse-removed", "chaining", "collapse-and-insertion", "Remove a link when its exit is already current and evidenced.", "Keep every link even when its exit is already evidenced."],
     ["bounded-detour-removed", "chaining", "failure-stop", "preserve its valid exit evidence, normalize the root cause,\nand choose one bounded detour that can change that cause.", "discard prior evidence and retry the same action."],
@@ -3716,8 +3716,8 @@ async function runRouteContractTests() {
     }
   }
 
-  console.log("✔ hapo:route proportional installed-capability contract is complete and bounded");
-  console.log("✔ hapo:route checker rejects semantic routing weakenings");
+  console.log("✔ cf:route proportional installed-capability contract is complete and bounded");
+  console.log("✔ cf:route checker rejects semantic routing weakenings");
   return mutations.length + safeStrengthenings.length + ruleMutations.length
     + safeRuleControls.length + 2;
 }
@@ -3939,8 +3939,8 @@ async function runLoopBoundedContractTests() {
       throw new Error(`[FAIL] Loop bounded mutation ${name} missed ${expectedIssue}: ${issues.join(", ")}`);
     }
   }
-  console.log("✔ hapo:loop bounded experiment contract is complete and fail-closed");
-  console.log(`✔ hapo:loop checker rejects unsafe semantic weakenings; count=${mutations.length}`);
+  console.log("✔ cf:loop bounded experiment contract is complete and fail-closed");
+  console.log(`✔ cf:loop checker rejects unsafe semantic weakenings; count=${mutations.length}`);
   return mutations.length + 1;
 }
 
@@ -3968,12 +3968,12 @@ async function runStaticSemanticTests() {
   );
 
   if (!specTemplateFiles.includes("spec-state.json")) {
-    console.error("[FAIL] hapo:specs spec-state template is missing");
+    console.error("[FAIL] cf:specs spec-state template is missing");
     process.exit(1);
   }
 
   if (specTemplateFiles.includes("init.json")) {
-    console.error("[FAIL] legacy hapo:specs init.json template must not be packaged");
+    console.error("[FAIL] legacy cf:specs init.json template must not be packaged");
     process.exit(1);
   }
 
@@ -3987,7 +3987,7 @@ async function runStaticSemanticTests() {
 
   const checks = [
     {
-      label: "hapo:specs hard output contract requires the flat packet",
+      label: "cf:specs hard output contract requires the flat packet",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
         content.includes("## Primary output layout") &&
@@ -4093,7 +4093,7 @@ async function runStaticSemanticTests() {
         content.includes("function hasPattern"),
     },
     {
-      label: "hapo:specs and spec-maker never auto-dispatch Develop",
+      label: "cf:specs and spec-maker never auto-dispatch Develop",
       files: [
         "src/claude/skills/specs/SKILL.md",
         "src/claude/agents/spec-maker.md",
@@ -4104,10 +4104,10 @@ async function runStaticSemanticTests() {
         !content.includes("ready_for_implementation"),
     },
     {
-      label: "hapo:specs frontmatter exposes only feature-description input",
+      label: "cf:specs frontmatter exposes only feature-description input",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
-        /^name:\s*hapo:specs$/m.test(content) &&
+        /^name:\s*cf:specs$/m.test(content) &&
         /^description:\s*\S.+$/m.test(content) &&
         /^argument-hint:\s*["']<feature-description>["']$/m.test(content) &&
         !/--(?:status|validate|archive)/.test(content),
@@ -4124,10 +4124,10 @@ async function runStaticSemanticTests() {
         content.includes("Do not start Develop"),
     },
     {
-      label: "hapo:ask skill answers questions with repo-first evidence",
+      label: "cf:ask skill answers questions with repo-first evidence",
       file: "src/claude/skills/question/SKILL.md",
       assert: (content) =>
-        content.includes("name: hapo:ask") &&
+        content.includes("name: cf:ask") &&
         content.includes("Answer questions with evidence") &&
         content.includes("<ANSWER-ONLY-GATE>") &&
         content.includes("Source-first") &&
@@ -4143,7 +4143,7 @@ async function runStaticSemanticTests() {
         content.includes("templates/question.md"),
     },
     {
-      label: "hapo:ask template captures answer evidence and gaps",
+      label: "cf:ask template captures answer evidence and gaps",
       file: "src/claude/skills/question/templates/question.md",
       assert: (content) =>
         content.includes("## Question") &&
@@ -4154,7 +4154,7 @@ async function runStaticSemanticTests() {
         content.includes("## Follow-up Question"),
     },
     {
-      label: "hapo:ask is packaged from the question directory in the migration manifest",
+      label: "cf:ask is packaged from the question directory in the migration manifest",
       file: "src/claude/migration-manifest.json",
       assert: (content) => {
         const manifest = JSON.parse(content);
@@ -4163,7 +4163,7 @@ async function runStaticSemanticTests() {
       },
     },
     {
-      label: "hapo:fix is packaged from the hotfix directory in the migration manifest",
+      label: "cf:fix is packaged from the hotfix directory in the migration manifest",
       file: "src/claude/migration-manifest.json",
       assert: (content) => {
         const manifest = JSON.parse(content);
@@ -4172,7 +4172,7 @@ async function runStaticSemanticTests() {
       },
     },
     {
-      label: "hapo:specs review requires evidence, fresh context, and bounded findings",
+      label: "cf:specs review requires evidence, fresh context, and bounded findings",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
         content.includes("path:line") &&
@@ -4181,7 +4181,7 @@ async function runStaticSemanticTests() {
         /two[^\n]*rounds/i.test(content),
     },
     {
-      label: "hapo:specs review gives C2 ownership to the user and sweeps every edit",
+      label: "cf:specs review gives C2 ownership to the user and sweeps every edit",
       file: "src/claude/skills/specs/references/review.md",
       assert: (content) =>
         content.includes("accept, reject, or revise") &&
@@ -4190,12 +4190,12 @@ async function runStaticSemanticTests() {
         content.includes("Reread every file"),
     },
     {
-      label: "hapo:specs requirements template has no SDD phase marker",
+      label: "cf:specs requirements template has no SDD phase marker",
       file: "src/claude/skills/specs/templates/requirements-init.md",
       assert: (content) => !content.includes("/sdd:"),
     },
     {
-      label: "hapo:specs flow is gated C1-C3 and process-first",
+      label: "cf:specs flow is gated C1-C3 and process-first",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
         ["C1", "C2", "C3"].every((gate) => content.includes(gate)) &&
@@ -4253,7 +4253,7 @@ async function runStaticSemanticTests() {
       assert: (content) => content.includes('"develop"') && content.includes('"parallel": true'),
     },
     {
-      label: "hapo:specs templates trace acceptance criteria to flat tasks and proof",
+      label: "cf:specs templates trace acceptance criteria to flat tasks and proof",
       file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
         content.includes("| ID | EARS criterion | Proof |") &&
@@ -4262,12 +4262,12 @@ async function runStaticSemanticTests() {
         content.includes("## Verification Plan"),
     },
     {
-      label: "hapo:specs plan template carries the queue-ready contract marker on line two",
+      label: "cf:specs plan template carries the queue-ready contract marker on line two",
       file: "src/claude/skills/specs/references/templates.md",
       assert: (content) => /^# <Feature name>\nSpecs-Contract: process-first-ready-v1$/m.test(content),
     },
     {
-      label: "hapo:specs templates carry EARS, Example Mapping, and edge-case saturation",
+      label: "cf:specs templates carry EARS, Example Mapping, and edge-case saturation",
       file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
         content.includes("EARS sentence patterns") &&
@@ -4277,7 +4277,7 @@ async function runStaticSemanticTests() {
         content.includes("Quality and saturation checks"),
     },
     {
-      label: "hapo:specs keeps human decisions at exactly the three named gates",
+      label: "cf:specs keeps human decisions at exactly the three named gates",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) =>
         content.includes("C1 — Scope") &&
@@ -4321,7 +4321,7 @@ async function runStaticSemanticTests() {
         content.includes("validation.status is not completed"),
     },
     {
-      label: "hapo:specs inline receipt is executable and provenance-bound",
+      label: "cf:specs inline receipt is executable and provenance-bound",
       file: "src/claude/skills/specs/references/templates.md",
       assert: (content) =>
         content.includes("## Canonical inline Receipt") &&
@@ -4342,7 +4342,7 @@ async function runStaticSemanticTests() {
         content.includes("Do not start Develop"),
     },
     {
-      label: "hapo:develop scouts reachability and enforces task scope",
+      label: "cf:develop scouts reachability and enforces task scope",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("### 1. Scout") &&
@@ -4351,18 +4351,18 @@ async function runStaticSemanticTests() {
         content.includes("feature-level integration"),
     },
     {
-      label: "hapo:develop supports explicit flash mode",
+      label: "cf:develop supports explicit flash mode",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("[--flash]") &&
         content.includes("### Flash (`--flash`)") &&
         content.toLowerCase().includes("skip dedicated tests") &&
         content.includes("FLASH_UNVERIFIED") &&
-        content.includes("awaiting /hapo:test <feature>") &&
+        content.includes("awaiting /cf:test <feature>") &&
         content.includes("do not unblock dependents"),
     },
     {
-      label: "hapo:develop makes implementation notes opt-in",
+      label: "cf:develop makes implementation notes opt-in",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) =>
         content.includes("--notes` is opt-in") &&
@@ -4372,7 +4372,7 @@ async function runStaticSemanticTests() {
         content.includes("Never create it by default"),
     },
     {
-      label: "hapo:develop implementation notes template is self-contained and block-based",
+      label: "cf:develop implementation notes template is self-contained and block-based",
       file: "src/claude/skills/develop/references/implementation-notes-template.html",
       assert: (content) =>
         content.includes("<style>") &&
@@ -4387,7 +4387,7 @@ async function runStaticSemanticTests() {
         !content.includes("http://"),
     },
     {
-      label: "hapo:develop quality gate separates proof, review, and closeout owners",
+      label: "cf:develop quality gate separates proof, review, and closeout owners",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
         content.includes("Test owner") &&
@@ -4396,7 +4396,7 @@ async function runStaticSemanticTests() {
         content.includes("reachability failure"),
     },
     {
-      label: "hapo:develop quality gate has flash bypass semantics",
+      label: "cf:develop quality gate has flash bypass semantics",
       file: "src/claude/skills/develop/references/quality-gate.md",
       assert: (content) =>
         content.includes("## Flash gate") &&
@@ -4424,10 +4424,10 @@ async function runStaticSemanticTests() {
       },
     },
     {
-      label: "hapo:scout uses a focused local fast path before delegation",
+      label: "cf:scout uses a focused local fast path before delegation",
       file: "src/claude/skills/inspect/SKILL.md",
       assert: (content) =>
-        content.includes("name: hapo:scout") &&
+        content.includes("name: cf:scout") &&
         content.includes("about 50 files or fewer") &&
         content.includes("Main-agent `rg` plus targeted reads; do not delegate") &&
         content.includes("Do not use the file estimate alone to justify agents") &&
@@ -4436,7 +4436,7 @@ async function runStaticSemanticTests() {
         !content.includes("`ext`"),
     },
     {
-      label: "hapo:scout delegation requires permission runtime support and independent scopes",
+      label: "cf:scout delegation requires permission runtime support and independent scopes",
       file: "src/claude/skills/inspect/references/internal-inspection.md",
       assert: (content) =>
         content.includes("The user explicitly requested or permitted delegation or parallel agents") &&
@@ -4468,7 +4468,7 @@ async function runStaticSemanticTests() {
         content.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED") &&
         content.includes("BLOCKED` is terminal") &&
         content.includes("Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry") &&
-        content.includes("The definition of `PASS` defers to `hapo:code-review`") &&
+        content.includes("The definition of `PASS` defers to `cf:code-review`") &&
         !content.includes("at most one Medium") &&
         !content.includes("score >= 9.0") &&
         !content.includes("critical_issues[]"),
@@ -4478,7 +4478,7 @@ async function runStaticSemanticTests() {
       file: "src/claude/agents/code-auditor.md",
       assert: (content) =>
         content.includes("PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED") &&
-        content.includes("The definition of `PASS` defers to `hapo:code-review`") &&
+        content.includes("The definition of `PASS` defers to `cf:code-review`") &&
         content.includes("cannot finish a task") &&
         !content.includes("at most one Medium"),
     },
@@ -4491,15 +4491,15 @@ async function runStaticSemanticTests() {
         content.includes("Runtime Reachability Missing = FAIL"),
     },
     {
-      label: "hapo:test supports spec-aware feature testing",
+      label: "cf:test supports spec-aware feature testing",
       file: "src/claude/skills/test/SKILL.md",
       assert: (content) =>
         content.includes("<SCOPE-GATE>") &&
-        content.includes("/hapo:test <feature-name>") &&
+        content.includes("/cf:test <feature-name>") &&
         content.includes("Spec-Aware Mode"),
     },
     {
-      label: "hapo:fix is deterministic scout-first without mode selection",
+      label: "cf:fix is deterministic scout-first without mode selection",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
         content.includes("Default: deterministic scout-first fix") &&
@@ -4508,7 +4508,7 @@ async function runStaticSemanticTests() {
         !content.includes("Default: Autonomous mode"),
     },
     {
-      label: "hapo:fix quick path never skips scout or diagnosis",
+      label: "cf:fix quick path never skips scout or diagnosis",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
         content.includes("it never skips scout, pre-fix evidence, diagnosis, or before/after verification") &&
@@ -4516,7 +4516,7 @@ async function runStaticSemanticTests() {
         content.includes("Do not ask generic questions before this step"),
     },
     {
-      label: "hapo:fix enforces no-side-effect gate with user options",
+      label: "cf:fix enforces no-side-effect gate with user options",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) =>
         content.includes("<HARD-GATE-NO-SIDE-EFFECTS>") &&
@@ -4525,19 +4525,19 @@ async function runStaticSemanticTests() {
         content.includes("Do not silently patch around the regression"),
     },
     {
-      label: "hapo:fix references are local and not stale debugger paths",
+      label: "cf:fix references are local and not stale debugger paths",
       file: "src/claude/skills/hotfix/SKILL.md",
       assert: (content) => !content.includes("references/debugger/"),
     },
     {
-      label: "hapo:fix prevention gate points back to side-effect sweep",
+      label: "cf:fix prevention gate points back to side-effect sweep",
       file: "src/claude/skills/hotfix/references/prevention-gate.md",
       assert: (content) =>
         content.includes("Step 5 side-effect sweep") &&
         !content.includes("references/debugger/"),
     },
     {
-      label: "hapo:fix review cycle uses pause conditions not mode selection",
+      label: "cf:fix review cycle uses pause conditions not mode selection",
       file: "src/claude/skills/hotfix/references/review-cycle.md",
       assert: (content) =>
         content.includes("## Default Review Handling") &&
@@ -4547,17 +4547,17 @@ async function runStaticSemanticTests() {
         !content.includes("## Human-in-the-Loop Mode"),
     },
     {
-      label: "hapo:debug is diagnosis-only and read-only for product code",
+      label: "cf:debug is diagnosis-only and read-only for product code",
       file: "src/claude/skills/debug/SKILL.md",
       assert: (content) =>
         content.includes("<DIAGNOSTIC-ONLY-GATE>") &&
-        content.includes("`hapo:debug` is read-only for product code") &&
+        content.includes("`cf:debug` is read-only for product code") &&
         content.includes("Do NOT edit product code") &&
         content.includes("Temporary instrumentation is allowed only") &&
         content.includes("Temporary instrumentation: removed"),
     },
     {
-      label: "hapo:debug enforces scout-first before hypotheses",
+      label: "cf:debug enforces scout-first before hypotheses",
       file: "src/claude/skills/debug/SKILL.md",
       assert: (content) =>
         content.includes("<HARD-GATE-SCOUT-FIRST>") &&
@@ -4566,17 +4566,17 @@ async function runStaticSemanticTests() {
         content.includes("3-6 bullet codebase-context summary"),
     },
     {
-      label: "hapo:debug blocks hotfix handoff when root cause is unknown",
+      label: "cf:debug blocks hotfix handoff when root cause is unknown",
       file: "src/claude/skills/debug/SKILL.md",
       assert: (content) =>
         content.includes("<ROOT-CAUSE-GATE>") &&
         content.includes("Root cause: unknown") &&
         content.includes("Missing Evidence") &&
         content.includes("Next Diagnostic Action") &&
-        content.includes("do not hand off to `hapo:fix` as ready"),
+        content.includes("do not hand off to `cf:fix` as ready"),
     },
     {
-      label: "hapo:debug references installed debugger manuals",
+      label: "cf:debug references installed debugger manuals",
       file: "src/claude/skills/debug/SKILL.md",
       assert: (content) =>
         content.includes("`.claude/references/debugger/core-philosophy.md`") &&
@@ -4588,7 +4588,7 @@ async function runStaticSemanticTests() {
       file: "src/claude/CLAUDE.md",
       assert: (content) =>
         content.includes("## Claude Code runtime") &&
-        content.includes("/hapo:specs") &&
+        content.includes("/cf:specs") &&
         content.includes("specs/<feature>/plan.md") &&
         content.includes("task-NN-*.md") &&
         content.includes("inline `## Receipt`") &&
@@ -4600,7 +4600,7 @@ async function runStaticSemanticTests() {
       file: "src/codex/AGENTS.md",
       assert: (content) =>
         content.includes("## Codex runtime") &&
-        content.includes("$hapo-specs") &&
+        content.includes("$cf-specs") &&
         content.includes("specs/<feature>/plan.md") &&
         content.includes("task-NN-*.md") &&
         content.includes("inline `## Receipt`") &&
@@ -4676,7 +4676,7 @@ async function runStaticSemanticTests() {
           normalized.includes("use the installed Route capability") &&
           normalized.includes("Resolve every abstract link against the current runtime catalog") &&
           normalized.includes("numeric optimization capability remains explicit-only") &&
-          !normalized.includes("/hapo:docs --reconstruct <scope>");
+          !normalized.includes("/cf:docs --reconstruct <scope>");
       },
     },
     {
@@ -4692,29 +4692,29 @@ async function runStaticSemanticTests() {
           normalized.includes("matching installed optional capability") &&
           normalized.includes("require explicit user disambiguation") &&
           normalized.includes("explicit-only numeric optimization capability") &&
-          !/\/hapo:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/.test(normalized);
+          !/\/cf:(?:docs|docx|pdf|pptx|xlsx|ai-multimodal)/.test(normalized);
       },
     },
     {
-      label: "hapo:docs skill is present in the optional document bundle",
+      label: "cf:docs skill is present in the optional document bundle",
       file: "src/claude/migration-manifest.json",
       assert: (content) => content.includes('"documentSkills"') && content.includes('"docs"'),
     },
     {
-      label: "hapo:docs --reconstruct keeps as-is evidence contract",
+      label: "cf:docs --reconstruct keeps as-is evidence contract",
       file: "src/claude/skills/docs/SKILL.md",
       assert: (content) =>
-        content.includes("name: hapo:docs") &&
-        content.includes("/hapo:docs --reconstruct <scope>") &&
+        content.includes("name: cf:docs") &&
+        content.includes("/cf:docs --reconstruct <scope>") &&
         content.includes("Mode flags are exclusive") &&
         content.includes("docs/as-is/<scope-slug>/") &&
         content.includes("Observed | Inferred | Unknown") &&
         content.includes("Confidence: High | Medium | Low") &&
         content.includes("MUST NOT") &&
-        content.includes("/hapo:specs <change request based on approved as-is docs>"),
+        content.includes("/cf:specs <change request based on approved as-is docs>"),
     },
     {
-      label: "hapo:docs --reconstruct reference defines output and human review gate",
+      label: "cf:docs --reconstruct reference defines output and human review gate",
       file: "src/claude/skills/docs/references/reconstruct-workflow.md",
       assert: (content) =>
         content.includes("docs/as-is/<scope-slug>/") &&
@@ -4724,10 +4724,10 @@ async function runStaticSemanticTests() {
         content.includes("unknowns-and-assumptions.md") &&
         content.includes("validate-docs-reconstruct.cjs") &&
         content.includes("Human Review Gate") &&
-        content.includes("Do not recommend `/hapo:develop`"),
+        content.includes("Do not recommend `/cf:develop`"),
     },
     {
-      label: "hapo:docs --reconstruct templates keep evidence and overview starters",
+      label: "cf:docs --reconstruct templates keep evidence and overview starters",
       file: "src/claude/skills/docs/templates/reconstruction.json",
       assert: (content) =>
         content.includes('"source_revision"') &&
@@ -4738,7 +4738,7 @@ async function runStaticSemanticTests() {
         content.includes('"glossary.md"'),
     },
     {
-      label: "hapo:docs --reconstruct overview template is self-contained",
+      label: "cf:docs --reconstruct overview template is self-contained",
       file: "src/claude/skills/docs/templates/reconstruct-overview.html",
       assert: (content) =>
         content.includes("data-reconstruct-overview") &&
@@ -4750,7 +4750,7 @@ async function runStaticSemanticTests() {
         !content.includes("http://"),
     },
     {
-      label: "hapo:docs normal docs references keep init update summarize phases",
+      label: "cf:docs normal docs references keep init update summarize phases",
       file: "src/claude/skills/docs/SKILL.md",
       assert: (content) =>
         content.includes("references/init-workflow.md") &&
@@ -4759,7 +4759,7 @@ async function runStaticSemanticTests() {
         content.includes("CafeKit ships `docs-keeper` instead"),
     },
     {
-      label: "hapo:docs --init reference keeps scout author validate discipline",
+      label: "cf:docs --init reference keeps scout author validate discipline",
       file: "src/claude/skills/docs/references/init-workflow.md",
       assert: (content) =>
         content.includes("Structure Scout") &&
@@ -4768,7 +4768,7 @@ async function runStaticSemanticTests() {
         content.includes("validate-docs.cjs <docs-root>"),
     },
     {
-      label: "hapo:docs --update reference reads existing docs before surgical updates",
+      label: "cf:docs --update reference reads existing docs before surgical updates",
       file: "src/claude/skills/docs/references/update-workflow.md",
       assert: (content) =>
         content.includes("Existing Docs Read") &&
@@ -4777,7 +4777,7 @@ async function runStaticSemanticTests() {
         content.includes(".sync_hash"),
     },
     {
-      label: "hapo:docs --summarize reference avoids broad codebase scans by default",
+      label: "cf:docs --summarize reference avoids broad codebase scans by default",
       file: "src/claude/skills/docs/references/summarize-workflow.md",
       assert: (content) =>
         content.includes("Do not scan the entire codebase") &&
@@ -4905,17 +4905,17 @@ async function runStaticSemanticTests() {
         [claudeHook, codexHook].every((content) => content.includes(":(exclude,literal)")),
     },
     {
-      label: "hapo:specs SKILL stays lean after slim-flow diet",
+      label: "cf:specs SKILL stays lean after slim-flow diet",
       file: "src/claude/skills/specs/SKILL.md",
       assert: (content) => content.trimEnd().split("\n").length >= 150 && content.trimEnd().split("\n").length <= 230,
     },
     {
-      label: "hapo:develop SKILL stays within directional context budget",
+      label: "cf:develop SKILL stays within directional context budget",
       file: "src/claude/skills/develop/SKILL.md",
       assert: (content) => content.trimEnd().split("\n").length >= 140 && content.trimEnd().split("\n").length <= 200,
     },
     {
-      label: "hapo:specs complete shipped bundle stays at or below 750 lines",
+      label: "cf:specs complete shipped bundle stays at or below 750 lines",
       files: [
         "src/claude/skills/specs/SKILL.md",
         "src/claude/skills/specs/references/review.md",
@@ -5117,7 +5117,7 @@ async function runStaticSemanticTests() {
       assertParts: ([guide, developTests, codexTests]) => {
         const normalized = guide.replace(/\s+/g, " ");
         const guideContract = [
-          "hapo:develop <feature>",
+          "cf:develop <feature>",
           "task-NN-<slug>.md",
           "paused",
           "blocked",
@@ -5155,9 +5155,9 @@ async function runStaticSemanticTests() {
           const codexLib = require(join(packageRoot, "bin/lib/codex-install.js"));
           const normalize = codexLib.normalizeCodexBody;
           if (typeof normalize === "function") {
-            const sample = "/hapo:develop <feature> --parallel";
+            const sample = "/cf:develop <feature> --parallel";
             const transformed = normalize(sample, "src/claude/skills/develop/SKILL.md");
-            return transformed.includes("$hapo-develop <feature> --parallel") && !transformed.includes("/hapo:develop");
+            return transformed.includes("$cf-develop <feature> --parallel") && !transformed.includes("/cf:develop");
           }
         } catch {}
         return false;
@@ -5252,15 +5252,15 @@ async function runStaticSemanticTests() {
         ];
         const forbiddenPatterns = [
           /(^|[\s("'`])\/(brainstorm|code-review|debug|develop|docs|frontend-design|git|hotfix|inspect|question|research|specs|test)(?=$|[\s<`),.:])/m,
-          /hapo:(?![a-z0-9-])/,
+          /cf:(?![a-z0-9-])/,
         ];
         return PORTED_RULE_PATHS.every((relative, index) => {
           const content = parts[index];
           if (forbiddenTokens.some((token) => content.includes(token))) return false;
           if (forbiddenPatterns.some((pattern) => pattern.test(content))) return false;
           const renameOnly = content
-            .replace(/\/hapo:([a-z0-9-]+)/gi, (_m, name) => `$hapo-${name}`)
-            .replace(/\bhapo:([a-z0-9-]+)/gi, (_m, name) => `hapo-${name}`);
+            .replace(/\/cf:([a-z0-9-]+)/gi, (_m, name) => `$cf-${name}`)
+            .replace(/\bcf:([a-z0-9-]+)/gi, (_m, name) => `cf-${name}`);
           return normalize(content, relative) === renameOnly;
         });
       },
@@ -5313,13 +5313,13 @@ function runSkillCatalogTests() {
   }
   for (const expected of [
     "CafeKit Skills Catalog",
-    "`hapo:specs`",
-    "`hapo:develop`",
-    "`hapo:docs`",
-    "`hapo:ask`",
-    "`hapo:scout`",
-    "`hapo:debug`",
-    "`hapo:fix`",
+    "`cf:specs`",
+    "`cf:develop`",
+    "`cf:docs`",
+    "`cf:ask`",
+    "`cf:scout`",
+    "`cf:debug`",
+    "`cf:fix`",
   ]) {
     if (!result.stdout.includes(expected)) {
       console.error(result.stdout);
@@ -5450,7 +5450,7 @@ async function runInstallerMigrationFixtureTests() {
       failures.push("skill catalog script was not installed");
     }
     if (await fileExists(join(root, ".claude", "skills", "docs", "SKILL.md"))) {
-      failures.push("optional hapo:docs skill was installed without opt-in");
+      failures.push("optional cf:docs skill was installed without opt-in");
     }
 
     if (failures.length > 0) {

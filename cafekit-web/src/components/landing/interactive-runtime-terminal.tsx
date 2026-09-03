@@ -29,7 +29,7 @@ const steps: TerminalStep[] = [
   {
     id: "specs",
     label: "Create spec",
-    command: "/hapo:specs Build a meeting transcript extension",
+    command: "/cf:specs Build a meeting transcript extension",
     outputs: [
       { kind: "output", text: "C1 scope confirmed  |  plan.md created" },
       { kind: "success", text: "flat tasks created  |  C2 findings ready" },
@@ -44,7 +44,7 @@ const steps: TerminalStep[] = [
   {
     id: "develop",
     label: "Develop",
-    command: "/hapo:develop meet-transcript-mvp",
+    command: "/cf:develop meet-transcript-mvp",
     outputs: [
       { kind: "output", text: "quality gate -> build, evidence, review" },
       { kind: "success", text: "task Status: done  |  inline Receipt current" },
@@ -53,7 +53,7 @@ const steps: TerminalStep[] = [
   {
     id: "test",
     label: "Test",
-    command: "/hapo:test --full",
+    command: "/cf:test --full",
     outputs: [{ kind: "success", text: "precheck first  |  exact task commands verified" }],
   },
 ];

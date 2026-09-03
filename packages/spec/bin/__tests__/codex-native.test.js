@@ -575,7 +575,7 @@ function authoringProjectionIssues(files) {
   ]) {
     if (!files.templates.includes(field)) issues.push(`receipt-${field.toLowerCase()}`);
   }
-  if (!/^name: hapo-specs$/m.test(files.skill)) issues.push('codex-skill-name');
+  if (!/^name: cf-specs$/m.test(files.skill)) issues.push('codex-skill-name');
   const bundle = [files.skill, files.review, files.templates, files.legacyTemplates].join('\n');
   const runtimeProjection = `${bundle}\n${files.codex.replace(foreignRuntimeBoundary, '')}`;
   if (!files.codex.includes(foreignRuntimeBoundary)
@@ -584,11 +584,11 @@ function authoringProjectionIssues(files) {
   }
   for (const claudeOnly of [
     'AskUserQuestion', 'TaskCreate', 'TaskGet', 'TaskUpdate', 'TaskList',
-    'WebSearch', 'WebFetch', 'SendMessage', 'Claude Code', '.claude', '/hapo:', 'hapo:'
+    'WebSearch', 'WebFetch', 'SendMessage', 'Claude Code', '.claude', '/cf:', 'cf:'
   ]) {
     if (runtimeProjection.includes(claudeOnly)) issues.push(`claude-vocabulary-${claudeOnly}`);
   }
-  for (const command of ['$hapo-specs', '$hapo-develop', '$hapo-sync']) {
+  for (const command of ['$cf-specs', '$cf-develop', '$cf-sync']) {
     if (!files.codex.includes(command)) issues.push(`codex-command-${command}`);
   }
   for (const state of ['pending', 'in_progress', 'paused', 'blocked', 'done']) {
@@ -853,8 +853,8 @@ function brainstormProjectionIssues(files) {
     || !skill.includes('Hydration is not a terminal route; continue to exactly one intent route below.')) {
     issues.add('front-door-routing');
   }
-  if (!skill.includes('Then use `hapo-debug` until root cause is evidenced.')
-    || !skill.includes('Hand off to `hapo-fix` only when the user explicitly requested a fix')) {
+  if (!skill.includes('Then use `cf-debug` until root cause is evidenced.')
+    || !skill.includes('Hand off to `cf-fix` only when the user explicitly requested a fix')) {
     issues.add('bug-routing');
   }
   if (!skill.includes('Do not request design approval, persist a report, or invoke another workflow without a new explicit request.')) {
@@ -865,12 +865,12 @@ function brainstormProjectionIssues(files) {
     || !agent.includes('never invent strawmen to fill a quota.')) {
     issues.add('option-cardinality');
   }
-  if (!agent.includes('You advise `hapo-brainstorm`; you do not replace its routing, question, approval, persistence, or handoff ownership.')
+  if (!agent.includes('You advise `cf-brainstorm`; you do not replace its routing, question, approval, persistence, or handoff ownership.')
     || !agent.includes(specialistBoundary)
     || brainstormProjectionHasUnauthorizedAuthority(agentAuthorityRemainder)) {
     issues.add('specialist-boundary');
   }
-  if (!agent.includes('If the request is a symptom without an evidenced root cause, return it to `hapo-debug`.')
+  if (!agent.includes('If the request is a symptom without an evidenced root cause, return it to `cf-debug`.')
     || !agent.includes('If the controller has not identified whether the work is feature delivery, an explicitly authorized fix, or non-bug exploration, request that routing context instead of guessing.')) {
     issues.add('specialist-routing');
   }
@@ -1433,7 +1433,7 @@ test('Codex payload transform emits native skill and subagent syntax', () => {
     transformed,
     /spawn_agent\(agent_type="implementer", fork_turns="none", message="Implement it", task_name="code_feature"\)/
   );
-  assert.match(transformed, /\$hapo-specs auth/);
+  assert.match(transformed, /\$cf-specs auth/);
   assert.match(transformed, /`send_message`/);
   assert.match(transformed, /`exec_command`/);
   assert.match(transformed, /`apply_patch`/);
@@ -1942,12 +1942,12 @@ test('Codex install preserves the adaptive diagnostic-only Debug contract', () =
     const installedSkill = fs.readFileSync(
       path.join(root, '.agents/skills/debug/SKILL.md'), 'utf8'
     );
-    assert.match(installedSkill, /^name: hapo-debug$/m);
+    assert.match(installedSkill, /^name: cf-debug$/m);
     assert.match(installedSkill, /## Proportional depth/);
     assert.match(installedSkill, /Evidence Timeline/);
     assert.match(installedSkill, /### Elimination Path/);
     assert.match(installedSkill, /### Recurrence-Prevention Handoff/);
-    assert.match(installedSkill, /`hapo-debug` is read-only for product code/);
+    assert.match(installedSkill, /`cf-debug` is read-only for product code/);
 
     const installedAgent = fs.readFileSync(
       path.join(root, '.codex/agents/debugger.toml'), 'utf8'
@@ -2154,7 +2154,7 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
       path.join(root, '.agents', 'skills', 'inspect', 'SKILL.md'),
       'utf8'
     );
-    assert.match(scoutSkill, /^name:\s*hapo-scout$/m);
+    assert.match(scoutSkill, /^name:\s*cf-scout$/m);
     assert.equal(
       fs.existsSync(path.join(root, '.agents', 'skills', 'scout')),
       false,
@@ -2164,7 +2164,7 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
       path.join(root, '.agents', 'skills', 'question', 'SKILL.md'),
       'utf8'
     );
-    assert.match(askSkill, /^name:\s*hapo-ask$/m);
+    assert.match(askSkill, /^name:\s*cf-ask$/m);
     assert.equal(
       fs.existsSync(path.join(root, '.agents', 'skills', 'ask')),
       false,
@@ -2211,10 +2211,10 @@ test('Codex installed Specs and spec-maker reject adaptive coverage mutations', 
     assert.doesNotMatch(visible, /If you are Codex CLI or any other runtime, ignore this entire Codex block/);
     assert.doesNotMatch(
       visible.replaceAll(foreignRuntimeBoundary, ''),
-      /\bAgent\(|subagent_type|`Agent`|\bSendMessage\b|\/hapo:|\bhapo:|Claude Code/,
+      /\bAgent\(|subagent_type|`Agent`|\bSendMessage\b|\/cf:|\bcf:|Claude Code/,
     );
     assert.doesNotMatch(visible, /@@PRIVACY_PROMPT_START@@|Claude Tasks/);
-    assert.match(visible, /\$hapo-specs/);
+    assert.match(visible, /\$cf-specs/);
 
     const agentsMd = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
     assert.ok(agentsMd.startsWith(userInstructions));
@@ -2368,7 +2368,7 @@ test('Codex installed Brainstorm skill reference and agent preserve proportional
       {
         name: 'debug-route-removed',
         source: 'skill',
-        from: 'Then use `hapo-debug` until',
+        from: 'Then use `cf-debug` until',
         to: 'Skip diagnosis and choose a remedy before',
         expected: ['bug-routing']
       },
@@ -2410,7 +2410,7 @@ test('Codex installed Brainstorm skill reference and agent preserve proportional
       {
         name: 'specialist-symptom-route-removed',
         source: 'agent',
-        from: 'If the request is a symptom without an evidenced root cause, return it to\n`hapo-debug`.',
+        from: 'If the request is a symptom without an evidenced root cause, return it to\n`cf-debug`.',
         to: 'If the request is a symptom, recommend a fix immediately.',
         expected: ['specialist-routing']
       },
@@ -2560,9 +2560,9 @@ test('Codex installed Develop preserves plan-native execution and references', (
       );
     }
     const installedSkill = fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8');
-    assert.match(installedSkill, /\$hapo-develop <feature>/);
+    assert.match(installedSkill, /\$cf-develop <feature>/);
     assert.match(installedSkill, /\.codex\/scripts\/workflow-policy\.cjs/);
-    assert.doesNotMatch(installedSkill, /\/hapo:develop|\.claude\/scripts/);
+    assert.doesNotMatch(installedSkill, /\/cf:develop|\.claude\/scripts/);
     assert.equal(fs.existsSync(path.join(root, '.claude/skills/develop')), false);
     for (const [sourcePath, expected] of sourceBytes) {
       assert.deepEqual(fs.readFileSync(sourcePath), expected, `canonical source changed: ${sourcePath}`);
@@ -2593,7 +2593,7 @@ test('Codex installed Research preserves adaptive evidence semantics', () => {
     const installedAgent = parseGeneratedTomlString(
       fs.readFileSync(installedAgentPath, 'utf8'), 'developer_instructions'
     );
-    assert.match(installedSkill, /^name: hapo-research$/m);
+    assert.match(installedSkill, /^name: cf-research$/m);
     assert.match(installedSkill, /Quick \| One low-risk, reversible fact or known option/);
     assert.match(installedSkill, /research sequentially with the same evidence bar/);
     assert.match(installedSkill, /Default to a concise answer in chat/);
@@ -2637,9 +2637,9 @@ test('Codex installed Test preserves plan-native proof and references', () => {
       );
     }
     const installedSkill = fs.readFileSync(path.join(installedRoot, 'SKILL.md'), 'utf8');
-    assert.match(installedSkill, /\$hapo-test/);
+    assert.match(installedSkill, /\$cf-test/);
     assert.match(installedSkill, /test-proof-v1/);
-    assert.doesNotMatch(installedSkill, /\/hapo:test/);
+    assert.doesNotMatch(installedSkill, /\/cf:test/);
 
     const installedRunnerPath = path.join(root, '.codex/agents/test_runner.toml');
     assert.equal(
@@ -2677,9 +2677,9 @@ function hotfixProjectionIssues(files) {
   const parallel = compact(files.parallel);
   const specialized = compact(files.specialized);
   const issues = new Set();
-  if (!skill.includes('name: hapo-fix')
+  if (!skill.includes('name: cf-fix')
     || !skill.includes('# Fix — root-cause repair workflow')
-    || skill.includes('name: hapo-hotfix')) {
+    || skill.includes('name: cf-hotfix')) {
     issues.add('public-rename');
   }
   if (!skill.includes('## Proportional depth')
@@ -2688,11 +2688,11 @@ function hotfixProjectionIssues(files) {
   }
   if (!skill.includes('`Timeline: skipped - <reason>` or `- skipped: <reason>`')
     || !skill.includes('`Recurrence-Prevention Handoff`, when present, carries evidence-backed candidates only.')
-    || !skill.includes('routes back to diagnosis (`hapo-debug`)')) {
+    || !skill.includes('routes back to diagnosis (`cf-debug`)')) {
     issues.add('debug-handoff');
   }
   if (!skill.includes('report `PASS | PASS_WITH_WARNINGS | FAIL | BLOCKED`')
-    || !skill.includes('The definition of `PASS` defers to `hapo-code-review`.')
+    || !skill.includes('The definition of `PASS` defers to `cf-code-review`.')
     || skill.includes('Confidence score')
     || !review.includes('Only `FAIL` and `PASS_WITH_WARNINGS` enter remediation retry')
     || !review.includes('only a fresh literal `PASS` enters finalization')
@@ -2720,7 +2720,7 @@ function hotfixProjectionIssues(files) {
     issues.add('bounded-repair-frame');
   }
   if (!skill.includes('after diagnosis, research only unresolved external facts')
-    || !skill.includes('`hapo-brainstorm` to compare 2-3 options')
+    || !skill.includes('`cf-brainstorm` to compare 2-3 options')
     || !skill.includes('When diagnosis leaves one safe direct repair, skip research and')) {
     issues.add('deep-decision-route');
   }
@@ -2767,14 +2767,14 @@ test('Codex installed Fix preserves the adaptive repair contract', () => {
       specialized: fs.readFileSync(path.join(installedRoot, 'references/workflow-specialized.md'), 'utf8'),
     });
     const installedSkill = readProjection().skill;
-    assert.match(installedSkill, /name: hapo-fix/);
-    assert.doesNotMatch(installedSkill, /name: hapo-hotfix|\/hapo:fix|hapo:debug|hapo:code-review/);
+    assert.match(installedSkill, /name: cf-fix/);
+    assert.doesNotMatch(installedSkill, /name: cf-hotfix|\/cf:fix|cf:debug|cf:code-review/);
     assert.deepEqual(hotfixProjectionIssues(readProjection()), []);
 
     const mutations = [
       {
         name: 'public-name-reverts', file: 'SKILL.md',
-        from: 'name: hapo-fix', to: 'name: hapo-hotfix',
+        from: 'name: cf-fix', to: 'name: cf-hotfix',
         expected: ['public-rename']
       },
       {
@@ -2800,7 +2800,7 @@ test('Codex installed Fix preserves the adaptive repair contract', () => {
       },
       {
         name: 'pass-redefined-locally', file: 'references/review-cycle.md',
-        from: 'The definition of `PASS` defers to `hapo-code-review`; Fix never redefines it with local severity thresholds.',
+        from: 'The definition of `PASS` defers to `cf-code-review`; Fix never redefines it with local severity thresholds.',
         to: 'The definition of `PASS` is local: no Critical, no High, at most one Medium.',
         expected: ['verdict-surface']
       },
@@ -2938,7 +2938,7 @@ test('Codex installed Docs preserves the adaptive contract', () => {
       update: fs.readFileSync(path.join(installedRoot, 'references/update-workflow.md'), 'utf8'),
       standard: fs.readFileSync(path.join(installedRoot, 'references/standard-docs-workflow.md'), 'utf8'),
     });
-    assert.match(readProjection().skill, /name: hapo-docs/);
+    assert.match(readProjection().skill, /name: cf-docs/);
     assert.deepEqual(docsProjectionIssues(readProjection()), []);
 
     const mutations = [
@@ -3120,8 +3120,8 @@ test('Claude and Codex installed Route preserve proportional live-catalog semant
       assert.match(route, /highest-link[\s\S]*risk[\s\S]*number of material domains/);
       assert.match(route, /never expand it/);
       const catalog = installedCatalog(root, runtime);
-      assert.ok(catalog.skills.some((skill) => skill.public_id === 'hapo:route'));
-      assert.equal(catalog.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+      assert.ok(catalog.skills.some((skill) => skill.public_id === 'cf:route'));
+      assert.equal(catalog.skills.some((skill) => skill.public_id === 'cf:docs'), false);
     }
   });
 });
@@ -3139,8 +3139,8 @@ test('combined installs bind each catalog to its native runtime inventory', () =
     const codex = installedCatalog(root, 'codex');
     assert.equal(claude.root, fs.realpathSync(path.join(root, '.claude/skills')));
     assert.equal(codex.root, fs.realpathSync(path.join(root, '.agents/skills')));
-    assert.equal(claude.skills.some((skill) => skill.public_id === 'hapo:docs'), true);
-    assert.equal(codex.skills.some((skill) => skill.public_id === 'hapo:docs'), false);
+    assert.equal(claude.skills.some((skill) => skill.public_id === 'cf:docs'), true);
+    assert.equal(codex.skills.some((skill) => skill.public_id === 'cf:docs'), false);
   });
 });
 
@@ -3150,8 +3150,8 @@ test('Claude and Codex installed rules preserve the ported review and process gu
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const ported = ['review-audit-self-decision.md', 'process-management.md'];
     const renameOnly = (content) => content
-      .replace(/\/hapo:([a-z0-9-]+)/gi, (_match, name) => `$hapo-${name}`)
-      .replace(/\bhapo:([a-z0-9-]+)/gi, (_match, name) => `hapo-${name}`);
+      .replace(/\/cf:([a-z0-9-]+)/gi, (_match, name) => `$cf-${name}`)
+      .replace(/\bcf:([a-z0-9-]+)/gi, (_match, name) => `cf-${name}`);
     for (const relative of ported) {
       const sourcePath = path.join(PACKAGE_ROOT, 'src/claude/rules', relative);
       const source = fs.readFileSync(sourcePath, 'utf8');
@@ -3185,7 +3185,7 @@ test('Claude and Codex installed rules preserve the ported review and process gu
       );
     }
     const pointerText = pointerLines.join('\n');
-    for (const forbidden of ['hapo:', 'Claude Code', 'Claude Tasks', 'SendMessage', '.claude/']) {
+    for (const forbidden of ['cf:', 'Claude Code', 'Claude Tasks', 'SendMessage', '.claude/']) {
       assert.equal(
         pointerText.includes(forbidden),
         false,

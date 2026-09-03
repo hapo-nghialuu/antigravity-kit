@@ -1,6 +1,6 @@
 # Diagnosis Protocol
 
-Structured root cause analysis methodology. Replaces ad-hoc guessing with evidence-based investigation. Prefer running `hapo:debug` directly; use this file as the Fix-local checklist.
+Structured root cause analysis methodology. Replaces ad-hoc guessing with evidence-based investigation. Prefer running `cf:debug` directly; use this file as the Fix-local checklist.
 
 ## Core Principle
 
@@ -86,7 +86,7 @@ Symptom (where error appears)
 
 ## Exact Root-Cause Contract
 
-Before Step 4 implementation in `hapo:fix`, record:
+Before Step 4 implementation in `cf:fix`, record:
 
 - Symptom: exact observable failure
 - Reproduction: command, user flow, CI job, log trigger, or route

@@ -108,8 +108,8 @@ const MESSAGES = {
 
     // Next steps
     nextStepsTitle:  'Next steps',
-    nsClaude:        'Start coding: /hapo:specs <feature>',
-    nsCodex:         'Start with `$hapo-specs <feature>`; review and trust project hooks with `/hooks`',
+    nsClaude:        'Start coding: /cf:specs <feature>',
+    nsCodex:         'Start with `$cf-specs <feature>`; review and trust project hooks with `/hooks`',
     nsKeys:          'Some skills need API keys: {skills}\n  Copy <skill>/.env.example → .env and fill in the values',
     nsForce:         'To force-refresh managed files: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run complete — no files were changed.\n  Re-run without --dry-run to apply.',
@@ -230,8 +230,8 @@ const MESSAGES = {
     preservedNote:   '編集済みファイル {n} 件はそのままにしました。\n  --force-overwrite で再実行するとリセットできます（.cafekit-backup/ にバックアップ保存）。',
 
     nextStepsTitle:  '次のステップ',
-    nsClaude:        'コーディング開始: /hapo:specs <機能名>',
-    nsCodex:         '`$hapo-specs <機能名>` で開始し、`/hooks` でプロジェクトフックを確認・信頼',
+    nsClaude:        'コーディング開始: /cf:specs <機能名>',
+    nsCodex:         '`$cf-specs <機能名>` で開始し、`/hooks` でプロジェクトフックを確認・信頼',
     nsKeys:          '一部のスキルに API キーが必要です: {skills}\n  <skill>/.env.example を .env にコピーし、値を入力してください',
     nsForce:         '管理ファイルを強制更新: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'ドライラン完了 — ファイルへの変更はありませんでした。\n  変更を適用するには --dry-run なしで再実行してください。',
@@ -351,8 +351,8 @@ const MESSAGES = {
     preservedNote:   '{n} tệp bạn đã chỉnh sửa được giữ nguyên.\n  Chạy lại với --force-overwrite để cài đè (bản sao lưu ở .cafekit-backup/).',
 
     nextStepsTitle:  'Bước tiếp theo',
-    nsClaude:        'Bắt đầu code: /hapo:specs <mô-tả-tính-năng>',
-    nsCodex:         'Bắt đầu bằng `$hapo-specs <tính-năng>`; kiểm tra và trust project hooks bằng `/hooks`',
+    nsClaude:        'Bắt đầu code: /cf:specs <mô-tả-tính-năng>',
+    nsCodex:         'Bắt đầu bằng `$cf-specs <tính-năng>`; kiểm tra và trust project hooks bằng `/hooks`',
     nsKeys:          'Một số skill cần API key: {skills}\n  Sao chép <skill>/.env.example → .env rồi điền giá trị',
     nsForce:         'Làm mới file được quản lý: npx @haposoft/cafekit --force-overwrite',
     dryRunOnly:      'Dry-run hoàn tất — không có tệp nào thay đổi.\n  Chạy lại không có --dry-run để áp dụng.',

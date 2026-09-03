@@ -1,6 +1,6 @@
 # Init Workflow
 
-Use with `/hapo:docs --init`.
+Use with `/cf:docs --init`.
 
 ## Goal
 
@@ -64,7 +64,7 @@ Run a lightweight source scout before deep reading:
    - UI/API/worker/job/deployment surfaces
 4. Split large repositories into scoped source areas.
 
-Use `hapo:scout` when source discovery spans multiple directories. Prefer targeted reads when the repo is small.
+Use `cf:scout` when source discovery spans multiple directories. Prefer targeted reads when the repo is small.
 
 ### Phase 2: Evidence Scout
 
@@ -126,7 +126,7 @@ Report:
 Recommended next command:
 
 ```text
-/hapo:docs --update
+/cf:docs --update
 ```
 
 after meaningful source changes.

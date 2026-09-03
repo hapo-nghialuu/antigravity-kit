@@ -22,7 +22,7 @@ to change one task state.
   changes; retain the stale receipt only when clearly labelled non-authoritative.
 
 For Flash, keep `Status: in_progress`, `FLASH_UNVERIFIED`, and blocker
-`awaiting /hapo:test <feature>`. Only sync-finalize with fresh canonical proof
+`awaiting /cf:test <feature>`. Only sync-finalize with fresh canonical proof
 may replace that marker and set done.
 
 ## Receipt update

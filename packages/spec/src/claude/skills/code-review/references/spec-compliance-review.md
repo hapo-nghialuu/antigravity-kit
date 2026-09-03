@@ -19,7 +19,7 @@ Do not attempt a standard text-based review if the project includes Visual Specs
 
 **Spec Detection Algorithm:**
 1. Check if the `.specs/` directory, user instructions, or Jira tickets contain attached Image files (`.png`, `.jpg`, `.svg`) or Documents (`.pdf`).
-2. If YES: use **`hapo:ai-multimodal` when installed**, or the runtime's available multimodal capability. If neither is available, mark visual comparison `UNPROVEN` and continue the non-visual review.
+2. If YES: use **`cf:ai-multimodal` when installed**, or the runtime's available multimodal capability. If neither is available, mark visual comparison `UNPROVEN` and continue the non-visual review.
 3. If NO (Markdown Spec only): Read the spec directly and extract:
    - requirement bullets
    - task `Outcome`, `Scope`, `Anchors and Ownership`, `Changes`, `Acceptance`,

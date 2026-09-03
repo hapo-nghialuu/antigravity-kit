@@ -1,5 +1,5 @@
 ---
-name: hapo:specs
+name: cf:specs
 description: "Turn a substantial or risk-elevated feature idea into a bounded, reviewed plan and executable flat task files, with human decisions at scope, findings, and completion. Use when work needs durable coordination or is not eligible for direct work; skip only when a change is clear, isolated, reversible, routine, and likely limited to one or two files."
 user-invocable: true
 argument-hint: "<feature-description>"

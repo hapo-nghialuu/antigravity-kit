@@ -1,5 +1,5 @@
 ---
-name: hapo:git
+name: cf:git
 description: "Hapo Native Git Operations & Worktree Management. Handles safe commits, conventional split, branch finish choices, secret scanning, and sibling-branch worktrees locally."
 user-invocable: true
 when_to_use: "Invoke for commits, PRs, branch hygiene, or worktree management."

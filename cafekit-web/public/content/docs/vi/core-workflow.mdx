@@ -10,13 +10,13 @@ description: Luồng CafeKit chính từ intent có boundary tới change đã v
 ## Main path
 
 ```text
-/hapo:brainstorm         # optional khi intent hoặc architecture chưa rõ
-  -> /hapo:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
+/cf:brainstorm         # optional khi intent hoặc architecture chưa rõ
+  -> /cf:specs         # C1 -> plan.md + flat tasks -> adversarial review -> C2
   -> dừng planning
-  -> /hapo:develop       # invocation mới; từng unblocked task
-  -> /hapo:test          # real proof nhỏ nhất nhưng đủ
-  -> /hapo:code-review   # correctness, security, regression, contract drift
-  -> /hapo:sync          # chỉ observed Status và inline Receipt
+  -> /cf:develop       # invocation mới; từng unblocked task
+  -> /cf:test          # real proof nhỏ nhất nhưng đủ
+  -> /cf:code-review   # correctness, security, regression, contract drift
+  -> /cf:sync          # chỉ observed Status và inline Receipt
   -> C3                  # quyết định completion của user
 ```
 
@@ -46,12 +46,12 @@ Chỉ controller update task Status và canonical Receipt. Sync có thể reconc
 
 | Tình huống | Route |
 |---|---|
-| Cần câu trả lời có evidence | `/hapo:ask` |
-| Cần scoped codebase discovery | `/hapo:scout` |
-| Chưa biết root cause | `/hapo:debug` |
-| Bug đã diagnose cần sửa | `/hapo:fix` |
-| Existing system thiếu docs tin cậy | `/hapo:docs --reconstruct <scope>` |
-| Technical decision còn uncertain | `/hapo:research` |
-| Bounded numeric optimization rõ ràng | `/hapo:loop` |
+| Cần câu trả lời có evidence | `/cf:ask` |
+| Cần scoped codebase discovery | `/cf:scout` |
+| Chưa biết root cause | `/cf:debug` |
+| Bug đã diagnose cần sửa | `/cf:fix` |
+| Existing system thiếu docs tin cậy | `/cf:docs --reconstruct <scope>` |
+| Technical decision còn uncertain | `/cf:research` |
+| Bounded numeric optimization rõ ràng | `/cf:loop` |
 
-Claude Code dùng `/hapo:*`; Codex CLI dùng native `$hapo-*`. OpenCode command chỉ còn trong ghi chú lịch sử 0.16.
+Claude Code dùng `/cf:*`; Codex CLI dùng native `$cf-*`. OpenCode command chỉ còn trong ghi chú lịch sử 0.16.

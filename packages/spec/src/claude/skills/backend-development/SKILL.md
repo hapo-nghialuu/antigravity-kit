@@ -1,5 +1,5 @@
 ---
-name: hapo:backend-development
+name: cf:backend-development
 description: Build backends with Node.js, Python, Go (NestJS, FastAPI, Django). Use for REST/GraphQL/gRPC APIs, auth (OAuth, JWT), databases, microservices, security (OWASP), Docker/K8s.
 license: MIT
 user-invocable: true

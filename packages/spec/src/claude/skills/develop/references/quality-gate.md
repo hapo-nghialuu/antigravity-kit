@@ -98,7 +98,7 @@ Mode: --flash
 Tests: skipped by user request
 Evidence: FLASH_UNVERIFIED
 Status: in_progress
-Blocker: awaiting /hapo:test <feature>
+Blocker: awaiting /cf:test <feature>
 ```
 
 Flash does not write a PASS receipt, mark done, unblock dependents, chain, or

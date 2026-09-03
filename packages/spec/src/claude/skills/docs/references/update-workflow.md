@@ -1,6 +1,6 @@
 # Update Workflow
 
-Use with `/hapo:docs --update`.
+Use with `/cf:docs --update`.
 
 ## Goal
 
@@ -20,7 +20,7 @@ Refresh existing living docs after code or project-state changes without rewriti
 
 1. Read repo instructions and docs root.
 2. Verify the docs root exists.
-3. If the docs root does not exist, switch to `init` or explain that no docs baseline exists. A post-task checkpoint entry never switches to `init`; it reports the gap and recommends an explicit `/hapo:docs --init` invocation instead.
+3. If the docs root does not exist, switch to `init` or explain that no docs baseline exists. A post-task checkpoint entry never switches to `init`; it reports the gap and recommends an explicit `/cf:docs --init` invocation instead.
 4. Identify update focus:
    - user-named module or doc
    - recent source diff
@@ -39,7 +39,7 @@ Scout source areas that can affect docs:
    - design/code standards
    - roadmap/changelog state
 3. Run targeted source reads for evidence.
-4. Use `hapo:scout` only when the affected scope is unclear or broad.
+4. Use `cf:scout` only when the affected scope is unclear or broad.
 
 Do not treat commit messages as sufficient evidence. Verify changed behavior in code, tests, config, or schemas.
 
@@ -121,5 +121,5 @@ Report:
 If a requested change belongs to future behavior rather than current project docs, recommend:
 
 ```text
-/hapo:specs <change request>
+/cf:specs <change request>
 ```

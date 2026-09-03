@@ -1,5 +1,5 @@
 ---
-name: hapo:scout
+name: cf:scout
 description: "Fast scoped codebase discovery using local search first and user-permitted Explore delegation only for broad independent scopes. Use for file discovery, task context, entrypoints, call paths, and blast radius."
 user-invocable: true
 when_to_use: "Invoke for fast scoped codebase discovery and file location."
@@ -130,7 +130,7 @@ no overlap.
 
 ## Rules
 
-- Keep scope narrow. Do not use `hapo:scout` as a runtime policy engine.
+- Keep scope narrow. Do not use `cf:scout` as a runtime policy engine.
 - Prefer listing files first, then reading only the shortlisted files.
 - Never encourage scanning ignored/generated/sensitive areas from the no-scan list.
 - Keep reports concise and actionable.

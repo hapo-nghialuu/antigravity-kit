@@ -12,12 +12,12 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
 ## 2. Plan
 
-- For non-trivial features, use `/hapo:specs` to challenge the minimum scope,
+- For non-trivial features, use `/cf:specs` to challenge the minimum scope,
   open C1, and create `specs/<feature>/plan.md` with flat
   `task-NN-*.md` files beside it.
 - After adversarial review, open C2 and apply only the findings the user accepts
   or revises. Specs never starts implementation.
-- Start implementation only after a new explicit `/hapo:develop` invocation,
+- Start implementation only after a new explicit `/cf:develop` invocation,
   then select one unblocked task at a time.
 - Extract from the active task:
   - `Status`
@@ -49,7 +49,7 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 
 ## 5. Sync
 
-- Use `/hapo:sync` to edit observed state surgically; the controller is the
+- Use `/cf:sync` to edit observed state surgically; the controller is the
   sole writer of task Status and proof.
 - Keep exactly one `Status:` field. Write or replace the task's final inline
   `## Receipt` before setting `Status: done`.

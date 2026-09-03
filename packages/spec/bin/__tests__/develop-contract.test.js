@@ -329,7 +329,7 @@ function canonicalFlashTask(overrides = {}) {
   return {
     status: 'in_progress',
     receipt: 'FLASH_UNVERIFIED',
-    blocker: 'awaiting /hapo:test <feature>',
+    blocker: 'awaiting /cf:test <feature>',
     dependencyBlocked: true,
     unblocks: false,
     feature_name: 'demo',
@@ -377,7 +377,7 @@ test('develop flags retain their process-v3 contracts', () => {
   assert.match(develop, /implementation-notes-template\.html/);
   assert.match(develop, /Never create it by default/i);
   assert.match(develop, /--parallel \[N\][\s\S]*parallel-waves\.md[\s\S]*isolated worktrees[\s\S]*one controller writer/i);
-  assert.match(develop, /--flash[\s\S]*Status: in_progress[\s\S]*FLASH_UNVERIFIED[\s\S]*awaiting \/hapo:test <feature>/i);
+  assert.match(develop, /--flash[\s\S]*Status: in_progress[\s\S]*FLASH_UNVERIFIED[\s\S]*awaiting \/cf:test <feature>/i);
   assert.match(develop, /FLASH_UNVERIFIED[\s\S]*do not unblock dependents[\s\S]*sync-finalize path/i);
 });
 
@@ -1290,7 +1290,7 @@ test('auto authoring reaches readiness only after promotion, validation, groundi
 
     const specs = read(SPECS);
     const executableBlocks = [...specs.matchAll(/```bash\n([\s\S]*?)```/g)].map((match) => match[1]);
-    assert.ok(executableBlocks.every((block) => !/hapo:?develop/i.test(block)), 'Specs must never execute Develop');
+    assert.ok(executableBlocks.every((block) => !/cf:?develop/i.test(block)), 'Specs must never execute Develop');
     assert.match(specs, /An implementation workflow owns execution/i);
     assert.match(specs, /selects one unblocked task[\s\S]*runs\s+the task's verification[\s\S]*inline `## Receipt`/i);
     assert.match(specs, /The user decides\s+at C3 whether the feature is done/i);
@@ -2682,7 +2682,7 @@ test('P0 receipt fail-closed: Exit 1/-1/abc/conflict/empty command rejected', ()
 });
 
 test('P0 flash marker-only must not promote or finalize', () => {
-  const flash = canonicalFlashTask({ blocker: 'awaiting /hapo:test' });
+  const flash = canonicalFlashTask({ blocker: 'awaiting /cf:test' });
   const markerOnly = 'Verification: PASS';
   const promoted = POLICY.promoteFlashTask(flash, 'PASS', markerOnly);
   assert.equal(promoted.status, 'in_progress');
@@ -2765,7 +2765,7 @@ test('P0 sync-finalize derives promotion from current FLASH_UNVERIFIED plus expl
   assert.equal(forgedOpenResult.status, 'in_progress');
   assert.equal(forgedOpenResult.unblocks, false);
 
-  const current = canonicalFlashTask({ blocker: 'awaiting /hapo:test' });
+  const current = canonicalFlashTask({ blocker: 'awaiting /cf:test' });
   const supported = spawnSync(process.execPath, [
     POLICY_PATH,
     '--sync-finalize',

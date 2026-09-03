@@ -2,7 +2,7 @@
 
 Use this reference to ask the smallest set of questions that can materially
 change the selected route or design. It does not override front-door routing in
-`hapo:brainstorm`.
+`cf:brainstorm`.
 
 ## Contract gaps and accepted decisions
 

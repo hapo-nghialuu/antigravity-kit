@@ -16,7 +16,7 @@ npx @haposoft/cafekit
 ## 2. Create and review the spec
 
 ```text
-/hapo:specs Build a meeting transcript extension with AI summaries
+/cf:specs Build a meeting transcript extension with AI summaries
 ```
 
 Specs opens C1, then creates:
@@ -32,7 +32,7 @@ At C2, accept findings, request revisions, or KEEP a named limitation. Planning 
 ## 3. Implement explicitly
 
 ```text
-/hapo:develop <feature>
+/cf:develop <feature>
 ```
 
 Develop executes one unblocked task at a time. It runs the exact planned proof and writes the task's final inline Receipt through the controller.
@@ -40,8 +40,8 @@ Develop executes one unblocked task at a time. It runs the exact planned proof a
 ## 4. Verify and review
 
 ```text
-/hapo:test --full
-/hapo:code-review --pending
+/cf:test --full
+/cf:code-review --pending
 ```
 
 `NO_TESTS` and zero executed tests are not a pass.
@@ -49,7 +49,7 @@ Develop executes one unblocked task at a time. It runs the exact planned proof a
 ## 5. Sync and close
 
 ```text
-/hapo:sync <feature>
+/cf:sync <feature>
 ```
 
 Sync only observed Status and proof. At C3, the user decides whether current receipts and unresolved limitations are sufficient to close.
