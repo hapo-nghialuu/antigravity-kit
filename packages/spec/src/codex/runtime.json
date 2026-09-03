@@ -1,4 +1,5 @@
 {
+  "$schema": "./runtime.schema.json",
   "privacyBlock": true,
   "inspect": {
     "enabled": true

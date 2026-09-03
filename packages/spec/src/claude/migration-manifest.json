@@ -121,6 +121,7 @@
     "files": [
       "gitignore",
       "runtime.json",
+      "runtime.schema.json",
       "status.cjs",
       "hooks/session.cjs",
       "hooks/precompact.cjs",

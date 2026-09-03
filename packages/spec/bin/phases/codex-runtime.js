@@ -66,6 +66,15 @@ function installRuntimeFiles(ctx, platformKey) {
   report(ctx, treeAction(agg), 'Codex native hooks');
   // Keep one canonical command analyzer in the Claude source tree, then
   // materialize the same bytes into the installed Codex runtime.
+  // One canonical runtime schema lives in the Claude source tree; both installed
+  // runtimes reference it as ./runtime.schema.json beside their runtime.json.
+  writeSourceFile(
+    ctx,
+    platformKey,
+    path.join(SRC, 'claude', 'runtime.schema.json'),
+    path.join(platform.folder, 'runtime.schema.json'),
+    'Codex runtime schema'
+  );
   writeSourceFile(
     ctx,
     platformKey,
