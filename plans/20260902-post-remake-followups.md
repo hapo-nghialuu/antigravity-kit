@@ -27,7 +27,9 @@ Cập nhật 2026-09-02, chạy tại HEAD `d2cd4c0` với thay đổi chưa com
 | 5 | Cài lại projection Codex | **XONG PHẦN LỚN** — rules 10/10, `loop` + `route` đã cài, 5/6 skill cũ đã gỡ; xem ghi chú bên dưới |
 | 6 | Packet gỡ kernel legacy | **CHƯA MỞ** — chờ Việc 2 và mốc ~20/09 |
 
-Ghi chú Việc 1: nguyên nhân gốc đúng như mô tả, nhưng có **năm** fixture test copy hook thô chứ không phải hai như plan dự đoán. Ngoài `develop-contract.test.js` và `specs-v2-execution-closeout.test.js` còn `spec-gate.test.js`, `state.test.js`. Mỗi chỗ phải copy kèm `hooks/lib/hook-state-dir.cjs`, nếu không hook fail-closed với thông báo thiếu module.
+Ghi chú Việc 1: nguyên nhân gốc đúng như mô tả, nhưng có **bốn** fixture test copy hook thô chứ không phải hai như plan dự đoán. Ngoài `develop-contract.test.js` và `specs-v2-execution-closeout.test.js` còn `spec-gate.test.js`, `state.test.js`. Mỗi chỗ phải copy kèm `hooks/lib/hook-state-dir.cjs`, nếu không hook fail-closed với thông báo thiếu module. Commit `e281605` ghi nhầm là năm; con số đúng là bốn.
+
+Sai số khác đã xác minh trong chính plan này, giữ lại để không ai đọc nhầm: bảng đối chiếu changelog ở Việc 4c liệt kê bảy mốc còn thiếu, thực tế là mười một vì bỏ sót Develop, Test và hai mốc Brainstorm; Việc 4e ngầm cho rằng ba plan cũ sẽ commit được, nhưng chúng nằm trong thư mục con của `plans/` mà `.gitignore:107` chặn, nên sửa đó chỉ tồn tại trên máy; tiêu chí Việc 5 đòi "không còn 6 skill đã bỏ" là quá chắc, `backend-development` bị xếp user-owned nên installer từ chối gỡ kể cả với `--force-overwrite`.
 
 Ghi chú Việc 1, bước 6: **đã kiểm và bỏ qua**. Thu hẹp `.gitignore` từ `.codex` thành `/.codex` sẽ làm lộ `packages/spec/.agents` (451 file) và `packages/spec/.codex` (61 file) — một bản cài Codex cũ nằm nhầm trong package từ 2026-08-04. Chúng đang bị pattern trần che, không ảnh hưởng Head vì file bị ignore không vào `git status --untracked-files=all`. Thu hẹp gitignore phải đi kèm quyết định xoá 512 file đó, nằm ngoài phạm vi plan này.
 
