@@ -59,10 +59,6 @@ function printSummary(ctx) {
     }[key];
     if (messageKey) lines.push(t(messageKey));
   }
-  // rtk token-saver result (set by phases/setup-rtk.js when setup completed).
-  if (ctx.rtkSetupRan) {
-    lines.push(t('rtkSummary'));
-  }
   const keySkills = skillsNeedingKeys(platforms);
   if (keySkills.length > 0) {
     lines.push(t('nsKeys', { skills: keySkills.join(', ') }));

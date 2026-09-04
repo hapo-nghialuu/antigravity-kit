@@ -207,7 +207,6 @@ function parseInstallerArgs(argv) {
     dryRun: false,
     yes: false,
     withSkillsDeps: false,
-    withRtk: false,
     withDocumentSkills: false,
     withoutDocumentSkills: false,
     platforms: []
@@ -224,8 +223,6 @@ function parseInstallerArgs(argv) {
       args.yes = true;
     } else if (arg === '--with-skills-deps') {
       args.withSkillsDeps = true;
-    } else if (arg === '--with-rtk') {
-      args.withRtk = true;
     } else if (arg === '--with-document-skills') {
       args.withDocumentSkills = true;
     } else if (arg === '--without-document-skills') {

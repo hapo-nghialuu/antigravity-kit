@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **rtk token-saver install phase**: the installer no longer offers or installs the rtk binary and its Claude Code hook. The `--with-rtk` flag is gone, along with the interactive prompt, the phase, and its localized strings. Unknown flags are ignored, so an old script still passing `--with-rtk` keeps working; anyone who wants rtk installs it themselves. Projects where a previous CafeKit run registered the rtk hook keep it — the installer never owned that hook's removal.
+
 ## [0.16.0] - 2026-09-04
 
 ### Breaking

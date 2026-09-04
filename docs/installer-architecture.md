@@ -39,7 +39,6 @@ bin/phases/
   post-install.js           Gemini API key, language + managed-block
                             addressing for Claude and Codex
   skills-setup.js           opt-in: venv+pip, skill npm, Chromium; detect+guide system tools
-  setup-rtk.js              opt-in: rtk token-saver binary + Claude Code hook registration
   summary.js / report.js    summary output + per-action reporting helper
 bin/lib/
   skill-deps.js             cross-platform setup primitives (venv/pip/npm/chromium/detect)
@@ -48,7 +47,7 @@ bin/lib/
 ## Run sequence
 
 1. **Lock** — acquire `.cafekit.lock`; refuse if a live PID owns it, reclaim if stale.
-2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`, `--with-rtk`,
+2. **Context** — parse args (`--force-overwrite`/`--upgrade`, `--dry-run`, `--with-skills-deps`,
    `--with-document-skills`/`--without-document-skills`), load the
    migration manifest, init results counters.
 3. **Select platforms** — honor `--platform`, otherwise restore installed/detected
@@ -69,8 +68,7 @@ bin/lib/
    `.agents/`, `.cafekit-backup/`, `.cafekit.lock`).
 7. **Post-install** — runtime locale, language and managed-block addressing for Claude and Codex.
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
-9. **rtk setup** — opt-in: rtk binary + hook registration for token-saving on Bash commands.
-10. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
+9. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
 
 ## Optional document skills
 

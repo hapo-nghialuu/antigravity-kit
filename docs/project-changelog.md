@@ -5,6 +5,10 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 
+### Removed
+
+- **rtk token-saver install phase**: removed the opt-in rtk phase, the `--with-rtk` flag, the interactive prompt, and its localized strings from the installer. An old script passing `--with-rtk` still runs, since unknown flags are ignored. A previously registered rtk hook stays where it is.
+
 ## [0.16.0] - 2026-09-04
 
 ### Breaking

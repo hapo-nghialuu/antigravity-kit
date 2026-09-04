@@ -42,7 +42,6 @@ const { checkVersions } = require('./lib/version-check');
 const { ensureGitignore } = require('./phases/root-config');
 const { runPostInstall } = require('./phases/post-install');
 const { setupSkillDeps } = require('./phases/skills-setup');
-const { setupRtk } = require('./phases/setup-rtk');
 const { printSummary } = require('./phases/summary');
 
 /** Install a single platform: payload + runtime + metadata, under one spinner. */
@@ -105,7 +104,6 @@ Options:
   -u, --upgrade, -f, --force   Alias of --force-overwrite
   --with-skills-deps   Install skill dependencies (Python venv + pip, npm,
                        Chromium/Playwright). Otherwise prompted interactively.
-  --with-rtk           Install the rtk token-saver (binary + Claude Code hook).
                        Otherwise prompted interactively.
   --with-document-skills     Install docs/DOCX/PDF/PPTX/XLSX/multimodal skills
   --without-document-skills  Skip or remove CafeKit-owned document skills
@@ -190,9 +188,6 @@ async function main() {
     ensureGitignore(ctx);
     await runPostInstall(ctx);
     await setupSkillDeps(ctx);
-    if (ctx.platforms.includes('claude')) {
-      await setupRtk(ctx);
-    }
 
     // Phase handlers may report recoverable-looking errors through counters
     // instead of throwing. Treat them as transactional failure so the snapshot
