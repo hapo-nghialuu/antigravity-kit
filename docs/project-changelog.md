@@ -3,19 +3,14 @@
 All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.16.0] - 2026-08-04
-
-### Changed
-- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
-- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
-- **Instruction hook safety**: rules hooks are silent when runtime configuration is missing, malformed, or unreadable; Claude subagent paths prefer payload `cwd` over stale `PROJECT_ROOT`.
-- **OpenCode instruction updates**: OpenCode language and addressing patches use its own managed block, and all runtimes ship project-local skill/venv gotchas with correct paths.
-- **Combined-install regression coverage**: real temp installs verify one shared core, runtime-specific blocks, localization, evidence contracts, and idempotent reruns.
-- **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
-- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
-- **Wave 4 skills editorial pass (Đợt 2)**: added Light/Standard/Deep delegation tiers and a mode matrix; replaced numeric quality scoring with severity verdicts (PASS = no Critical, no High, at most one Medium); renamed the implementation agent payload to `implementer` and aligned migration-manifest, Codex, and OpenCode mappings; made inspect internal-only with related ext/Gemini cleanup; removed unsourced domain percentage claims.
-
 ## [Unreleased]
+
+## [0.16.0] - 2026-09-04
+
+### Breaking
+
+- **Public skill prefix renamed to `cf`**: skills are invoked as `cf:<name>` in Claude Code and `cf-<name>` in Codex CLI. The `hapo` prefix is gone with no alias.
+- **Repair skill renamed to `fix`**: `hapo:hotfix` became `cf:fix` (`cf-fix` on Codex). No old-command alias. The `hotfix` payload directory name is unchanged so upgrades stay clean.
 
 ### Fixed
 - **Hook state written into the source tree** (2026-09-02): Claude and Codex hooks now resolve their own state directory, so a run from `packages/spec/src` writes crash logs and gate caches to a temp directory instead of the source tree. An untracked `.logs/` under `src/` changed the worktree digest that receipt provenance binds to, which made the completion gate report every done task as stale; it did so three times before the cause was found. One shared helper per runtime replaces fourteen copies of the old path expression, and a final self-test fails when any suite leaves hook state under `src/`.
@@ -67,6 +62,18 @@ All notable changes to CafeKit are documented here, following
 - **Lane-aware evidence**: security verification applies only when the task touches redaction or filesystem boundary; Direct — targeted unit test + diff self-check, Standard — bounded suite, Critical — strict evidence / full suite (inspector/test-runner/code-auditor) per lane policy; no fixed heavy ceremony on every task.
 - **B1 benchmark harness**: added frozen corpus/config/receipt validation, per-lane baseline/treatment summaries, task/repeat completeness gates, and fixture-only contract tests; live baseline/treatment runs remain pending, with no rollout claim.
 - `npm test` in `packages/spec` passes `304` tests.
+
+## [0.16.0-rc.1] - 2026-08-07
+
+### Changed
+- **Slim always-on instructions**: made `AGENTS.md` the shared instruction surface, reduced Claude/Codex/OpenCode templates to project gotchas plus runtime-specific guidance, and added `Commands`, `Do not touch`, and `Slow or expensive` scaffolding stubs.
+- **Canonical instruction install**: root `AGENTS.md` stores one shared `src/common/AGENTS.md` core block for Claude, Codex, and OpenCode installs; each runtime keeps its own managed block and user content is preserved.
+- **Instruction hook safety**: rules hooks are silent when runtime configuration is missing, malformed, or unreadable; Claude subagent paths prefer payload `cwd` over stale `PROJECT_ROOT`.
+- **OpenCode instruction updates**: OpenCode language and addressing patches use its own managed block, and all runtimes ship project-local skill/venv gotchas with correct paths.
+- **Combined-install regression coverage**: real temp installs verify one shared core, runtime-specific blocks, localization, evidence contracts, and idempotent reruns.
+- **Session-scoped hook context**: rules hooks now reserve one injection per session instead of re-injecting after a five-minute gap; reservation or runtime-read failures remain fail-open.
+- **Trimmed dynamic reminders**: kept only configured language, plans/docs paths, and `docs.maxLoc` in prompt hooks; trimmed Claude subagent context to paths, language, and skill venv guidance.
+- **Wave 4 skills editorial pass (Đợt 2)**: added Light/Standard/Deep delegation tiers and a mode matrix; replaced numeric quality scoring with severity verdicts (PASS = no Critical, no High, at most one Medium); renamed the implementation agent payload to `implementer` and aligned migration-manifest, Codex, and OpenCode mappings; made inspect internal-only with related ext/Gemini cleanup; removed unsourced domain percentage claims.
 
 ## [0.15.2] - 2026-07-29
 

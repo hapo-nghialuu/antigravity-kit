@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-04
+
+### Breaking
+
+- **Public skill prefix renamed to `cf`**: skills are invoked as `cf:<name>` in Claude Code and `cf-<name>` in Codex CLI. The `hapo` prefix is gone with no alias.
+- **Repair skill renamed to `fix`**: `hapo:hotfix` became `cf:fix` (`cf-fix` on Codex). No old-command alias. The `hotfix` payload directory name is unchanged so upgrades stay clean.
+
 ### Changed
 
 - **Secret output guardrail** (2026-09-04): a new UserPromptSubmit hook on both runtimes injects a reminder when the prompt is about credential handling. The privacy hook already gates whether a sensitive file may be read, but nothing gated what happened after that approval, so an approved read could still put a raw key into the transcript — where it is written to disk, survives compaction, and is replayed to the model on every later turn. The reminder separates permission to read from permission to print. It reads the prompt and echoes neither the prompt nor any matched value, so the guardrail cannot itself become the leak, and it fails open on malformed input.
@@ -86,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npm test` passes 304 tests.
 - Docs validation reports no broken relative links; release guidance remains under the 800-line documentation limit.
 
-## [0.16.0] - 2026-08-04
+## [0.16.0-rc.1] - 2026-08-07
 
 ### Added
 
