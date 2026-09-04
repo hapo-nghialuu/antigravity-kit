@@ -5,7 +5,7 @@ const path = require('path');
 const { PLATFORMS } = require('../lib/context');
 const { writeManagedFile, copyManagedTree } = require('../lib/managed-writer');
 const { report, treeAction } = require('./report');
-const { copyRulesDirectory } = require('./claude-runtime');
+const { copyRulesDirectory, copyOutputStylesDirectory } = require('./claude-runtime');
 const {
   managedRange,
   upsertManagedCodexBlock
@@ -137,6 +137,7 @@ function installCodexRuntime(ctx, platformKey) {
   if (platformKey !== 'codex') return ctx;
   installRuntimeFiles(ctx, platformKey);
   copyRulesDirectory(ctx, platformKey);
+  copyOutputStylesDirectory(ctx, platformKey);
   installNativeRuleOverrides(ctx, platformKey);
   installManagedAgentsMd(ctx);
   return ctx;

@@ -4,6 +4,7 @@
     "command": "node \"$CLAUDE_PROJECT_DIR/.claude/status.cjs\"",
     "padding": 0
   },
+  "outputStyle": "Junior Developer Mode (Level 1)",
   "hooks": {
     "SessionStart": [
       {

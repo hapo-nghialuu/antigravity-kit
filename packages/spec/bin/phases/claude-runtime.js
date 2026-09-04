@@ -277,11 +277,11 @@ function copyRulesDirectory(ctx, platformKey) {
 }
 
 /**
- * Copy the output-styles/ tree. Claude Code discovers these under `.claude/`; Codex CLI
- * has no equivalent surface, so this is the sole guard rather than a platform capability.
+ * Copy the output-styles/ tree from the one canonical source. Claude Code discovers
+ * these natively under `.claude/`; Codex CLI has no output-style feature, so its rules
+ * hook reads the selected file and injects it once per session instead.
  */
 function copyOutputStylesDirectory(ctx, platformKey) {
-  if (platformKey !== 'claude') return;
 
   const src = path.join(SRC, 'claude/output-styles');
   const dest = getRuntimeSupportTargetDir(platformKey, 'output-styles');

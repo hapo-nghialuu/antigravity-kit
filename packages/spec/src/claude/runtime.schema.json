@@ -93,6 +93,13 @@
         "responseLanguage": { "type": ["string", "null"], "default": null, "description": "Language for user-facing output." }
       }
     },
+    "codingLevel": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 5,
+      "default": 1,
+      "description": "Codex only. How much explanation answers carry: 0 ELI5, 1 junior, 2 mid-level, 3 senior, 4 lead, 5 expert. Codex CLI has no output-style feature, so the rules hook injects the matching file from .codex/output-styles/ once per session. Claude Code loads the same styles natively and reads outputStyle from settings.json instead, so this key is ignored there. null or an out-of-range value injects nothing."
+    },
     "statusline": {
       "enum": ["full", "compact", "minimal", "none"],
       "default": "full",

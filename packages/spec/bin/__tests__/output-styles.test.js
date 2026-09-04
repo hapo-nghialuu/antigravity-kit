@@ -100,12 +100,104 @@ test('a Claude install places every style where Claude Code discovers them', () 
   });
 });
 
-test('a Codex install ships no output styles, because Codex CLI has no such surface', () => {
+test('a Codex install ships the same styles, since its rules hook injects them', () => {
   inTempProject((root) => {
     const result = install(root, 'codex');
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.equal(fs.existsSync(path.join(root, '.codex', 'output-styles')), false);
-    assert.equal(fs.existsSync(path.join(root, '.agents', 'output-styles')), false);
+    const installed = path.join(root, '.codex', 'output-styles');
+    for (const name of EXPECTED) {
+      assert.equal(
+        fs.readFileSync(path.join(installed, name), 'utf8'),
+        fs.readFileSync(path.join(SOURCE_DIR, name), 'utf8'),
+        `${name} differs from the one canonical source`
+      );
+    }
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root, '.codex', 'runtime.json'), 'utf8')).codingLevel, 1);
+  });
+});
+
+/** Run the installed Codex rules hook and return what it injects. */
+function runRulesHook(root, sessionId) {
+  const result = spawnSync(process.execPath, [path.join(root, '.codex', 'hooks', 'rules.cjs')], {
+    cwd: root,
+    input: JSON.stringify({ session_id: sessionId, cwd: root }),
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout;
+}
+
+function setCodingLevel(root, level) {
+  const file = path.join(root, '.codex', 'runtime.json');
+  const runtime = JSON.parse(fs.readFileSync(file, 'utf8'));
+  runtime.codingLevel = level;
+  fs.writeFileSync(file, `${JSON.stringify(runtime, null, 2)}\n`);
+}
+
+test('the Codex rules hook injects the style the coding level names', () => {
+  inTempProject((root) => {
+    assert.equal(install(root, 'codex').status, 0);
+
+    const junior = runRulesHook(root, 'session-junior');
+    assert.match(junior, /## Communication style/);
+    assert.match(junior, /Junior Developer Communication Mode/);
+    // The body uses `---` as a horizontal rule, so check a frontmatter-only marker.
+    assert.doesNotMatch(junior, /keep-coding-instructions/, 'the frontmatter must be stripped, not injected');
+    assert.doesNotMatch(junior, /^description:/m, 'the frontmatter must be stripped, not injected');
+    assert.match(junior, /## Rules/, 'the existing rules injection must survive');
+
+    setCodingLevel(root, 5);
+    const expert = runRulesHook(root, 'session-expert');
+    assert.match(expert, /God Mode Communication/);
+    assert.doesNotMatch(expert, /Junior Developer Communication Mode/);
+  });
+});
+
+test('the Codex style is injected once per session, not once per turn', () => {
+  inTempProject((root) => {
+    assert.equal(install(root, 'codex').status, 0);
+    const first = runRulesHook(root, 'one-session');
+    assert.match(first, /## Communication style/);
+    assert.equal(runRulesHook(root, 'one-session'), '', 'a second turn in the same session must inject nothing');
+    assert.match(runRulesHook(root, 'another-session'), /## Communication style/);
+  });
+});
+
+test('an absent or out-of-range coding level injects no style but keeps the rules', () => {
+  inTempProject((root) => {
+    assert.equal(install(root, 'codex').status, 0);
+    for (const [level, label] of [[null, 'null'], [9, 'out of range'], ['1', 'a string']]) {
+      setCodingLevel(root, level);
+      const out = runRulesHook(root, `session-${label.replace(/\s/g, '-')}`);
+      assert.doesNotMatch(out, /## Communication style/, `${label} must not select a style`);
+      assert.match(out, /## Rules/, `${label} must not break the existing rules injection`);
+    }
+  });
+});
+
+test('a Claude install seeds the default style but never overwrites the user choice', () => {
+  inTempProject((root) => {
+    assert.equal(install(root, 'claude').status, 0);
+    const settingsPath = path.join(root, '.claude', 'settings.json');
+    const seeded = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.equal(seeded.outputStyle, 'Junior Developer Mode (Level 1)');
+
+    seeded.outputStyle = 'God Mode (Level 5)';
+    fs.writeFileSync(settingsPath, `${JSON.stringify(seeded, null, 2)}\n`);
+
+    assert.equal(install(root, 'claude').status, 0);
+    assert.equal(
+      JSON.parse(fs.readFileSync(settingsPath, 'utf8')).outputStyle, 'God Mode (Level 5)',
+      'a reinstall reset a preference the user had chosen'
+    );
+
+    const forced = spawnSync(process.execPath, [INSTALLER, '--platform', 'claude', '--force-overwrite', '--yes'],
+      { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '/usr/bin:/bin' } });
+    assert.equal(forced.status, 0, `${forced.stdout}\n${forced.stderr}`);
+    assert.equal(
+      JSON.parse(fs.readFileSync(settingsPath, 'utf8')).outputStyle, 'God Mode (Level 5)',
+      '--force-overwrite repairs managed files; it must not reset taste'
+    );
   });
 });
 

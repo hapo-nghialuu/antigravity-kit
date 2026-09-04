@@ -24,6 +24,7 @@
     "thinkingLanguage": null,
     "responseLanguage": null
   },
+  "codingLevel": 1,
   "hooks": {},
   "assertions": []
 }

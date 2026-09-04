@@ -109,6 +109,14 @@ function mergeClaudeSettings(ctx, platformKey) {
     }
   }
 
+  // outputStyle: a reader preference, not CafeKit functionality. Seed it once when
+  // the user has none, and never replace a choice they made — not even under
+  // --force-overwrite, which exists to repair managed files, not to reset taste.
+  if (managedSettings.outputStyle && !existingSettings.outputStyle) {
+    mergedSettings.outputStyle = managedSettings.outputStyle;
+    ctx.ui.detail(`  ✓ ${ctx.dryRun ? '[dry-run] ' : ''}Settings: outputStyle seeded (${managedSettings.outputStyle})`);
+  }
+
   // hooks: merge managed hooks per command (not per entry). An entry is keyed
   // by its matcher; commands missing from the matching entry are appended, so
   // a new command added to an existing matcher entry is not swallowed on
