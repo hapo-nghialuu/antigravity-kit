@@ -40,6 +40,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/secret-output-guardrail.cjs\"",
+            "commandWindows": "node \".codex/hooks/secret-output-guardrail.cjs\""
+          },
+          {
+            "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/privacy-approval.cjs\"",
             "commandWindows": "node \".codex/hooks/privacy-approval.cjs\""
           },

@@ -129,6 +129,7 @@
       "hooks/agent.cjs",
       "hooks/usage.cjs",
       "hooks/privacy-block.cjs",
+      "hooks/secret-output-guardrail.cjs",
       "hooks/inspect-block.cjs",
       "hooks/task-scaffold-guard.cjs",
       "hooks/rules.cjs",
@@ -148,6 +149,7 @@
       "hooks/lib/detect.cjs",
       "hooks/lib/hook-state-dir.cjs",
       "hooks/lib/privacy-command-analysis.cjs",
+      "hooks/lib/secret-keywords.cjs",
       "hooks/lib/runtime-path-safety.cjs"
     ]
   },
