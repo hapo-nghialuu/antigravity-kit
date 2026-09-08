@@ -189,7 +189,14 @@ function copyPlatformFiles(ctx, platformKey) {
     } else {
       report(ctx, 'missing', `agents: ${platform.agentsDir}`);
     }
+  }
 
+  // ── Scripts ─────────────────────────────────────────────
+  // Gated on its own capability. This block used to sit inside the agents guard,
+  // so a platform with agents: false and scripts: true (omp) never received
+  // .omp/scripts/, and every Stop-time gate that requires ../scripts/*.cjs answered
+  // "Completion gate unavailable" on each session_stop.
+  if (hasPlatformCapability(platformKey, 'scripts')) {
     const scriptsSourceDir = path.join(SRC, 'claude/scripts');
     if (fs.existsSync(scriptsSourceDir)) {
       const scriptsDest = getRuntimeSupportTargetDir(platformKey, 'scripts');

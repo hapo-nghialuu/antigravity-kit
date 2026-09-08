@@ -88,3 +88,26 @@ test('reinstalling omp is idempotent and preserves a user-added extension', () =
     assert.equal(fs.existsSync(mine), true, 'a reinstall erased an extension the user added');
   });
 });
+
+test('an omp install ships the scripts the Stop gate needs', () => {
+  inTempProject((root) => {
+    fs.mkdirSync(path.join(root, 'specs'), { recursive: true });
+    const result = install(root, 'omp');
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+    // Every Stop-time gate requires ../scripts/*.cjs. Without these files the
+    // installed gate answers "Completion gate unavailable" and the bridge turns that
+    // into a block on every session_stop — the defect this case exists to pin.
+    for (const script of ['workflow-policy.cjs', 'spec-receipt.cjs', 'spec-resolver.cjs', 'provenance.cjs']) {
+      assert.equal(fs.existsSync(path.join(root, '.omp', 'scripts', script)), true, `missing .omp/scripts/${script}`);
+    }
+
+    const gate = spawnSync(process.execPath, [path.join(root, '.omp', 'hooks', 'spec-gate.cjs')], {
+      cwd: root,
+      input: JSON.stringify({ session_id: 'gate-probe', cwd: root, hook_event_name: 'Stop', stop_hook_active: false }),
+      encoding: 'utf8',
+    });
+    assert.equal(gate.status, 0, gate.stderr);
+    assert.doesNotMatch(gate.stdout, /Completion gate unavailable/, 'the installed Stop gate must load its scripts');
+  });
+});
