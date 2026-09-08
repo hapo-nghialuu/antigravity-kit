@@ -149,15 +149,19 @@ function parseStatus(bytes) {
   return entries;
 }
 
+// Generated runtime state, not source evidence. Shared with the receipt binding
+// selector so the gate's own cache writes cannot be read as a dirty worktree.
+const RUNTIME_STATE_ROOTS = Object.freeze([
+  '.git', 'node_modules', '.claude/hooks/.logs', '.codex/hooks/.logs',
+  '.claude/.logs', '.codex/.logs', '.claude/runtime.json', '.codex/runtime.json',
+]);
+
 function excluded(root, absolute, specsRoot) {
   const relative = path.relative(root, absolute).split(path.sep).join('/');
   const specsRelative = path.relative(root, specsRoot);
   // These roots are generated runtime state, not source evidence. The selected
   // canonical specs root is excluded above to avoid receipt/state recursion.
-  const roots = [
-    '.git', 'node_modules', '.claude/hooks/.logs', '.codex/hooks/.logs',
-    '.claude/.logs', '.codex/.logs', '.claude/runtime.json', '.codex/runtime.json',
-  ];
+  const roots = RUNTIME_STATE_ROOTS;
   if (relative === specsRelative || relative.startsWith(`${specsRelative}/`)) return true;
   return roots.some((entry) => relative === entry || relative.startsWith(`${entry}/`));
 }
@@ -315,6 +319,7 @@ function runCli(argv = process.argv.slice(2)) {
 if (require.main === module) process.exitCode = runCli();
 
 module.exports = {
+  RUNTIME_STATE_ROOTS,
   CONTEXT_SCHEMA_VERSION,
   PROVENANCE_MODE,
   ProvenanceError,

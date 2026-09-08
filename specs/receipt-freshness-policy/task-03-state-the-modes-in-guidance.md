@@ -1,7 +1,6 @@
 # Task 03 — Rules, skill and guides state the modes and the limitation
 
-Status: pending
-
+Status: done
 ## Outcome
 
 Every operator-facing statement of the completion policy describes the two modes,
@@ -67,3 +66,22 @@ receipt, so nobody infers a guarantee the code does not provide.
 - Artifacts: none.
 
 ## Receipt
+
+Verification: PASS
+Command: npm --prefix packages/spec test
+Exit: 0
+Base: 874bda9490ddd205dfb52772d33f8392458c675b
+Head: ec2ea6805c49bb0ec70c4bc4ff74d727ba05a21180ecad45ebbe992a10791598
+```text
+$ npm --prefix packages/spec test
+ℹ tests 417
+ℹ pass 416
+ℹ fail 0
+ℹ tests 219
+ℹ pass 219
+ℹ fail 0
+ℹ tests 42
+ℹ pass 42
+ℹ fail 0
+[skill-test] PASS: 1238 tests executed
+```

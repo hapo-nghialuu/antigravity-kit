@@ -486,7 +486,7 @@ Tests: 3 passed, 3 total
           <li>Placeholder hoặc chỉ nói “PASS” bằng miệng → bị chặn.</li>
         </ul>
         <div class="callout red">
-          Stop gate revalidates mọi task done trước khi đóng turn.
+          Stop gate đọc lại receipt của mọi task done. Nó so Base và Head với runtime khi file task khác bản đã commit, và chỉ kiểm cấu trúc khi file đã commit, không đổi, và cây ngoài specs sạch. Gate phát hiện lệch chứ không phát hiện receipt bịa.
         </div>
       </article>
     </section>

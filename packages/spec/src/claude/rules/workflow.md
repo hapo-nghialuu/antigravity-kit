@@ -56,6 +56,8 @@ Use the CafeKit loop: **Understand -> Plan -> Execute -> Verify -> Sync**.
 - A canonical Receipt contains the exact command, `Exit: 0`,
   `Verification: PASS`, runtime-derived Base and Head values, and non-empty
   fenced current output. Never invent, copy, or infer missing proof.
+- When the binding to Base and Head applies, and what the gate does and does not
+  detect, are stated once in `state-sync.md`.
 - Re-read each edited task and reconcile its plan row, dependencies, acceptance
   mapping, status, and receipt without rewriting unrelated bytes.
 - Run docs checkpoint when a completed task affects public docs or architecture docs.

@@ -4841,6 +4841,36 @@ async function runStaticSemanticTests() {
         content.includes("nothing here grants an authorization") &&
         content.includes("compact-recovery.json") &&
         content.includes("hook-state-dir.cjs"),
+      label: "completion policy states both receipt modes and the invention limit",
+      file: "src/claude/rules/state-sync.md",
+      assert: (content) =>
+        content.includes("validated on structure alone once the file is committed, unchanged, and the") &&
+        content.includes("The gate detects drift, not invention") &&
+        !content.includes("revalidates every task currently marked done"),
+    },
+    {
+      label: "Codex carries the same completion policy, since it does not auto-load Claude rules",
+      file: "src/codex/rules/state-sync.md",
+      assert: (content) =>
+        content.includes("validated on structure alone once the file is committed, unchanged, and the") &&
+        content.includes("The gate detects drift, not invention") &&
+        !content.includes("revalidates every task currently marked done"),
+    },
+    {
+      label: "workflow rule points at one home for the binding policy instead of copying it",
+      file: "src/claude/rules/workflow.md",
+      assert: (content) =>
+        content.includes("are stated once in `state-sync.md`") &&
+        !content.includes("The gate detects drift, not invention") &&
+        !content.includes("revalidates every task currently marked done"),
+    },
+    {
+      label: "Specs machine boundary records what the gate cannot detect",
+      file: "src/claude/skills/specs/SKILL.md",
+      assert: (content) =>
+        content.includes("detects drift\nbetween a receipt and the tree, not invention") &&
+        content.includes("C3 is where a human weighs the evidence") &&
+        !content.includes("revalidates every done task's inline Receipt and provenance"),
     },
     {
       label: "CafeKit runtime config drives shared hook config",
@@ -5528,6 +5558,47 @@ async function runSettingsManifestConsistencyCheck() {
  * every done task as stale three times before the cause was found, so the
  * invariant is checked rather than remembered.
  */
+/**
+ * The old policy sentence promised the gate revalidated every done task against
+ * the current tree. That is no longer what the gate does, and a stale copy of the
+ * promise would teach an operator to read a correct silence as a bug.
+ */
+async function runCompletionPolicyWordingCheck() {
+  const retired = "revalidates every task currently marked done";
+  const offenders = [];
+
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const absolute = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === ".venv") continue;
+        await walk(absolute);
+      } else if (/\.(md|cjs|mjs|js|json|html)$/.test(entry.name)) {
+        const content = await readFile(absolute, "utf8");
+        if (content.includes(retired)) offenders.push(absolute);
+      }
+    }
+  }
+
+  console.log("\n[skill-test] retired completion-policy sentence is gone from the payload");
+  await walk(join(packageRoot, "src"));
+  if (offenders.length > 0) {
+    console.error(
+      `[FAIL] the retired sentence "${retired}" still appears in: ${offenders.join(", ")}. `
+      + "State the two receipt modes instead; the policy is defined once in src/claude/rules/state-sync.md.",
+    );
+    process.exit(1);
+  }
+  console.log("Ran 1 test in completion policy wording");
+  return 1;
+}
+
 async function runSourceTreeCleanlinessCheck() {
   const sourceRoot = join(packageRoot, "src");
   const offenders = [];
@@ -6403,6 +6474,7 @@ async function main() {
     process.exit(1);
   }
 
+  totalTests += await runCompletionPolicyWordingCheck();
   totalTests += await runSourceTreeCleanlinessCheck();
 
   console.log(`\n[skill-test] PASS: ${totalTests} tests executed`);

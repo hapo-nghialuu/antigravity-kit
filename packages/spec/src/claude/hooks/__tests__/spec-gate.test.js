@@ -1486,3 +1486,339 @@ test('36. process-v3 Stop accepts two completed packets with valid Receipts', ()
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ── Receipt freshness: bound while written or altered, structure-only once committed on a clean tree ──
+
+const STALE_BASE = 'f'.repeat(40);
+const STALE_HEAD = 'e'.repeat(40);
+
+function commitAll(dir, message) {
+  for (const args of [['add', '-A'], ['commit', '-qm', message, '--allow-empty']]) {
+    const result = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8' });
+    assert.strictEqual(result.status, 0, result.stderr);
+  }
+}
+
+function boundReceipt(base = VALID_BASE, head = VALID_HEAD) {
+  return [
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${base}`, `Head: ${head}`, '```text', '$ node --test', 'pass: 1', '```',
+  ];
+}
+
+function runHookFrom(dir, cwd) {
+  const res = spawnSync(process.execPath, [HOOK], {
+    cwd,
+    input: JSON.stringify({ hook_event_name: 'Stop', session_id: 'test', transcript_path: '/tmp/t', stop_hook_active: false, cwd: dir }),
+    encoding: 'utf8',
+    env: { ...process.env, PROJECT_ROOT: dir },
+  });
+  return { code: res.status, stdout: (res.stdout || '').trim(), stderr: res.stderr || '' };
+}
+
+test('37. committed receipt on a clean tree survives later commits', () => {
+  const dir = makeWorkflowFixture(boundReceipt());
+  try {
+    commitAll(dir, 'receipt');
+    fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'src', 'unrelated.txt'), 'later change\n');
+    commitAll(dir, 'unrelated source change');
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.strictEqual(result.stdout, '', 'a committed, unchanged receipt on a clean tree must stay accepted after unrelated commits');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('38. untracked task file requires binding', () => {
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'an untracked task file must keep full binding');
+    assert.match(body.reason, /\bprovenance\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('38b. the same stale receipt is accepted once committed on a clean tree', () => {
+  // Documents the accepted trade-off: once committed and clean, Base and Head
+  // must be concrete but are no longer compared against the runtime.
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    commitAll(dir, 'receipt');
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.stdout, '', result.stderr);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('39. staged but uncommitted task file requires binding', () => {
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    const add = spawnSync('git', ['-C', dir, 'add', '-A'], { encoding: 'utf8' });
+    assert.strictEqual(add.status, 0, add.stderr);
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'git add alone must not grant structure-only');
+    assert.match(body.reason, /\bprovenance\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('40. modified receipt requires binding', () => {
+  const dir = makeWorkflowFixture(boundReceipt());
+  try {
+    commitAll(dir, 'receipt');
+    const taskFile = path.join(dir, 'specs', FEATURE, 'task-01-demo.md');
+    const context = workflowRuntimeContext(dir);
+    const before = fs.readFileSync(taskFile, 'utf8');
+    const after = before.replace(`Head: ${context.head}`, `Head: ${STALE_HEAD}`);
+    assert.notStrictEqual(after, before, 'fixture must contain the bound Head');
+    fs.writeFileSync(taskFile, after);
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'a receipt edited after commit must be rebound');
+    assert.match(body.reason, /\bprovenance\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('41. unborn HEAD fails closed before any receipt check', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ck-spec-gate-'));
+  try {
+    for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test']]) {
+      const result = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8' });
+      assert.strictEqual(result.status, 0, result.stderr);
+    }
+    const featureDir = path.join(dir, 'specs', FEATURE);
+    fs.mkdirSync(featureDir, { recursive: true });
+    fs.writeFileSync(path.join(featureDir, 'plan.md'), '# Demo plan\n');
+    fs.writeFileSync(path.join(featureDir, 'task-01-demo.md'), [
+      '# Task 01: demo', '', 'Status: done', '', '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '', ...boundReceipt(STALE_BASE, STALE_HEAD), '',
+    ].join('\n'));
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'an unborn HEAD must block');
+    // The block arrives from provenance derivation, which cannot resolve a base
+    // commit here, so the receipt check is never reached. Asserting the reason
+    // keeps this case honest: it guards fail-closed behavior on an unborn HEAD,
+    // not the binding-mode selector. The selector's own HEAD-unreadable branch
+    // is guarded by cases 38 and 39.
+    assert.match(body.reason, /controlled failure/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('42. dirty tree outside specs requires binding, regardless of working directory', () => {
+  const dir = makeWorkflowFixture(boundReceipt());
+  try {
+    commitAll(dir, 'receipt');
+    fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'src', 'dirty.txt'), 'uncommitted\n');
+    clearCache();
+    const fromRoot = parseBlock(runHook({}, dir).stdout);
+    assert.ok(fromRoot && fromRoot.decision === 'block', 'an uncommitted change outside specs must rebind');
+    assert.match(fromRoot.reason, /\bprovenance\b/);
+    clearCache();
+    const fromSpecs = parseBlock(runHookFrom(dir, path.join(dir, 'specs', FEATURE)).stdout);
+    assert.ok(fromSpecs && fromSpecs.decision === 'block', 'the status check must pin the project root, not the working directory');
+    assert.match(fromSpecs.reason, /\bprovenance\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('42b. a change hidden by skip-worktree or assume-unchanged requires binding', () => {
+  // `git status` honors both index flags, so a tracked file outside the specs
+  // root can differ from HEAD while the tree reports clean. Structure mode must
+  // not be granted from a report that git itself is suppressing.
+  for (const flag of ['--skip-worktree', '--assume-unchanged']) {
+    const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+    try {
+      fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'src', 'hidden.txt'), 'committed\n');
+      commitAll(dir, 'receipt and source');
+      const marked = spawnSync('git', ['-C', dir, 'update-index', flag, 'src/hidden.txt'], { encoding: 'utf8' });
+      assert.strictEqual(marked.status, 0, marked.stderr);
+      fs.writeFileSync(path.join(dir, 'src', 'hidden.txt'), 'tampered\n');
+      const status = spawnSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' });
+      assert.strictEqual(status.stdout.trim(), '', `${flag} must make the tree look clean for this case to mean anything`);
+      clearCache();
+      const body = parseBlock(runHook({}, dir).stdout);
+      assert.ok(body && body.decision === 'block', `${flag} must not grant structure-only`);
+      assert.match(body.reason, /\bprovenance\b/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('43. structure checks still block in committed mode', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 1',
+    `Base: ${STALE_BASE}`, `Head: ${STALE_HEAD}`, '```text', '$ node --test', 'fail: 1', '```',
+  ]);
+  try {
+    commitAll(dir, 'receipt');
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block');
+    assert.match(body.reason, /exit_result/);
+    assert.doesNotMatch(body.reason, /\bprovenance\b/, 'committed mode must not report a provenance failure for a stale but concrete pair');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('43b. committed mode still requires concrete Base and Head fields', () => {
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${STALE_BASE}`, '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    commitAll(dir, 'receipt without Head');
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'a missing Head field must still block');
+    assert.match(body.reason, /\bprovenance\b/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('44. edited artifact bytes still block in committed mode', () => {
+  const artifactPath = 'output/bundle.js';
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${STALE_BASE}`, `Head: ${STALE_HEAD}`,
+    `Artifact: ${artifactPath} (sha256:${FIXTURE_ARTIFACT_DIGEST})`,
+    '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    fs.mkdirSync(path.join(dir, 'output'), { recursive: true });
+    fs.writeFileSync(path.join(dir, artifactPath), FIXTURE_ARTIFACT);
+    commitAll(dir, 'receipt and artifact');
+    clearCache();
+    const accepted = runHook({}, dir);
+    assert.strictEqual(accepted.stdout, '', accepted.stderr);
+    fs.writeFileSync(path.join(dir, artifactPath), 'tampered\n');
+    commitAll(dir, 'tamper artifact');
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'artifact bytes must still be verified in committed mode');
+    assert.match(body.reason, /artifact_hash/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('45. the cache grants no authority across a state change', () => {
+  // A cached PASS must not survive a later mutation. The first run accepts and
+  // writes the cache; the second run sees tampered artifact bytes committed on a
+  // still-clean tree and must block without the cache being cleared first.
+  const artifactPath = 'output/cached.js';
+  const dir = makeWorkflowFixture([
+    '## Receipt', '', 'Verification: PASS', 'Command: node --test', 'Exit: 0',
+    `Base: ${STALE_BASE}`, `Head: ${STALE_HEAD}`,
+    `Artifact: ${artifactPath} (sha256:${FIXTURE_ARTIFACT_DIGEST})`,
+    '```text', '$ node --test', 'pass: 1', '```',
+  ]);
+  try {
+    fs.mkdirSync(path.join(dir, 'output'), { recursive: true });
+    fs.writeFileSync(path.join(dir, artifactPath), FIXTURE_ARTIFACT);
+    commitAll(dir, 'receipt and artifact');
+    clearCache();
+    const accepted = runHook({}, dir);
+    assert.strictEqual(accepted.stdout, '', 'first run must accept and populate the cache');
+    fs.writeFileSync(path.join(dir, artifactPath), 'tampered after the cached pass\n');
+    commitAll(dir, 'tamper artifact, tree stays clean');
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'a cached pass must not hide a later mutation');
+    assert.match(body.reason, /artifact_hash/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('46. a dirty file inside the specs root does not force binding', () => {
+  // The status and index queries exclude the specs root on purpose: a receipt is
+  // written into that root, so counting it would make every receipt invalidate
+  // itself. Dropping the exclusion from either query must fail this case.
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    commitAll(dir, 'receipt');
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, 'plan.md'), '# Demo plan\n\nEdited after the receipt was committed.\n');
+    fs.writeFileSync(path.join(dir, 'specs', FEATURE, 'notes-untracked.md'), 'scratch\n');
+    const dirty = spawnSync('git', ['-C', dir, 'status', '--porcelain', '--untracked-files=all'], { encoding: 'utf8' });
+    assert.match(dirty.stdout, /specs\//, 'the specs root must actually be dirty for this case to mean anything');
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.stdout, '', 'work inside the specs root must not reopen a committed receipt');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('47. completed-set branch accepts committed receipts and blocks a tampered one', () => {
+  // Two finished packets resolve to the completed-set branch, which is the path
+  // that revalidated every done receipt on every Stop. Prove the new mode works
+  // there, then prove it still blocks.
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    const secondDir = path.join(dir, 'specs', 'second');
+    fs.mkdirSync(secondDir, { recursive: true });
+    fs.writeFileSync(path.join(secondDir, 'plan.md'), '# Second plan\n');
+    fs.writeFileSync(path.join(secondDir, 'task-01-second.md'), [
+      '# Task 01: second', '', 'Status: done', '', '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '', ...boundReceipt(STALE_BASE, STALE_HEAD), '',
+    ].join('\n'));
+    commitAll(dir, 'two completed packets');
+    clearCache();
+    const accepted = runHook({}, dir);
+    assert.strictEqual(accepted.stdout, '', 'the completed-set branch must accept committed receipts on a clean tree');
+    fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'src', 'dirty.txt'), 'uncommitted\n');
+    clearCache();
+    const body = parseBlock(runHook({}, dir).stdout);
+    assert.ok(body && body.decision === 'block', 'the completed-set branch must rebind on a dirty tree');
+    assert.match(body.reason, /\bprovenance\b/);
+    assert.match(body.reason, /second|demo/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('48. the gate\'s own runtime state does not defeat structure mode', () => {
+  // The gate writes its cache under .claude/hooks/.logs on every Stop. If that
+  // write counted as a dirty tree, a project tracking its runtime directory could
+  // never reach structure mode and the gate would defeat itself. The status query
+  // excludes the same runtime-state roots the provenance manifest already ignores.
+  const dir = makeWorkflowFixture(boundReceipt(STALE_BASE, STALE_HEAD));
+  try {
+    const stateDir = path.join(dir, '.claude', 'hooks', '.logs');
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(path.join(stateDir, 'spec-gate-last.json'), '{}\n');
+    fs.writeFileSync(path.join(dir, '.claude', 'runtime.json'), '{}\n');
+    commitAll(dir, 'receipt plus tracked runtime state');
+    // Mutate the tracked runtime state exactly as a Stop would.
+    fs.writeFileSync(path.join(stateDir, 'spec-gate-last.json'), '{"demo":{"task-01-demo.md":"done"}}\n');
+    fs.writeFileSync(path.join(dir, '.claude', 'runtime.json'), '{"spec":{}}\n');
+    const dirty = spawnSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' });
+    assert.match(dirty.stdout, /\.claude\//, 'the runtime state must actually be dirty for this case to mean anything');
+    clearCache();
+    const result = runHook({}, dir);
+    assert.strictEqual(result.stdout, '', 'generated runtime state must not be read as a dirty worktree');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

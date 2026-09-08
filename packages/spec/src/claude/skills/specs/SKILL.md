@@ -124,17 +124,16 @@ it does not invent product approval, review independence, or runtime coverage.
 
 ## Machine boundary
 
-The shared workflow resolver recognizes only a regular `plan.md` plus one or
-more regular flat `task-*.md` files inside one direct feature directory. The
-Stop gate revalidates every done task's inline Receipt and provenance. The old
-task-scaffold guard remains limited to the older nested layout; flat v3 tasks
-do not invoke that kernel path.
-
-The resolver projects exact `Status:` values; it does not infer blockers from prose.
-
-These checks are a final safety net, not a substitute for C1-C3 judgment. Do
-not add a new schema, approval field, readiness bit, or review state to make the
-Markdown look more authoritative.
+The shared workflow resolver recognizes only a regular `plan.md` plus one or more
+regular flat `task-*.md` files in one direct feature directory, and projects exact
+`Status:` values without inferring blockers from prose. The Stop gate re-reads every
+done Receipt, binding Base and Head to the live runtime until the task file is
+committed, unchanged, and the tree outside the specs root is clean. It detects drift
+between a receipt and the tree, not invention: a valid pair costs one command and no
+verification run, so a receipt for a command that never ran satisfies it in either
+mode. C3 is where a human weighs the evidence. These checks are a final safety net,
+not a substitute for C1-C3 judgment. Do not add a new schema, approval field,
+readiness bit, or review state to make the Markdown look more authoritative.
 
 ## Legacy compatibility
 

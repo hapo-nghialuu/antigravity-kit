@@ -225,10 +225,14 @@ try {
     process.exit(0);
   }
 
-  // Cache hardening: every Stop revalidates the canonical receipt for
-  // every task currently marked done, so a cached PASS cannot hide later
-  // mutations (deletion, placeholder, changed Verification/Command/Exit/
-  // Base/Head, stale provenance). Cache is an optimization, not truth.
+  // Cache hardening: every Stop re-reads and re-checks the receipt of every
+  // task currently marked done, so a cached PASS cannot hide later mutations
+  // (deletion, placeholder, changed Verification/Command/Exit, missing
+  // output, edited artifact bytes). Base/Head are compared against the live
+  // runtime only while the task file differs from its committed bytes or the
+  // tree outside the specs root is dirty; a committed, unchanged receipt on a
+  // clean tree is checked on structure alone. Cache is an optimization, not
+  // truth.
   const featureCache = cacheExists ? (cache[featureName] || {}) : {};
   const allDoneTasks = Object.keys(taskRegistry).filter((tp) =>
     (taskRegistry[tp]?.status || 'pending') === 'done'

@@ -466,3 +466,29 @@ test('scaffold creates planning artifacts but no task or feature receipts', () =
     assert.equal(files.some((file) => file.includes('receipt')), false);
   });
 });
+
+test('legacy receipt still requires provenance under a clean committed tree', () => {
+  // The workflow task path may validate a committed, unchanged receipt on
+  // structure alone; the legacy task and feature receipt paths must not.
+  withTempResources((resources) => {
+    const root = gitRoot(resources);
+    const { featureDir } = prepare(root);
+    const stale = { base: 'f'.repeat(40), head: 'e'.repeat(40) };
+    fs.writeFileSync(
+      path.join(featureDir, 'receipts', path.basename(TASK)),
+      receiptBody(stale, `Task: ${path.basename(TASK)}\nTask path: ${TASK}`),
+    );
+    fs.writeFileSync(path.join(featureDir, 'feature-receipt.md'), receiptBody(stale, `Feature: ${FEATURE}`));
+    for (const args of [['add', '-A'], ['commit', '-qm', 'committed legacy receipts']]) {
+      const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+    }
+    const clean = spawnSync('git', ['-C', root, 'status', '--porcelain'], { encoding: 'utf8' });
+    assert.equal(clean.stdout.trim(), '', 'fixture tree must be clean before the check');
+    const ctx = runtime(root);
+    const taskFailures = RECEIPT.checkTaskReceipt(featureDir, TASK, { completed_at: '2026-08-13T00:00:00.000Z' }, ctx, POLICY).failures;
+    assert.ok(taskFailures.includes('provenance'), `legacy task receipts keep provenance binding when committed and clean; got ${JSON.stringify(taskFailures)}`);
+    const featureFailures = RECEIPT.checkFeatureReceipt(featureDir, ctx, POLICY).failures;
+    assert.ok(featureFailures.includes('provenance'), `feature receipts keep provenance binding when committed and clean; got ${JSON.stringify(featureFailures)}`);
+  });
+});

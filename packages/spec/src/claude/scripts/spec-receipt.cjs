@@ -3,7 +3,9 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const { annotatedMarkdownLines } = require('./spec-resolver.cjs');
+const { RUNTIME_STATE_ROOTS } = require('./provenance.cjs');
 
 const EVIDENCE_HEADINGS = new Set([
   'Evidence',
@@ -177,11 +179,67 @@ function identity(body) {
   return crypto.createHash('sha256').update(JSON.stringify({ fields, artifacts })).digest('hex');
 }
 
-function canonicalFailures(body, task, runtimeContext, policy) {
+function tryGitBytes(root, args) {
+  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 });
+  if (result.error || result.status !== 0) return null;
+  return result.stdout;
+}
+
+// A receipt is bound to live Base/Head while it is being written or altered.
+// Once its task file matches the committed bytes and nothing outside the specs
+// root is uncommitted, later commits must not reopen it: rebinding every done
+// receipt on every Stop made each unrelated commit a refresh of all of them.
+// Every state that cannot be read as committed-and-clean keeps the binding,
+// including an unborn HEAD, a staged-only file, and any git failure. The git
+// calls pin the project root; a working-directory-relative status query run
+// from inside the specs root reports a dirty tree as clean.
+function receiptBindingMode(featureDir, taskPath, taskBytes, runtimeContext) {
+  const root = runtimeContext && typeof runtimeContext.project_root === 'string' ? runtimeContext.project_root : null;
+  const specsRoot = runtimeContext && typeof runtimeContext.specs_root === 'string' ? runtimeContext.specs_root : null;
+  if (!root || !specsRoot || !Buffer.isBuffer(taskBytes)) return 'binding';
+  let canonicalFeature;
+  try { canonicalFeature = fs.realpathSync(featureDir); } catch { return 'binding'; }
+  const toPosix = (value) => value.split(path.sep).join('/');
+  const taskRelative = toPosix(path.relative(root, path.join(canonicalFeature, taskPath)));
+  const specsRelative = toPosix(path.relative(root, specsRoot));
+  const escapes = (value) => !value || value === '..' || value.startsWith('../') || path.isAbsolute(value);
+  if (escapes(taskRelative) || escapes(specsRelative)) return 'binding';
+  // `--filters` applies the same smudge/eol conversion the worktree copy has,
+  // so a checkout that converts line endings can still reach structure mode.
+  const committed = tryGitBytes(root, ['cat-file', '--filters', `HEAD:${taskRelative}`]);
+  if (committed === null || !committed.equals(taskBytes)) return 'binding';
+  // The same roots the provenance manifest calls generated runtime state rather
+  // than source evidence. Without them the gate defeats itself: writing its own
+  // cache dirties the tree, so a project that tracks its runtime directory could
+  // never reach structure mode.
+  const outsideSpecs = ['--', '.', `:(exclude,literal)${specsRelative}`,
+    ...RUNTIME_STATE_ROOTS.map((entry) => `:(exclude,literal)${entry}`)];
+  const status = tryGitBytes(root, ['status', '--porcelain', '--untracked-files=all', ...outsideSpecs]);
+  if (status === null || status.length !== 0) return 'binding';
+  // `git status` obeys skip-worktree and assume-unchanged, so a tracked file can
+  // be modified while the tree reports clean. Require every index entry outside
+  // the specs root to carry the plain cached tag `H`; any other tag, including
+  // `S` and the lowercase assume-unchanged tags, keeps the binding.
+  const indexTags = tryGitBytes(root, ['ls-files', '-v', ...outsideSpecs]);
+  if (indexTags === null) return 'binding';
+  const hidden = indexTags.toString('utf8').split('\n')
+    .filter((line) => line.trim() !== '')
+    .some((line) => line[0] !== 'H');
+  if (hidden) return 'binding';
+  return 'structure';
+}
+
+function canonicalFailures(body, task, runtimeContext, policy, { bindProvenance = true } = {}) {
   if (!policy || typeof policy.validateCanonicalReceipt !== 'function') return ['validator_unavailable'];
   const options = typeof policy.receiptValidatorOptions === 'function'
     ? policy.receiptValidatorOptions(task || {}, { runtimeContext, requireProvenanceBinding: true })
     : { requireProvenanceBinding: true };
+  // Structure-only mode drops the live Base/Head comparison and nothing else.
+  // It is granted only while a trusted artifact root survived, because
+  // withholding the runtime context would also silence artifact byte checks.
+  if (!bindProvenance && typeof options.artifactRoot === 'string' && options.artifactRoot.trim() !== '') {
+    return policy.validateCanonicalReceipt(body, { ...options, expectedProvenance: null, requireProvenanceBinding: false });
+  }
   return policy.validateCanonicalReceipt(body, options);
 }
 
@@ -261,12 +319,15 @@ function checkWorkflowTaskReceipt(featureDir, taskPath, runtimeContext, policy) 
     const options = typeof policy?.receiptValidatorOptions === 'function'
       ? policy.receiptValidatorOptions({}, { runtimeContext, requireProvenanceBinding: true })
       : { requireProvenanceBinding: true };
-    failures.push(...canonicalFailures(canonicalBody, {}, runtimeContext, policy));
-    failures.push(...canonicalFailures(body, {}, runtimeContext, policy)
+    const requested = receiptBindingMode(featureDir, taskPath, taskFile.bytes, runtimeContext);
+    const artifactRootAvailable = typeof options.artifactRoot === 'string' && options.artifactRoot.trim() !== '';
+    const bindProvenance = !(requested === 'structure' && artifactRootAvailable);
+    failures.push(...canonicalFailures(canonicalBody, {}, runtimeContext, policy, { bindProvenance }));
+    failures.push(...canonicalFailures(body, {}, runtimeContext, policy, { bindProvenance })
       .filter((failure) => ['placeholder', 'verification_state', 'exit_result'].includes(failure)));
     failures.push(...workflowCommandFailures(taskText, canonicalBody));
     if (!hasNonEmptyFencedBlock(body)) failures.push('command_output');
-    if (!options.expectedProvenance) failures.push('provenance');
+    if (bindProvenance && !options.expectedProvenance) failures.push('provenance');
   }
   return {
     status: failures.length === 0 ? 'ok' : 'invalid',

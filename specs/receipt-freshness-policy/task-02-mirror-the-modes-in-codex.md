@@ -1,10 +1,6 @@
 # Task 02 — The Codex gate applies the same two modes
 
-Status: blocked
-
-Blocker: finding G-06's third repair adds the fixture precondition the closure
-pass prescribed, but that final wording has not itself been independently
-replayed. Clear this by replaying the counterexample against the current text.
+Status: done
 
 ## Outcome
 
@@ -14,9 +10,25 @@ completion verdicts.
 
 ## Scope
 
-- In: the Codex per-task and completed-set gate paths, the tollgate, the wrappers
-  that forward to the shared checker, and the Codex tollgate message.
-- Out: the shared checker and the mode selector, authored in task 01.
+- In: a regression lock proving Codex inherits the two modes through its installed
+  wrapper, and the Codex tollgate message.
+- Out: the shared checker and the mode selector, authored in task 01; and the Codex
+  gate and wrapper source, which need no change.
+
+### Scope narrowed after task 01 landed
+
+Task 01 changed the shared checker that Codex loads, so Codex already behaves
+correctly with no source change of its own. Measured on a temporary repository
+against `checkWorkflowReceiptDetails`: a committed receipt on a clean tree returns
+no failures, and the same receipt with an uncommitted change outside the specs root
+returns `provenance`. The wrapper resolves to `claude/scripts/spec-receipt.cjs`
+through `loadModule` (`codex/hooks/lib/spec-receipt.cjs:6-19`), and the gate already
+supplies a context carrying `project_root` (`codex/hooks/spec-gate.cjs:120-126`).
+
+The gate and wrapper are therefore no longer owned for modification. Listing them as
+writable invited exactly what this packet forbids: a second copy of the mode logic
+inside the Codex wrapper. The outcome, CP-04 and AC-04 are unchanged; only the work
+needed to reach them shrank.
 
 ## Coverage
 
@@ -24,10 +36,10 @@ completion verdicts.
 
 ## Ownership
 
-- Modify: `packages/spec/src/codex/hooks/spec-gate.cjs`
 - Modify: `packages/spec/src/codex/hooks/spec-state.cjs`
-- Modify: `packages/spec/src/codex/hooks/lib/spec-receipt.cjs`
 - Modify: `packages/spec/bin/__tests__/codex-hooks.test.js`
+- Read: `packages/spec/src/codex/hooks/spec-gate.cjs`
+- Read: `packages/spec/src/codex/hooks/lib/spec-receipt.cjs`
 - Read: `packages/spec/src/claude/scripts/spec-receipt.cjs`
 
 ## Acceptance
@@ -43,9 +55,10 @@ completion verdicts.
   `checkWorkflowReceiptDetails` (`codex/hooks/lib/spec-receipt.cjs:72-79`), reached
   from `codex/hooks/spec-gate.cjs:179`, and the completed-set wrapper
   `checkWorkflowReceiptSet` (`:80-87`), reached from `codex/hooks/spec-gate.cjs:65`.
-  Both wrappers are pass-through, so neither carries validation logic; the material
-  difference is that only the completed-set call receives a project root, and the
-  per-task call must obtain one from `runtimeContext.project_root`.
+  Both wrappers stay pass-through; the mode logic is never duplicated into them. The
+  material difference is that only the completed-set call receives a project root,
+  so the per-task path must obtain one from `runtimeContext.project_root`, and the
+  proof must exercise that asymmetry rather than assume it.
 - The Codex fallback validator path is exercised, not only the shared-policy path.
 - The Codex tollgate message at `spec-state.cjs:159` states the two modes and the
   clean-tree condition instead of claiming revalidation of every done task.
@@ -87,3 +100,19 @@ completion verdicts.
 - Artifacts: none; the temporary install root is removed by the test.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test packages/spec/bin/__tests__/codex-hooks.test.js
+Exit: 0
+Base: 874bda9490ddd205dfb52772d33f8392458c675b
+Head: ec2ea6805c49bb0ec70c4bc4ff74d727ba05a21180ecad45ebbe992a10791598
+```text
+$ node --test packages/spec/bin/__tests__/codex-hooks.test.js
+ℹ tests 39
+ℹ suites 0
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```

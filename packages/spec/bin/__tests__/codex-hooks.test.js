@@ -1746,3 +1746,128 @@ test('Claude and Codex fail closed consistently for malformed cwd payloads', () 
     assert.equal(JSON.parse(codex.stdout).hookSpecificOutput.permissionDecision, 'deny');
   });
 });
+
+test('Codex emits the required decision for all six receipt states', () => {
+  // Codex owns no checker of its own: both wrappers in .codex/hooks/lib forward to
+  // the shared module, so the two receipt modes arrive by inheritance. This case is
+  // the regression lock on that inheritance. Each state asserts the decision Codex
+  // must emit on its own terms; parity with Claude is checked in addition, never
+  // instead, because both runtimes execute the same module and a broken
+  // implementation would agree with itself.
+  //
+  // The dirty-tree state runs the hook from a directory below the project root with
+  // the uncommitted change outside that directory's subtree. Without that, an
+  // implementation resolving the repository root from the working directory returns
+  // the same decision as a correct one and the case cannot fail.
+  inHookFixture((root, hooks) => {
+    const nested = path.join(root, 'packages', 'app');
+    const feature = path.join(root, 'specs', 'auth');
+    const taskFile = path.join(feature, 'task-01-auth.md');
+    const outsideDirt = path.join(root, 'src', 'outside.txt');
+    fs.mkdirSync(nested, { recursive: true });
+    fs.mkdirSync(feature, { recursive: true });
+    fs.mkdirSync(path.dirname(outsideDirt), { recursive: true });
+    fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\n');
+    fs.writeFileSync(outsideDirt, 'committed\n');
+
+    const staleBase = 'f'.repeat(40);
+    const staleHead = 'e'.repeat(40);
+    const taskBody = [
+      '# Task 01: auth', '', 'Status: done', '',
+      '## Dependencies', '', '- none', '',
+      '## Verification Plan', '', '- Command: node --test', '',
+      '## Receipt', '',
+      'Verification: PASS', 'Command: node --test', 'Exit: 0',
+      `Base: ${staleBase}`, `Head: ${staleHead}`,
+      '```text', '$ node --test', 'pass: 1', '```', '',
+    ].join('\n');
+    fs.writeFileSync(taskFile, taskBody);
+
+    const gate = path.join(hooks, 'spec-gate.cjs');
+    const payload = {
+      cwd: nested,
+      featureName: 'auth',
+      session_id: 'session-a',
+      hook_event_name: 'Stop',
+      stop_hook_active: false,
+    };
+    const git = (...args) => {
+      const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      return result;
+    };
+    const decide = () => {
+      const result = runHook(gate, nested, payload);
+      assert.equal(result.status, 0, result.stderr);
+      return result.stdout.trim() === '' ? 'accept' : 'block';
+    };
+    // Use the same module instance that minted the context: a trusted runtime
+    // context is tracked per module, so mixing the package copy with the fixture
+    // copy would report a spurious binding failure.
+    const RECEIPT = require(path.join(PACKAGE_ROOT, 'src/claude/scripts/spec-receipt.cjs'));
+    const sharedDecides = () => {
+      const failures = RECEIPT.checkWorkflowTaskReceipt(
+        feature, 'task-01-auth.md', workflowRuntimeContext(root), POLICY,
+      ).failures;
+      return failures.length === 0 ? 'accept' : 'block';
+    };
+
+    // 1. untracked task file — never committed, so the binding stays.
+    assert.equal(decide(), 'block', 'an untracked task file must keep full binding');
+
+    // 2. staged but not committed — `git add` alone must not read as committed.
+    git('add', '-A');
+    assert.equal(decide(), 'block', 'a staged-only task file must keep full binding');
+
+    // 3. committed on a clean tree — the one accepting state.
+    git('commit', '-qm', 'receipt and source');
+    // Generated runtime state is excluded by design, so assert cleanliness the way
+    // the selector sees it: nothing dirty outside the specs root and the runtime
+    // state roots. The gate's own cache write must not read as a dirty worktree.
+    const cleanStatus = spawnSync('git', ['-C', root, 'status', '--porcelain', '--untracked-files=all',
+      '--', '.', ':(exclude,literal)specs', ':(exclude,literal).codex/hooks/.logs',
+      ':(exclude,literal).claude/hooks/.logs', ':(exclude,literal).codex/runtime.json'], { encoding: 'utf8' });
+    assert.equal(cleanStatus.stdout.trim(), '', 'nothing outside specs and runtime state may be dirty for this state to mean anything');
+    assert.equal(decide(), 'accept', 'a committed, unchanged receipt on a clean tree must be accepted');
+    assert.equal(sharedDecides(), 'accept', 'the shared checker must agree');
+
+    // 4. dirty tree outside the specs root, hook run from a nested directory with
+    //    the change outside that directory's subtree.
+    fs.writeFileSync(outsideDirt, 'uncommitted\n');
+    assert.ok(!path.relative(nested, outsideDirt).startsWith('..') === false,
+      'the dirt must lie outside the working directory used for the run');
+    assert.equal(decide(), 'block', 'an uncommitted change outside the specs root must rebind');
+    assert.equal(sharedDecides(), 'block', 'the shared checker must agree');
+    git('checkout', '--', 'src/outside.txt');
+
+    // 5. work confined to the specs root does not reopen a committed receipt.
+    fs.writeFileSync(path.join(feature, 'plan.md'), '# Auth plan\n\nEdited after the receipt landed.\n');
+    assert.equal(decide(), 'accept', 'edits inside the specs root must not rebind');
+    git('checkout', '--', 'specs/auth/plan.md');
+
+    // 6. committed then modified — the receipt itself changed after the commit.
+    fs.writeFileSync(taskFile, taskBody.replace(`Head: ${staleHead}`, `Head: ${'d'.repeat(40)}`));
+    assert.equal(decide(), 'block', 'a receipt edited after commit must be rebound');
+    assert.equal(sharedDecides(), 'block', 'the shared checker must agree');
+  });
+});
+
+test('Codex wrappers stay pass-through and carry no receipt-mode logic', () => {
+  // The mode selector must exist in exactly one place. If it is ever duplicated
+  // into the Codex wrapper, the two runtimes can drift apart silently.
+  const wrapper = fs.readFileSync(
+    path.join(PACKAGE_ROOT, 'src/codex/hooks/lib/spec-receipt.cjs'),
+    'utf8',
+  );
+  for (const marker of ['receiptBindingMode', 'skip-worktree', 'ls-files', 'cat-file', 'structure']) {
+    assert.ok(
+      !wrapper.includes(marker),
+      `the Codex wrapper must not reimplement receipt-mode logic; found ${marker}`,
+    );
+  }
+  assert.match(wrapper, /checkWorkflowTaskReceipt\(featureDir, taskPath, runtimeContext, policy\)/);
+  assert.match(
+    fs.readFileSync(path.join(PACKAGE_ROOT, 'src/codex/hooks/spec-state.cjs'), 'utf8'),
+    /Stop re-checks every done receipt/,
+  );
+});
