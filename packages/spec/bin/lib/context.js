@@ -119,6 +119,35 @@ const PLATFORMS = {
       rules: true,
       commands: false
     }
+  },
+  omp: {
+    id: 'omp',
+    name: 'Oh My Pi',
+    description: 'Oh My Pi coding agent',
+    folder: '.omp',
+    detectFiles: ['.omp'],
+    commandsDir: null,
+    // omp discovers .claude/skills and .agents/skills itself, so CafeKit copies
+    // no skill payload for it. See specs/omp-runtime-support/plan.md.
+    skillsDir: '.agents/skills',
+    agentsDir: null,
+    skillsRef: '.agents/skills',
+    commandPrefix: '$',
+    sourceDir: 'claude',
+    sourceSubdir: null,
+    backupTargets: ['.omp', 'AGENTS.md'],
+    ownership: {
+      recordRoot: '.',
+      allowedRoots: ['.omp']
+    },
+    capabilities: {
+      skills: false,
+      agents: false,
+      references: true,
+      scripts: true,
+      rules: true,
+      commands: false
+    }
   }
   // Add new platforms here:
   // cursor: {

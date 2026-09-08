@@ -37,6 +37,7 @@ const {
 const { reconcileSkillInventory } = require('./phases/skill-inventory');
 const { mergeClaudeSettings } = require('./phases/claude-settings');
 const { installCodexRuntime } = require('./phases/codex-runtime');
+const { installOmpRuntime } = require('./phases/omp-runtime');
 const { writePlatformVersionMetadata } = require('./phases/write-metadata');
 const { checkVersions } = require('./lib/version-check');
 const { ensureGitignore } = require('./phases/root-config');
@@ -75,6 +76,10 @@ function installPlatform(ctx, platformKey) {
 
   if (platformKey === 'codex') {
     installCodexRuntime(ctx, platformKey);
+  }
+
+  if (platformKey === 'omp') {
+    installOmpRuntime(ctx, platformKey);
   }
 
   writePlatformVersionMetadata(ctx, platformKey);

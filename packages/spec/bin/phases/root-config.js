@@ -110,6 +110,9 @@ function ensureGitignore(ctx) {
     // Local runtime payload — reinstall with npx; keep out of git
     '.claude/',
     '.codex/',
+    // omp auto-executes every file in .omp/extensions/, so a committed copy
+    // would run arbitrary code on clone. Keep it out of git like the rest.
+    '.omp/',
     '.agents/'
   ];
   const prefix = ctx.dryRun ? '[dry-run] ' : '';
