@@ -12,7 +12,7 @@
  *   Stop          → persist full session state and archive
  *   SubagentStop  → append agent completion note to current state
  *
- * Storage: .claude/session-state/latest.md (+ archive/)
+ * Storage: <runtime>/session-state/latest.md (+ archive/)
  * Exit: 0 always (fail-open)
  */
 
@@ -23,6 +23,7 @@ try {
   const crypto = require('crypto');
   const { execSync } = require('child_process');
   const { parseTranscript } = require('./lib/parser.cjs');
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 
   const EXPIRY_DAYS = 7;
   const MAX_ARCHIVES = 5;
@@ -32,8 +33,8 @@ try {
 
   function stateDir(cwd) {
     try {
-      const local = path.join(cwd, '.claude', 'session-state');
-      if (fs.existsSync(path.join(cwd, '.claude'))) {
+      const local = runtimePath(cwd, 'session-state');
+      if (fs.existsSync(runtimeDir(cwd))) {
         if (!fs.existsSync(local)) fs.mkdirSync(local, { recursive: true });
         return local;
       }

@@ -41,9 +41,10 @@ try {
     /\.env\.(example|sample|template|test)$/i
   ];
 
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   function readRuntime(cwd) {
     try {
-      const file = path.join(cwd, '.claude', 'runtime.json');
+      const file = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
     } catch {
       return {};

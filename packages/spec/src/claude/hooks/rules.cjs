@@ -16,9 +16,10 @@ try {
   const os   = require('os');
   const path = require('path');
 
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   function readRuntime(cwd) {
     try {
-      const p = path.join(cwd, '.claude', 'runtime.json');
+      const p = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
     } catch { return null; }
   }

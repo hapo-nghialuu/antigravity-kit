@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 
 function projectRoot(payload = {}) {
   const configured = typeof process.env.CLAUDE_PROJECT_DIR === 'string'
@@ -25,7 +26,7 @@ function projectRoot(payload = {}) {
   }
 
   const installedRoot = path.resolve(__dirname, '..', '..');
-  const installedHook = path.join(installedRoot, '.claude', 'hooks', path.basename(__filename));
+  const installedHook = runtimePath(installedRoot, 'hooks', path.basename(__filename));
   if (fs.existsSync(installedHook)) return installedRoot;
 
   const sourceFixture = typeof process.env.PROJECT_ROOT === 'string'
@@ -108,7 +109,7 @@ try {
   // Missing/malformed runtime.json keeps the gate ON (fail-closed, valve 3 style).
   let runtime = {};
   try {
-    const rp = path.join(cwd, '.claude', 'runtime.json');
+    const rp = runtimePath(cwd, 'runtime.json');
     if (fs.existsSync(rp)) runtime = JSON.parse(fs.readFileSync(rp, 'utf8'));
   } catch { /* gate stays on */ }
   // Active-spec discovery via shared resolver — explicit target if present, else fail on ambiguity.

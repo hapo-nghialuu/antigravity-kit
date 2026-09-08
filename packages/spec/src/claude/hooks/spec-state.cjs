@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 
 function logCrash(error) {
   try {
@@ -69,7 +70,7 @@ try {
   // Read runtime configuration if exists
   let runtime = {};
   try {
-    const p = path.join(cwd, '.claude', 'runtime.json');
+    const p = runtimePath(cwd, 'runtime.json');
     if (fs.existsSync(p)) runtime = JSON.parse(fs.readFileSync(p, 'utf8'));
   } catch { /* ignore */ }
 
@@ -77,7 +78,9 @@ try {
   // (The Stop completion gate has its own toggle: spec.completion_gate.)
   if (runtime.spec && runtime.spec.tollgate === false) process.exit(0);
 
-  const baseDir   = process.env.PROJECT_ROOT || cwd;
+  // Same rule as spec-gate: an installed hook trusts its own location over the environment.
+  const installedRoot = path.basename(path.resolve(__dirname, '..')).startsWith('.') ? path.resolve(__dirname, '..', '..') : null;
+  const baseDir   = installedRoot || process.env.PROJECT_ROOT || cwd;
   const explicitFeature = payload.featureName || payload.feature || payload.explicitFeature || null;
   const explicitPath = payload.specPath || payload.spec_path || payload.featurePath || null;
   const resolveWorkflow = typeof RESOLVER.resolveWorkflowCandidate === 'function'
@@ -226,7 +229,7 @@ try {
   } else {
     lines.push('- Sync `spec.json` + task Markdown status after verified work; task proof belongs in `receipts/<task-basename>.md`.');
     lines.push(`- Create \`feature-receipt.md\` once after final integration proof${featureReceiptPresent ? ' (present)' : ' (not required before closeout)'}.`);
-    lines.push(`- Validate with \`node .claude/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
+    lines.push(`- Validate with \`node ${runtimeDirName()}/scripts/validate-spec-output.cjs specs/${featureName}\`; hooks revalidate receipt bytes but never grant approval.`);
   }
   lines.push('');
 

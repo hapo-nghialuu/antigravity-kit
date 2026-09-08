@@ -30,6 +30,7 @@ function installSemanticRuntime(target, runtime) {
   for (const name of ['semantic-review-authority.cjs', 'completion-authority-state.cjs']) {
     fs.copyFileSync(path.join(PACKAGE_ROOT, `src/${runtime}/hooks`, name), path.join(hooks, name));
   }
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/runtime-dir.cjs'), path.join(hooks, 'lib/runtime-dir.cjs'));
   fs.copyFileSync(
     path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/runtime-path-safety.cjs'),
     path.join(hooks, 'lib/runtime-path-safety.cjs'),

@@ -5,7 +5,7 @@
  * gate/tollgate caches.
  *
  * Hooks run from two places. In an installed project they live in
- * `.claude/hooks/`, whose `.logs/` is gitignored, so writing beside the hook is
+ * `<runtime-dir>/hooks/`, whose `.logs/` is gitignored, so writing beside the hook is
  * correct. During this package's tests they run straight from
  * `packages/spec/src/claude/hooks/`, where the same write lands inside the
  * source tree as an untracked directory. That changes the worktree digest the
@@ -32,7 +32,7 @@ function isSourceTree(dir) {
 /** Absolute directory for hook-generated state; create it before writing. */
 function hookStateDir() {
   return isSourceTree(HOOKS_DIR)
-    ? path.join(os.tmpdir(), 'cafekit-hook-logs', 'claude')
+    ? path.join(os.tmpdir(), 'cafekit-hook-logs', require('./runtime-dir.cjs').runtimeDirName().slice(1))
     : path.join(HOOKS_DIR, '.logs');
 }
 

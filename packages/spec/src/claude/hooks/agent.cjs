@@ -15,19 +15,23 @@ try {
   const fs   = require('fs');
   const path = require('path');
 
-  /** Read .claude/runtime.json */
+  /** Read <runtime>/runtime.json */
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   function readRuntime(cwd) {
     try {
-      const p = path.join(cwd, '.claude', 'runtime.json');
+      const p = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
     } catch { return null; }
   }
 
+  // Skills live beside the runtime only on Claude; Codex and omp read `.agents/skills`.
+  function skillsDir() { return runtimeDirName() === '.claude' ? '.claude/skills' : '.agents/skills'; }
+
   /** Resolve Python venv executable path if it exists */
   function resolveVenv(cwd) {
     const candidates = [
-      path.join(cwd, '.claude', 'skills', '.venv', 'bin', 'python3'),
-      path.join(cwd, '.claude', 'skills', '.venv', 'Scripts', 'python.exe'),
+      path.join(cwd, skillsDir(), '.venv', 'bin', 'python3'),
+      path.join(cwd, skillsDir(), '.venv', 'Scripts', 'python.exe'),
     ];
     return candidates.find(p => fs.existsSync(p)) || null;
   }
@@ -67,13 +71,13 @@ try {
     lines.push('');
   }
 
-  // Python venv (optional — if .claude/skills/.venv exists)
+  // Python venv (optional — if <skills>/.venv exists)
   const venv = resolveVenv(agentCwd);
 
   lines.push('## Rules');
   lines.push(`- Plans → ${plansPath}/ | Docs → ${docsPath}/`);
   if (venv) {
-    lines.push(`- Python in .claude/skills/: use \`${venv}\``);
+    lines.push(`- Python in ${skillsDir()}/: use \`${venv}\``);
     lines.push('- Never use global pip install');
   }
 

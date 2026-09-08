@@ -14,6 +14,7 @@
 try {
   const fs   = require('fs');
   const path = require('path');
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   const os   = require('os');
   const { execSync } = require('child_process');
 
@@ -49,16 +50,16 @@ try {
     }
 
     const installedRoot = path.resolve(__dirname, '..', '..');
-    const installedHook = path.join(installedRoot, '.claude', 'hooks', path.basename(__filename));
+    const installedHook = runtimePath(installedRoot, 'hooks', path.basename(__filename));
     if (fs.existsSync(installedHook)) return installedRoot;
 
     try { return fs.realpathSync(process.cwd()); } catch { return path.resolve(process.cwd()); }
   }
 
-  /** Read .claude/runtime.json config */
+  /** Read <runtime>/runtime.json config */
   function readRuntime(cwd) {
     try {
-      const p = path.join(cwd, '.claude', 'runtime.json');
+      const p = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
     } catch { return {}; }
   }
@@ -143,12 +144,12 @@ try {
   }
 
   /**
-   * Read the installed CafeKit version from .claude/cafekit.json.
+   * Read the installed CafeKit version from <runtime>/cafekit.json.
    * Returns null if not found.
    */
   function getInstalledVersion(cwd) {
     try {
-      const p = path.join(cwd, '.claude', 'cafekit.json');
+      const p = runtimePath(cwd, 'cafekit.json');
       if (!fs.existsSync(p)) return null;
       const meta = JSON.parse(fs.readFileSync(p, 'utf8'));
       return typeof meta.version === 'string' ? meta.version : null;
@@ -158,14 +159,14 @@ try {
   /**
    * Check for a newer CafeKit version and return an update notice string,
    * or an empty string if already up to date or check fails.
-   * Result is cached in .claude/.cafekit-update-cache.json for 12 hours.
+   * Result is cached in <runtime>/.cafekit-update-cache.json for 12 hours.
    */
   async function checkCafeKitUpdate(cwd) {
     const installed = getInstalledVersion(cwd);
     if (!installed) return '';
 
     const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
-    const cachePath = path.join(cwd, '.claude', '.cafekit-update-cache.json');
+    const cachePath = runtimePath(cwd, '.cafekit-update-cache.json');
 
     // Return cached result if still fresh.
     try {

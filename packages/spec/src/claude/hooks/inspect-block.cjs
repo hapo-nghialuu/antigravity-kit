@@ -8,7 +8,7 @@
  * Blocks access to heavy directories that would flood the LLM context window.
  * Also warns on overly-broad glob patterns.
  *
- * Disable: set "inspect": { "enabled": false } in .claude/runtime.json
+ * Disable: set "inspect": { "enabled": false } in <runtime>/runtime.json
  *
  * Exit: 0 = allow, 2 = block
  */
@@ -60,9 +60,10 @@ try {
     return out.filter(Boolean);
   }
 
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   function readRuntime(cwd) {
     try {
-      const p = path.join(cwd, '.claude', 'runtime.json');
+      const p = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
     } catch { return {}; }
   }

@@ -1,6 +1,6 @@
 # Task 02 — Reads, writes, and advice go through the helper
 
-Status: pending
+Status: done
 
 ## Outcome
 Every category-A and A′ site and every reachable category-C string in `src/claude/hooks` uses `runtime-dir.cjs`. The five fixtures that copy hooks by hand also copy the helper. The hook suite and the two installer suites pass at their prior counts.
@@ -39,3 +39,33 @@ Every category-A and A′ site and every reachable category-C string in `src/cla
 - Artifacts: ephemeral, removed in `finally`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/runtime-dir.test.js && node --test src/claude/hooks/__tests__/*.test.js && node --test bin/__tests__/develop-contract.test.js bin/__tests__/specs-v2-execution-closeout.test.js
+Exit: 0
+Base: ddf85c8fe1914869b85d2a6b49ee093ccb6e6c68
+Head: cb88555f16bd5d78c7b5ae7168150cb4068e356c258e3ad03a2e0d848cc0f4aa
+```text
+$ node --test bin/__tests__/runtime-dir.test.js && node --test src/claude/hooks/__tests__/*.test.js && node --test bin/__tests__/develop-contract.test.js bin/__tests__/specs-v2-execution-closeout.test.js
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ tests 219
+ℹ suites 0
+ℹ pass 219
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ tests 78
+ℹ suites 0
+ℹ pass 78
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```

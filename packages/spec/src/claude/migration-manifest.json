@@ -148,6 +148,7 @@
       "hooks/lib/context.cjs",
       "hooks/lib/detect.cjs",
       "hooks/lib/hook-state-dir.cjs",
+      "hooks/lib/runtime-dir.cjs",
       "hooks/lib/privacy-command-analysis.cjs",
       "hooks/lib/secret-keywords.cjs",
       "hooks/lib/runtime-path-safety.cjs"

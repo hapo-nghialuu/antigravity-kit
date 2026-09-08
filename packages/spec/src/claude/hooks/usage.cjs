@@ -17,7 +17,7 @@
  * Features:
  * - Cross-platform credential retrieval (macOS Keychain, file-based)
  * - Throttled API calls: 1 min (prompt) / 5 min (tool use)
- * - Disable: set "usage": { "enabled": false } in .claude/runtime.json
+ * - Disable: set "usage": { "enabled": false } in <runtime>/runtime.json
  */
 
 // Crash wrapper
@@ -27,11 +27,12 @@ try {
   const os = require("os");
   const { execSync } = require("child_process");
 
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
   function readRuntime(cwd) {
     try {
-      const runtimePath = path.join(cwd, '.claude', 'runtime.json');
-      if (fs.existsSync(runtimePath)) {
-        return JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
+      const rp = runtimePath(cwd, 'runtime.json');
+      if (fs.existsSync(rp)) {
+        return JSON.parse(fs.readFileSync(rp, 'utf-8'));
       }
     } catch { /* fail-open */ }
     return {};

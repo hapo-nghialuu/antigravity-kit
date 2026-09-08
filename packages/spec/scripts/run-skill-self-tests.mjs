@@ -4886,7 +4886,7 @@ async function runStaticSemanticTests() {
       label: "CafeKit runtime config drives shared hook config",
       file: "src/claude/hooks/lib/config.cjs",
       assert: (content) =>
-        content.includes("RUNTIME_CONFIG_PATH = '.claude/runtime.json'") &&
+        content.includes("RUNTIME_CONFIG_PATH = `${runtimeDirName()}/runtime.json`") &&
         content.includes("const CONFIG_PATH = RUNTIME_CONFIG_PATH") &&
         content.includes("if (runtimeConfig) merged = deepMerge(merged, runtimeConfig)") &&
         !content.includes("'skill-router': true"),

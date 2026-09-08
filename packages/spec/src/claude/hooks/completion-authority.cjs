@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 let STATE;
 let evaluateCloseout;
 
@@ -27,7 +28,7 @@ function projectRoot(payload = {}) {
   }
 
   const installedRoot = path.resolve(__dirname, '..', '..');
-  const installedHook = path.join(installedRoot, '.claude', 'hooks', path.basename(__filename));
+  const installedHook = runtimePath(installedRoot, 'hooks', path.basename(__filename));
   if (fs.existsSync(installedHook)) return installedRoot;
 
   const sourceFixture = typeof process.env.PROJECT_ROOT === 'string'
@@ -50,7 +51,7 @@ function sessionId(payload) {
 
 function readRuntime(root) {
   try {
-    const file = path.join(root, '.claude', 'runtime.json');
+    const file = runtimePath(root, 'runtime.json');
     return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
   } catch { return {}; }
 }

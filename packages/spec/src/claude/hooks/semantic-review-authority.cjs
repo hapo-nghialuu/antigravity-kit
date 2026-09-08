@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 const { spawnSync } = require('child_process');
 const STATE = require('./completion-authority-state.cjs');
 const PATH_SAFETY = require('./lib/runtime-path-safety.cjs');
@@ -28,7 +29,7 @@ function inside(root, target) {
 
 function projectRoot(payload = {}) {
   const installedRoot = path.resolve(__dirname, '..', '..');
-  if (fs.existsSync(path.join(installedRoot, '.claude', 'hooks', path.basename(__filename)))) {
+  if (fs.existsSync(runtimePath(installedRoot, 'hooks', path.basename(__filename)))) {
     try { return STATE.canonicalProjectRoot(installedRoot); } catch {}
   }
   for (const candidate of [process.env.CLAUDE_PROJECT_DIR, process.env.PROJECT_ROOT]) {
@@ -70,7 +71,7 @@ function parseClaim(message) {
 }
 
 function validatorFor(root) {
-  const installedRoot = path.join(root, '.claude');
+  const installedRoot = runtimeDir(root);
   const installedHook = path.join(installedRoot, 'hooks', path.basename(__filename));
   if (fs.existsSync(installedHook)) {
     const canonicalHook = PATH_SAFETY.canonicalRegularFile(root, installedHook, 'installed semantic hook');
@@ -82,7 +83,7 @@ function validatorFor(root) {
 
   const sourceRuntime = path.resolve(__dirname, '..');
   const sourceRoot = path.resolve(sourceRuntime, '..');
-  if (path.basename(sourceRuntime) !== 'claude' || path.basename(sourceRoot) !== 'src') {
+  if (`.${path.basename(sourceRuntime)}` !== runtimeDirName() || path.basename(sourceRoot) !== 'src') {
     throw new Error('semantic validator runtime root is not recognized');
   }
   const validator = path.join(sourceRuntime, 'scripts', 'validate-spec-output.cjs');
