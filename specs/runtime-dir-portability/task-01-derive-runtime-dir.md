@@ -1,7 +1,6 @@
 # Task 01 — A hook knows its own runtime directory
 
-Status: pending
-
+Status: done
 ## Outcome
 `src/claude/hooks/lib/runtime-dir.cjs` exports `runtimeDirName()`, `runtimeDir(cwd)`, and `runtimePath(cwd, ...segments)`. The name is derived from the module's own location and is correct for every layout the installer produces and for the source tree.
 
@@ -32,3 +31,19 @@ Status: pending
 - Artifacts: ephemeral `fs.mkdtempSync` directories removed in `finally`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/runtime-dir.test.js
+Exit: 0
+Base: 8eb354129dbc43000a9cbd140b58eb5134fdd85c
+Head: 41ce58dd6c6231b27a3674ab18cc2bdb18ca3dcc44d23bbefcf9326d5e3e34bb
+```text
+$ node --test bin/__tests__/runtime-dir.test.js
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```

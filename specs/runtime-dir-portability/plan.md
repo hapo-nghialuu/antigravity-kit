@@ -55,7 +55,7 @@ Specs-Contract: process-first-ready-v1
 ## Tasks
 | # | Task | Criteria | Primary ownership | Dependencies | Status |
 |---|---|---|---|---|---|
-| 01 | Derive the runtime directory from the hook's location | AC-01 | `src/claude/hooks/lib/runtime-dir.cjs`, `bin/__tests__/runtime-dir.test.js` | - | pending |
+| 01 | Derive the runtime directory from the hook's location | AC-01 | `src/claude/hooks/lib/runtime-dir.cjs`, `bin/__tests__/runtime-dir.test.js` | - | done |
 | 02 | Route reads, writes, and advice through the helper | AC-02, AC-03, AC-04 | 13 hook files, 5 fixture allow-lists, `bin/__tests__/runtime-dir.test.js` | task-01-derive-runtime-dir.md | pending |
 | 03 | Make the omp fork an overlay and give an omp-only install working rules | AC-05, AC-06, AC-07 | `src/omp/hooks/`, `src/omp/runtime.json`, `bin/phases/omp-runtime.js`, `src/claude/scripts/provenance.cjs`, `bin/__tests__/omp-hooks.test.js`, `bin/__tests__/omp-runtime.test.js`, `bin/__tests__/runtime-schema.test.js` | task-02-route-runtime-paths.md | pending |
 | 04 | Document portability and the Claude-only remainder | AC-08 | `docs/installer-architecture.md`, `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`, `packages/spec/scripts/run-skill-self-tests.mjs` | task-03-omp-overlay-and-runtime.md | pending |
