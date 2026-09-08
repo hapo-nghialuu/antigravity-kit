@@ -34,7 +34,7 @@ bin/phases/
                             AGENTS core + wrappers, rules (Addressing-preserving)
   claude-settings.js        settings.json merge + obsolete-hook pruning
   codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
-  omp-runtime.js            Oh My Pi: forked gate scripts + bridge extension; no skill payload
+  omp-runtime.js            Oh My Pi: Claude gate scripts + omp overlay, runtime.json, bridge extension; no skill payload
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
   post-install.js           Gemini API key, language + managed-block
@@ -73,14 +73,25 @@ bin/lib/
 
 ## Oh My Pi (omp)
 
-`--platform omp` installs CafeKit for the Oh My Pi coding agent. omp discovers `.claude/skills` and `.agents/skills` on its own (`skills.enableClaudeProject` and `skills.enableAgentsProject` default to true), so the installer copies no skill payload for it and `PLATFORMS.omp.capabilities.skills` is false. What omp lacks is CafeKit's enforcement chain, which `omp-runtime.js` provisions in two directories:
+`--platform omp` installs CafeKit for the Oh My Pi coding agent. omp discovers `.claude/skills` and `.agents/skills` on its own (`skills.enableClaudeProject` and `skills.enableAgentsProject` default to true), so the installer copies no skill payload for it and `PLATFORMS.omp.capabilities.skills` is false. What omp lacks is CafeKit's enforcement chain, which `omp-runtime.js` provisions under `.omp/`:
 
-- `.omp/hooks/` — the gate scripts, forked from `src/claude/hooks/` into `src/omp/hooks/` with three omp-specific contract changes: lowercase tool names (`bash`, `read`, `edit`, `write`, `grep`) reach the same rules as Claude's capitalised names; the privacy hook denies where it would ask, because omp's `tool_call` result has only `block` and `reason`; and an access the hook cannot evaluate is denied rather than allowed.
+- `.omp/hooks/` — the Claude gate scripts, written from the migration manifest's `runtime.files` list (the same set that reaches `.claude/hooks/`; a directory walk would also ship `hooks/__tests__/`), with `src/omp/hooks/` written over them. That overlay is exactly three files carrying the omp-specific contract changes: `privacy-block.cjs` (lowercase tool names such as `bash` and `read` reach the same rules as Claude's capitalised names, and the hook denies where it would ask, because omp's `tool_call` result has only `block` and `reason`; an access it cannot evaluate is denied rather than allowed), `task-scaffold-guard.cjs` (a lowercase `write` is guarded), and `lib/omp-tool-names.cjs` (the name map). Each overlay file is the current Claude file plus those edits; `bin/__tests__/omp-hooks.test.js` re-derives it from the Claude source and fails on a byte of drift in either direction, and on a fourth file.
+- `.omp/runtime.json` and `.omp/runtime.schema.json` — the hooks' configuration, read from the folder the hook lives in (see Hook portability). It ships no statusline keys, `usage.enabled: false` because `usage.cjs` reads Claude Code's credential file, and `codingLevel: 1` like Codex; no omp hook consumes `codingLevel` yet, since the style injection lives in the Codex rules hook. Without this file `rules.cjs` exits silently and an omp-only project never sees the rules.
 - `.omp/extensions/cafekit-bridge.mjs` — the extension omp auto-loads. It shapes each omp event into the Claude-shaped payload the scripts read, runs them as child processes with an 8000 ms budget (omp itself substitutes a reasonless block at 30000 ms), and translates all three denial mechanisms back into omp's contract. It mints a session id per load because omp's `input` payload carries none, and honours `stop_hook_active` on `session_stop` so a blocked turn cannot loop.
 
 Carried: every hook registered for SessionStart, PreCompact, UserPromptSubmit, PreToolUse, PostToolUse, and Stop. Not carried: `agent.cjs` (SubagentStart) and `semantic-review-authority.cjs` (SubagentStop), because omp has no subagent lifecycle events; `state.cjs` likewise does not run at SubagentStop. `.omp/` is added to the root ignore rules as part of the install, since omp executes every file under `.omp/extensions/` and a committed copy would run on clone before any gate could act.
 
 The bridge's dispatch table mirrors `src/claude/settings/settings.json` and `bin/__tests__/omp-bridge.test.js` fails if the two drift. The install is verified against the real omp extension contract read from the installed binary; the tests do not launch omp, which needs provider credentials.
+
+## Hook portability
+
+The gate hooks under `src/claude/hooks/` run unchanged under `.claude/`, `.omp/`, and any future dotted platform folder because they derive their runtime directory from their own location. `src/claude/hooks/lib/runtime-dir.cjs` resolves two levels up from the hook file and returns that folder's basename when it starts with a dot; when the hook runs from this repository's source tree (`packages/spec/src/<platform>/hooks/`) it returns the dotted form of `<platform>`, and anything else falls back to `.claude`, the pre-helper behaviour. A dotted basename wins over the source-tree check, because an install can sit under a path that contains `/packages/spec/src/`. Every project-runtime read (`runtime.json`, `scripts/`, `rules/`, session and gate state) and every model-facing path in hook advice goes through this helper, so a hook installed under `.omp/` reads `.omp/runtime.json` and tells the model to run `node .omp/scripts/…`. Installed-root detection derives the same way, so on omp the `__dirname`-derived project root wins over `PROJECT_ROOT` and `payload.cwd` exactly as it always has on Claude.
+
+Skill paths are the one deliberate exception: they come from the platform registry (`PLATFORMS[*].skillsRef`), not the runtime directory, because omp reads `.agents/skills` and has no `.omp/skills`. `agent.cjs` mirrors that mapping.
+
+Two groups of `.claude` literals stay by design. Thirteen `~/.claude/` sites (`usage.cjs`, `state.cjs`, `lib/counter.cjs`, `lib/context.cjs`) read Claude Code's own files in the user's home directory and are kept as Claude Code behaviour; omp and other platforms have no equivalent, and `src/omp/runtime.json` turns the reachable one (`usage`) off. Twenty dead-code lines in `lib/context.cjs` and `lib/detect.cjs`, which nothing imports, are left in place rather than ported. `bin/__tests__/runtime-dir.test.js` copies the whole hook tree under a throwaway `.omp/` and checks that `rules.cjs`, `inspect-block.cjs`, `privacy-block.cjs`, and `spec-gate.cjs` all answer from `.omp/runtime.json` while no `.claude` path exists. `src/omp/hooks/` is an overlay of three files on top of that portable set, described above.
+
+The shipped hook set is the explicit `runtime.files` list in `src/claude/migration-manifest.json`, so a new hook library must be added there or a packed install ships hooks whose `require` fails; `bin/__tests__/package-inventory.test.js` runs the packed install and catches the omission. `provenance.cjs` excludes `.omp/hooks/.logs`, `.omp/.logs`, and `.omp/runtime.json` from the worktree digest like their `.claude` and `.codex` counterparts.
 
 ## Optional document skills
 

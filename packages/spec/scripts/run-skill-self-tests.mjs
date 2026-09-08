@@ -4883,6 +4883,18 @@ async function runStaticSemanticTests() {
         content.includes("`.omp/` is added to the root ignore rules"),
     },
     {
+      label: "installer architecture documents hook portability",
+      file: "../../docs/installer-architecture.md",
+      assert: (content) =>
+        content.includes("## Hook portability") &&
+        content.includes("runtime-dir.cjs") &&
+        content.includes("derive their runtime directory from their own location") &&
+        content.includes("Thirteen `~/.claude/` sites") &&
+        content.includes("kept as Claude Code behaviour") &&
+        content.includes("Twenty dead-code lines in `lib/context.cjs` and `lib/detect.cjs`") &&
+        content.includes("`src/omp/hooks/` is an overlay of three files"),
+    },
+    {
       label: "CafeKit runtime config drives shared hook config",
       file: "src/claude/hooks/lib/config.cjs",
       assert: (content) =>
