@@ -3338,3 +3338,45 @@ test('P0 canonical phantom vectors - zero, cancellation, suite, FAIL, error, col
   assert.equal(POLICY.isTapMetadataHeading('# Notes'), false);
   assert.equal(POLICY.isTapMetadataHeading('# pass 1 explanation'), false);
 });
+
+test('generated runtime state under every platform folder stays out of the worktree digest', () => {
+  // The gate writes its cache and the installer writes runtime.json under the platform
+  // folder on every run. If those writes moved Head, a project tracking its runtime
+  // directory could never hold a stable receipt. The exclusion list must name each
+  // shipped platform, and a real source change must still move Head.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-state-roots-'));
+  try {
+    for (const args of [['init', '-q'], ['config', 'user.email', 'cafekit@example.invalid'], ['config', 'user.name', 'CafeKit Test'], ['commit', '--allow-empty', '-qm', 'fixture']]) {
+      const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+    }
+    fs.mkdirSync(path.join(root, 'specs', 'demo'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'specs', 'demo', 'plan.md'), '# Demo plan\n');
+    const derive = () => PROVENANCE_HELPER.deriveRuntimeContext({
+      projectRoot: root,
+      specsRoot: path.join(root, 'specs'),
+      specFile: path.join(root, 'specs', 'demo', 'plan.md'),
+      featureName: 'demo',
+      runtimeSession: 'state-roots',
+    });
+    const before = derive();
+
+    for (const folder of ['.claude', '.codex', '.omp']) {
+      fs.mkdirSync(path.join(root, folder, 'hooks', '.logs'), { recursive: true });
+      fs.mkdirSync(path.join(root, folder, '.logs'), { recursive: true });
+      fs.writeFileSync(path.join(root, folder, 'hooks', '.logs', 'spec-gate-last.json'), '{"demo":{}}\n');
+      fs.writeFileSync(path.join(root, folder, '.logs', 'hook-log.jsonl'), '{}\n');
+      fs.writeFileSync(path.join(root, folder, 'runtime.json'), '{"spec":{"completion_gate":true}}\n');
+    }
+    const afterState = derive();
+    assert.equal(afterState.head, before.head, 'runtime state under .claude, .codex, and .omp must not move Head');
+    assert.equal(afterState.base, before.base);
+
+    // Anything else under the platform folder is source: a hook edit must move Head.
+    fs.mkdirSync(path.join(root, '.omp', 'hooks'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.omp', 'hooks', 'rules.cjs'), '// edited\n');
+    assert.notEqual(derive().head, before.head, 'a real file under the platform folder must still move Head');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

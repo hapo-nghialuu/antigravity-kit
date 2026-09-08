@@ -41,9 +41,11 @@ try {
     /\.env\.(example|sample|template|test)$/i
   ];
 
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
+  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');
   function readRuntime(cwd) {
     try {
-      const file = path.join(cwd, '.claude', 'runtime.json');
+      const file = runtimePath(cwd, 'runtime.json');
       return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
     } catch {
       return {};
@@ -187,19 +189,18 @@ try {
     return paths.filter(Boolean);
   }
 
-  // omp has no ask state on tool_call, so an ask under Claude becomes a denial here.
   function askForPermission(filePath) {
     const basename = path.basename(filePath);
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',
+        // omp has no ask state on tool_call, so an ask under Claude becomes a denial here.
         permissionDecision: 'deny',
         permissionDecisionReason: `Sensitive file access requires approval: ${basename}`
       }
     }) + '\n');
   }
 
-  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 

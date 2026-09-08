@@ -1,6 +1,6 @@
 # Task 03 — The omp fork is an overlay and an omp-only install injects rules
 
-Status: pending
+Status: done
 
 ## Outcome
 `src/omp/hooks/` contains only the files that genuinely differ from Claude: `privacy-block.cjs`, `task-scaffold-guard.cjs`, `lib/omp-tool-names.cjs`. `omp-runtime.js` copies the portable Claude tree and overlays them, so a Claude hook change cannot silently miss omp. The install ships `.omp/runtime.json` and its schema, `provenance.cjs` ignores omp state roots, and `.omp/hooks/rules.cjs` prints `## Rules` on an omp-only project.
@@ -36,3 +36,19 @@ Status: pending
 - Artifacts: ephemeral, removed in `finally`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/omp-hooks.test.js bin/__tests__/omp-runtime.test.js bin/__tests__/runtime-schema.test.js bin/__tests__/develop-contract.test.js
+Exit: 0
+Base: 8885085c9037462aba2fe56e5d2bff60f25420a7
+Head: e12e2cd9db388715c9c8325af3bfd26cf74c29f6a7e0915cd504edef908693e1
+```text
+$ node --test bin/__tests__/omp-hooks.test.js bin/__tests__/omp-runtime.test.js bin/__tests__/runtime-schema.test.js bin/__tests__/develop-contract.test.js
+ℹ tests 90
+ℹ suites 0
+ℹ pass 90
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```

@@ -3,8 +3,9 @@
 // omp has no hooks.json. The bridge is the only thing between omp's lifecycle events and
 // CafeKit's gate scripts, so a mistranslation disables every gate while looking installed.
 // These tests drive the bridge's exported functions against real child hook processes from
-// the omp fork. They do not launch omp, which needs provider credentials; the contract rows
-// they rely on were read from the installed omp binary and are recorded in plan.md.
+// the tree an omp install produces: the Claude hook set with the omp overlay written over
+// it. They do not launch omp, which needs provider credentials; the contract rows they rely
+// on were read from the installed omp binary and are recorded in plan.md.
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -13,13 +14,28 @@ const path = require('node:path');
 const { test } = require('node:test');
 
 const PACKAGE_ROOT = path.join(__dirname, '../..');
-const HOOKS = path.join(PACKAGE_ROOT, 'src/omp/hooks');
 const BRIDGE = path.join(PACKAGE_ROOT, 'src/omp/extensions/cafekit-bridge.mjs');
 const SETTINGS = require(path.join(PACKAGE_ROOT, 'src/claude/settings/settings.json'));
-const { PREFIX } = require(path.join(HOOKS, 'completion-authority-state.cjs'));
+const MANIFEST = require(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'));
+const { PREFIX } = require(path.join(PACKAGE_ROOT, 'src/claude/hooks/completion-authority-state.cjs'));
+
+/**
+ * The hooks an omp install runs: the Claude set the manifest ships, then `src/omp/hooks/`
+ * written over it. Composed once under a dotted folder so runtime-dir.cjs derives `.omp`.
+ */
+const COMPOSED_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-omp-composed-'));
+const HOOKS = path.join(COMPOSED_ROOT, '.omp', 'hooks');
+for (const rel of MANIFEST.runtime.files.filter((f) => f.startsWith('hooks/'))) {
+  const target = path.join(COMPOSED_ROOT, '.omp', rel);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude', rel), target);
+}
+fs.cpSync(path.join(PACKAGE_ROOT, 'src/omp/hooks'), HOOKS, { recursive: true });
+fs.cpSync(path.join(PACKAGE_ROOT, 'src/claude/scripts'), path.join(COMPOSED_ROOT, '.omp', 'scripts'), { recursive: true });
 
 let bridge;
 test.before(async () => { bridge = await import(BRIDGE); });
+test.after(() => { fs.rmSync(COMPOSED_ROOT, { recursive: true, force: true }); });
 
 function tempProject(withSecret = true) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-omp-bridge-'));

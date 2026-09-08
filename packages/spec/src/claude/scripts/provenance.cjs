@@ -152,8 +152,10 @@ function parseStatus(bytes) {
 // Generated runtime state, not source evidence. Shared with the receipt binding
 // selector so the gate's own cache writes cannot be read as a dirty worktree.
 const RUNTIME_STATE_ROOTS = Object.freeze([
-  '.git', 'node_modules', '.claude/hooks/.logs', '.codex/hooks/.logs',
-  '.claude/.logs', '.codex/.logs', '.claude/runtime.json', '.codex/runtime.json',
+  '.git', 'node_modules',
+  '.claude/hooks/.logs', '.codex/hooks/.logs', '.omp/hooks/.logs',
+  '.claude/.logs', '.codex/.logs', '.omp/.logs',
+  '.claude/runtime.json', '.codex/runtime.json', '.omp/runtime.json',
 ]);
 
 function excluded(root, absolute, specsRoot) {

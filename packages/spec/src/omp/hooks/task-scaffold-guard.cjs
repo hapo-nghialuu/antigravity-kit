@@ -21,7 +21,7 @@
  *   1. fail-open when spec-scaffold.cjs is absent — you cannot force a tool that
  *      is not installed, so a hook shipped without its script must not deadlock.
  *   2. actionable block message — prints the exact scaffold command to run.
- *   3. escape hatch — "spec": { "scaffold_guard": false } in .claude/runtime.json.
+ *   3. escape hatch — "spec": { "scaffold_guard": false } in <runtime>/runtime.json.
  *
  * Exit: 0 = allow, 2 = block.
  */
@@ -29,6 +29,7 @@
 try {
   const fs   = require('fs');
   const path = require('path');
+  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
 
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
@@ -52,17 +53,17 @@ try {
   const isTaskFile = /(^|\/)specs\/[^/]+\/tasks\/task-[^/]+\.md$/.test(norm);
   if (!isTaskFile) process.exit(0);
 
-  // Valve 3: explicit escape hatch via .claude/runtime.json (fail-closed: a
+  // Valve 3: explicit escape hatch via <runtime>/runtime.json (fail-closed: a
   // missing/broken runtime.json keeps the guard ON).
   let runtime = {};
   try {
-    const rp = path.join(cwd, '.claude', 'runtime.json');
+    const rp = runtimePath(cwd, 'runtime.json');
     if (fs.existsSync(rp)) runtime = JSON.parse(fs.readFileSync(rp, 'utf8'));
   } catch { /* malformed runtime.json -> keep guard on */ }
   if (runtime.spec && runtime.spec.scaffold_guard === false) process.exit(0);
 
   // Valve 1: fail-open if the scaffold script is not installed next to this hook
-  // (hook lives in .claude/hooks/, script in .claude/scripts/). Forcing a tool
+  // (hook lives in <runtime>/hooks/, script in <runtime>/scripts/). Forcing a tool
   // that does not exist would deadlock task creation.
   const scaffold = path.join(__dirname, '..', 'scripts', 'spec-scaffold.cjs');
   if (!fs.existsSync(scaffold)) process.exit(0);
@@ -77,7 +78,7 @@ try {
     `TASK SCAFFOLD REQUIRED: task files must be generated, not hand-written.\n` +
     `Blocked Write: ${filePath}\n\n` +
     `Generate the stub(s), then Edit-fill the {{...}} placeholders:\n` +
-    `  node .claude/scripts/spec-scaffold.cjs ${feature} --tasks "R0-01-slug,R1-01-slug,..." --tasks-only\n` +
+    `  node ${runtimeDirName()}/scripts/spec-scaffold.cjs ${feature} --tasks "R0-01-slug,R1-01-slug,..." --tasks-only\n` +
     `Then use Edit (not Write) on each tasks/task-*.md stub.`
   );
   process.exit(2);

@@ -12,7 +12,7 @@ const { test } = require('node:test');
 const PACKAGE_ROOT = path.join(__dirname, '../..');
 const SCHEMA_PATH = path.join(PACKAGE_ROOT, 'src/claude/runtime.schema.json');
 const SCHEMA = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'));
-const RUNTIMES = ['src/claude/runtime.json', 'src/codex/runtime.json'];
+const RUNTIMES = ['src/claude/runtime.json', 'src/codex/runtime.json', 'src/omp/runtime.json'];
 const MANIFEST = require(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'));
 
 function readRuntime(relative) {
@@ -54,14 +54,14 @@ test('the schema is a valid, self-describing JSON Schema document', () => {
   assert.equal(SCHEMA.additionalProperties, false, 'an unknown top-level key must be reported, not accepted silently');
 });
 
-test('every key in both shipped runtime.json files is described by the schema', () => {
+test('every key in each shipped runtime.json is described by the schema', () => {
   for (const relative of RUNTIMES) {
     const missing = undescribedKeys(readRuntime(relative), SCHEMA);
     assert.deepEqual(missing, [], `${relative} ships keys the schema does not describe: ${missing.join(', ')}`);
   }
 });
 
-test('both runtimes point at the schema that installs beside them', () => {
+test('every runtime points at the schema that installs beside it', () => {
   for (const relative of RUNTIMES) {
     assert.equal(readRuntime(relative).$schema, './runtime.schema.json', `${relative} must reference the schema`);
   }
@@ -71,6 +71,8 @@ test('both runtimes point at the schema that installs beside them', () => {
   );
   const codexPhase = fs.readFileSync(path.join(PACKAGE_ROOT, 'bin/phases/codex-runtime.js'), 'utf8');
   assert.match(codexPhase, /runtime\.schema\.json/, 'the schema must also be installed for Codex');
+  const ompPhase = fs.readFileSync(path.join(PACKAGE_ROOT, 'bin/phases/omp-runtime.js'), 'utf8');
+  assert.match(ompPhase, /runtime\.schema\.json/, 'the schema must also be installed for omp');
 });
 
 test('every documented property carries a description a reader can act on', () => {

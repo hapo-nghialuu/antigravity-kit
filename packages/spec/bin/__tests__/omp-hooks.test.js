@@ -2,8 +2,9 @@
 
 // The gate scripts were authored against Claude Code's vocabulary. omp speaks a
 // different one: its tool registry uses lowercase names, and its tool_call result has
-// only { block, reason } — there is no ask state. The omp fork carries those three
-// contract differences. Each test states the failure it prevents, because a fork that
+// only { block, reason } — there is no ask state. `src/omp/hooks/` is an overlay holding
+// only the files that carry those contract differences; the installer writes it over the
+// portable Claude set. Each test states the failure it prevents, because an overlay that
 // silently drifts back to the Claude contract disables a gate while looking installed.
 
 const assert = require('node:assert/strict');
@@ -17,6 +18,23 @@ const PACKAGE_ROOT = path.join(__dirname, '../..');
 const OMP_HOOKS = path.join(PACKAGE_ROOT, 'src/omp/hooks');
 const CLAUDE_HOOKS = path.join(PACKAGE_ROOT, 'src/claude/hooks');
 const { normalizeToolName } = require(path.join(OMP_HOOKS, 'lib/omp-tool-names.cjs'));
+const MANIFEST = require(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'));
+
+/**
+ * The overlay is not runnable on its own: it requires the shared libraries the Claude set
+ * carries. Behaviour is therefore exercised on what an install produces — the manifest's
+ * hook set with the overlay written over it, under a dotted folder so runtime-dir derives
+ * `.omp` — while the source-shape checks below read `src/omp/hooks/` directly.
+ */
+const INSTALLED_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-omp-installed-'));
+const INSTALLED = path.join(INSTALLED_ROOT, '.omp', 'hooks');
+for (const rel of MANIFEST.runtime.files.filter((f) => f.startsWith('hooks/'))) {
+  const target = path.join(INSTALLED_ROOT, '.omp', rel);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(PACKAGE_ROOT, 'src/claude', rel), target);
+}
+fs.cpSync(OMP_HOOKS, INSTALLED, { recursive: true });
+test.after(() => { fs.rmSync(INSTALLED_ROOT, { recursive: true, force: true }); });
 
 function withSecretProject(run) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-omp-hooks-'));
@@ -60,7 +78,7 @@ test('a lowercase bash command reading a secret file is denied, where Claude let
     const claude = verdict(path.join(CLAUDE_HOOKS, 'privacy-block.cjs'), payload);
     assert.equal(claude.decision, null, 'fixture assumes the Claude hook does not act on a lowercase name');
 
-    const omp = verdict(path.join(OMP_HOOKS, 'privacy-block.cjs'), payload);
+    const omp = verdict(path.join(INSTALLED, 'privacy-block.cjs'), payload);
     assert.equal(omp.decision, 'deny');
     assert.match(omp.out, /\.env/, 'the denial must name what it protected');
   });
@@ -68,7 +86,7 @@ test('a lowercase bash command reading a secret file is denied, where Claude let
 
 test('a capitalised tool name keeps working, so the fork adds a case rather than swapping one', () => {
   withSecretProject((root) => {
-    const omp = verdict(path.join(OMP_HOOKS, 'privacy-block.cjs'),
+    const omp = verdict(path.join(INSTALLED, 'privacy-block.cjs'),
       { tool_name: 'Bash', tool_input: { command: `cat ${path.join(root, '.env')}` }, cwd: root });
     assert.equal(omp.decision, 'deny');
   });
@@ -81,7 +99,7 @@ test('the privacy hook denies where Claude asks, since omp tool_call has no ask 
   assert.ok(source.includes("permissionDecision: 'deny'"));
 
   withSecretProject((root) => {
-    const omp = verdict(path.join(OMP_HOOKS, 'privacy-block.cjs'),
+    const omp = verdict(path.join(INSTALLED, 'privacy-block.cjs'),
       { tool_name: 'read', tool_input: { file_path: path.join(root, '.env') }, cwd: root });
     assert.equal(omp.decision, 'deny');
   });
@@ -89,7 +107,7 @@ test('the privacy hook denies where Claude asks, since omp tool_call has no ask 
 
 test('an unevaluable access denies rather than allows', () => {
   for (const malformed of ['not json', '', '{"tool_name":']) {
-    const omp = verdict(path.join(OMP_HOOKS, 'privacy-block.cjs'), malformed);
+    const omp = verdict(path.join(INSTALLED, 'privacy-block.cjs'), malformed);
     assert.equal(omp.code, 0, 'the hook must not crash the turn');
     if (malformed === 'not json' || malformed === '{"tool_name":') {
       assert.equal(omp.decision, 'deny',
@@ -105,8 +123,53 @@ test('a write to a scaffolded task path is guarded under omp lowercase names too
     "omp sends `write`; an exact 'Write' comparison would skip the guard entirely");
 });
 
-test('the fork carries every gate script, not a subset', () => {
-  const claude = fs.readdirSync(CLAUDE_HOOKS).filter((f) => f.endsWith('.cjs')).sort();
-  const omp = fs.readdirSync(OMP_HOOKS).filter((f) => f.endsWith('.cjs')).sort();
-  assert.deepEqual(omp, claude, 'a missing script means the bridge dispatches into nothing');
+/** Every file under a directory, relative and sorted. */
+function walk(dir, prefix = '') {
+  return fs.readdirSync(dir).flatMap((name) => {
+    const rel = prefix ? `${prefix}/${name}` : name;
+    return fs.statSync(path.join(dir, name)).isDirectory() ? walk(path.join(dir, name), rel) : [rel];
+  }).sort();
+}
+
+/** The contract edits, applied to the portable Claude bytes. This is the whole overlay. */
+function expectedOverlay(name) {
+  let source = fs.readFileSync(path.join(CLAUDE_HOOKS, name), 'utf8');
+  const edit = (from, to) => {
+    assert.equal(source.split(from).length - 1, 1, `${name} must contain exactly one "${from.trim()}"`);
+    source = source.replace(from, to);
+  };
+  if (name === 'privacy-block.cjs') {
+    edit("  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');\n",
+      "  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');\n"
+      + "  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');\n");
+    edit("    if (toolName === 'Bash' && typeof input.command === 'string') {\n",
+      "    // omp sends `bash`; the rule below was authored against Claude's `Bash`.\n"
+      + "    if (normalizeToolName(toolName) === 'Bash' && typeof input.command === 'string') {\n");
+    edit("        permissionDecision: 'ask',\n        permissionDecisionReason: `Sensitive file access requires approval: ${basename}`\n",
+      "        // omp has no ask state on tool_call, so an ask under Claude becomes a denial here.\n"
+      + "        permissionDecision: 'deny',\n        permissionDecisionReason: `Sensitive file access requires approval: ${basename}`\n");
+    edit("      permissionDecision: 'ask',\n      permissionDecisionReason: 'Sensitive access could not be evaluated safely.'\n",
+      "      permissionDecision: 'deny',\n      permissionDecisionReason: 'Sensitive access could not be evaluated safely.'\n");
+  }
+  if (name === 'task-scaffold-guard.cjs') {
+    edit("  if (toolName !== 'Write') process.exit(0);\n",
+      "  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');\n"
+      + "  // omp sends `write`; this guard was authored against Claude's `Write`.\n"
+      + "  if (normalizeToolName(toolName) !== 'Write') process.exit(0);\n");
+  }
+  return source;
+}
+
+test('the fork differs from Claude only by its overlay', () => {
+  // A fourth file here would be a hook the installer stops taking from Claude, so a
+  // Claude fix would silently miss omp. A shared file that differs beyond its contract
+  // edits is the same drift in the other direction.
+  assert.deepEqual(walk(OMP_HOOKS), ['lib/omp-tool-names.cjs', 'privacy-block.cjs', 'task-scaffold-guard.cjs']);
+  for (const name of ['privacy-block.cjs', 'task-scaffold-guard.cjs']) {
+    assert.equal(fs.readFileSync(path.join(OMP_HOOKS, name), 'utf8'), expectedOverlay(name),
+      `${name} must be the portable Claude file plus its omp contract edits, nothing else`);
+  }
+  const phase = fs.readFileSync(path.join(PACKAGE_ROOT, 'bin/phases/omp-runtime.js'), 'utf8');
+  assert.match(phase, /claudeHookFiles/, 'the phase must install the Claude set first');
+  assert.match(phase, /overlayFiles/, 'the phase must write the overlay over it');
 });
