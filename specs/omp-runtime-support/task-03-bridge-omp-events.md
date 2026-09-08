@@ -1,7 +1,6 @@
 # Task 03 — The bridge maps omp events onto the forked hooks
 
-Status: blocked
-
+Status: pending
 ## Outcome
 An extension loaded from `.omp/extensions/` receives omp lifecycle events, dispatches the matching forked hook with a Claude-shaped payload carrying a stable session identifier, and returns omp's block shape with the hook's own reason. A blocked turn can be approved and closed.
 

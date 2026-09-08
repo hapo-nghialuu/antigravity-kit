@@ -1,7 +1,6 @@
 # Task 04 — Documentation states omp's real coverage and its gaps
 
-Status: blocked
-
+Status: pending
 ## Outcome
 The installer architecture document and both changelogs state that omp is supported, which hooks it carries, and which registered hooks it does not. A reader can tell what they get without reading source.
 

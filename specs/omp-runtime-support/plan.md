@@ -61,11 +61,12 @@ No hook emits a block reason on stderr. Verified across `src/claude/hooks/`.
 ## Tasks
 | # | Task | Criteria | Primary ownership | Dependencies | Status |
 |---|---|---|---|---|---|
-| 01 | Register omp as an install target | AC-01, AC-02, AC-03 | `bin/lib/context.js`, `bin/install.js`, `bin/phases/omp-runtime.js`, `bin/phases/root-config.js` | - | pending |
-| 02 | Fork the hook tree for omp's vocabulary | AC-04, AC-05, AC-06 | `src/omp/hooks/` | task-01-register-omp-platform.md | blocked |
-| 03 | Bridge omp events onto the forked hooks | AC-07, AC-08, AC-09, AC-10, AC-11 | `src/omp/extensions/cafekit-bridge.mjs` | task-02-fork-omp-hooks.md | blocked |
-| 04 | Document omp coverage and its gaps | AC-12 | `docs/installer-architecture.md`, `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`, `packages/spec/scripts/run-skill-self-tests.mjs` | task-03-bridge-omp-events.md | blocked |
+| 01 | Register omp as an install target | AC-01, AC-02, AC-03 | `bin/lib/context.js`, `bin/install.js`, `bin/phases/omp-runtime.js`, `bin/phases/root-config.js` | - | done |
+| 02 | Fork the hook tree for omp's vocabulary | AC-04, AC-05, AC-06 | `src/omp/hooks/` | task-01-register-omp-platform.md | pending |
+| 03 | Bridge omp events onto the forked hooks | AC-07, AC-08, AC-09, AC-10, AC-11 | `src/omp/extensions/cafekit-bridge.mjs` | task-02-fork-omp-hooks.md | pending |
+| 04 | Document omp coverage and its gaps | AC-12 | `docs/installer-architecture.md`, `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`, `packages/spec/scripts/run-skill-self-tests.mjs` | task-03-bridge-omp-events.md | pending |
 
 ## Review log
 - Round 1 (2026-09-08): two fresh-context reviewers, both FAIL. 15 deduplicated findings. Accepted 13 as defects and rewrote the acceptance layer: AC-04 previously named two denial mechanisms where three exist and put the reason on stderr where every hook writes stdout; AC-05 mandated fail-open where omp itself fails closed at `tool_call`; task 01 installed no hooks at all; lowercase omp tool names, the missing session id on `input`, and the unmapped approve path were all absent from the plan. Corrected the hook count from seventeen to fifteen registered plus two libraries, and narrowed the coverage claim. Rejected nothing. One reviewer flagged `stop_hook_active` as unverified; the other verified it in the binary and the flag was wrong — the field is real and AC-10 stands. C2 decision: fork the hook tree following the Codex precedent.
 - Round 2 (2026-09-08, during execution): task 01 AC-01 required `.omp/extensions/` to contain the bridge file, which task 03 owns. Narrowed to the directory. This is the ownership conflict round 1 raised and the first rewrite only half-fixed.
+- Round 2 correction: tasks 02-04 were authored `blocked` on their dependencies alone. The status matrix reserves `blocked` for an open decision, an accepted finding, or `UNKNOWN` reachability; the resolver queues dependencies itself. Promoted to `pending`.

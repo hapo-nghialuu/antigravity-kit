@@ -1,7 +1,6 @@
 # Task 02 — The forked hooks speak omp's vocabulary
 
-Status: blocked
-
+Status: pending
 ## Outcome
 `src/omp/hooks/` holds a hook tree derived from `src/claude/hooks/` with three omp-specific contract changes: lowercase tool names are recognised, the privacy hook denies where it would ask, and an unevaluable access denies rather than allows.
 
