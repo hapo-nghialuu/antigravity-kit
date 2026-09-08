@@ -4873,6 +4873,16 @@ async function runStaticSemanticTests() {
         !content.includes("revalidates every done task's inline Receipt and provenance"),
     },
     {
+      label: "installer architecture documents omp coverage and gaps",
+      file: "../../docs/installer-architecture.md",
+      assert: (content) =>
+        content.includes("## Oh My Pi (omp)") &&
+        content.includes(".omp/extensions/cafekit-bridge.mjs") &&
+        content.includes("omp discovers `.claude/skills` and `.agents/skills` on its own") &&
+        content.includes("Not carried: `agent.cjs` (SubagentStart) and `semantic-review-authority.cjs` (SubagentStop)") &&
+        content.includes("`.omp/` is added to the root ignore rules"),
+    },
+    {
       label: "CafeKit runtime config drives shared hook config",
       file: "src/claude/hooks/lib/config.cjs",
       assert: (content) =>

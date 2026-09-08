@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Oh My Pi (omp) platform** (2026-09-08): `--platform omp` installs CafeKit's enforcement chain for the Oh My Pi coding agent. omp already discovers `.claude/skills` and `.agents/skills`, so no skill payload is copied; the installer provisions `.omp/hooks/` — a fork of the gate scripts that recognises omp's lowercase tool names, denies where the privacy hook would ask, and denies what it cannot evaluate — and `.omp/extensions/cafekit-bridge.mjs`, which omp auto-loads to dispatch its lifecycle events onto those scripts with an 8000 ms budget below omp's own 30000 ms cut-off. Every hook registered for SessionStart, PreCompact, UserPromptSubmit, PreToolUse, PostToolUse, and Stop is carried; `agent.cjs` and `semantic-review-authority.cjs` are not, because omp has no subagent events. `.omp/` joins the generated ignore rules because omp executes everything under `.omp/extensions/`.
+
 ### Removed
 
 - **rtk token-saver install phase**: the installer no longer offers or installs the rtk binary and its Claude Code hook. The `--with-rtk` flag is gone, along with the interactive prompt, the phase, and its localized strings. Unknown flags are ignored, so an old script still passing `--with-rtk` keeps working; anyone who wants rtk installs it themselves. Projects where a previous CafeKit run registered the rtk hook keep it — the installer never owned that hook's removal.

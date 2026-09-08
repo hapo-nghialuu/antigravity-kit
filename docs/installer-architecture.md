@@ -34,6 +34,7 @@ bin/phases/
                             AGENTS core + wrappers, rules (Addressing-preserving)
   claude-settings.js        settings.json merge + obsolete-hook pruning
   codex-runtime.js          native hooks/rules, split-root ignores, managed AGENTS block
+  omp-runtime.js            Oh My Pi: forked gate scripts + bridge extension; no skill payload
   write-metadata.js         cafekit.json version metadata + ownership manifest write
   root-config.js            root .gitignore patterns
   post-install.js           Gemini API key, language + managed-block
@@ -55,7 +56,7 @@ bin/lib/
 4. **Snapshot** — back up each platform's declared targets plus root `.gitignore`
    (skipped in dry-run). Claude snapshots `.claude/`, `CLAUDE.md`, and `AGENTS.md`;
    Codex snapshots `.codex/`, `.agents/`, and `AGENTS.md`.
-5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude or Codex runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, the installer runs **`ensureSharedAgentsMdCore`** once for every selected runtime, installing/refreshing the shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START/END -->`) in root `AGENTS.md`; the Codex writer appends only its runtime-specific managed block.
+5. **Per platform** — read ownership baseline, start a tracker, then: copy payload → Claude, Codex, or omp runtime → write that runtime's managed instruction block → write metadata + manifest. Before this loop, the installer runs **`ensureSharedAgentsMdCore`** once for every selected runtime, installing/refreshing the shared `src/common/AGENTS.md` CORE block (`<!-- CAFEKIT CORE START/END -->`) in root `AGENTS.md`; the Codex writer appends only its runtime-specific managed block.
 
    The Claude-specific per-platform sequence is:
    - copyClaudeRuntimeFiles (ROUTING, rules, scripts, references)
@@ -65,10 +66,21 @@ bin/lib/
    - copyClaudeMdFile — writes `CLAUDE.md` with `@AGENTS.md` import and Claude-specific runtime guidance
    - copyRulesDirectory
 6. **Root config** — ensure `.gitignore` patterns (incl. `.claude/`, `.codex/`,
-   `.agents/`, `.cafekit-backup/`, `.cafekit.lock`).
+   `.omp/`, `.agents/`, `.cafekit-backup/`, `.cafekit.lock`).
 7. **Post-install** — runtime locale, language and managed-block addressing for Claude and Codex.
 8. **Skills setup** — opt-in: Python venv, pip deps, skill npm, Chromium; detect system tools.
 9. **Summary**; prune old backups. On any throw: **restore snapshot** and exit 1.
+
+## Oh My Pi (omp)
+
+`--platform omp` installs CafeKit for the Oh My Pi coding agent. omp discovers `.claude/skills` and `.agents/skills` on its own (`skills.enableClaudeProject` and `skills.enableAgentsProject` default to true), so the installer copies no skill payload for it and `PLATFORMS.omp.capabilities.skills` is false. What omp lacks is CafeKit's enforcement chain, which `omp-runtime.js` provisions in two directories:
+
+- `.omp/hooks/` — the gate scripts, forked from `src/claude/hooks/` into `src/omp/hooks/` with three omp-specific contract changes: lowercase tool names (`bash`, `read`, `edit`, `write`, `grep`) reach the same rules as Claude's capitalised names; the privacy hook denies where it would ask, because omp's `tool_call` result has only `block` and `reason`; and an access the hook cannot evaluate is denied rather than allowed.
+- `.omp/extensions/cafekit-bridge.mjs` — the extension omp auto-loads. It shapes each omp event into the Claude-shaped payload the scripts read, runs them as child processes with an 8000 ms budget (omp itself substitutes a reasonless block at 30000 ms), and translates all three denial mechanisms back into omp's contract. It mints a session id per load because omp's `input` payload carries none, and honours `stop_hook_active` on `session_stop` so a blocked turn cannot loop.
+
+Carried: every hook registered for SessionStart, PreCompact, UserPromptSubmit, PreToolUse, PostToolUse, and Stop. Not carried: `agent.cjs` (SubagentStart) and `semantic-review-authority.cjs` (SubagentStop), because omp has no subagent lifecycle events; `state.cjs` likewise does not run at SubagentStop. `.omp/` is added to the root ignore rules as part of the install, since omp executes every file under `.omp/extensions/` and a committed copy would run on clone before any gate could act.
+
+The bridge's dispatch table mirrors `src/claude/settings/settings.json` and `bin/__tests__/omp-bridge.test.js` fails if the two drift. The install is verified against the real omp extension contract read from the installed binary; the tests do not launch omp, which needs provider credentials.
 
 ## Optional document skills
 

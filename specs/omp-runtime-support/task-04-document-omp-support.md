@@ -1,6 +1,6 @@
 # Task 04 — Documentation states omp's real coverage and its gaps
 
-Status: pending
+Status: done
 ## Outcome
 The installer architecture document and both changelogs state that omp is supported, which hooks it carries, and which registered hooks it does not. A reader can tell what they get without reading source.
 
@@ -32,3 +32,14 @@ The installer architecture document and both changelogs state that omp is suppor
 - Artifacts: none; the suite reads tracked files in place.
 
 ## Receipt
+
+Verification: PASS
+Command: node scripts/run-skill-self-tests.mjs
+Exit: 0
+Base: 70925016983102568922ac1a5d39d137f5c4d75f
+Head: d8d7bae85483951c96843ca183c7aa10eacc8aad141309ce9011e89419a0025b
+```text
+$ node scripts/run-skill-self-tests.mjs
+✔ installer architecture documents omp coverage and gaps
+[skill-test] PASS: 1260 tests executed
+```

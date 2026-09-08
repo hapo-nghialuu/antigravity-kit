@@ -4,6 +4,8 @@ All notable changes to CafeKit are documented here, following
 [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+- **Oh My Pi (omp) platform** (2026-09-08): `--platform omp` provisions forked gate scripts under `.omp/hooks/` and a bridge extension omp auto-loads from `.omp/extensions/`, giving omp CafeKit's gates on every event it emits. Skills are not copied, since omp discovers `.claude/skills` and `.agents/skills` itself. Subagent hooks are not carried because omp has no subagent events.
 
 ### Removed
 
