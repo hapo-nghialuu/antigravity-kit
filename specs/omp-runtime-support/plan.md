@@ -63,7 +63,7 @@ No hook emits a block reason on stderr. Verified across `src/claude/hooks/`.
 |---|---|---|---|---|---|
 | 01 | Register omp as an install target | AC-01, AC-02, AC-03 | `bin/lib/context.js`, `bin/install.js`, `bin/phases/omp-runtime.js`, `bin/phases/root-config.js` | - | done |
 | 02 | Fork the hook tree for omp's vocabulary | AC-04, AC-05, AC-06 | `src/omp/hooks/` | task-01-register-omp-platform.md | done |
-| 03 | Bridge omp events onto the forked hooks | AC-07, AC-08, AC-09, AC-10, AC-11 | `src/omp/extensions/cafekit-bridge.mjs` | task-02-fork-omp-hooks.md | pending |
+| 03 | Bridge omp events onto the forked hooks | AC-07, AC-08, AC-09, AC-10, AC-11 | `src/omp/extensions/cafekit-bridge.mjs` | task-02-fork-omp-hooks.md | done |
 | 04 | Document omp coverage and its gaps | AC-12 | `docs/installer-architecture.md`, `packages/spec/CHANGELOG.md`, `docs/project-changelog.md`, `packages/spec/scripts/run-skill-self-tests.mjs` | task-03-bridge-omp-events.md | pending |
 
 ## Review log

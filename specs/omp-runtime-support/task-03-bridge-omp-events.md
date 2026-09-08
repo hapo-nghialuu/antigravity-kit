@@ -1,6 +1,6 @@
 # Task 03 — The bridge maps omp events onto the forked hooks
 
-Status: pending
+Status: done
 ## Outcome
 An extension loaded from `.omp/extensions/` receives omp lifecycle events, dispatches the matching forked hook with a Claude-shaped payload carrying a stable session identifier, and returns omp's block shape with the hook's own reason. A blocked turn can be approved and closed.
 
@@ -38,3 +38,19 @@ An extension loaded from `.omp/extensions/` receives omp lifecycle events, dispa
 - Artifacts: ephemeral temporary directories from `fs.mkdtempSync`, removed in `finally`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/omp-bridge.test.js
+Exit: 0
+Base: 39fd5ceab93ca78203f7194832d296c1deec9415
+Head: 3e0ede44a864e9a36574eb90ee65309327015f5f4fa3fbf9a26a57a06ebf9fa2
+```text
+$ node --test bin/__tests__/omp-bridge.test.js
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```
