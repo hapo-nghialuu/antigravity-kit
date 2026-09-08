@@ -1,6 +1,6 @@
 # Task 02 — The forked hooks speak omp's vocabulary
 
-Status: pending
+Status: done
 ## Outcome
 `src/omp/hooks/` holds a hook tree derived from `src/claude/hooks/` with three omp-specific contract changes: lowercase tool names are recognised, the privacy hook denies where it would ask, and an unevaluable access denies rather than allows.
 
@@ -35,3 +35,19 @@ Status: pending
 - Artifacts: ephemeral temporary directories from `fs.mkdtempSync`, removed in `finally`. Mutation checks run only on copies inside those directories, never on tracked source.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/omp-hooks.test.js
+Exit: 0
+Base: 9854d9e348cc5910700e0e09eb469c97e2cc86ab
+Head: 8e05daceec59f5c96ff5db372b83b524f40b692d821fa3f2d983836eefe4d3c2
+```text
+$ node --test bin/__tests__/omp-hooks.test.js
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```
