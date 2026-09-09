@@ -70,10 +70,31 @@ try {
 
   // ── Main ──────────────────────────────────────────────────────────────────
 
+/**
+ * Deny the call with a reason every host can read.
+ *
+ * The reason is the JSON `permissionDecisionReason`, which Claude Code reads natively and
+ * grok honours "regardless of exit code"; the same text also goes to stderr, because on
+ * an exit-2 denial that is the channel Claude Code feeds back, and grok reads only the
+ * first stderr line. Exit 2 stays so a host that reads neither still blocks.
+ */
+function denyWithReason(reason) {
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: reason
+    }
+  }) + '\n');
+  process.stderr.write(reason + '\n');
+  process.exit(2);
+}
+
   const stdin   = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const data      = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const data      = normalizeHookPayload(JSON.parse(stdin));
   const toolName  = data.tool_name  || '';
   const toolInput = data.tool_input || {};
   const cwd       = data.cwd        || process.cwd();
@@ -89,12 +110,11 @@ try {
 
   // Broad glob check
   if (toolInput.pattern && isBroadGlob(toolInput.pattern)) {
-    console.log(
+    denyWithReason(
       `SCOPE LIMIT EXCEEDED: Glob pattern is excessively broad\n` +
       `Requested Pattern: ${toolInput.pattern}\n\n` +
       `Please narrow your scope (e.g., src/**/*.ts rather than **/*.ts).`
     );
-    process.exit(2);
   }
 
   // Blocked directory check
@@ -102,12 +122,11 @@ try {
   for (const p of paths) {
     if (isBlockedPath(p)) {
       const blocked = p.replace(/\\/g, '/').split('/').find(s => BLOCKED_DIRS.includes(s));
-      console.log(
+      denyWithReason(
         `SCOPE LIMIT EXCEEDED: Directory "${blocked}/" is explicitly forbidden\n` +
         `Requested Path: ${p}\n` +
         `Restricted zones: ${BLOCKED_DIRS.join(', ')}`
       );
-      process.exit(2);
     }
   }
 

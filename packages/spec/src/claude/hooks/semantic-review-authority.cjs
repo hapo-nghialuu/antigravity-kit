@@ -144,7 +144,8 @@ function verifyAttestation(root, specFile, featureName, semanticDigest) {
 if (require.main === module) {
   try {
     const raw = fs.readFileSync(0, 'utf8').trim();
-    if (raw) recordFromSubagentStop(JSON.parse(raw));
+    const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+    if (raw) recordFromSubagentStop(normalizeHookPayload(JSON.parse(raw)));
   } catch (error) {
     process.stderr.write(`CafeKit semantic review SubagentStop claim rejected: ${error.message}\n`);
   }

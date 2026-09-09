@@ -69,7 +69,8 @@ function activeTask(root) {
 
 try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
-  const payload = stdin ? JSON.parse(stdin) : {};
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = stdin ? normalizeHookPayload(JSON.parse(stdin)) : {};
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) process.exit(0);
 
   const root = projectRoot(payload);

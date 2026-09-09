@@ -225,7 +225,8 @@ try {
     const stdin = fs.readFileSync(0, 'utf8').trim();
     if (!stdin) process.exit(0);
 
-    const data = JSON.parse(stdin);
+    const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+    const data = normalizeHookPayload(JSON.parse(stdin));
     const event = data.hook_event_name || '';
     const cwd = data.cwd || process.cwd();
     const dir = stateDir(cwd);

@@ -69,14 +69,15 @@ test('omp tool names map to the Claude names the rules were written against', ()
   assert.equal(normalizeToolName('Bash'), 'Bash', 'a Claude name must survive unchanged');
 });
 
-test('a lowercase bash command reading a secret file is denied, where Claude lets it pass', () => {
+test('a lowercase bash command reading a secret file is denied, where Claude asks', () => {
   withSecretProject((root) => {
     const payload = { tool_name: 'bash', tool_input: { command: `cat ${path.join(root, '.env')}` }, cwd: root };
 
-    // The gap this fork exists to close: privacy-block.cjs compares tool_name === 'Bash'
-    // exactly, so omp's lowercase name skips the command scan entirely.
+    // Both hooks now see the lowercase name, because the shared payload reader aliases it.
+    // What still differs is the answer: omp's tool_call result carries only block and
+    // reason, so an ask there would be dropped and the access allowed.
     const claude = verdict(path.join(CLAUDE_HOOKS, 'privacy-block.cjs'), payload);
-    assert.equal(claude.decision, null, 'fixture assumes the Claude hook does not act on a lowercase name');
+    assert.equal(claude.decision, 'ask', 'the Claude hook now recognises the lowercase name and asks');
 
     const omp = verdict(path.join(INSTALLED, 'privacy-block.cjs'), payload);
     assert.equal(omp.decision, 'deny');
@@ -139,8 +140,8 @@ function expectedOverlay(name) {
     source = source.replace(from, to);
   };
   if (name === 'privacy-block.cjs') {
-    edit("  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');\n",
-      "  const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');\n"
+    edit("  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');\n",
+      "  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');\n"
       + "  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');\n");
     edit("    if (toolName === 'Bash' && typeof input.command === 'string') {\n",
       "    // omp sends `bash`; the rule below was authored against Claude's `Bash`.\n"

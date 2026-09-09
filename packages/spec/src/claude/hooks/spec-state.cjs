@@ -50,7 +50,8 @@ try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const payload = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = normalizeHookPayload(JSON.parse(stdin));
   const cwd     = payload.cwd || process.cwd();
 
   let POLICY;

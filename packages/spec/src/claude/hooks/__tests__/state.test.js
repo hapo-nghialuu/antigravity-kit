@@ -45,6 +45,7 @@ function inInstalledProcessSpecStateFixture(run) {
     fs.copyFileSync(path.join(CLAUDE_ROOT, 'hooks', 'spec-state.cjs'), path.join(hooks, 'spec-state.cjs'));
     fs.mkdirSync(path.join(hooks, 'lib'), { recursive: true });
     fs.copyFileSync(path.join(CLAUDE_ROOT, 'hooks', 'lib', 'runtime-dir.cjs'), path.join(hooks, 'lib', 'runtime-dir.cjs'));
+    fs.copyFileSync(path.join(CLAUDE_ROOT, 'hooks', 'lib', 'hook-payload.cjs'), path.join(hooks, 'lib', 'hook-payload.cjs'));
     fs.copyFileSync(
       path.join(CLAUDE_ROOT, 'hooks', 'lib', 'hook-state-dir.cjs'),
       path.join(hooks, 'lib', 'hook-state-dir.cjs'),

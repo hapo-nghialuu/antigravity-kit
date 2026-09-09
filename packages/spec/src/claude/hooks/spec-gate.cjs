@@ -79,8 +79,13 @@ try {
     throw new Error('hook payload must be a JSON object');
   }
 
-  // Never re-block a continuation caused by our own block (infinite-loop guard).
-  if (payload.stop_hook_active === true) process.exit(0);
+  // Never re-block a continuation caused by our own block (infinite-loop guard). Grok
+  // spells this `stopHookActive`; both are accepted here rather than through the payload
+  // reader, because the catch at the end of this file answers a block, so a reader that
+  // threw above the guard would block every completion instead of only a foreign one.
+  // The rest of this hook is already host-neutral: sessionIdentity() accepts sessionId
+  // and sessionID, the resolver reads camelCase targets, and projectRoot reads cwd.
+  if (payload.stop_hook_active === true || payload.stopHookActive === true) process.exit(0);
 
   let POLICY;
   let RESOLVER;

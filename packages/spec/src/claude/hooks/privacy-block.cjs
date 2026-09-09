@@ -201,7 +201,8 @@ try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const data = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const data = normalizeHookPayload(JSON.parse(stdin));
   const toolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
   const cwd = typeof data.cwd === 'string' && data.cwd.trim() ? data.cwd : process.cwd();

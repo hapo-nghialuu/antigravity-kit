@@ -196,7 +196,8 @@ try {
 
   (async () => {
   const stdin   = fs.readFileSync(0, 'utf8').trim();
-  const payload = stdin ? JSON.parse(stdin) : {};
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = stdin ? normalizeHookPayload(JSON.parse(stdin)) : {};
   const source  = payload.source || 'unknown';
   const envFile = process.env.CLAUDE_ENV_FILE;
   const cwd     = projectRoot();

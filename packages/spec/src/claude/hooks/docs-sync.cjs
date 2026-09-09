@@ -19,7 +19,8 @@ try {
 
   // Đọc stdin theo chuẩn hook
   const stdin = fs.readFileSync(0, 'utf8').trim();
-  const payload = stdin ? JSON.parse(stdin) : {};
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = stdin ? normalizeHookPayload(JSON.parse(stdin)) : {};
   const cwd = payload.cwd || process.cwd();
   const config = loadConfig({ cwd, includeProject: false, includeAssertions: false, includeLocale: false });
 

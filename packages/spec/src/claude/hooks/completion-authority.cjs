@@ -136,9 +136,14 @@ function stop(payload) {
 
 let mode = process.argv[2] || null;
 try {
-  const payload = readPayload();
+  const raw = readPayload();
+  // Read the loop guard before normalization: the catch below answers a block, so a
+  // reader failure must not be able to reach it. Both spellings are accepted here.
+  const hostLoop = raw.stop_hook_active === true || raw.stopHookActive === true;
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = normalizeHookPayload(raw);
   mode = mode || (payload.hook_event_name === 'UserPromptSubmit' ? '--approve' : '--stop');
-  if (mode === '--stop' && payload.stop_hook_active === true) {
+  if (mode === '--stop' && hostLoop) {
     // Host loop prevention is always silent, including when dependencies are unavailable.
   } else {
     const dependencyError = loadAuthority();

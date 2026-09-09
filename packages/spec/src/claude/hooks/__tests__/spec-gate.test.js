@@ -290,6 +290,7 @@ function installClaudeGate(root, policyMode = 'valid') {
   fs.copyFileSync(HOOK, path.join(hooks, 'spec-gate.cjs'));
   fs.mkdirSync(path.join(hooks, 'lib'), { recursive: true });
   fs.copyFileSync(path.join(__dirname, '..', 'lib', 'runtime-dir.cjs'), path.join(hooks, 'lib', 'runtime-dir.cjs'));
+  fs.copyFileSync(path.join(__dirname, '..', 'lib', 'hook-payload.cjs'), path.join(hooks, 'lib', 'hook-payload.cjs'));
   fs.copyFileSync(
     path.join(__dirname, '..', 'lib', 'hook-state-dir.cjs'),
     path.join(hooks, 'lib', 'hook-state-dir.cjs'),

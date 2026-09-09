@@ -264,6 +264,7 @@ function installGate(root, kind) {
     'scripts/spec-receipt.cjs', 'scripts/validate-spec-output.cjs', 'scripts/spec-ground.cjs',
     'scripts/spec-semantic-model.cjs', 'scripts/spec-final-state.cjs',
     'hooks/lib/runtime-path-safety.cjs', 'hooks/lib/hook-state-dir.cjs', 'hooks/lib/runtime-dir.cjs',
+    'hooks/lib/hook-payload.cjs',
   ]);
   if (kind === 'claude') {
     for (const name of [

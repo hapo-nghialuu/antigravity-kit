@@ -24,7 +24,8 @@ try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const payload = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload = normalizeHookPayload(JSON.parse(stdin));
   const prompt = String(payload.prompt || payload.user_prompt || '');
   if (!containsSecretKeyword(prompt)) process.exit(0);
 

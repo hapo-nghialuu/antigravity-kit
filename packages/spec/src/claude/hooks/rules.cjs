@@ -49,7 +49,8 @@ try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const payload   = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const payload   = normalizeHookPayload(JSON.parse(stdin));
   const sessionId = payload.session_id || null;
   const payloadCwd = typeof payload.cwd === 'string' ? payload.cwd.trim() : '';
   const cwd       = payloadCwd || process.env.PROJECT_ROOT || process.cwd();

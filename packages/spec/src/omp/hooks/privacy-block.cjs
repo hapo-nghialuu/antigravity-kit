@@ -42,7 +42,6 @@ try {
   ];
 
   const { runtimeDirName, runtimeDir, runtimePath } = require('./lib/runtime-dir.cjs');
-  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');
   function readRuntime(cwd) {
     try {
       const file = runtimePath(cwd, 'runtime.json');
@@ -204,7 +203,9 @@ try {
   const stdin = fs.readFileSync(0, 'utf8').trim();
   if (!stdin) process.exit(0);
 
-  const data = JSON.parse(stdin);
+  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
+  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');
+  const data = normalizeHookPayload(JSON.parse(stdin));
   const toolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
   const cwd = typeof data.cwd === 'string' && data.cwd.trim() ? data.cwd : process.cwd();
