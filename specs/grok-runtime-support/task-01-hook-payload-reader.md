@@ -1,6 +1,6 @@
 # Task 01 — One reader turns any supported envelope into the Claude payload
 
-Status: pending
+Status: done
 
 ## Outcome
 `src/claude/hooks/lib/hook-payload.cjs` exports `normalizeHookPayload(payload)` and `normalizeToolName(name)`. Given grok's camelCase envelope it returns the snake_case, Claude-named payload every gate hook was written against; given a Claude payload it keeps every key spelling and value except the tool name, which always passes through the alias table so omp's lowercase names reach the Claude names. The alias table is the single home for tool-name mapping across platforms, and the reader never throws.
@@ -38,3 +38,32 @@ Status: pending
 - Artifacts: none.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/hook-payload.test.js
+Exit: 0
+Base: 197c0994137e8bad6f48dba6f6724bb1378b07ad
+Head: 97aabe9760afbca62557bace5d4487f571a1cb7a791a8f13605b8ee7d5d4a64b
+```text
+$ node --test bin/__tests__/hook-payload.test.js
+✔ a grok PreToolUse envelope becomes the Claude payload (1.620292ms)
+✔ read_file path becomes file_path (0.0815ms)
+✔ an existing file_path is never overwritten by path (0.060917ms)
+✔ Stop and subagent fields map (0.096417ms)
+✔ every name reaching a Bash matcher becomes Bash (0.061542ms)
+✔ write and search_replace map to different Claude tools (0.058708ms)
+✔ omp lowercase names are aliased even under a snake_case key (0.0835ms)
+✔ a Claude payload keeps its keys (0.085667ms)
+✔ an unknown tool name is left alone (0.076ms)
+✔ hostile input never throws (0.218625ms)
+✔ the event map covers every event grok emits (0.16025ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```
+
+Counterexamples ran on a disposable copy under a temp root, never the tracked bytes. Each mutation turned 11 pass into 10 pass 1 fail: an unknown tool name mapped to `Bash`; aliasing only when the key is camelCase; `search_replace` mapped to `Write`; a non-object input throwing; the input mutated in place.

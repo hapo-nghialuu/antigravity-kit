@@ -71,7 +71,7 @@ The user declined spending a grok turn to settle these. Each names the command t
 ## Tasks
 | # | Task | Criteria | Primary ownership | Dependencies | Status |
 |---|---|---|---|---|---|
-| 01 | One reader turns any supported envelope into the Claude payload | AC-01 | `src/claude/hooks/lib/hook-payload.cjs`, `bin/__tests__/hook-payload.test.js` | - | pending |
+| 01 | One reader turns any supported envelope into the Claude payload | AC-01 | `src/claude/hooks/lib/hook-payload.cjs`, `bin/__tests__/hook-payload.test.js` | - | done |
 | 02 | Every gate hook reads through it and denies with a visible reason | AC-02, AC-03 | 14 hook files, `src/claude/migration-manifest.json`, 5 fixture allow-lists, `bin/__tests__/grok-envelope.test.js`, the overlay anchor in `bin/__tests__/omp-hooks.test.js` | task-01-hook-payload-reader.md | pending |
 | 03 | The omp overlay shrinks to the privacy hook | AC-04 | `src/omp/hooks/`, three omp tests, the overlay sentences in `docs/installer-architecture.md`, both changelogs, and their probe | task-02-route-hooks-through-reader.md | pending |
 | 04 | `--platform grok` installs the Claude runtime and asks for trust | AC-05 | `bin/lib/context.js`, `bin/phases/select-platform.js`, `bin/lib/i18n.js`, `bin/__tests__/grok-platform.test.js` | task-02-route-hooks-through-reader.md | pending |
