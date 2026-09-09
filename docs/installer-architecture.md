@@ -93,6 +93,23 @@ Two groups of `.claude` literals stay by design. Thirteen `~/.claude/` sites (`u
 
 The shipped hook set is the explicit `runtime.files` list in `src/claude/migration-manifest.json`, so a new hook library must be added there or a packed install ships hooks whose `require` fails; `bin/__tests__/package-inventory.test.js` runs the packed install and catches the omission. `provenance.cjs` excludes `.omp/hooks/.logs`, `.omp/.logs`, and `.omp/runtime.json` from the worktree digest like their `.claude` and `.codex` counterparts.
 
+## Grok CLI
+
+Grok CLI needs no CafeKit payload of its own. Its Claude-compatibility layer already reads `<cwd>/.claude/skills`, `.claude/rules`, `CLAUDE*.md`, `~/.claude.json` for MCP servers, and the hooks in `.claude/settings.json`, and every `[compat.claude]` cell defaults to on. `--platform grok` therefore installs the Claude runtime and creates nothing under `.grok/`; `.grok` is deliberately not a detection marker, because detected platforms are unioned with saved ones on a reinstall.
+
+Two things make the gates actually work there.
+
+- **The envelope.** Grok sends camelCase keys (`toolName`, `stopHookActive`, `sessionId`) and its own tool names (`run_terminal_command`, `read_file`, `search_replace`, `write`). `lib/hook-payload.cjs` normalizes grok's camelCase envelope into the Claude shape inside each hook, so `.claude/settings.json` needs no grok-specific edits and one hook file serves every host. Before it existed, `privacy-block.cjs` read an undefined `tool_name`, extracted no paths, and allowed the call: the gate looked installed and was open.
+- **The trust step.** Project hooks are silently skipped until the folder is trusted with `grok --trust` or `/hooks-trust`. The installer prints that once, because nothing in the output would otherwise reveal that the gates are inert. `CLAUDE_PROJECT_DIR` is set by grok for every hook as an alias of `GROK_WORKSPACE_ROOT`, so the hooks resolve the project root the way they always have.
+
+**What grok can carry is narrower than Claude.** It has four control-flow channels: a `PreToolUse` deny, a `UserPromptSubmit` block, a `Stop`/`SubagentStop` block, and exit 2. Every other event is passive, and an allowing `UserPromptSubmit` hook's stdout is discarded rather than added as context. So the gates work and the reminders do not: `rules.cjs`, `spec-state.cjs`, `session.cjs`, `docs-sync.cjs`, `state.cjs`, and the allowing path of `secret-output-guardrail.cjs` are normalized for one code path but never reach the model under grok. Grok also fails open on any hook timeout, crash, or malformed output, where the omp bridge fails closed.
+
+Denials carry their reason as a JSON `permissionDecision: "deny"` on stdout, which grok honours regardless of exit code, with the same text on stderr and exit 2 retained. Grok takes only the first stderr line, so a multi-line reason such as the scaffold guard's command would otherwise arrive truncated to its headline.
+
+`usage.cjs` is deliberately not routed through the reader. It reads the Claude Code OAuth token from the macOS Keychain and calls `api.anthropic.com`, and its prompt flag lowers the fetch interval from 300 s to 60 s, so normalizing its payload would make a non-Claude runtime touch Claude credentials five times as often for output grok discards.
+
+Three contract details are `[UNVERIFIED]`, because settling them costs a live grok session, and no test depends on any of them: whether a `"*"` matcher matches, since grok documents matchers as regular expressions and CafeKit uses `"*"` for `SubagentStart` and `PreCompact`; the input key `grep` and `list_dir` use for their pattern, which is what `inspect-block.cjs` gates on; and grok's spelling for `prompt`, `source`, and `trigger`, where the reader accepts the Claude key and its camelCase twin so either shape works. Each is settled by dumping a real envelope from a hook registered in a throwaway repository. Turning off `[compat.claude] hooks` is not supported: CafeKit registers no `.grok/hooks/*.json`, so a user who disables that scanner gets no gates.
+
 ## Optional document skills
 
 The install inventory has two tiers. Core skills always install. The document

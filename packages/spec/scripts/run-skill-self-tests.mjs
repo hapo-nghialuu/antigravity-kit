@@ -4883,6 +4883,19 @@ async function runStaticSemanticTests() {
         content.includes("`.omp/` is added to the root ignore rules"),
     },
     {
+      label: "installer architecture documents grok compatibility",
+      file: "../../docs/installer-architecture.md",
+      assert: (content) =>
+        content.includes("## Grok CLI") &&
+        content.includes("[compat.claude]") &&
+        content.includes("normalizes grok's camelCase envelope") &&
+        content.includes("grok --trust") &&
+        content.includes("CLAUDE_PROJECT_DIR` is set by grok") &&
+        content.includes("It has four control-flow channels") &&
+        content.includes("`usage.cjs` is deliberately not routed") &&
+        content.includes("Turning off `[compat.claude] hooks` is not supported"),
+    },
+    {
       label: "installer architecture documents hook portability",
       file: "../../docs/installer-architecture.md",
       assert: (content) =>

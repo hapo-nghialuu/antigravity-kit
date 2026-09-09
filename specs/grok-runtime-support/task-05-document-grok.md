@@ -1,6 +1,6 @@
 # Task 05 — Documentation records grok compatibility and its limits
 
-Status: pending
+Status: done
 
 ## Outcome
 The installer architecture document has a Grok CLI section stating how grok reaches the CafeKit gates, what it cannot carry, and where the evidence stops; the Hook portability section names the payload reader as the second portability seam; both changelogs carry a `Fixed` entry; a static probe keeps the section honest.
@@ -36,3 +36,20 @@ The installer architecture document has a Grok CLI section stating how grok reac
 - Artifacts: none.
 
 ## Receipt
+
+Verification: PASS
+Command: node scripts/run-skill-self-tests.mjs
+Exit: 0
+Base: f57d6d72ed6e2d5972e4f1193890de3d6c06650e
+Head: 497099f8cb0a2c900fc91b6b8d7703eba2295a378c1268783d67eb3cda91c6e4
+```text
+$ node scripts/run-skill-self-tests.mjs
+✔ installer architecture documents grok compatibility
+…
+Ran 1 test in completion policy wording
+[skill-test] source tree stays free of hook state
+Ran 1 test in source tree cleanliness
+[skill-test] PASS: 1301 tests executed
+```
+
+Counterexamples ran against the tracked document and restored it byte-identical each time. Deleting the Grok CLI section failed the probe; so did changing only the sentence that states the four control-flow channels, which is the limit a reader is most likely to lose.

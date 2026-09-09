@@ -10,6 +10,10 @@ All notable changes to CafeKit are documented here, following
 ### Changed
 - **Portable gate hooks** (2026-09-08): hooks derive their runtime directory from their own location (`lib/runtime-dir.cjs`) instead of hardcoding `.claude`, so one hook tree serves `.claude/` and `.omp/`; the omp fork became a small overlay written over the Claude set, an omp-only install ships `.omp/runtime.json` so rules are injected, and provenance ignores `.omp/` runtime state. Thirteen `~/.claude/` reads of Claude Code's own files stay Claude-only by design.
 
+### Fixed
+
+- **Gates were silently open under Grok CLI** (2026-09-08): grok runs CafeKit's hooks through its Claude compatibility but with a camelCase envelope, so the privacy gate asked nothing, the Stop gate lost its loop guard, and denials arrived without a reason. One shared payload reader inside the hooks fixes all three, denials now carry a JSON reason, and `--platform grok` installs the Claude runtime plus a trust reminder. The limits are recorded: only four grok channels change control flow, so reminder hooks do not reach the model, and `usage.cjs` stays unrouted because it touches Claude credentials.
+
 ### Removed
 
 - **rtk token-saver install phase**: removed the opt-in rtk phase, the `--with-rtk` flag, the interactive prompt, and its localized strings from the installer. An old script passing `--with-rtk` still runs, since unknown flags are ignored. A previously registered rtk hook stays where it is.
