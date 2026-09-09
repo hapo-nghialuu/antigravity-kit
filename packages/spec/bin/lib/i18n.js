@@ -120,6 +120,7 @@ const MESSAGES = {
 
     // Platform/language auto-skip when already installed
     installingFor:        'Installing for: {names}',
+    grokCompatNotice:     'Grok CLI reads this install through its Claude compatibility. Trust the project first: run `grok --trust` or `/hooks-trust`, or its project hooks are skipped.',
     langKept:             'Language: {lang} (saved — skipping prompt)',
     platformKept:         'Platform: {names} (saved — skipping prompt)',
 
@@ -231,6 +232,7 @@ const MESSAGES = {
 
     // Platform/language auto-skip when already installed
     installingFor:        'インストール先: {names}',
+    grokCompatNotice:     'Grok CLI はこのインストールを Claude 互換として読み込みます。先にプロジェクトを信頼してください: `grok --trust` または `/hooks-trust`。信頼しないとプロジェクトフックはスキップされます。',
     langKept:             '言語: {lang} (保存済み — スキップ)',
     platformKept:         'プラットフォーム: {names} (保存済み — スキップ)',
 
@@ -342,6 +344,7 @@ const MESSAGES = {
 
     // Platform/language auto-skip when already installed
     installingFor:        'Cài cho: {names}',
+    grokCompatNotice:     'Grok CLI đọc bản cài này qua lớp tương thích Claude. Hãy trust project trước: chạy `grok --trust` hoặc `/hooks-trust`, nếu không project hooks sẽ bị bỏ qua.',
     langKept:             'Ngôn ngữ: {lang} (đã lưu — bỏ qua chọn lại)',
     platformKept:         'Nền tảng: {names} (đã lưu — bỏ qua chọn lại)',
 

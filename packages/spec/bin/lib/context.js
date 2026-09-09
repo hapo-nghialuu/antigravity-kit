@@ -161,6 +161,25 @@ const PLATFORMS = {
   // }
 };
 
+/**
+ * Hosts that run another platform's install rather than one of their own.
+ *
+ * Grok CLI discovers `.claude/skills`, `.claude/rules`, `CLAUDE*.md` and the hooks in
+ * `.claude/settings.json` through its own Claude-compatibility layer, and the gate hooks
+ * normalize its envelope, so `--platform grok` provisions the Claude runtime. There is no
+ * `.grok/` payload and deliberately no detection marker: a repository that merely holds
+ * `.grok/` has not asked for a CafeKit install.
+ */
+const PLATFORM_ALIASES = Object.freeze({
+  grok: 'claude'
+});
+
+/** Resolve host aliases and drop duplicates, preserving the requested order. */
+function resolvePlatformAliases(keys = []) {
+  const resolved = keys.map((key) => PLATFORM_ALIASES[key] || key);
+  return { platforms: [...new Set(resolved)], aliased: keys.some((key) => Boolean(PLATFORM_ALIASES[key])) };
+}
+
 // ═══════════════════════════════════════════════════════════
 // DETECTION + PLATFORM HELPERS
 // ═══════════════════════════════════════════════════════════
@@ -347,6 +366,8 @@ module.exports = {
   INSTALL_COMMAND,
   DEPENDENCY_TEMPLATES,
   PLATFORMS,
+  PLATFORM_ALIASES,
+  resolvePlatformAliases,
   validateManifestV2,
   loadClaudeMigrationManifest,
   detectPlatforms,

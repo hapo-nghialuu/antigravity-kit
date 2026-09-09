@@ -1,6 +1,6 @@
 # Task 04 — `--platform grok` installs the Claude runtime and asks for trust
 
-Status: pending
+Status: done
 
 ## Outcome
 `npx @haposoft/cafekit --platform grok` resolves to the Claude platform: the install lands under `.claude/` exactly as `--platform claude` would, no `.grok/` directory is created, and one localized line tells the user that grok reads this install through its Claude compatibility and that project hooks run only after `grok --trust` or `/hooks-trust`. Nothing about automatic detection changes.
@@ -18,7 +18,7 @@ Status: pending
 - Read: `packages/spec/bin/install.js`, `packages/spec/bin/phases/summary.js`, `packages/spec/bin/phases/write-metadata.js`
 
 ## Acceptance
-- AC-05 as stated in `plan.md`.
+- AC-05 as stated in `plan.md`, with one correction found while executing it: the installer already defaults to Claude when it detects no platform at all (`No platform detected; defaulting to Claude Code`), so "a grok-only project is not auto-detected" cannot be observed through a bare install. The acceptance is therefore that `.grok` is not a detection marker: with `.grok/` and `.codex/` both present, `detectPlatforms()` returns `['codex']` alone. That is the behaviour the finding was protecting, since detected platforms are unioned with saved ones on a reinstall.
 - **The alias resolves before language selection.** `select-platform.js` filters `ctx.options.platforms` through `PLATFORMS[key]` when choosing which installed runtime to read a saved locale from; an unresolved `grok` makes that list empty and the fallback scans every platform folder, so `--platform grok` in a project that also has `.codex/` would silently take Codex's language. The alias is applied to `ctx.options.platforms` upstream of that filter, and the unknown-platform rejection stays reachable for genuinely unknown values.
 - **`select-platform.js` prints the notice**, not `summary.js`; it already prints platform-selection lines and owns the moment the alias is known. Exactly one notice per install, in the language selected by `--lang`, naming both `grok --trust` and `/hooks-trust`.
 - An install with `--platform claude` prints no grok notice, so the alias leaves the Claude path unchanged.
@@ -28,10 +28,38 @@ Status: pending
 
 ## Verification Plan
 - Command: `node --test bin/__tests__/grok-platform.test.js`
-- Named probe: `--platform grok installs the Claude runtime and no .grok directory`, `the trust reminder is printed once in the selected language`, `grok and claude together install once`, `a plain claude install prints no grok notice`, `a grok-only project is not auto-detected as a Claude install`, `an unknown platform is still rejected`.
+- Named probe: `grok is an alias, not a platform of its own`, `--platform grok installs the Claude runtime and no .grok directory`, `the trust reminder is printed once in the selected language`, `grok and claude together install once`, `a plain claude install prints no grok notice`, `.grok is not a detection marker`, `an unknown platform is still rejected`, `the notice exists in every shipped locale`.
 - Reachability: known — the real installer runs into a temp git repository, the technique `omp-runtime.test.js` uses.
-- Oracle: `.claude/cafekit.json` records `platform: claude`; `fs.existsSync('.grok')` is false; stdout matches the localized notice exactly once; a single Claude summary line for `grok,claude`; a non-interactive run in a repository holding only `.grok/` creates no `.claude/`.
-- Counterexample: registering `grok` as its own `PLATFORMS` entry must fail the no-`.grok` case; applying the alias after the language filter must fail the selected-language case; adding `.grok` to `detectFiles` must fail the auto-detect case; printing the notice unconditionally must fail the plain-claude case.
+- Oracle: `.claude/cafekit.json` records `platform: claude`; `fs.existsSync('.grok')` is false; stdout carries the localized notice exactly once; a single Claude summary line for `grok,claude`; `detectPlatforms()` returns `['codex']` beside a `.grok/` directory.
+- Counterexample: registering `grok` as its own `PLATFORMS` entry must fail the alias case; adding `.grok` to `detectFiles` must fail the detection case; printing the notice unconditionally must fail the plain-claude case; dropping a locale's string must fail the locale case.
 - Artifacts: ephemeral, removed in `finally`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/grok-platform.test.js
+Exit: 0
+Base: bd02208496605fab1d8c0c85ee5c04595f41eb7d
+Head: 3241648cf2a84a1da32bb12b4cc254825e202eb216d3b2964369434f702ce5cd
+```text
+$ node --test bin/__tests__/grok-platform.test.js
+✔ grok is an alias, not a platform of its own (1.524875ms)
+✔ --platform grok installs the Claude runtime and no .grok directory (311.411833ms)
+✔ the trust reminder is printed once in the selected language (454.38825ms)
+✔ grok and claude together install once (224.011583ms)
+✔ a plain claude install prints no grok notice (223.623792ms)
+✔ .grok is not a detection marker (0.840667ms)
+✔ an unknown platform is still rejected (109.731083ms)
+✔ the notice exists in every shipped locale (0.110208ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+```
+
+Counterexamples ran on a disposable copy under a temp root with the package's node_modules linked in, never the tracked bytes. Adding `.grok` to Claude's `detectFiles` turned 8 pass into 7 pass 1 fail; printing the notice unconditionally, the same; deleting the Vietnamese string turned it into 6 pass 2 fail; registering `grok` as its own `PLATFORMS` entry turned it into 3 pass 5 fail.
+
+One acceptance clause was corrected during execution rather than satisfied as written. `a grok-only project is not auto-detected as a Claude install` is not observable through a bare install: the installer already reports `No platform detected; defaulting to Claude Code` for any project with no platform at all, which predates this alias. The case now asserts the property the finding was protecting, that `.grok` is not a detection marker: with `.grok/` and `.codex/` both present, `detectPlatforms()` returns `['codex']` alone.

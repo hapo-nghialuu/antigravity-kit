@@ -11,7 +11,8 @@ const path = require('path');
 const {
   PLATFORMS,
   detectPlatforms,
-  getPlatformKeys
+  getPlatformKeys,
+  resolvePlatformAliases
 } = require('../lib/context');
 const { SUPPORTED, LANGUAGE_LABELS, OTHER_LABEL } = require('../lib/i18n');
 
@@ -36,7 +37,25 @@ function getInstalledLocale(platformKeys = getPlatformKeys()) {
 }
 
 /** First step: pick the installer/UI language (interactive only). */
+/**
+ * Resolve host aliases on the requested platform list, once, before anything reads it.
+ *
+ * selectLanguage() filters this list through PLATFORMS to decide which installed runtime
+ * to take a saved locale from, so an unresolved alias would empty that list and fall back
+ * to scanning every platform folder — `--platform grok` in a project that also has
+ * `.codex/` would then silently take Codex's language.
+ */
+function applyPlatformAliases(ctx) {
+  const requested = ctx.options.platforms || [];
+  if (requested.length === 0) return ctx;
+  const { platforms, aliased } = resolvePlatformAliases(requested);
+  ctx.options.platforms = platforms;
+  ctx.aliasedHost = aliased;
+  return ctx;
+}
+
 async function selectLanguage(ctx) {
+  applyPlatformAliases(ctx);
   // Restore the saved locale BEFORE the interactivity check: a non-interactive
   // upgrade (--yes) must not forget the configured language. Skipping this left
   // ctx at the 'en' default, and patchRuntimeLocale then clobbered the user's
@@ -161,6 +180,7 @@ async function resolvePlatforms(ctx) {
     ctx.ui.info(ctx.t('installingFor', {
       names: platformNames(requested)
     }));
+    if (ctx.aliasedHost) ctx.ui.info(ctx.t('grokCompatNotice'));
     reportInstallMode(ctx);
     return ctx;
   }
@@ -244,6 +264,7 @@ function getInstalledPlatform() {
 
 module.exports = {
   selectLanguage,
+  applyPlatformAliases,
   promptPlatformSelection,
   resolvePlatforms,
   getInstalledPlatform,
