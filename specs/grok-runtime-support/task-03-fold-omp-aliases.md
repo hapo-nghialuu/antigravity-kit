@@ -1,6 +1,6 @@
 # Task 03 — The omp overlay shrinks to the privacy hook
 
-Status: pending
+Status: done
 
 ## Outcome
 `src/omp/hooks/` contains only `privacy-block.cjs`, which is the routed Claude file plus its two ask→deny edits. The lowercase tool-name handling omp needed now comes from the shared reader every hook calls, so `task-scaffold-guard.cjs` and `lib/omp-tool-names.cjs` leave the overlay. An omp install keeps every contract the omp packet pinned: a lowercase `bash` read of `.env` is denied, a lowercase `write` into a nested task path is guarded, an unevaluable access is denied. Every sentence that counted the overlay at three files now says one.
@@ -36,3 +36,22 @@ Status: pending
 - Artifacts: ephemeral, removed in `finally` and `test.after`.
 
 ## Receipt
+
+Verification: PASS
+Command: node --test bin/__tests__/omp-hooks.test.js bin/__tests__/omp-runtime.test.js bin/__tests__/omp-bridge.test.js && node scripts/run-skill-self-tests.mjs --static-only
+Exit: 0
+Base: 4adb5f2af2c549b992376be18a57692e079e7366
+Head: a2f68c80e885c60848fd46b6425ff3528f5d81526bf29190ef91353b4b51a1dc
+```text
+$ node --test bin/__tests__/omp-hooks.test.js bin/__tests__/omp-runtime.test.js bin/__tests__/omp-bridge.test.js && node scripts/run-skill-self-tests.mjs --static-only
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+[skill-test] PASS: 539 focused static tests executed
+```
+
+Counterexamples ran on a disposable copy under a temp root, and the docs one restored the tracked file byte-identical. Adding a second file to the overlay turned 7 pass into 6 pass 1 fail. Removing the lowercase `bash` and `write` aliases from the shared table turned it into 4 pass 3 fail, which is the case for folding them there rather than keeping a second table. Leaving the documentation at three files failed the static probe.

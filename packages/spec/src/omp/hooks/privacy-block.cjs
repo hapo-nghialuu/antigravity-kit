@@ -180,8 +180,7 @@ try {
       }
     }
 
-    // omp sends `bash`; the rule below was authored against Claude's `Bash`.
-    if (normalizeToolName(toolName) === 'Bash' && typeof input.command === 'string') {
+    if (toolName === 'Bash' && typeof input.command === 'string') {
       paths.push(...extractBashPaths(input.command));
     }
 
@@ -204,7 +203,6 @@ try {
   if (!stdin) process.exit(0);
 
   const { normalizeHookPayload } = require('./lib/hook-payload.cjs');
-  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');
   const data = normalizeHookPayload(JSON.parse(stdin));
   const toolName = data.tool_name || '';
   const toolInput = data.tool_input || {};

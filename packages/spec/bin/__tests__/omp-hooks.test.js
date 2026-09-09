@@ -17,7 +17,7 @@ const { test } = require('node:test');
 const PACKAGE_ROOT = path.join(__dirname, '../..');
 const OMP_HOOKS = path.join(PACKAGE_ROOT, 'src/omp/hooks');
 const CLAUDE_HOOKS = path.join(PACKAGE_ROOT, 'src/claude/hooks');
-const { normalizeToolName } = require(path.join(OMP_HOOKS, 'lib/omp-tool-names.cjs'));
+const { normalizeToolName } = require(path.join(PACKAGE_ROOT, 'src/claude/hooks/lib/hook-payload.cjs'));
 const MANIFEST = require(path.join(PACKAGE_ROOT, 'src/claude/migration-manifest.json'));
 
 /**
@@ -118,10 +118,22 @@ test('an unevaluable access denies rather than allows', () => {
 });
 
 test('a write to a scaffolded task path is guarded under omp lowercase names too', () => {
-  const guard = path.join(OMP_HOOKS, 'task-scaffold-guard.cjs');
-  const source = fs.readFileSync(guard, 'utf8');
-  assert.match(source, /normalizeToolName\(toolName\) !== 'Write'/,
-    "omp sends `write`; an exact 'Write' comparison would skip the guard entirely");
+  // The guard is no longer an overlay file, so this is a behaviour case on the tree an
+  // install produces: omp sends `write`, and the shared reader has to make it reach the
+  // rule that was authored against Claude's `Write`.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cafekit-omp-guard-'));
+  try {
+    const target = path.join(root, 'specs', 'demo', 'tasks', 'task-R0-01-x.md');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(path.join(PACKAGE_ROOT, 'src/claude/scripts'), path.join(INSTALLED_ROOT, '.omp', 'scripts'),
+      { recursive: true, force: true });
+    const r = verdict(path.join(INSTALLED, 'task-scaffold-guard.cjs'),
+      { tool_name: 'write', tool_input: { file_path: target }, cwd: root });
+    assert.equal(r.code, 2, "omp sends `write`; an exact 'Write' comparison would skip the guard entirely");
+    assert.equal(r.decision, 'deny');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 /** Every file under a directory, relative and sorted. */
@@ -140,33 +152,23 @@ function expectedOverlay(name) {
     source = source.replace(from, to);
   };
   if (name === 'privacy-block.cjs') {
-    edit("  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');\n",
-      "  const { normalizeHookPayload } = require('./lib/hook-payload.cjs');\n"
-      + "  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');\n");
-    edit("    if (toolName === 'Bash' && typeof input.command === 'string') {\n",
-      "    // omp sends `bash`; the rule below was authored against Claude's `Bash`.\n"
-      + "    if (normalizeToolName(toolName) === 'Bash' && typeof input.command === 'string') {\n");
     edit("        permissionDecision: 'ask',\n        permissionDecisionReason: `Sensitive file access requires approval: ${basename}`\n",
       "        // omp has no ask state on tool_call, so an ask under Claude becomes a denial here.\n"
       + "        permissionDecision: 'deny',\n        permissionDecisionReason: `Sensitive file access requires approval: ${basename}`\n");
     edit("      permissionDecision: 'ask',\n      permissionDecisionReason: 'Sensitive access could not be evaluated safely.'\n",
       "      permissionDecision: 'deny',\n      permissionDecisionReason: 'Sensitive access could not be evaluated safely.'\n");
   }
-  if (name === 'task-scaffold-guard.cjs') {
-    edit("  if (toolName !== 'Write') process.exit(0);\n",
-      "  const { normalizeToolName } = require('./lib/omp-tool-names.cjs');\n"
-      + "  // omp sends `write`; this guard was authored against Claude's `Write`.\n"
-      + "  if (normalizeToolName(toolName) !== 'Write') process.exit(0);\n");
-  }
   return source;
 }
 
 test('the fork differs from Claude only by its overlay', () => {
-  // A fourth file here would be a hook the installer stops taking from Claude, so a
+  // A second file here would be a hook the installer stops taking from Claude, so a
   // Claude fix would silently miss omp. A shared file that differs beyond its contract
-  // edits is the same drift in the other direction.
-  assert.deepEqual(walk(OMP_HOOKS), ['lib/omp-tool-names.cjs', 'privacy-block.cjs', 'task-scaffold-guard.cjs']);
-  for (const name of ['privacy-block.cjs', 'task-scaffold-guard.cjs']) {
+  // edits is the same drift in the other direction. Every lowercase tool name omp sends
+  // is handled by the shared payload reader, so only the ask-versus-deny difference —
+  // which is a contract, not a spelling — still needs a file of its own.
+  assert.deepEqual(walk(OMP_HOOKS), ['privacy-block.cjs']);
+  for (const name of ['privacy-block.cjs']) {
     assert.equal(fs.readFileSync(path.join(OMP_HOOKS, name), 'utf8'), expectedOverlay(name),
       `${name} must be the portable Claude file plus its omp contract edits, nothing else`);
   }

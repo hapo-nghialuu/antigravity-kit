@@ -131,7 +131,7 @@ test('an omp-only install injects rules', () => {
     // The Claude set arrives whole, the overlay on top, and nothing from the test tree.
     const hooks = fs.readdirSync(path.join(root, '.omp', 'hooks'));
     assert.equal(hooks.includes('__tests__'), false, 'the source tree holds tests that must never install');
-    for (const required of ['rules.cjs', 'spec-gate.cjs', 'session.cjs', 'lib/runtime-dir.cjs', 'lib/omp-tool-names.cjs']) {
+    for (const required of ['rules.cjs', 'spec-gate.cjs', 'session.cjs', 'lib/runtime-dir.cjs', 'lib/hook-payload.cjs']) {
       assert.equal(fs.existsSync(path.join(root, '.omp', 'hooks', required)), true, `missing .omp/hooks/${required}`);
     }
     const privacy = fs.readFileSync(path.join(root, '.omp', 'hooks', 'privacy-block.cjs'), 'utf8');

@@ -4892,7 +4892,7 @@ async function runStaticSemanticTests() {
         content.includes("Thirteen `~/.claude/` sites") &&
         content.includes("kept as Claude Code behaviour") &&
         content.includes("Twenty dead-code lines in `lib/context.cjs` and `lib/detect.cjs`") &&
-        content.includes("`src/omp/hooks/` is an overlay of three files"),
+        content.includes("`src/omp/hooks/` is an overlay of one file"),
     },
     {
       label: "CafeKit runtime config drives shared hook config",

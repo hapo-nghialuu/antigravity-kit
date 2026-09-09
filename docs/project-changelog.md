@@ -5,10 +5,10 @@ All notable changes to CafeKit are documented here, following
 
 ## [Unreleased]
 ### Added
-- **Oh My Pi (omp) platform** (2026-09-08): `--platform omp` provisions the Claude gate scripts with a three-file omp overlay under `.omp/hooks/`, `.omp/runtime.json` with its schema, and a bridge extension omp auto-loads from `.omp/extensions/`, giving omp CafeKit's gates on every event it emits. Skills are not copied, since omp discovers `.claude/skills` and `.agents/skills` itself. Subagent hooks are not carried because omp has no subagent events.
+- **Oh My Pi (omp) platform** (2026-09-08): `--platform omp` provisions the Claude gate scripts with a one-file omp overlay under `.omp/hooks/`, `.omp/runtime.json` with its schema, and a bridge extension omp auto-loads from `.omp/extensions/`, giving omp CafeKit's gates on every event it emits. Skills are not copied, since omp discovers `.claude/skills` and `.agents/skills` itself. Subagent hooks are not carried because omp has no subagent events.
 
 ### Changed
-- **Portable gate hooks** (2026-09-08): hooks derive their runtime directory from their own location (`lib/runtime-dir.cjs`) instead of hardcoding `.claude`, so one hook tree serves `.claude/` and `.omp/`; the omp fork became a three-file overlay written over the Claude set, an omp-only install ships `.omp/runtime.json` so rules are injected, and provenance ignores `.omp/` runtime state. Thirteen `~/.claude/` reads of Claude Code's own files stay Claude-only by design.
+- **Portable gate hooks** (2026-09-08): hooks derive their runtime directory from their own location (`lib/runtime-dir.cjs`) instead of hardcoding `.claude`, so one hook tree serves `.claude/` and `.omp/`; the omp fork became a small overlay written over the Claude set, an omp-only install ships `.omp/runtime.json` so rules are injected, and provenance ignores `.omp/` runtime state. Thirteen `~/.claude/` reads of Claude Code's own files stay Claude-only by design.
 
 ### Removed
 
